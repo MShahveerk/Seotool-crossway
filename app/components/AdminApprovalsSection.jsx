@@ -111,6 +111,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
     imageFile: null,
     /** If true, record as approved on create (assignee does not need to act). */
     approveOnAssignment: false,
+    scheduledFor: "",
   });
   const [expandedApprovalId, setExpandedApprovalId] = useState(null);
   const [actionsMenuId, setActionsMenuId] = useState(null);
@@ -236,6 +237,9 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
       fd.append("caption", form.caption.trim());
       fd.append("selectedSite", selectedSite);
       fd.append("approveOnAssignment", wasApproveOnAssignment ? "1" : "0");
+      if (form.scheduledFor) {
+        fd.append("scheduledFor", form.scheduledFor);
+      }
       const res = await fetch("/api/admin/approvals", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create approval");
@@ -244,7 +248,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
           ? "Approval created and recorded as approved (assignee does not need to review)."
           : "Approval created and assigned."
       );
-      setForm({ title: "", caption: "", imageFile: null, approveOnAssignment: false });
+      setForm({ title: "", caption: "", imageFile: null, approveOnAssignment: false, scheduledFor: "" });
       if (approvalImageInputRef.current) approvalImageInputRef.current.value = "";
       await load();
       if (typeof window !== "undefined") {
@@ -376,6 +380,15 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
               </span>
             </span>
           </label>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Schedule Post (Optional)</label>
+            <input
+              type="datetime-local"
+              value={form.scheduledFor}
+              onChange={(e) => setForm((f) => ({ ...f, scheduledFor: e.target.value }))}
+              className="w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-sm focus:border-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-400"
+            />
+          </div>
           <div className="hidden">
             <label className="block text-sm font-semibold text-gray-700 mb-2">Assignment source</label>
             <div className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-white text-sm text-gray-900">

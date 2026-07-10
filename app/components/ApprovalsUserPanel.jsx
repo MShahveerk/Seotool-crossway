@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FiCheck, FiEdit2, FiX, FiRefreshCw, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { FiCheck, FiEdit2, FiX, FiRefreshCw, FiChevronDown, FiChevronUp, FiClock } from "react-icons/fi";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
 
 function displayBody(a) {
@@ -301,6 +301,17 @@ export default function ApprovalsUserPanel() {
                         </div>
                       </>
                     ) : null}
+                    {a.scheduledFor && (
+                      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                        <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 block mb-1">
+                          Scheduled For
+                        </label>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                          <FiClock className="text-primary-500" />
+                          {new Date(a.scheduledFor).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    )}
                     {canAct && (
                       <>
                         <div className="grid gap-3 sm:grid-cols-2">

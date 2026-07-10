@@ -16,12 +16,16 @@ import {
   FiHelpCircle,
   FiClipboard,
   FiUsers,
+  FiCalendar,
+  FiCheckSquare,
 } from "react-icons/fi";
 
 const mainMenuItems = [
   { id: "dashboard", label: "Dashboard", icon: FiBarChart2 },
   { id: "website-statistics", label: "Website Statistics", icon: FiSearch },
   { id: "smm-statistics", label: "SMM Statistics", icon: FiTrendingUp },
+  { id: "calendar", label: "Content Calendar", icon: FiCalendar },
+  { id: "my-approvals", label: "My Approvals", icon: FiCheckSquare },
 ];
 
 const userManagementMenuItem = {
@@ -396,6 +400,9 @@ export default function DashboardLayout({
               <p className="px-3 pb-2 text-[10px] font-semibold tracking-wider text-gray-500 uppercase">Main Menu</p>
             )}
             {mainMenuItems.map((item) => {
+              if (session?.user?.role === "approver" && item.id !== "calendar" && item.id !== "my-approvals") {
+                return null;
+              }
               const IconComponent = item.icon;
               const isActive = activeSection === item.id;
               return (

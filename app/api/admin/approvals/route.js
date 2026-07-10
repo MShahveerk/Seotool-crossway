@@ -117,6 +117,8 @@ export async function POST(req) {
       approveOnAssignmentRaw === "1" ||
       approveOnAssignmentRaw === "true" ||
       approveOnAssignmentRaw === "on";
+    const scheduledForRaw = form.get("scheduledFor");
+    const scheduledFor = scheduledForRaw ? new Date(scheduledForRaw) : null;
 
     if (!title || title.length > 255) {
       return new Response(JSON.stringify({ error: "Title is required (max 255 characters)." }), {
@@ -256,6 +258,7 @@ export async function POST(req) {
         lastAction: approveOnAssignment ? "approve" : null,
         respondedAt: approveOnAssignment ? now : null,
         awaitingAdminReview: false,
+        scheduledFor: (!isNaN(scheduledFor) ? scheduledFor : null),
       },
       include: {
         assignee: { select: { id: true, email: true, name: true } },

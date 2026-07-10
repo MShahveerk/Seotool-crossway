@@ -1030,6 +1030,7 @@ export default function AdminSection() {
                   <option value="user">User</option>
                   <option value="viewer">Viewer (Read-only)</option>
                   <option value="smm">SMM (Social media manager)</option>
+                  <option value="approver">Approver (SMM Approvals)</option>
                 </select>
               </div>
 

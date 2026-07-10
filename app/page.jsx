@@ -9,6 +9,8 @@ import SearchConsoleSection from "./components/SearchConsoleSection";
 import AdminSection from "./components/AdminSection";
 import AdminApprovalsSection from "./components/AdminApprovalsSection";
 import SmmStatisticsSection from "./components/SmmStatisticsSection";
+import CalendarSection from "./components/CalendarSection";
+import MyApprovalsSection from "./components/MyApprovalsSection";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -19,8 +21,10 @@ export default function Home() {
   useEffect(() => {
     if (status === "unauthenticated") {
       router.replace("/login");
+    } else if (status === "authenticated" && session?.user?.role === "approver" && activeSection === "dashboard") {
+      setActiveSection("calendar");
     }
-  }, [status, router]);
+  }, [status, router, session, activeSection]);
 
   if (status === "loading") {
     return (
@@ -67,6 +71,10 @@ export default function Home() {
         return <SearchConsoleSection selectedSite={selectedSite} />;
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
+      case "calendar":
+        return <CalendarSection />;
+      case "my-approvals":
+        return <MyApprovalsSection />;
       case "user-management":
         return session?.user?.role === "super_admin" ? (
           <AdminSection />
@@ -80,7 +88,7 @@ export default function Home() {
           <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
         );
       default:
-        return <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />;
+        return session?.user?.role === "approver" ? <CalendarSection /> : <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />;
     }
   };
 

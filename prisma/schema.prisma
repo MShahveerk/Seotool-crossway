@@ -69,6 +69,11 @@ model Approval {
   hiddenFromAssignee    Boolean   @default(false) @map("hidden_from_assignee")
   /// Set when Super Admin chose "approve on assignment" — no assignee review step.
   skippedAssigneeReview Boolean   @default(false) @map("skipped_assignee_review")
+
+  scheduledFor          DateTime? @map("scheduled_for")
+  publishStatus         String?   @default("unpublish") @db.VarChar(32) @map("publish_status")
+  publishError          String?   @db.Text @map("publish_error")
+
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
