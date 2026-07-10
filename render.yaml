@@ -1,0 +1,43 @@
+services:
+  # 1. Main Next.js Web Service
+  - type: web
+    name: crossway-web
+    env: node
+    plan: starter # Change to free if preferred, but starter provides more RAM for Next.js builds
+    buildCommand: npm install && npx prisma@6 generate && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXTAUTH_URL
+        # Render will automatically inject the public URL here
+        value: https://crossway-web.onrender.com
+      - key: DATABASE_URL
+        # You will link this to your Render MySQL database
+        sync: false
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      - key: SMM_COLLECT_SECRET
+        generateValue: true
+
+  # 2. Background Scheduler (Cron) Worker
+  - type: worker
+    name: crossway-scheduler
+    env: node
+    plan: free
+    buildCommand: npm install && npx prisma@6 generate
+    startCommand: npm run scheduler
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        # This MUST be the exact same database URL as the web service
+        sync: false
+      - key: NEXTAUTH_URL
+        value: https://crossway-web.onrender.com
+      - key: META_PAGE_ACCESS_TOKEN
+        # Enter this manually in the Render dashboard
+        sync: false
+      - key: META_APP_ACCESS_TOKEN
+        # Enter this manually in the Render dashboard
+        sync: false
