@@ -78,6 +78,10 @@ export default function AdminSection() {
   const [smmBaselines, setSmmBaselines] = useState(DEFAULT_SMM_BASELINES);
   const [smmFetchStatusByPlatform, setSmmFetchStatusByPlatform] = useState({});
 
+  // Meta Accounts Dropdown State
+  const [metaAccounts, setMetaAccounts] = useState([]);
+  const [loadingMetaAccounts, setLoadingMetaAccounts] = useState(false);
+
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -85,6 +89,27 @@ export default function AdminSection() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
+
+  useEffect(() => {
+    if (showCreateModal || editingUser) {
+      fetchMetaAccounts();
+    }
+  }, [showCreateModal, editingUser]);
+
+  const fetchMetaAccounts = async () => {
+    setLoadingMetaAccounts(true);
+    try {
+      const res = await fetch("/api/admin/meta-accounts");
+      const data = await res.json();
+      if (res.ok && data.accounts) {
+        setMetaAccounts(data.accounts);
+      }
+    } catch (err) {
+      console.error("Failed to load Meta accounts", err);
+    } finally {
+      setLoadingMetaAccounts(false);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -1070,29 +1095,66 @@ export default function AdminSection() {
                       Add GTM container ID to ingest social metrics via `/api/smm/collect`.
                     </p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
-                      Facebook Page ID (for Graph API)
+                  <div className="col-span-1 md:col-span-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-300 dark:bg-gray-100">
+                    <label className="block text-sm font-bold text-gray-800 mb-2">
+                      Link Meta Account (Facebook & Instagram)
                     </label>
-                    <input
-                      type="text"
-                      value={formData.facebookPageId || ""}
-                      onChange={(e) => setFormData({ ...formData, facebookPageId: e.target.value })}
-                      placeholder="e.g. 61558883521953"
-                      className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
-                      Instagram User ID (for Graph API)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.instagramUserId || ""}
-                      onChange={(e) => setFormData({ ...formData, instagramUserId: e.target.value })}
-                      placeholder="e.g. 17841400000000000"
-                      className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black"
-                    />
+                    <p className="text-xs text-gray-600 mb-3">
+                      Select a Facebook Page linked to your Meta Token. This will automatically set the Facebook Page ID and Instagram User ID for publishing.
+                    </p>
+
+                    {loadingMetaAccounts ? (
+                      <div className="text-xs text-gray-500 animate-pulse">Loading connected Meta accounts...</div>
+                    ) : metaAccounts.length > 0 ? (
+                      <select
+                        value={formData.facebookPageId || ""}
+                        onChange={(e) => {
+                          const selectedPageId = e.target.value;
+                          const account = metaAccounts.find(a => a.facebookPageId === selectedPageId);
+
+                          setFormData({
+                            ...formData,
+                            facebookPageId: selectedPageId,
+                            instagramUserId: account ? account.instagramUserId : ""
+                          });
+                        }}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white text-gray-900 shadow-sm"
+                      >
+                        <option value="">-- Select a Meta Account --</option>
+                        {metaAccounts.map((acc) => (
+                          <option key={acc.facebookPageId} value={acc.facebookPageId}>
+                            {acc.name} {acc.instagramUserId ? "(Includes Instagram)" : "(Facebook Only)"}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                        No Meta accounts found. Please ensure <code>META_PAGE_ACCESS_TOKEN</code> is set in your environment variables.
+                      </div>
+                    )}
+
+                    <div className="mt-4 grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Facebook Page ID</label>
+                        <input
+                          type="text"
+                          value={formData.facebookPageId || ""}
+                          onChange={(e) => setFormData({ ...formData, facebookPageId: e.target.value })}
+                          placeholder="Manual ID entry..."
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-700 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Instagram User ID</label>
+                        <input
+                          type="text"
+                          value={formData.instagramUserId || ""}
+                          onChange={(e) => setFormData({ ...formData, instagramUserId: e.target.value })}
+                          placeholder="Manual ID entry..."
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-700 bg-white"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
