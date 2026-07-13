@@ -33,15 +33,21 @@ In the Render dashboard, you will be asked to provide values for the following e
 
 *Note: Render will automatically generate secure strings for `NEXTAUTH_SECRET` and `SMM_COLLECT_SECRET` based on the blueprint rules.*
 
-### 4. Run Database Migrations
-Once the web service finishes building, you need to push the Prisma schema to your new database so the tables are created.
+### 4. Initialize Database and Create Admin User
+Once the web service finishes building, you need to push the Prisma schema to your new database to create the tables, and then seed the initial admin account.
+*(If you are seeing a `DATABASE_UNAVAILABLE` or `Invalid `prisma.user.findFirst()`... relation does not exist` error, it is because you have not run these commands yet!)*
+
 1. In the Render Dashboard, go to your **crossway-web** service.
-2. Click on the **Shell** tab.
-3. Run the following command:
+2. Click on the **Shell** tab on the left sidebar.
+3. Run the following command to create the database tables:
    ```bash
    npx prisma@6 db push
    ```
-4. *Optional:* If you want to create a default Super Admin account immediately, you can run a custom seed script here if you have one.
+4. Next, run the following command to generate the default Super Admin user:
+   ```bash
+   npx prisma@6 db seed
+   ```
+5. The shell will output the default Admin Email (`admin@crossway.com`) and Password (`Admin123!`). You can now log into your live application!
 
 ### 5. Final Configuration Checklist
 - **OAuth / Google Cloud:** If you are using Google Search Console or PageSpeed Insights, ensure you go to the **Environment** tab of the `crossway-web` service and add your `PAGESPEED_API_KEY` and `GOOGLE_APPLICATION_CREDENTIALS_JSON`.
