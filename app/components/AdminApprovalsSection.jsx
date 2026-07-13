@@ -238,7 +238,8 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
       fd.append("selectedSite", selectedSite);
       fd.append("approveOnAssignment", wasApproveOnAssignment ? "1" : "0");
       if (form.scheduledFor) {
-        fd.append("scheduledFor", form.scheduledFor);
+        // Convert the local datetime string into a precise UTC ISO string before sending
+        fd.append("scheduledFor", new Date(form.scheduledFor).toISOString());
       }
       const res = await fetch("/api/admin/approvals", { method: "POST", body: fd });
       const data = await res.json();

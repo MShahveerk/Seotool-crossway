@@ -16,7 +16,9 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Production
 
-See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for environment variables, `prisma migrate deploy`, Docker/standalone build, and security notes.
+See **[RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md)** for instructions on how to seamlessly deploy the Web Application and the Background Publishing Scheduler to Render using the included Blueprint (`render.yaml`).
+
+Alternatively, see **[DEPLOYMENT.md](./DEPLOYMENT.md)** for manual server configurations, `prisma migrate deploy`, Docker/standalone build, and security notes.
 
 ## Scripts
 
