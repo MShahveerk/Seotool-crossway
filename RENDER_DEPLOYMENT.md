@@ -12,10 +12,9 @@ When you deploy this application, Render will create **three** components:
 ## Step-by-Step Deployment Guide
 
 ### 1. Set Up the Database
-Before deploying the application, you need a MySQL database. Render natively supports PostgreSQL, but for MySQL, you have two options:
-* **Option A:** Use an external managed MySQL provider (like [PlanetScale](https://planetscale.com/), [Aiven](https://aiven.io/), or [DigitalOcean](https://www.digitalocean.com/)).
-* **Option B:** Deploy a MySQL container using Render's "Private Services" feature.
-> *Note: Copy the `DATABASE_URL` connection string provided by your MySQL host. You will need it in Step 2.*
+Before deploying the application, you need a PostgreSQL database.
+You can instantly deploy a managed PostgreSQL instance directly from the Render Dashboard by clicking **New > PostgreSQL**.
+> *Note: Copy the "Internal Database URL" (if deploying the web app in the same region) or the "External Database URL" connection string provided by Render. You will need it in Step 2.*
 
 ### 2. Deploy the Blueprint
 1. Log in to your [Render Dashboard](https://dashboard.render.com/).
@@ -28,7 +27,7 @@ In the Render dashboard, you will be asked to provide values for the following e
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | The MySQL connection string from Step 1. Ensure it looks like `mysql://user:pass@host:3306/db`. **This must be identical for both the Web Service and the Worker.** |
+| `DATABASE_URL` | The PostgreSQL connection string from Step 1. Ensure it looks like `postgres://user:pass@host:5432/db`. **This must be identical for both the Web Service and the Worker.** |
 | `META_PAGE_ACCESS_TOKEN` | Your Facebook/Meta Graph API token. Required for the background worker to publish scheduled posts. |
 | `META_APP_ACCESS_TOKEN` | Secondary Meta token (if applicable). |
 
