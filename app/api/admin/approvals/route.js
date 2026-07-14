@@ -308,14 +308,64 @@ export async function POST(req) {
       console.error("Failed to generate HMAC token", err);
     }
 
-    if (!approveOnAssignment && assignee.email) {
+    if (!approveOnAssignment) {
       try {
         const { sendPostApprovalNotification } = await import("../../../../lib/email.js");
-        // We explicitly inject the caption into the approval object here so the email template can render it
         const emailApproval = { ...approval, caption };
-        await sendPostApprovalNotification(assignee.email, emailApproval, assignee, token);
+
+        // 1. Send to the main Assignee (Approver)
+        if (assignee.email) {
+          console.log(`[INFO] Sending main approval email to Approver: ${assignee.email}`);
+          await sendPostApprovalNotification(assignee.email, emailApproval, assignee, token);
+        }
+
+        // 2. Send copy to all active Super Admins
+        const superAdmins = await prisma.user.findMany({
+          where: { role: ROLES.SUPER_ADMIN, isActive: true },
+          select: { email: true, name: true }
+        });
+        for (const admin of superAdmins) {
+          if (admin.email && admin.email !== assignee.email) {
+            console.log(`[INFO] Sending copy of approval email to Super Admin: ${admin.email}`);
+            await sendPostApprovalNotification(admin.email, emailApproval, admin, token);
+          }
+        }
+
+        // 3. Send copy to relevant SMMs (creator or mapped)
+        const relevantSmms = await prisma.user.findMany({
+          where: { role: ROLES.SMM, isActive: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            siteLink: true,
+            facebookPageId: true,
+            instagramUserId: true,
+            accessibleSites: { select: { siteLink: true } }
+          }
+        });
+
+        for (const smm of relevantSmms) {
+          const isCreator = smm.id === session.user.id;
+          
+          const primary = smm.siteLink ? String(smm.siteLink).toLowerCase().trim() : "";
+          const normSelected = selectedSite ? String(selectedSite).toLowerCase().trim() : "";
+          
+          const isSiteMatch = (primary && primary === normSelected) || (smm.accessibleSites || []).some(
+            (entry) => entry.siteLink && String(entry.siteLink).toLowerCase().trim() === normSelected
+          );
+          const isMetaMatch = (smm.facebookPageId && String(smm.facebookPageId).toLowerCase().trim() === normSelected) || 
+                              (smm.instagramUserId && String(smm.instagramUserId).toLowerCase().trim() === normSelected);
+          
+          const isRelevant = isCreator || isSiteMatch || isMetaMatch;
+          
+          if (isRelevant && smm.email && smm.email !== assignee.email) {
+            console.log(`[INFO] Sending copy of approval email to SMM: ${smm.email}`);
+            await sendPostApprovalNotification(smm.email, emailApproval, smm, token);
+          }
+        }
       } catch (emailErr) {
-        console.error("Failed to send approval email notification", emailErr);
+        console.error("Failed to send approval email notifications", emailErr);
       }
     }
 
