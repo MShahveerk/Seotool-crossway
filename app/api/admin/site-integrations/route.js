@@ -3,6 +3,7 @@ import { assignAccessibleSites, assignSiteLink, getAllUsers, getUserById } from 
 import { getSearchAnalyticsTimeSeries } from "../../../../lib/searchconsole";
 import { normalizeSiteOrigin } from "../../../../lib/validation";
 import { PERMISSIONS, ROLES } from "../../../../lib/rbac";
+import axios from "axios";
 
 function resolveSiteProperty(siteUrl, propertyId) {
   const rawProperty = String(propertyId || "").trim();
@@ -85,17 +86,59 @@ export async function GET() {
     const users = await getAllUsers(true);
     const currentSuperAdmin = users.find((u) => u.id === session.user.id) || null;
 
-    const siteEntries = users
-      .filter((u) => Boolean(u.siteLink) || Boolean(u.facebookPageId) || Boolean(u.instagramUserId))
-      .map((u) => ({
-        userId: u.id,
-        userName: u.name || u.email,
-        userEmail: u.email,
-        siteLink: u.siteLink || "",
-        facebookPageId: u.facebookPageId || "",
-        instagramUserId: u.instagramUserId || "",
-        isSuperAdminSite: u.id === session.user.id,
-      }));
+    // Fetch Meta accounts from token
+    const metaToken = process.env.META_PAGE_ACCESS_TOKEN || process.env.META_APP_ACCESS_TOKEN;
+    let metaAccounts = [];
+    if (metaToken) {
+      try {
+        const url = `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,instagram_business_account&access_token=${metaToken}`;
+        const res = await axios.get(url);
+        if (res.data?.data) {
+          metaAccounts = res.data.data.map(page => ({
+            userId: null,
+            userName: page.name,
+            userEmail: "",
+            siteLink: "",
+            facebookPageId: page.id,
+            instagramUserId: page.instagram_business_account?.id || "",
+            isSuperAdminSite: false,
+          }));
+        }
+      } catch (err) {
+        try {
+          const url = `https://graph.facebook.com/v20.0/me?fields=id,name,instagram_business_account&access_token=${metaToken}`;
+          const res = await axios.get(url);
+          if (res.data?.id) {
+            metaAccounts = [{
+              userId: null,
+              userName: res.data.name || "Configured Page",
+              userEmail: "",
+              siteLink: "",
+              facebookPageId: res.data.id,
+              instagramUserId: res.data.instagram_business_account?.id || "",
+              isSuperAdminSite: false,
+            }];
+          }
+        } catch (innerErr) {
+          console.error("Failed to fetch meta accounts for site integrations", innerErr.message);
+        }
+      }
+    }
+
+    const siteEntries = [
+      ...users
+        .filter((u) => Boolean(u.siteLink) || Boolean(u.facebookPageId) || Boolean(u.instagramUserId))
+        .map((u) => ({
+          userId: u.id,
+          userName: u.name || u.email,
+          userEmail: u.email,
+          siteLink: u.siteLink || "",
+          facebookPageId: u.facebookPageId || "",
+          instagramUserId: u.instagramUserId || "",
+          isSuperAdminSite: u.id === session.user.id,
+        })),
+      ...metaAccounts
+    ];
 
     let filteredEntries = siteEntries;
     if (session.user.role === ROLES.SMM) {
