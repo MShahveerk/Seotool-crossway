@@ -27,7 +27,7 @@ In the Render dashboard, you will be asked to provide values for the following e
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | The PostgreSQL connection string from Step 1. Ensure it looks like `postgres://user:pass@host:5432/db`. **This must be identical for both the Web Service and the Worker.** |
+| `DATABASE_URL` | The PostgreSQL connection string from Step 1. Ensure it looks like `postgres://user:pass@host:5432/db`. **If using Render's Internal URL (`dpg-...`), your Web Service and Database MUST be deployed in the exact same Region (e.g., Ohio). If they are not, you must use the External URL and append `?sslmode=require` to it.** |
 | `META_PAGE_ACCESS_TOKEN` | Your Facebook/Meta Graph API token. Required for the background worker to publish scheduled posts. |
 | `META_APP_ACCESS_TOKEN` | Secondary Meta token (if applicable). |
 
@@ -38,7 +38,7 @@ Once the web service finishes building, you need to push the Prisma schema to yo
 *(If you are seeing a `DATABASE_UNAVAILABLE` or `Invalid `prisma.user.findFirst()`... relation does not exist` error, it is because you have not run these commands yet!)*
 
 1. In the Render Dashboard, go to your **crossway-web** service.
-2. Click on the **Shell** tab on the left sidebar.
+2. Click on the **Shell** tab on the left sidebar. *(Note: If you just changed your `DATABASE_URL` environment variable, you must close the shell and let the service fully redeploy before opening a new shell, or it will use the old credentials).*
 3. Run the following command to create the database tables:
    ```bash
    npx prisma@6 db push
