@@ -1137,7 +1137,8 @@ export default function AdminSection() {
                     <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-white">
                       {availableIntegrations.map((integration) => {
                         const val = integration.facebookPageId || integration.siteLink;
-                        const label = integration.userName || val;
+                        const metaMatch = metaAccounts.find(a => a.facebookPageId === val);
+                        const label = metaMatch ? metaMatch.name : (integration.userName || val);
                         const isChecked = (formData.accessibleSites || []).includes(val);
                         return (
                           <label key={val} className="flex items-center space-x-2.5 py-1 hover:bg-gray-50 rounded px-1.5 cursor-pointer">
