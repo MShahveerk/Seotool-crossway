@@ -145,7 +145,7 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
     } finally {
       setLoading(false);
     }
-  }, [effectiveSite, isSuperAdmin]);
+  }, [effectiveSite, hasGlobalAccess]);
 
   useEffect(() => {
     loadSnapshot();

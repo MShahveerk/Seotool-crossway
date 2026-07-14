@@ -153,7 +153,7 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
     } finally {
       setLoading(false);
     }
-  }, [activeSite, isSuperAdmin, platform]);
+  }, [activeSite, hasGlobalAccess, platform]);
 
   useEffect(() => {
     fetchStats();
