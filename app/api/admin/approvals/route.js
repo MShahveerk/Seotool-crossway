@@ -226,6 +226,7 @@ export async function POST(req) {
         }
       );
     }
+    // Primary assignee for DB record (first approver-role match, or fallback)
     const assignee = matchedUsers.find(u => u.role === ROLES.APPROVER || u.role === ROLES.USER || u.role === "user") || matchedUsers[0];
     if (!assignee) {
       return new Response(JSON.stringify({ error: "Assignee user not found." }), {
@@ -239,6 +240,9 @@ export async function POST(req) {
         headers: { "Content-Type": "application/json" },
       });
     }
+    // All approver-role matches — each one gets the notification email
+    const allApprovers = matchedUsers.filter(u => u.role === ROLES.APPROVER || u.role === ROLES.USER || u.role === "user");
+    if (allApprovers.length === 0) allApprovers.push(assignee);
 
     const buf = Buffer.from(await image.arrayBuffer());
     const fileName = `${crypto.randomBytes(20).toString("hex")}${ext}`;
@@ -338,10 +342,14 @@ export async function POST(req) {
           createdByEmail: creator?.email || session.user.email || "",
         };
 
-        // 1. Send to the main Assignee (Approver)
-        if (assignee.email) {
-          console.log(`[INFO] Sending main approval email to Approver: ${assignee.email}`);
-          await sendPostApprovalNotification(assignee.email, emailApproval, assignee, token);
+        // 1. Send to ALL matched Approvers
+        const notifiedEmails = new Set();
+        for (const approver of allApprovers) {
+          if (approver.email && !notifiedEmails.has(approver.email)) {
+            console.log(`[INFO] Sending main approval email to Approver: ${approver.email}`);
+            await sendPostApprovalNotification(approver.email, emailApproval, approver, token);
+            notifiedEmails.add(approver.email);
+          }
         }
 
         // 2. Send copy to all active Super Admins
@@ -350,9 +358,10 @@ export async function POST(req) {
           select: { email: true, name: true }
         });
         for (const admin of superAdmins) {
-          if (admin.email && admin.email !== assignee.email) {
+          if (admin.email && !notifiedEmails.has(admin.email)) {
             console.log(`[INFO] Sending copy of approval email to Super Admin: ${admin.email}`);
             await sendPostApprovalNotification(admin.email, emailApproval, admin, token);
+            notifiedEmails.add(admin.email);
           }
         }
 
@@ -384,9 +393,10 @@ export async function POST(req) {
           
           const isRelevant = isCreator || isSiteMatch || isMetaMatch;
           
-          if (isRelevant && smm.email && smm.email !== assignee.email) {
+          if (isRelevant && smm.email && !notifiedEmails.has(smm.email)) {
             console.log(`[INFO] Sending copy of approval email to SMM: ${smm.email}`);
             await sendPostApprovalNotification(smm.email, emailApproval, smm, token);
+            notifiedEmails.add(smm.email);
           }
         }
       } catch (emailErr) {
