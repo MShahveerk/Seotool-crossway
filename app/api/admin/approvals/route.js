@@ -188,6 +188,8 @@ export async function POST(req) {
       where: { role: { not: ROLES.SUPER_ADMIN } },
       select: {
         id: true,
+        email: true,
+        name: true,
         role: true,
         siteLink: true,
         facebookPageId: true,
