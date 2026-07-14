@@ -18,12 +18,42 @@ export async function GET(req) {
     let whereClause = {};
 
     if (role !== "super_admin" && role !== "smm") {
-      whereClause = {
-        OR: [
-          { assigneeId: session.user.id },
-          { createdById: session.user.id }
-        ]
-      };
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        include: { accessibleSites: true }
+      });
+      const allowedSites = [
+        user.siteLink,
+        user.facebookPageId,
+        user.instagramUserId,
+        ...(user.accessibleSites || []).map(s => s.siteLink)
+      ].filter(Boolean);
+
+      if (allowedSites.length > 0) {
+        whereClause = {
+          AND: [
+            {
+              OR: [
+                { assigneeId: session.user.id },
+                { createdById: session.user.id }
+              ]
+            },
+            {
+              OR: [
+                { facebookPageId: { in: allowedSites } },
+                { siteLink: { in: allowedSites } }
+              ]
+            }
+          ]
+        };
+      } else {
+        whereClause = {
+          OR: [
+            { assigneeId: session.user.id },
+            { createdById: session.user.id }
+          ]
+        };
+      }
     }
 
     const approvals = await prisma.approval.findMany({

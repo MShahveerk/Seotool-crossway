@@ -128,7 +128,7 @@ export async function PATCH(req, { params }) {
     
     // Validate role if provided
     if (body.role) {
-      const validRoles = [ROLES.USER, ROLES.VIEWER, ROLES.SMM];
+      const validRoles = [ROLES.USER, ROLES.VIEWER, ROLES.SMM, ROLES.APPROVER];
       if (!validRoles.includes(body.role)) {
         return new Response(
           JSON.stringify({ error: `Invalid role. Must be one of: ${validRoles.join(", ")}` }),

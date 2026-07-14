@@ -32,7 +32,34 @@ export async function GET(req) {
     const forSmmDisplay = req.nextUrl?.searchParams?.get("smmDisplay") === "1";
 
     // SMM users see everything. Others only see their assigned items.
-    const whereClause = session.user.role === ROLES.SMM ? {} : { assigneeId };
+    let whereClause = session.user.role === ROLES.SMM ? {} : { assigneeId };
+
+    if (session.user.role === ROLES.APPROVER) {
+      const user = await prisma.user.findUnique({
+        where: { id: assigneeId },
+        include: { accessibleSites: true }
+      });
+      const allowedSites = [
+        user.siteLink,
+        user.facebookPageId,
+        user.instagramUserId,
+        ...(user.accessibleSites || []).map(s => s.siteLink)
+      ].filter(Boolean);
+
+      if (allowedSites.length > 0) {
+        whereClause = {
+          AND: [
+            { assigneeId },
+            {
+              OR: [
+                { facebookPageId: { in: allowedSites } },
+                { siteLink: { in: allowedSites } }
+              ]
+            }
+          ]
+        };
+      }
+    }
 
     const rows = await prisma.approval.findMany({
       where: whereClause,

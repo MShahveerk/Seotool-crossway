@@ -73,6 +73,9 @@ model Approval {
   scheduledFor          DateTime? @map("scheduled_for")
   publishStatus         String?   @default("unpublish") @db.VarChar(32) @map("publish_status")
   publishError          String?   @db.Text @map("publish_error")
+  facebookPageId        String?   @map("facebook_page_id") @db.VarChar(191)
+  instagramUserId       String?   @map("instagram_user_id") @db.VarChar(191)
+  siteLink              String?   @map("site_link") @db.VarChar(512)
 
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")

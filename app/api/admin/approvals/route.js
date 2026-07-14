@@ -249,6 +249,11 @@ export async function POST(req) {
 
     const imagePath = `/uploads/approvals/${fileName}`;
 
+    const isMeta = !selectedSite.startsWith("http");
+    const fbPageId = isMeta ? (selectedSite === assignee.facebookPageId ? selectedSite : (assignee.facebookPageId || selectedSite)) : null;
+    const igUserId = isMeta ? (selectedSite === assignee.instagramUserId ? selectedSite : (assignee.instagramUserId || null)) : null;
+    const siteUrlLink = isMeta ? (assignee.siteLink || null) : selectedSite;
+
     const now = new Date();
     const approval = await prisma.approval.create({
       data: {
@@ -262,6 +267,9 @@ export async function POST(req) {
         respondedAt: approveOnAssignment ? now : null,
         awaitingAdminReview: false,
         scheduledFor: (!isNaN(scheduledFor) ? scheduledFor : null),
+        facebookPageId: fbPageId,
+        instagramUserId: igUserId,
+        siteLink: siteUrlLink,
       },
       include: {
         assignee: { select: { id: true, email: true, name: true } },
