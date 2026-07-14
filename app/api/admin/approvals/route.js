@@ -197,13 +197,23 @@ export async function POST(req) {
     });
 
     const matchedUsers = candidateUsers.filter((u) => {
-      const primary = normalizeSiteForMatch(u.siteLink);
-      const isSiteMatch = (primary && primary === normalizedSelectedSite) || (u.accessibleSites || []).some(
-        (entry) => normalizeSiteForMatch(entry.siteLink) === normalizedSelectedSite
-      );
-      const isMetaMatch = (u.facebookPageId && u.facebookPageId === selectedSite) || (u.instagramUserId && u.instagramUserId === selectedSite);
-      return isSiteMatch || isMetaMatch;
+      const matchPrimarySite = u.siteLink && normalizeSiteForMatch(u.siteLink) === normalizedSelectedSite;
+      const matchPrimaryFb = u.facebookPageId && String(u.facebookPageId).trim() === String(selectedSite).trim();
+      const matchPrimaryIg = u.instagramUserId && String(u.instagramUserId).trim() === String(selectedSite).trim();
+
+      const matchAccessible = (u.accessibleSites || []).some((entry) => {
+        if (!entry.siteLink) return false;
+        const entryVal = String(entry.siteLink).trim();
+        const selectedVal = String(selectedSite).trim();
+        return entryVal === selectedVal || normalizeSiteForMatch(entry.siteLink) === normalizedSelectedSite;
+      });
+
+      return matchPrimarySite || matchPrimaryFb || matchPrimaryIg || matchAccessible;
     });
+
+    console.log(`[DEBUG] Selected Site for Approval: "${selectedSite}"`);
+    console.log(`[DEBUG] Candidate Users count: ${candidateUsers.length}`);
+    console.log("[DEBUG] Matched Users:", matchedUsers.map(u => ({ id: u.id, role: u.role, email: u.email })));
 
     if (matchedUsers.length === 0) {
       return new Response(
