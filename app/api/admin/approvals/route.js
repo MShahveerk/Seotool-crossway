@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from "fs/promises";
+import { existsSync } from "fs";
 import path from "path";
 import crypto from "crypto";
 import { Prisma } from "@prisma/client";
@@ -242,12 +243,15 @@ export async function POST(req) {
 
     const buf = Buffer.from(await image.arrayBuffer());
     const fileName = `${crypto.randomBytes(20).toString("hex")}${ext}`;
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "approvals");
+    const isProductionDisk = existsSync("/var/data");
+    const uploadsDir = isProductionDisk 
+      ? "/var/data/uploads/approvals" 
+      : path.join(process.cwd(), "public", "uploads", "approvals");
     await mkdir(uploadsDir, { recursive: true });
     const diskPath = path.join(uploadsDir, fileName);
     await writeFile(diskPath, buf);
 
-    const imagePath = `/uploads/approvals/${fileName}`;
+    const imagePath = `/api/uploads/${fileName}`;
 
     const isMeta = !selectedSite.startsWith("http");
     const fbPageId = isMeta ? (selectedSite === assignee.facebookPageId ? selectedSite : (assignee.facebookPageId || selectedSite)) : null;
