@@ -26,13 +26,6 @@ export async function PATCH(req, { params }) {
       });
     }
 
-    if (session.user.role === ROLES.SUPER_ADMIN) {
-      return new Response(JSON.stringify({ error: "Super admins do not use this endpoint." }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
     const { id } = await params;
     const body = await req.json();
     const action = String(body.action || "").toLowerCase();
@@ -44,7 +37,33 @@ export async function PATCH(req, { params }) {
         headers: { "Content-Type": "application/json" },
       });
     }
-    if (approval.assigneeId !== session.user.id) {
+
+    let hasAccess = false;
+    if (session.user.role === ROLES.SUPER_ADMIN) {
+      hasAccess = true;
+    } else if (approval.assigneeId === session.user.id) {
+      hasAccess = true;
+    } else if (session.user.role === ROLES.SMM) {
+      const isCreator = approval.createdById === session.user.id;
+      
+      const allowedSites = [
+        session.user.siteLink,
+        session.user.facebookPageId,
+        session.user.instagramUserId,
+        ...(session.user.accessibleSites || []).map(s => s.siteLink || s)
+      ].filter(Boolean).map(s => String(s).toLowerCase().trim());
+
+      const postFb = approval.facebookPageId ? String(approval.facebookPageId).toLowerCase().trim() : "";
+      const postSite = approval.siteLink ? String(approval.siteLink).toLowerCase().trim() : "";
+
+      const isPageMatch = (postFb && allowedSites.includes(postFb)) || (postSite && allowedSites.includes(postSite));
+      
+      if (isCreator || isPageMatch) {
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { "Content-Type": "application/json" },
