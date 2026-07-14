@@ -88,7 +88,7 @@ export async function GET(req) {
     let hiddenIds = new Set();
     try {
       const hiddenRows = await prisma.$queryRaw(
-        Prisma.sql`SELECT id FROM approvals WHERE assignee_id = ${assigneeId} AND hidden_from_assignee = 1`
+        Prisma.sql`SELECT id FROM approvals WHERE assignee_id = ${assigneeId} AND hidden_from_assignee = true`
       );
       hiddenIds = new Set(
         Array.isArray(hiddenRows) ? hiddenRows.map((r) => String((r && r.id) || "")).filter(Boolean) : []
@@ -103,7 +103,7 @@ export async function GET(req) {
       let skippedIds = new Set();
       try {
         const skippedRows = await prisma.$queryRaw(
-          Prisma.sql`SELECT id FROM approvals WHERE assignee_id = ${assigneeId} AND skipped_assignee_review = 1`
+          Prisma.sql`SELECT id FROM approvals WHERE assignee_id = ${assigneeId} AND skipped_assignee_review = true`
         );
         skippedIds = new Set(
           Array.isArray(skippedRows)
