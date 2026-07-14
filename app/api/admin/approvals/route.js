@@ -214,20 +214,7 @@ export async function POST(req) {
         }
       );
     }
-    if (matchedUsers.length > 1) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Multiple users are mapped to the selected site. Keep a single mapped user per site before creating approvals.",
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    const assignee = matchedUsers[0];
+    const assignee = matchedUsers.find(u => u.role === ROLES.APPROVER || u.role === ROLES.USER || u.role === "user") || matchedUsers[0];
     if (!assignee) {
       return new Response(JSON.stringify({ error: "Assignee user not found." }), {
         status: 400,
