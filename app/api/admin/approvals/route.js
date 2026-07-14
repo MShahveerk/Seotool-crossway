@@ -296,6 +296,27 @@ export async function POST(req) {
       }
     }
 
+    // --- Send Email Notification ---
+    let token = null;
+    try {
+      const crypto = await import("crypto");
+      const secret = process.env.NEXTAUTH_SECRET || "default-secret";
+      token = crypto.createHmac('sha256', secret).update(String(approval.id)).digest('hex');
+    } catch(err) {
+      console.error("Failed to generate HMAC token", err);
+    }
+
+    if (!approveOnAssignment && assignee.email) {
+      try {
+        const { sendPostApprovalNotification } = await import("../../../../lib/email.js");
+        // We explicitly inject the caption into the approval object here so the email template can render it
+        const emailApproval = { ...approval, caption };
+        await sendPostApprovalNotification(assignee.email, emailApproval, assignee, token);
+      } catch (emailErr) {
+        console.error("Failed to send approval email notification", emailErr);
+      }
+    }
+
     const approvalOut = { ...approval, caption, instructions, skippedAssigneeReview: approveOnAssignment };
 
     return new Response(JSON.stringify({ approval: approvalOut }), {
@@ -304,6 +325,7 @@ export async function POST(req) {
     });
   } catch (error) {
     if (error.message === "Unauthorized" || error.message.includes("Super admin")) {
+
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { "Content-Type": "application/json" },

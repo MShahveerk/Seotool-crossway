@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
-    "scheduler": "node scripts/scheduler.mjs",
     "build:win": "next build --webpack",
     "start": "next start",
     "lint": "eslint",

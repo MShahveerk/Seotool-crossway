@@ -3,6 +3,10 @@ const nextConfig = {
   // Use webpack instead of Turbopack for stable dev behavior on Windows
   // Do NOT include turbopack config when using webpack - it causes conflicts
 
+  experimental: {
+    instrumentationHook: true,
+  },
+
   // Docker / self-hosted: produces a minimal server bundle (see DEPLOYMENT.md)
   output: process.env.DOCKER_BUILD === "1" ? "standalone" : undefined,
 
@@ -72,12 +76,15 @@ const nextConfig = {
         net: false,
         tls: false,
         crypto: false,
+        child_process: false,
+        path: false,
       };
     }
     
     // Keep server-only externals in the server bundle
     if (isServer) {
       config.externals = config.externals || [];
+      config.externals.push("node-cron");
     }
     
     return config;

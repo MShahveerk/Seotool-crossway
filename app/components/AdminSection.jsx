@@ -711,8 +711,10 @@ export default function AdminSection() {
     }
   };
 
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+
   const showFullUserSetup = Boolean(
-    !editingUser || (editingUser && editingUser.role !== ROLES.SUPER_ADMIN)
+    (!editingUser || (editingUser && editingUser.role !== ROLES.SUPER_ADMIN)) && showAdvancedSettings
   );
 
   if (loading) {
@@ -1059,27 +1061,75 @@ export default function AdminSection() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
-                  Site Link
-                </label>
-                <input
-                  type="url"
-                  value={formData.siteLink}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setFormData((prev) => ({ ...prev, siteLink: v }));
-                    if (showFullUserSetup) {
-                      setSiteIntegrationForm((prev) => ({ ...prev, siteUrl: v }));
-                    }
-                  }}
-                  placeholder="https://example.com"
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black"
-                />
+              {(!editingUser || (editingUser && editingUser.role !== ROLES.SUPER_ADMIN)) && (
+                <div className="col-span-1 md:col-span-2 rounded-lg border border-[#0EFF2A]/20 bg-[#0EFF2A]/5 p-4 dark:border-[#0EFF2A]/10 dark:bg-[#0EFF2A]/5">
+                  <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">
+                    Link Meta Account (Facebook & Instagram)
+                  </label>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                    Select a Facebook Page linked to your Meta Token. This will automatically set the Facebook Page ID and Instagram User ID for publishing.
+                  </p>
+
+                  {loadingMetaAccounts ? (
+                    <div className="text-xs text-gray-500 animate-pulse">Loading connected Meta accounts...</div>
+                  ) : metaAccounts.length > 0 ? (
+                    <select
+                      value={formData.facebookPageId || ""}
+                      onChange={(e) => {
+                        const selectedPageId = e.target.value;
+                        const account = metaAccounts.find(a => a.facebookPageId === selectedPageId);
+
+                        setFormData({
+                          ...formData,
+                          facebookPageId: selectedPageId,
+                          instagramUserId: account ? account.instagramUserId : ""
+                        });
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white text-gray-900 shadow-sm"
+                    >
+                      <option value="">-- Select a Meta Account --</option>
+                      {metaAccounts.map((acc) => (
+                        <option key={acc.facebookPageId} value={acc.facebookPageId}>
+                          {acc.name} {acc.instagramUserId ? "(Includes Instagram)" : "(Facebook Only)"}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                      No Meta accounts found. Please ensure <code>META_PAGE_ACCESS_TOKEN</code> is set in your environment variables.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                  className="text-xs font-semibold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors flex items-center gap-1"
+                >
+                  {showAdvancedSettings ? "Hide Advanced Tracking Settings" : "Show Advanced Tracking Settings (GTM, Site Link)"}
+                </button>
               </div>
 
               {showFullUserSetup && (
-                <div className="space-y-3">
+                <div className="space-y-4 pt-2">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
+                      Site Link
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.siteLink}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setFormData((prev) => ({ ...prev, siteLink: v }));
+                        setSiteIntegrationForm((prev) => ({ ...prev, siteUrl: v }));
+                      }}
+                      placeholder="https://example.com"
+                      className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
                       GTM Container ID
@@ -1095,65 +1145,26 @@ export default function AdminSection() {
                       Add GTM container ID to ingest social metrics via `/api/smm/collect`.
                     </p>
                   </div>
-                  <div className="col-span-1 md:col-span-2 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-300 dark:bg-gray-100">
-                    <label className="block text-sm font-bold text-gray-800 mb-2">
-                      Link Meta Account (Facebook & Instagram)
-                    </label>
-                    <p className="text-xs text-gray-600 mb-3">
-                      Select a Facebook Page linked to your Meta Token. This will automatically set the Facebook Page ID and Instagram User ID for publishing.
-                    </p>
-
-                    {loadingMetaAccounts ? (
-                      <div className="text-xs text-gray-500 animate-pulse">Loading connected Meta accounts...</div>
-                    ) : metaAccounts.length > 0 ? (
-                      <select
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Facebook Page ID (Manual)</label>
+                      <input
+                        type="text"
                         value={formData.facebookPageId || ""}
-                        onChange={(e) => {
-                          const selectedPageId = e.target.value;
-                          const account = metaAccounts.find(a => a.facebookPageId === selectedPageId);
-
-                          setFormData({
-                            ...formData,
-                            facebookPageId: selectedPageId,
-                            instagramUserId: account ? account.instagramUserId : ""
-                          });
-                        }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white text-gray-900 shadow-sm"
-                      >
-                        <option value="">-- Select a Meta Account --</option>
-                        {metaAccounts.map((acc) => (
-                          <option key={acc.facebookPageId} value={acc.facebookPageId}>
-                            {acc.name} {acc.instagramUserId ? "(Includes Instagram)" : "(Facebook Only)"}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
-                        No Meta accounts found. Please ensure <code>META_PAGE_ACCESS_TOKEN</code> is set in your environment variables.
-                      </div>
-                    )}
-
-                    <div className="mt-4 grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Facebook Page ID</label>
-                        <input
-                          type="text"
-                          value={formData.facebookPageId || ""}
-                          onChange={(e) => setFormData({ ...formData, facebookPageId: e.target.value })}
-                          placeholder="Manual ID entry..."
-                          className="w-full px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-700 bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Instagram User ID</label>
-                        <input
-                          type="text"
-                          value={formData.instagramUserId || ""}
-                          onChange={(e) => setFormData({ ...formData, instagramUserId: e.target.value })}
-                          placeholder="Manual ID entry..."
-                          className="w-full px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-700 bg-white"
-                        />
-                      </div>
+                        onChange={(e) => setFormData({ ...formData, facebookPageId: e.target.value })}
+                        placeholder="Manual ID entry..."
+                        className="w-full px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-700 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Instagram User ID (Manual)</label>
+                      <input
+                        type="text"
+                        value={formData.instagramUserId || ""}
+                        onChange={(e) => setFormData({ ...formData, instagramUserId: e.target.value })}
+                        placeholder="Manual ID entry..."
+                        className="w-full px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-700 bg-white"
+                      />
                     </div>
                   </div>
                 </div>

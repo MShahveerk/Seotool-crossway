@@ -25,13 +25,17 @@ You can instantly deploy a managed PostgreSQL instance directly from the Render 
 ### 3. Configure Environment Variables
 In the Render dashboard, you will be asked to provide values for the following environment variables:
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | The PostgreSQL connection string from Step 1. Ensure it looks like `postgres://user:pass@host:5432/db`. **If using Render's Internal URL (`dpg-...`), your Web Service and Database MUST be deployed in the exact same Region (e.g., Ohio). If they are not, you must use the External URL and append `?sslmode=require` to it.** |
-| `META_PAGE_ACCESS_TOKEN` | Your Facebook/Meta Graph API token. Required for the background worker to publish scheduled posts. |
-| `META_APP_ACCESS_TOKEN` | Secondary Meta token (if applicable). |
+Here is the exact `.env` file structure you should have in Render (under the Environment tab).
 
-*Note: Render will automatically generate secure strings for `NEXTAUTH_SECRET` and `SMM_COLLECT_SECRET` based on the blueprint rules.*
+| Variable | Description | Example Value |
+|----------|-------------|---------------|
+| `DATABASE_URL` | Your PostgreSQL connection string. Ensure it uses `postgres://`. **If using Render's Internal URL (`dpg-...`), your Web Service and Database MUST be deployed in the exact same Region. Otherwise, use the External URL and append `?sslmode=require` to it.** | `postgres://user:pass@dpg-xxx-a.ohio-postgres.render.com/db` |
+| `META_PAGE_ACCESS_TOKEN` | Your Facebook/Meta Graph API token. Required to automatically fetch connected Pages and publish scheduled posts to Facebook/Instagram. | `EAANUp83ZBGK0BRZAFJID96LVKf...` |
+| `META_APP_ACCESS_TOKEN` | Secondary Meta token (if applicable). | `EAANUp83ZBGK0BRdLBUqXWu4qr...` |
+| `NEXTAUTH_SECRET` | A secure random string for encrypting user sessions. Render auto-generates this, but you can override it if you want. | `AIzaSyAaKzAzuyC_8w1G0L5wI...` |
+| `NEXTAUTH_URL` | The public URL of your Render application. NextAuth requires this to work. | `https://crossway-web.onrender.com` |
+
+*Note: Render will automatically generate secure strings for `NEXTAUTH_SECRET` and `SMM_COLLECT_SECRET` if deployed via the blueprint.*
 
 ### 4. Initialize Database and Create Admin User
 Once the web service finishes building, you need to push the Prisma schema to your new database to create the tables, and then seed the initial admin account.

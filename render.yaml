@@ -19,22 +19,6 @@ services:
         generateValue: true
       - key: SMM_COLLECT_SECRET
         generateValue: true
-
-  # 2. Background Scheduler (Cron) Worker
-  - type: worker
-    name: crossway-scheduler
-    env: node
-    plan: free
-    buildCommand: npm install && npx prisma@6 generate
-    startCommand: npm run scheduler
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        # This MUST be the exact same database URL as the web service
-        sync: false
-      - key: NEXTAUTH_URL
-        value: https://crossway-web.onrender.com
       - key: META_PAGE_ACCESS_TOKEN
         # Enter this manually in the Render dashboard
         sync: false

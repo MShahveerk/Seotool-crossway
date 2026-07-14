@@ -13,4 +13,8 @@ export async function register() {
   }
   const { validateStartup } = await import("./lib/startup.js");
   await validateStartup();
+
+  // Start the integrated cron scheduler
+  const { startCronJobs } = await import("./lib/cron.js");
+  startCronJobs();
 }
