@@ -151,10 +151,14 @@ export async function PATCH(req, { params }) {
       delete body.siteLink; // Remove from update body
     }
     
-    // Handle accessible sites for viewers / SMM (read-only multi-site roles)
+    // Handle accessible sites for viewers / SMM / Approver (multi-site roles)
     if (body.accessibleSites !== undefined) {
       const roleForSites = body.role || existing.role;
-      if (roleForSites === ROLES.VIEWER || roleForSites === ROLES.SMM) {
+      if (
+        roleForSites === ROLES.VIEWER ||
+        roleForSites === ROLES.SMM ||
+        roleForSites === ROLES.APPROVER
+      ) {
         await assignAccessibleSites(id, body.accessibleSites);
       }
       delete body.accessibleSites; // Remove from update body
