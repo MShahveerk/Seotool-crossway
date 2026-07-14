@@ -323,7 +323,20 @@ export async function POST(req) {
     if (!approveOnAssignment) {
       try {
         const { sendPostApprovalNotification } = await import("../../../../lib/email.js");
-        const emailApproval = { ...approval, caption };
+
+        // Fetch full creator details for the email
+        const creator = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { name: true, email: true }
+        });
+
+        const emailApproval = {
+          ...approval,
+          caption,
+          selectedSite,
+          createdByName: creator?.name || session.user.name || "Admin",
+          createdByEmail: creator?.email || session.user.email || "",
+        };
 
         // 1. Send to the main Assignee (Approver)
         if (assignee.email) {
