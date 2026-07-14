@@ -31,8 +31,11 @@ export async function GET(req) {
     const assigneeId = session.user.id;
     const forSmmDisplay = req.nextUrl?.searchParams?.get("smmDisplay") === "1";
 
+    // SMM users see everything. Others only see their assigned items.
+    const whereClause = session.user.role === ROLES.SMM ? {} : { assigneeId };
+
     const rows = await prisma.approval.findMany({
-      where: { assigneeId },
+      where: whereClause,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,

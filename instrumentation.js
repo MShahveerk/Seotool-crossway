@@ -15,6 +15,8 @@ export async function register() {
   await validateStartup();
 
   // Start the integrated cron scheduler
-  const { startCronJobs } = await import("./lib/cron.js");
-  startCronJobs();
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    const { startCronJobs } = await import("./lib/cron.js");
+    startCronJobs();
+  }
 }

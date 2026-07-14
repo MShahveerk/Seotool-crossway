@@ -17,7 +17,7 @@ export async function GET(req) {
     const role = session.user.role;
     let whereClause = {};
 
-    if (role !== "super_admin") {
+    if (role !== "super_admin" && role !== "smm") {
       whereClause = {
         OR: [
           { assigneeId: session.user.id },
