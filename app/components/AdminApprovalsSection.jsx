@@ -15,6 +15,7 @@ import {
   FiEyeOff,
 } from "react-icons/fi";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
+import MediaCropModal from "./MediaCropModal";
 
 function formatDateTime(iso) {
   if (!iso) return "—";
@@ -117,6 +118,60 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
   const [actionsMenuId, setActionsMenuId] = useState(null);
   const actionsMenuWrapRef = useRef(null);
   const approvalImageInputRef = useRef(null);
+
+  // Crop modal state
+  const [cropPendingFile, setCropPendingFile] = useState(null);  // raw file awaiting crop
+  const [cropPreviews, setCropPreviews] = useState({});           // { facebook?: string, instagram?: string } object URLs
+
+  // Determine which Meta platforms the selected site belongs to
+  const isMeta = selectedSite && !selectedSite.startsWith("http");
+  const cropPlatforms = isMeta ? ["facebook", "instagram"] : [];
+
+  // Revoke object URLs on unmount or when they change
+  useEffect(() => {
+    return () => {
+      Object.values(cropPreviews).forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    };
+  }, [cropPreviews]);
+
+  const handleFileSelect = (rawFile) => {
+    if (!rawFile) return;
+    const isVideo = rawFile.type.startsWith("video/");
+    // Skip crop modal for videos or non-Meta sites
+    if (isVideo || cropPlatforms.length === 0) {
+      setForm((f) => ({ ...f, imageFile: rawFile }));
+      setCropPreviews({});
+      return;
+    }
+    // Open crop modal
+    setCropPendingFile(rawFile);
+  };
+
+  const handleCropConfirm = (croppedFiles) => {
+    // Use the facebook crop as the upload file (primary), fall back to instagram or original
+    const uploadFile = croppedFiles.facebook || croppedFiles.instagram || cropPendingFile;
+    setForm((f) => ({ ...f, imageFile: uploadFile }));
+    // Build preview URLs
+    const previews = {};
+    if (croppedFiles.facebook) previews.facebook = URL.createObjectURL(croppedFiles.facebook);
+    if (croppedFiles.instagram) previews.instagram = URL.createObjectURL(croppedFiles.instagram);
+    setCropPreviews(previews);
+    setCropPendingFile(null);
+  };
+
+  const handleCropUseOriginal = () => {
+    setForm((f) => ({ ...f, imageFile: cropPendingFile }));
+    setCropPreviews({});
+    setCropPendingFile(null);
+  };
+
+  const handleCropCancel = () => {
+    setCropPendingFile(null);
+    // Reset file input so user can re-select
+    if (approvalImageInputRef.current) approvalImageInputRef.current.value = "";
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -275,6 +330,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
   }
 
   return (
+    <>
     <div className="rounded-xl border border-gray-200 bg-[#ffffff] overflow-hidden">
       <div className="px-4 sm:px-6 py-5 border-b border-gray-200">
         <h2 className="text-2xl font-bold text-gray-900">Approvals</h2>
@@ -329,9 +385,10 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                 id="approval-new-image"
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, imageFile: e.target.files?.[0] || null }))
-                }
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  if (f) handleFileSelect(f);
+                }}
                 className="sr-only"
               />
               <label
@@ -354,6 +411,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                     className="text-sm font-medium text-gray-600 hover:text-gray-900 underline underline-offset-2"
                     onClick={() => {
                       setForm((f) => ({ ...f, imageFile: null }));
+                      setCropPreviews({});
                       if (approvalImageInputRef.current) approvalImageInputRef.current.value = "";
                     }}
                   >
@@ -364,6 +422,28 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                 <span className="text-sm text-gray-500">Click to select image or video.</span>
               )}
             </div>
+
+            {/* Platform crop previews */}
+            {(cropPreviews.facebook || cropPreviews.instagram) && (
+              <div className="flex flex-wrap gap-4 mt-3">
+                {cropPreviews.facebook && (
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-blue-600">🟦 Facebook</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={cropPreviews.facebook} alt="Facebook crop preview" className="rounded-lg border border-gray-200 shadow-sm" style={{ width: 160, height: 84, objectFit: 'cover' }} />
+                    <span className="text-[10px] text-gray-400">1200 × 628</span>
+                  </div>
+                )}
+                {cropPreviews.instagram && (
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-pink-600">🟣 Instagram</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={cropPreviews.instagram} alt="Instagram crop preview" className="rounded-lg border border-gray-200 shadow-sm" style={{ width: 84, height: 84, objectFit: 'cover' }} />
+                    <span className="text-[10px] text-gray-400">1080 × 1080</span>
+                  </div>
+                )}
+              </div>
+            )}
             <p className="text-xs text-gray-500 mt-1">
               Images: JPEG, PNG, WebP, or GIF — max 5 MB. Videos: MP4, WebM, or MOV — max 100 MB.
             </p>
@@ -676,5 +756,17 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
         </div>
       </div>
     </div>
+
+    {/* Crop modal — only mounted when a file is pending crop */}
+    {cropPendingFile && (
+      <MediaCropModal
+        file={cropPendingFile}
+        platforms={cropPlatforms}
+        onConfirm={handleCropConfirm}
+        onUseOriginal={handleCropUseOriginal}
+        onCancel={handleCropCancel}
+      />
+    )}
+    </>
   );
 }
