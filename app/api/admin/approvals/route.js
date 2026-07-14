@@ -2,9 +2,9 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { Prisma } from "@prisma/client";
-import { requireSuperAdmin } from "../../../../lib/middleware/auth";
+import { requireSuperAdmin, requirePermission } from "../../../../lib/middleware/auth";
 import prisma from "../../../../lib/prisma";
-import { ROLES } from "../../../../lib/rbac";
+import { ROLES, PERMISSIONS } from "../../../../lib/rbac";
 import {
   fetchCaptionMapByApprovalIds,
   mergeCaptionFieldsIntoApprovals,
@@ -54,7 +54,7 @@ function mediaMaxBytes(mime) {
 /** GET — list approvals (optional ?countOnly=1 for unread badge) */
 export async function GET(req) {
   try {
-    await requireSuperAdmin();
+    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
 
     const countOnly = req.nextUrl.searchParams.get("countOnly") === "1";
     if (countOnly) {
@@ -86,7 +86,7 @@ export async function GET(req) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    if (error.message === "Unauthorized" || error.message.includes("Super admin")) {
+    if (error.message === "Unauthorized" || error.message.includes("Forbidden")) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { "Content-Type": "application/json" },
@@ -102,7 +102,7 @@ export async function GET(req) {
 /** POST — multipart: media file field `image` (legacy key), title, selectedSite, optional approveOnAssignment */
 export async function POST(req) {
   try {
-    const session = await requireSuperAdmin();
+    const session = await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
 
     const form = await req.formData();
     const image = form.get("image");
@@ -189,16 +189,19 @@ export async function POST(req) {
         id: true,
         role: true,
         siteLink: true,
+        facebookPageId: true,
+        instagramUserId: true,
         accessibleSites: { select: { siteLink: true } },
       },
     });
 
     const matchedUsers = candidateUsers.filter((u) => {
       const primary = normalizeSiteForMatch(u.siteLink);
-      if (primary && primary === normalizedSelectedSite) return true;
-      return (u.accessibleSites || []).some(
+      const isSiteMatch = (primary && primary === normalizedSelectedSite) || (u.accessibleSites || []).some(
         (entry) => normalizeSiteForMatch(entry.siteLink) === normalizedSelectedSite
       );
+      const isMetaMatch = (u.facebookPageId && u.facebookPageId === selectedSite) || (u.instagramUserId && u.instagramUserId === selectedSite);
+      return isSiteMatch || isMetaMatch;
     });
 
     if (matchedUsers.length === 0) {

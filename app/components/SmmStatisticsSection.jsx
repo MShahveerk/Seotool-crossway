@@ -107,6 +107,7 @@ function AnalyticsTooltip({ active, payload, label, chartYear }) {
 export default function SmmStatisticsSection({ selectedSite = "" }) {
   const { data: session } = useSession();
   const isSuperAdmin = session?.user?.role === "super_admin";
+  const hasGlobalAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
   const ownSite =
     session?.user?.siteLink ||
     (Array.isArray(session?.user?.accessibleSites) && session?.user?.accessibleSites[0]) ||
@@ -123,7 +124,7 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
   const [viewMonth, setViewMonth] = useState(() => formatYearMonth(new Date()));
   const [reportModalOpen, setReportModalOpen] = useState(false);
 
-  const activeSite = isSuperAdmin ? (selectedSite || ownSite) : ownSite;
+  const activeSite = hasGlobalAccess ? (selectedSite || ownSite) : ownSite;
 
   const fetchStats = useCallback(async () => {
     if (!activeSite) {
@@ -139,7 +140,7 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
       const query = new URLSearchParams({
         range: SMM_STATS_RANGE,
         platform,
-        ...(isSuperAdmin ? { url: activeSite } : {}),
+        ...(hasGlobalAccess ? { url: activeSite } : {}),
       });
       const res = await fetch(`/api/smm/stats?${query.toString()}`);
       const data = await res.json();

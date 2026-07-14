@@ -34,13 +34,31 @@ export async function GET(req) {
         ? session.user.accessibleSites[0]
         : "");
 
-    let targetSite =
-      role === ROLES.SUPER_ADMIN
+    const hasGlobalAccess = role === ROLES.SUPER_ADMIN || role === ROLES.SMM;
+
+    let targetSite = hasGlobalAccess
         ? (req.nextUrl.searchParams.get("url") || fallbackSite || "")
         : fallbackSite;
 
-    targetSite = normalizeSiteOrigin(targetSite);
-    if (!targetSite) {
+    // Resolve targetSite to siteLink if it is a Meta Page ID
+    let resolvedSiteLink = targetSite;
+    if (targetSite) {
+      const mappedUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { facebookPageId: targetSite },
+            { instagramUserId: targetSite }
+          ]
+        },
+        select: { siteLink: true }
+      });
+      if (mappedUser?.siteLink) {
+        resolvedSiteLink = mappedUser.siteLink;
+      }
+    }
+
+    const targetSiteNormalized = normalizeSiteOrigin(resolvedSiteLink);
+    if (!targetSiteNormalized) {
       return new Response(
         JSON.stringify({ baselines: [], siteUrl: null, message: "No site selected." }),
         { status: 200, headers: { "Content-Type": "application/json" } }
@@ -49,7 +67,7 @@ export async function GET(req) {
 
     if (role === ROLES.USER) {
       const ownSite = normalizeSiteOrigin(session.user.siteLink || "");
-      if (!ownSite || ownSite !== targetSite) {
+      if (!ownSite || ownSite !== targetSiteNormalized) {
         return new Response(JSON.stringify({ error: "Access denied for selected site." }), {
           status: 403,
           headers: { "Content-Type": "application/json" },
@@ -63,7 +81,7 @@ export async function GET(req) {
       );
       const ownLink = normalizeSiteOrigin(session.user.siteLink || "");
       if (ownLink) allowed.add(ownLink);
-      if (!allowed.size || !allowed.has(targetSite)) {
+      if (!allowed.size || !allowed.has(targetSiteNormalized)) {
         return new Response(JSON.stringify({ error: "Access denied for selected site." }), {
           status: 403,
           headers: { "Content-Type": "application/json" },
@@ -72,13 +90,13 @@ export async function GET(req) {
     }
 
     let ownerUser = await prisma.user.findFirst({
-      where: { siteLink: targetSite },
+      where: { siteLink: targetSiteNormalized },
       orderBy: { createdAt: "asc" },
       select: { id: true },
     });
     if (!ownerUser) {
       const statOwner = await prisma.socialMediaDailyStat.findFirst({
-        where: { siteLink: targetSite },
+        where: { siteLink: targetSiteNormalized },
         orderBy: { statDate: "desc" },
         select: { userId: true },
       });
@@ -88,7 +106,7 @@ export async function GET(req) {
     if (!ownerUser?.id) {
       return new Response(
         JSON.stringify({
-          siteUrl: targetSite,
+          siteUrl: targetSiteNormalized,
           baselines: [],
           message: "No user or baseline rows found for this site yet.",
         }),
@@ -99,7 +117,7 @@ export async function GET(req) {
     const rawRows = await prisma.socialMediaDailyStat.findMany({
       where: {
         userId: ownerUser.id,
-        siteLink: targetSite,
+        siteLink: targetSiteNormalized,
       },
       orderBy: [{ statDate: "desc" }, { updatedAt: "desc" }],
     });
@@ -132,7 +150,7 @@ export async function GET(req) {
 
     return new Response(
       JSON.stringify({
-        siteUrl: targetSite,
+        siteUrl: targetSiteNormalized,
         userId: ownerUser.id,
         baselines,
       }),

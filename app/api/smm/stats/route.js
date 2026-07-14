@@ -128,13 +128,31 @@ export async function GET(req) {
         ? session.user.accessibleSites[0]
         : "");
 
-    let targetSite =
-      role === ROLES.SUPER_ADMIN
+    const hasGlobalAccess = role === ROLES.SUPER_ADMIN || role === ROLES.SMM;
+
+    let targetSite = hasGlobalAccess
         ? (req.nextUrl.searchParams.get("url") || fallbackSite || "")
         : fallbackSite;
 
-    targetSite = normalizeSiteOrigin(targetSite);
-    if (!targetSite) {
+    // Resolve targetSite to siteLink if it is a Meta Page ID
+    let resolvedSiteLink = targetSite;
+    if (targetSite) {
+      const mappedUser = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { facebookPageId: targetSite },
+            { instagramUserId: targetSite }
+          ]
+        },
+        select: { siteLink: true }
+      });
+      if (mappedUser?.siteLink) {
+        resolvedSiteLink = mappedUser.siteLink;
+      }
+    }
+
+    const targetSiteNormalized = normalizeSiteOrigin(resolvedSiteLink);
+    if (!targetSiteNormalized) {
       return new Response(
         JSON.stringify({
           error: "No site selected.",
@@ -148,7 +166,7 @@ export async function GET(req) {
 
     if (role === ROLES.USER) {
       const ownSite = normalizeSiteOrigin(session.user.siteLink || "");
-      if (!ownSite || ownSite !== targetSite) {
+      if (!ownSite || ownSite !== targetSiteNormalized) {
         return new Response(JSON.stringify({ error: "Access denied for selected site." }), {
           status: 403,
           headers: { "Content-Type": "application/json" },
@@ -162,7 +180,7 @@ export async function GET(req) {
       );
       const ownLink = normalizeSiteOrigin(session.user.siteLink || "");
       if (ownLink) allowed.add(ownLink);
-      if (!allowed.size || !allowed.has(targetSite)) {
+      if (!allowed.size || !allowed.has(targetSiteNormalized)) {
         return new Response(JSON.stringify({ error: "Access denied for selected site." }), {
           status: 403,
           headers: { "Content-Type": "application/json" },
@@ -201,7 +219,7 @@ export async function GET(req) {
           : { platform }
         : {};
     const filter = {
-      siteLink: targetSite,
+      siteLink: targetSiteNormalized,
       statDate: { gte: start, lte: end },
       ...platformWhere,
     };
@@ -213,7 +231,7 @@ export async function GET(req) {
     const rows = rawRows.filter((r) => String(r.platform || "").toLowerCase() !== "linkedin");
 
     const usersForSite = await prisma.user.findMany({
-      where: { siteLink: targetSite },
+      where: { siteLink: targetSiteNormalized },
       select: { id: true, email: true, name: true, gtmContainerId: true },
       orderBy: { createdAt: "asc" },
     });
@@ -225,7 +243,7 @@ export async function GET(req) {
     if (!rows.length) {
       return new Response(
         JSON.stringify({
-          siteUrl: targetSite,
+          siteUrl: targetSiteNormalized,
           range: rangeEffective,
           platform,
           monthlyBreakdown,
@@ -323,7 +341,7 @@ export async function GET(req) {
 
     return new Response(
       JSON.stringify({
-        siteUrl: targetSite,
+        siteUrl: targetSiteNormalized,
         range: rangeEffective,
         platform,
         monthlyBreakdown,

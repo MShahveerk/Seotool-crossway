@@ -60,6 +60,7 @@ export default function DashboardLayout({
   const [failedSiteLogos, setFailedSiteLogos] = useState({});
   const [approvalAdminUnread, setApprovalAdminUnread] = useState(0);
   const isSuperAdmin = session?.user?.role === "super_admin";
+  const hasGlobalSiteAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
   const userSiteLink = session?.user?.siteLink || "";
 
   useEffect(() => {
@@ -115,7 +116,7 @@ export default function DashboardLayout({
 
   useEffect(() => {
     const fetchAvailableSites = async () => {
-      if (!isSuperAdmin) {
+      if (!hasGlobalSiteAccess) {
         setAvailableSites([]);
         return;
       }
@@ -124,9 +125,7 @@ export default function DashboardLayout({
         const res = await fetch("/api/admin/site-integrations");
         if (!res.ok) return;
         const data = await res.json();
-        const sites = (data.sites || []).map((entry) =>
-          typeof entry === "string" ? entry : entry.siteLink
-        ).filter(Boolean);
+        const sites = data.sites || [];
         const ownSite = data.superAdminSite || "";
         setSuperAdminPrimarySite(ownSite);
         setAvailableSites(sites);
@@ -138,25 +137,28 @@ export default function DashboardLayout({
     };
 
     fetchAvailableSites();
-  }, [isSuperAdmin]);
+  }, [hasGlobalSiteAccess]);
 
   useEffect(() => {
-    if (!isSuperAdmin || selectedSite) return;
+    if (!hasGlobalSiteAccess || selectedSite) return;
     if (superAdminPrimarySite) {
       onSelectedSiteChange?.(superAdminPrimarySite);
       return;
     }
     if (availableSites.length > 0) {
-      onSelectedSiteChange?.(availableSites[0]);
+      const firstVal = availableSites[0].facebookPageId || availableSites[0].siteLink;
+      onSelectedSiteChange?.(firstVal);
     }
-  }, [availableSites, isSuperAdmin, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
+  }, [availableSites, hasGlobalSiteAccess, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
 
   useEffect(() => {
-    if (!isSuperAdmin || !availableSites.length || !selectedSite) return;
-    if (!availableSites.includes(selectedSite)) {
-      onSelectedSiteChange?.(superAdminPrimarySite || availableSites[0]);
+    if (!hasGlobalSiteAccess || !availableSites.length || !selectedSite) return;
+    const isValIncluded = availableSites.some(s => s.facebookPageId === selectedSite || s.siteLink === selectedSite);
+    if (!isValIncluded) {
+      const firstVal = availableSites[0].facebookPageId || availableSites[0].siteLink;
+      onSelectedSiteChange?.(superAdminPrimarySite || firstVal);
     }
-  }, [availableSites, isSuperAdmin, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
+  }, [availableSites, hasGlobalSiteAccess, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
 
   useEffect(() => {
     setSiteLogoVisible(true);
@@ -290,10 +292,10 @@ export default function DashboardLayout({
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto" aria-label="Dashboard navigation">
-            {isSuperAdmin && !isCompactSidebar && (
+            {hasGlobalSiteAccess && !isCompactSidebar && (
               <div className="px-3 pb-4 relative">
                 <p className="block text-[10px] font-semibold tracking-wider text-gray-500 uppercase mb-2">
-                  Site Dashboard
+                  Client Account
                 </p>
                 <button
                   type="button"
@@ -303,21 +305,14 @@ export default function DashboardLayout({
                   aria-expanded={superAdminSiteDropdownOpen}
                 >
                   <span className="flex items-center gap-2 min-w-0">
-                    {selectedSite && !failedSiteLogos[selectedSite] && getFaviconUrl(selectedSite) ? (
-                      <img
-                        src={getFaviconUrl(selectedSite)}
-                        alt={`${getSiteHostName(selectedSite)} logo`}
-                        width={18}
-                        height={18}
-                        className="h-[18px] w-[18px] rounded-sm object-contain shrink-0"
-                        onError={() => markSiteLogoFailed(selectedSite)}
-                      />
-                    ) : (
-                      <div className="h-[18px] w-[18px] rounded-sm bg-gray-100 flex items-center justify-center shrink-0">
-                        <FiGlobe className="w-3 h-3 text-gray-500" />
-                      </div>
-                    )}
-                    <span className="truncate">{selectedSite ? getSiteHostName(selectedSite) : "No Site Selected"}</span>
+                    <div className="h-[18px] w-[18px] rounded-sm bg-gray-100 flex items-center justify-center shrink-0">
+                      <FiGlobe className="w-3 h-3 text-gray-500" />
+                    </div>
+                    <span className="truncate">
+                      {selectedSite ? (
+                        availableSites.find(s => s.facebookPageId === selectedSite || s.siteLink === selectedSite)?.userName || getSiteHostName(selectedSite)
+                      ) : "No Account Selected"}
+                    </span>
                   </span>
                   <FiChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${superAdminSiteDropdownOpen ? "rotate-180" : ""}`} />
                 </button>
@@ -331,43 +326,36 @@ export default function DashboardLayout({
                     <div
                       className="absolute left-3 right-3 top-[72px] z-20 rounded-lg border border-gray-200 bg-white shadow-xl max-h-64 overflow-y-auto"
                       role="listbox"
-                      aria-label="Select site dashboard"
+                      aria-label="Select client account"
                     >
-                      {availableSites.map((siteUrl) => (
-                        <button
-                          key={siteUrl}
-                          type="button"
-                          onClick={() => {
-                            onSelectedSiteChange?.(siteUrl);
-                            setSuperAdminSiteDropdownOpen(false);
-                          }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 ${
-                            selectedSite === siteUrl ? "bg-[#dff7de]" : ""
-                          }`}
-                        >
-                          {!failedSiteLogos[siteUrl] && getFaviconUrl(siteUrl) ? (
-                            <img
-                              src={getFaviconUrl(siteUrl)}
-                              alt={`${getSiteHostName(siteUrl)} logo`}
-                              width={18}
-                              height={18}
-                              className="h-[18px] w-[18px] rounded-sm object-contain shrink-0"
-                              onError={() => markSiteLogoFailed(siteUrl)}
-                            />
-                          ) : (
+                      {availableSites.map((siteEntry) => {
+                        const val = siteEntry.facebookPageId || siteEntry.siteLink;
+                        const label = siteEntry.userName || getSiteHostName(val);
+                        return (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => {
+                              onSelectedSiteChange?.(val);
+                              setSuperAdminSiteDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 ${
+                              selectedSite === val ? "bg-[#dff7de]" : ""
+                            }`}
+                          >
                             <div className="h-[18px] w-[18px] rounded-sm bg-gray-100 flex items-center justify-center shrink-0">
                               <FiGlobe className="w-3 h-3 text-gray-500" />
                             </div>
-                          )}
-                          <span className="text-sm text-gray-800 truncate">{getSiteHostName(siteUrl)}</span>
-                        </button>
-                      ))}
+                            <span className="text-sm text-gray-800 truncate">{label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </>
                 )}
               </div>
             )}
-            {!isSuperAdmin && !isCompactSidebar && (
+            {!hasGlobalSiteAccess && !isCompactSidebar && (
               <div className="px-3 pb-4">
                 <p className="block text-[10px] font-semibold tracking-wider text-gray-500 uppercase mb-2">
                   Current Site
@@ -434,10 +422,10 @@ export default function DashboardLayout({
             })}
             
             {/* Admin items (excludes User Management — see footer) */}
-            {(session?.user?.role === "super_admin" || adminMenuItems.some((item) => !item.role)) && (
+            {(hasGlobalSiteAccess || adminMenuItems.some((item) => !item.role)) && (
               <div className={isCompactSidebar ? "" : "pt-4"}>
                 {adminMenuItems
-                  .filter((item) => !item.role || session?.user?.role === item.role)
+                  .filter((item) => !item.role || session?.user?.role === item.role || (item.id === "admin-approvals" && session?.user?.role === "smm"))
                   .map((item) => {
                   const IconComponent = item.icon;
                   const isActive = activeSection === item.id;

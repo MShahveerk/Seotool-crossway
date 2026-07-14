@@ -72,9 +72,9 @@ function BigStatCard({ label, value, sub, accentClass = "border-gray-100", barCl
 
 export default function DashboardSection({ selectedSite = "", onNavigate }) {
   const { data: session } = useSession();
-  const isSuperAdmin = session?.user?.role === "super_admin";
+  const hasGlobalAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
   const userSiteLink = session?.user?.siteLink || "";
-  const effectiveSite = isSuperAdmin ? (selectedSite || userSiteLink) : userSiteLink;
+  const effectiveSite = hasGlobalAccess ? (selectedSite || userSiteLink) : userSiteLink;
 
   const [loading, setLoading] = useState(true);
   const [gscPayload, setGscPayload] = useState(null);
@@ -105,10 +105,10 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
     setBaselineRows([]);
 
     const gq = new URLSearchParams({ range: "28d", page: "1", pageSize: "5" });
-    if (isSuperAdmin) gq.set("url", effectiveSite);
+    if (hasGlobalAccess) gq.set("url", effectiveSite);
 
     const bq = new URLSearchParams();
-    if (isSuperAdmin) bq.set("url", effectiveSite);
+    if (hasGlobalAccess) bq.set("url", effectiveSite);
 
     try {
       const [gscRes, baseRes] = await Promise.all([

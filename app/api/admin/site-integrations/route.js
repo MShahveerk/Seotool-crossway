@@ -1,7 +1,8 @@
-import { requireSuperAdmin } from "../../../../lib/middleware/auth";
+import { requireSuperAdmin, requirePermission } from "../../../../lib/middleware/auth";
 import { assignAccessibleSites, assignSiteLink, getAllUsers, getUserById } from "../../../../lib/auth";
 import { getSearchAnalyticsTimeSeries } from "../../../../lib/searchconsole";
 import { normalizeSiteOrigin } from "../../../../lib/validation";
+import { PERMISSIONS, ROLES } from "../../../../lib/rbac";
 
 function resolveSiteProperty(siteUrl, propertyId) {
   const rawProperty = String(propertyId || "").trim();
@@ -61,7 +62,8 @@ async function verifySiteOwnershipToken(siteUrl, verificationCode) {
 function getLast28Days() {
   const endDate = new Date();
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 28);
+  const offset = 28;
+  startDate.setDate(startDate.getDate() - offset);
 
   const formatDate = (date) => {
     const year = date.getFullYear();
@@ -76,42 +78,63 @@ function getLast28Days() {
   };
 }
 
-// GET /api/admin/site-integrations - Return integrated sites for current super admin
+// GET /api/admin/site-integrations - Return integrated sites for current super admin or SMM
 export async function GET() {
   try {
-    const session = await requireSuperAdmin();
+    const session = await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
     const users = await getAllUsers(true);
     const currentSuperAdmin = users.find((u) => u.id === session.user.id) || null;
 
     const siteEntries = users
-      .filter((u) => Boolean(u.siteLink))
+      .filter((u) => Boolean(u.siteLink) || Boolean(u.facebookPageId) || Boolean(u.instagramUserId))
       .map((u) => ({
         userId: u.id,
         userName: u.name || u.email,
         userEmail: u.email,
-        siteLink: u.siteLink,
+        siteLink: u.siteLink || "",
+        facebookPageId: u.facebookPageId || "",
+        instagramUserId: u.instagramUserId || "",
         isSuperAdminSite: u.id === session.user.id,
       }));
 
-    const uniqueBySite = Array.from(
-      siteEntries.reduce((map, entry) => {
-        if (!map.has(entry.siteLink)) {
-          map.set(entry.siteLink, entry);
-        }
-        return map;
-      }, new Map()).values()
-    );
+    let filteredEntries = siteEntries;
+    if (session.user.role === ROLES.SMM) {
+      const allowed = new Set(
+        (session.user.accessibleSites || []).map((s) => s.toLowerCase().trim()).filter(Boolean)
+      );
+      const ownLink = (session.user.siteLink || "").toLowerCase().trim();
+      if (ownLink) allowed.add(ownLink);
 
-    uniqueBySite.sort((a, b) => {
+      filteredEntries = siteEntries.filter((entry) => {
+        const link = (entry.siteLink || "").toLowerCase().trim();
+        const fb = (entry.facebookPageId || "").toLowerCase().trim();
+        const ig = (entry.instagramUserId || "").toLowerCase().trim();
+        return (link && allowed.has(link)) || (fb && allowed.has(fb)) || (ig && allowed.has(ig));
+      });
+    }
+
+    const uniqueEntries = [];
+    const seen = new Set();
+    for (const entry of filteredEntries) {
+      const key = entry.facebookPageId || entry.siteLink;
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        uniqueEntries.push(entry);
+      }
+    }
+
+    uniqueEntries.sort((a, b) => {
       if (a.isSuperAdminSite && !b.isSuperAdminSite) return -1;
       if (!a.isSuperAdminSite && b.isSuperAdminSite) return 1;
-      return a.siteLink.localeCompare(b.siteLink);
+      const nameA = a.facebookPageId || a.siteLink;
+      const nameB = b.facebookPageId || b.siteLink;
+      return nameA.localeCompare(nameB);
     });
 
     return new Response(
       JSON.stringify({
-        sites: uniqueBySite,
-        superAdminSite: currentSuperAdmin?.siteLink || null,
+        sites: uniqueEntries,
+        superAdminSite: currentSuperAdmin?.facebookPageId || currentSuperAdmin?.siteLink || null,
       }),
       {
         status: 200,
