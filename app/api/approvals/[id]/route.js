@@ -43,24 +43,6 @@ export async function PATCH(req, { params }) {
       hasAccess = true;
     } else if (approval.assigneeId === session.user.id) {
       hasAccess = true;
-    } else if (session.user.role === ROLES.SMM) {
-      const isCreator = approval.createdById === session.user.id;
-      
-      const allowedSites = [
-        session.user.siteLink,
-        session.user.facebookPageId,
-        session.user.instagramUserId,
-        ...(session.user.accessibleSites || []).map(s => s.siteLink || s)
-      ].filter(Boolean).map(s => String(s).toLowerCase().trim());
-
-      const postFb = approval.facebookPageId ? String(approval.facebookPageId).toLowerCase().trim() : "";
-      const postSite = approval.siteLink ? String(approval.siteLink).toLowerCase().trim() : "";
-
-      const isPageMatch = (postFb && allowedSites.includes(postFb)) || (postSite && allowedSites.includes(postSite));
-      
-      if (isCreator || isPageMatch) {
-        hasAccess = true;
-      }
     }
 
     if (!hasAccess) {
