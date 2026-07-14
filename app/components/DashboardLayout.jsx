@@ -59,9 +59,25 @@ export default function DashboardLayout({
   const [superAdminPrimarySite, setSuperAdminPrimarySite] = useState("");
   const [failedSiteLogos, setFailedSiteLogos] = useState({});
   const [approvalAdminUnread, setApprovalAdminUnread] = useState(0);
+  const [metaAccounts, setMetaAccounts] = useState([]);
   const isSuperAdmin = session?.user?.role === "super_admin";
   const hasGlobalSiteAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
   const userSiteLink = session?.user?.siteLink || "";
+
+  useEffect(() => {
+    if (!hasGlobalSiteAccess) return;
+    const fetchMetaAccounts = async () => {
+      try {
+        const res = await fetch("/api/admin/meta-accounts");
+        if (!res.ok) return;
+        const data = await res.json();
+        setMetaAccounts(data.accounts || []);
+      } catch (err) {
+        console.error("Failed to load Meta accounts", err);
+      }
+    };
+    fetchMetaAccounts();
+  }, [hasGlobalSiteAccess]);
 
   useEffect(() => {
     if (!isSuperAdmin) return undefined;
@@ -183,6 +199,16 @@ export default function DashboardLayout({
     } catch {
       return siteUrl.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0] || "No Site Linked";
     }
+  };
+
+  const getPageDisplayName = (siteEntryOrVal) => {
+    const val = typeof siteEntryOrVal === "string" ? siteEntryOrVal : (siteEntryOrVal.facebookPageId || siteEntryOrVal.siteLink);
+    const metaMatch = metaAccounts.find(a => a.facebookPageId === val);
+    if (metaMatch) {
+      return metaMatch.name;
+    }
+    const entryMatch = typeof siteEntryOrVal === "object" ? siteEntryOrVal : availableSites.find(s => s.facebookPageId === val || s.siteLink === val);
+    return entryMatch?.userName || getSiteHostName(val);
   };
 
   const getFaviconUrl = (siteUrl) => {
@@ -309,9 +335,7 @@ export default function DashboardLayout({
                       <FiGlobe className="w-3 h-3 text-gray-500" />
                     </div>
                     <span className="truncate">
-                      {selectedSite ? (
-                        availableSites.find(s => s.facebookPageId === selectedSite || s.siteLink === selectedSite)?.userName || getSiteHostName(selectedSite)
-                      ) : "No Account Selected"}
+                      {selectedSite ? getPageDisplayName(selectedSite) : "No Account Selected"}
                     </span>
                   </span>
                   <FiChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${superAdminSiteDropdownOpen ? "rotate-180" : ""}`} />
@@ -330,7 +354,7 @@ export default function DashboardLayout({
                     >
                       {availableSites.map((siteEntry) => {
                         const val = siteEntry.facebookPageId || siteEntry.siteLink;
-                        const label = siteEntry.userName || getSiteHostName(val);
+                        const label = getPageDisplayName(siteEntry);
                         return (
                           <button
                             key={val}
