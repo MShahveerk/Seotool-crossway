@@ -1,5 +1,5 @@
 import { requireSuperAdmin } from "../../../../lib/middleware/auth";
-import { getAllUsers, createUser, hashPassword, getUserByEmail } from "../../../../lib/auth";
+import { getAllUsers, createUser, hashPassword, getUserByEmail, assignAccessibleSites } from "../../../../lib/auth";
 import { ROLES } from "../../../../lib/rbac";
 import { logger } from "../../../../lib/logger";
 
@@ -52,6 +52,7 @@ export async function POST(req) {
       facebookPageId = null,
       instagramUserId = null,
       isActive = true,
+      accessibleSites = [],
     } = body;
     
     if (!email || !password) {
@@ -114,6 +115,10 @@ export async function POST(req) {
         skipVerification: true,
       }
     );
+
+    if (accessibleSites && accessibleSites.length > 0 && (role === ROLES.VIEWER || role === ROLES.SMM || role === ROLES.APPROVER)) {
+      await assignAccessibleSites(user.id, accessibleSites);
+    }
 
     logger.info("User created by admin (active, no email verification)", {
       userId: user.id,

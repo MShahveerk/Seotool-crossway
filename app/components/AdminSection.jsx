@@ -47,6 +47,7 @@ const SMM_BASELINE_PLATFORM_LABEL = {
 export default function AdminSection() {
   const { data: session } = useSession();
   const [users, setUsers] = useState([]);
+  const [availableIntegrations, setAvailableIntegrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -62,6 +63,7 @@ export default function AdminSection() {
     facebookPageId: "",
     instagramUserId: "",
     isActive: true,
+    accessibleSites: [],
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [activeActionMenuUserId, setActiveActionMenuUserId] = useState(null);
@@ -94,8 +96,21 @@ export default function AdminSection() {
   useEffect(() => {
     if (showCreateModal || editingUser) {
       fetchMetaAccounts();
+      fetchAvailableIntegrations();
     }
   }, [showCreateModal, editingUser]);
+
+  const fetchAvailableIntegrations = async () => {
+    try {
+      const res = await fetch("/api/admin/site-integrations");
+      const data = await res.json();
+      if (res.ok && data.sites) {
+        setAvailableIntegrations(data.sites);
+      }
+    } catch (err) {
+      console.error("Failed to load integrations", err);
+    }
+  };
 
   const fetchMetaAccounts = async () => {
     setLoadingMetaAccounts(true);
@@ -148,6 +163,7 @@ export default function AdminSection() {
         gtmContainerId: formData.gtmContainerId || null,
         facebookPageId: formData.facebookPageId || null,
         instagramUserId: formData.instagramUserId || null,
+        accessibleSites: formData.accessibleSites || [],
       };
       if (editingUser?.role !== ROLES.SUPER_ADMIN) {
         payload.role = formData.role;
@@ -231,6 +247,7 @@ export default function AdminSection() {
       facebookPageId: user.facebookPageId || "",
       instagramUserId: user.instagramUserId || "",
       isActive: user.isActive !== false,
+      accessibleSites: Array.isArray(user.accessibleSites) ? user.accessibleSites.map((s) => s.siteLink || s) : [],
     });
     setSiteIntegrationForm({
       userId: user.id,
@@ -557,6 +574,7 @@ export default function AdminSection() {
           gtmContainerId: formData.gtmContainerId || null,
           facebookPageId: formData.facebookPageId || null,
           instagramUserId: formData.instagramUserId || null,
+          accessibleSites: formData.accessibleSites || [],
         }),
       });
 
@@ -626,6 +644,7 @@ export default function AdminSection() {
         facebookPageId: "",
         instagramUserId: "",
         isActive: true,
+        accessibleSites: [],
       });
       setSiteIntegrationForm({
         userId: "",
@@ -785,6 +804,7 @@ export default function AdminSection() {
                   facebookPageId: "",
                   instagramUserId: "",
                   isActive: true,
+                  accessibleSites: [],
                 });
                 setSiteIntegrationForm({
                   userId: "",
@@ -1105,6 +1125,44 @@ export default function AdminSection() {
                 </div>
               )}
 
+              {(formData.role === "smm" || formData.role === "approver" || formData.role === "viewer") && (
+                <div className="col-span-1 md:col-span-2 rounded-xl border border-gray-200 p-4 space-y-3 bg-gray-50/50">
+                  <label className="block text-sm font-bold text-gray-800 dark:text-gray-900">
+                    Assign Accessible Client Sites / Pages
+                  </label>
+                  <p className="text-xs text-gray-600">
+                    Select the client sites or Meta pages this user is allowed to access and manage.
+                  </p>
+                  {availableIntegrations.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-white">
+                      {availableIntegrations.map((integration) => {
+                        const val = integration.facebookPageId || integration.siteLink;
+                        const label = integration.userName || val;
+                        const isChecked = (formData.accessibleSites || []).includes(val);
+                        return (
+                          <label key={val} className="flex items-center space-x-2.5 py-1 hover:bg-gray-50 rounded px-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                const nextList = e.target.checked
+                                  ? [...(formData.accessibleSites || []), val]
+                                  : (formData.accessibleSites || []).filter((x) => x !== val);
+                                setFormData({ ...formData, accessibleSites: nextList });
+                              }}
+                              className="w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                            />
+                            <span className="text-sm text-gray-700">{label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500">No integrated sites or Meta pages found.</div>
+                  )}
+                </div>
+              )}
+
               <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
                 <button
                   type="button"
@@ -1403,6 +1461,7 @@ export default function AdminSection() {
                       facebookPageId: "",
                       instagramUserId: "",
                       isActive: true,
+                      accessibleSites: [],
                     });
                     setSiteIntegrationForm({
                       userId: "",
