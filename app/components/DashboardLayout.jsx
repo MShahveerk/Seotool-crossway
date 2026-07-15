@@ -19,6 +19,7 @@ import {
   FiCalendar,
   FiCheckSquare,
 } from "react-icons/fi";
+import { SiFacebook } from "react-icons/si";
 
 const mainMenuItems = [
   { id: "dashboard", label: "Dashboard", icon: FiBarChart2 },
@@ -348,7 +349,13 @@ export default function DashboardLayout({
                 >
                   <span className="flex items-center gap-2 min-w-0">
                     <div className="h-[18px] w-[18px] rounded-sm bg-gray-100 flex items-center justify-center shrink-0">
-                      <FiGlobe className="w-3 h-3 text-gray-500" />
+                      {(() => {
+                        const entry = availableSites.find(s => s.siteLink === selectedSite || s.facebookPageId === selectedSite);
+                        if (entry?.type === "meta_page") {
+                          return <SiFacebook className="w-3 h-3 text-[#1877F2]" />;
+                        }
+                        return <FiGlobe className="w-3 h-3 text-gray-500" />;
+                      })()}
                     </div>
                     <span className="truncate">
                       {selectedSite ? getPageDisplayName(selectedSite) : "No Account Selected"}
@@ -356,7 +363,7 @@ export default function DashboardLayout({
                   </span>
                   <FiChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${superAdminSiteDropdownOpen ? "rotate-180" : ""}`} />
                 </button>
-
+ 
                 {superAdminSiteDropdownOpen && (
                   <>
                     <div
@@ -371,6 +378,7 @@ export default function DashboardLayout({
                       {availableSites.map((siteEntry) => {
                         const val = siteEntry.siteLink || siteEntry.facebookPageId;
                         const label = getPageDisplayName(siteEntry);
+                        const isMetaPage = siteEntry.type === "meta_page";
                         return (
                           <button
                             key={val}
@@ -384,7 +392,11 @@ export default function DashboardLayout({
                             }`}
                           >
                             <div className="h-[18px] w-[18px] rounded-sm bg-gray-100 flex items-center justify-center shrink-0">
-                              <FiGlobe className="w-3 h-3 text-gray-500" />
+                              {isMetaPage ? (
+                                <SiFacebook className="w-3 h-3 text-[#1877F2]" />
+                              ) : (
+                                <FiGlobe className="w-3 h-3 text-gray-500" />
+                              )}
                             </div>
                             <span className="text-sm text-gray-800 truncate">{label}</span>
                           </button>

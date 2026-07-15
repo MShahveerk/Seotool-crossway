@@ -140,70 +140,111 @@ export async function GET() {
       }
     }
 
-    const siteEntries = [
-      ...users
-        .filter((u) => Boolean(u.siteLink) || Boolean(u.facebookPageId) || Boolean(u.instagramUserId))
-        .map((u) => ({
-          userId: u.id,
-          userName: u.name || u.email,
-          userEmail: u.email,
-          siteLink: u.siteLink || "",
-          facebookPageId: u.facebookPageId || "",
-          instagramUserId: u.instagramUserId || "",
-          isSuperAdminSite: u.id === session.user.id,
-        })),
-      ...globalSites.map((s) => ({
-          userId: null,
-          userName: s.siteUrl,
-          userEmail: "",
-          siteLink: s.siteUrl,
-          facebookPageId: s.facebookPageId || "",
-          instagramUserId: s.instagramUserId || "",
-          isSuperAdminSite: false,
-      })),
-      ...metaAccounts
-    ];
+    // 1. Build Websites List
+    const websitesList = [];
+    const seenWebsites = new Set();
 
-    let filteredEntries = siteEntries;
-    if (session.user.role === ROLES.SMM) {
-      const allowed = new Set(
-        (session.user.accessibleSites || []).map((s) => s.toLowerCase().trim()).filter(Boolean)
-      );
-      const ownLink = (session.user.siteLink || "").toLowerCase().trim();
-      if (ownLink) allowed.add(ownLink);
-
-      filteredEntries = siteEntries.filter((entry) => {
-        const link = (entry.siteLink || "").toLowerCase().trim();
-        const fb = (entry.facebookPageId || "").toLowerCase().trim();
-        const ig = (entry.instagramUserId || "").toLowerCase().trim();
-        return (link && allowed.has(link)) || (fb && allowed.has(fb)) || (ig && allowed.has(ig));
-      });
-    }
-
-    // Sort entries so that those with a non-empty siteLink come first, ensuring they are not discarded during deduplication
-    const sortedEntries = [...filteredEntries].sort((a, b) => {
-      const aHasLink = Boolean(a.siteLink);
-      const bHasLink = Boolean(b.siteLink);
-      if (aHasLink && !bHasLink) return -1;
-      if (!aHasLink && bHasLink) return 1;
-      return 0;
-    });
-
-    const uniqueEntries = [];
-    const seen = new Set();
-    for (const entry of sortedEntries) {
-      const key = entry.facebookPageId || entry.siteLink;
-      if (key && !seen.has(key)) {
-        seen.add(key);
-        uniqueEntries.push(entry);
+    for (const s of globalSites) {
+      if (s.siteUrl) {
+        const norm = s.siteUrl.toLowerCase().trim();
+        if (!seenWebsites.has(norm)) {
+          seenWebsites.add(norm);
+          websitesList.push({
+            userId: null,
+            userName: s.siteUrl,
+            userEmail: "",
+            siteLink: s.siteUrl,
+            facebookPageId: s.facebookPageId || "",
+            instagramUserId: s.instagramUserId || "",
+            isSuperAdminSite: false,
+            type: "website"
+          });
+        }
       }
     }
 
+    for (const u of users) {
+      if (u.siteLink) {
+        const norm = u.siteLink.toLowerCase().trim();
+        if (!seenWebsites.has(norm)) {
+          seenWebsites.add(norm);
+          websitesList.push({
+            userId: u.id,
+            userName: u.siteLink,
+            userEmail: u.email,
+            siteLink: u.siteLink,
+            facebookPageId: u.facebookPageId || "",
+            instagramUserId: u.instagramUserId || "",
+            isSuperAdminSite: u.id === session.user.id,
+            type: "website"
+          });
+        }
+      }
+    }
+
+    // 2. Build Meta Pages List
+    const metaPagesList = [];
+    const seenMetaPages = new Set();
+
+    for (const page of metaAccounts) {
+      if (page.facebookPageId) {
+        const pageId = String(page.facebookPageId).trim();
+        if (!seenMetaPages.has(pageId)) {
+          seenMetaPages.add(pageId);
+          metaPagesList.push({
+            userId: null,
+            userName: page.userName || page.name,
+            userEmail: "",
+            siteLink: page.siteLink || "",
+            facebookPageId: page.facebookPageId,
+            instagramUserId: page.instagramUserId || "",
+            isSuperAdminSite: false,
+            type: "meta_page"
+          });
+        }
+      }
+    }
+
+    // 3. Filter lists by role
+    let filteredWebsites = websitesList;
+    let filteredMetaPages = metaPagesList;
+
+    if (session.user.role === ROLES.SMM) {
+      const allowedSites = new Set(
+        (session.user.accessibleSites || []).map((s) => s.toLowerCase().trim()).filter(Boolean)
+      );
+      const ownLink = (session.user.siteLink || "").toLowerCase().trim();
+      if (ownLink) allowedSites.add(ownLink);
+
+      filteredWebsites = websitesList.filter((w) => {
+        const link = (w.siteLink || "").toLowerCase().trim();
+        return link && allowedSites.has(link);
+      });
+
+      const allowedFbIds = new Set([
+        (session.user.facebookPageId || "").trim()
+      ].filter(Boolean));
+      
+      filteredWebsites.forEach(w => {
+        if (w.facebookPageId) allowedFbIds.add(w.facebookPageId.trim());
+      });
+
+      filteredMetaPages = metaPagesList.filter((m) => {
+        const fbId = (m.facebookPageId || "").trim();
+        return fbId && allowedFbIds.has(fbId);
+      });
+    }
+
+    const uniqueEntries = [...filteredWebsites, ...filteredMetaPages];
+
+    // Sort to keep super admin site first, then websites, then meta pages
     uniqueEntries.sort((a, b) => {
       if (a.isSuperAdminSite && !b.isSuperAdminSite) return -1;
       if (!a.isSuperAdminSite && b.isSuperAdminSite) return 1;
-      const nameA = a.facebookPageId || a.siteLink;
-      const nameB = b.facebookPageId || b.siteLink;
+      if (a.type === "website" && b.type === "meta_page") return -1;
+      if (a.type === "meta_page" && b.type === "website") return 1;
+      const nameA = a.userName || "";
+      const nameB = b.userName || "";
       return nameA.localeCompare(nameB);
     });
 
