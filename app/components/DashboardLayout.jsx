@@ -162,7 +162,7 @@ export default function DashboardLayout({
       return;
     }
     if (availableSites.length > 0) {
-      const firstVal = availableSites[0].facebookPageId || availableSites[0].siteLink;
+      const firstVal = availableSites[0].siteLink || availableSites[0].facebookPageId;
       onSelectedSiteChange?.(firstVal);
     }
   }, [availableSites, hasGlobalSiteAccess, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
@@ -171,7 +171,7 @@ export default function DashboardLayout({
     if (!hasGlobalSiteAccess || !availableSites.length || !selectedSite) return;
     const isValIncluded = availableSites.some(s => s.facebookPageId === selectedSite || s.siteLink === selectedSite);
     if (!isValIncluded) {
-      const firstVal = availableSites[0].facebookPageId || availableSites[0].siteLink;
+      const firstVal = availableSites[0].siteLink || availableSites[0].facebookPageId;
       onSelectedSiteChange?.(superAdminPrimarySite || firstVal);
     }
   }, [availableSites, hasGlobalSiteAccess, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
@@ -202,12 +202,12 @@ export default function DashboardLayout({
   };
 
   const getPageDisplayName = (siteEntryOrVal) => {
-    const val = typeof siteEntryOrVal === "string" ? siteEntryOrVal : (siteEntryOrVal.facebookPageId || siteEntryOrVal.siteLink);
-    const metaMatch = metaAccounts.find(a => a.facebookPageId === val);
+    const val = typeof siteEntryOrVal === "string" ? siteEntryOrVal : (siteEntryOrVal.siteLink || siteEntryOrVal.facebookPageId);
+    const metaMatch = metaAccounts.find(a => a.facebookPageId === val || a.siteLink === val);
     if (metaMatch) {
       return metaMatch.name;
     }
-    const entryMatch = typeof siteEntryOrVal === "object" ? siteEntryOrVal : availableSites.find(s => s.facebookPageId === val || s.siteLink === val);
+    const entryMatch = typeof siteEntryOrVal === "object" ? siteEntryOrVal : availableSites.find(s => s.siteLink === val || s.facebookPageId === val);
     const name = entryMatch?.userName || val;
     if (name && name.startsWith("http")) {
       return getSiteHostName(name);
@@ -357,7 +357,7 @@ export default function DashboardLayout({
                       aria-label="Select client account"
                     >
                       {availableSites.map((siteEntry) => {
-                        const val = siteEntry.facebookPageId || siteEntry.siteLink;
+                        const val = siteEntry.siteLink || siteEntry.facebookPageId;
                         const label = getPageDisplayName(siteEntry);
                         return (
                           <button

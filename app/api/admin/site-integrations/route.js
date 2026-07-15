@@ -180,9 +180,18 @@ export async function GET() {
       });
     }
 
+    // Sort entries so that those with a non-empty siteLink come first, ensuring they are not discarded during deduplication
+    const sortedEntries = [...filteredEntries].sort((a, b) => {
+      const aHasLink = Boolean(a.siteLink);
+      const bHasLink = Boolean(b.siteLink);
+      if (aHasLink && !bHasLink) return -1;
+      if (!aHasLink && bHasLink) return 1;
+      return 0;
+    });
+
     const uniqueEntries = [];
     const seen = new Set();
-    for (const entry of filteredEntries) {
+    for (const entry of sortedEntries) {
       const key = entry.facebookPageId || entry.siteLink;
       if (key && !seen.has(key)) {
         seen.add(key);
