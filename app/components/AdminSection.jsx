@@ -19,7 +19,8 @@ import {
   FiCheckCircle,
   FiRefreshCw,
   FiMoreVertical,
-  FiFilter
+  FiFilter,
+  FiAlertCircle
 } from "react-icons/fi";
 
 const ROLES = {
