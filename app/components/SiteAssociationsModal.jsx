@@ -16,11 +16,25 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
     instagramUserId: ""
   });
 
+  const [metaAccounts, setMetaAccounts] = useState([]);
+
   useEffect(() => {
     if (isOpen) {
       fetchSites();
+      fetchMetaAccounts();
     }
   }, [isOpen]);
+
+  const fetchMetaAccounts = async () => {
+    try {
+      const res = await fetch("/api/admin/meta-accounts");
+      if (!res.ok) return;
+      const data = await res.json();
+      setMetaAccounts(data.accounts || []);
+    } catch (err) {
+      console.error("Failed to load Meta accounts in modal", err);
+    }
+  };
 
   const fetchSites = async () => {
     setLoading(true);
@@ -167,25 +181,36 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
                       className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Facebook Page ID</label>
-                    <input
-                      type="text"
-                      value={formData.facebookPageId}
-                      onChange={(e) => setFormData({ ...formData, facebookPageId: e.target.value })}
-                      placeholder="e.g. 1029384756"
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Instagram User ID</label>
-                    <input
-                      type="text"
-                      value={formData.instagramUserId}
-                      onChange={(e) => setFormData({ ...formData, instagramUserId: e.target.value })}
-                      placeholder="e.g. 17841400000000"
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
-                    />
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Link Meta Page Account</label>
+                    <select
+                      value={metaAccounts.find(a => a.facebookPageId === formData.facebookPageId)?.id || ""}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const match = metaAccounts.find(a => a.id === selectedId);
+                        if (match) {
+                          setFormData({
+                            ...formData,
+                            facebookPageId: match.facebookPageId || "",
+                            instagramUserId: match.instagramUserId || "",
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            facebookPageId: "",
+                            instagramUserId: "",
+                          });
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent text-sm"
+                    >
+                      <option value="">-- No Linked Meta Page --</option>
+                      {metaAccounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name} (FB: {acc.facebookPageId} {acc.instagramUserId ? `| IG: ${acc.instagramUserId}` : ''})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
@@ -227,23 +252,36 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
                           className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
                         />
                       </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Facebook Page ID</label>
-                        <input
-                          type="text"
-                          value={formData.facebookPageId}
-                          onChange={(e) => setFormData({ ...formData, facebookPageId: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Instagram User ID</label>
-                        <input
-                          type="text"
-                          value={formData.instagramUserId}
-                          onChange={(e) => setFormData({ ...formData, instagramUserId: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
-                        />
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Link Meta Page Account</label>
+                        <select
+                          value={metaAccounts.find(a => a.facebookPageId === formData.facebookPageId)?.id || ""}
+                          onChange={(e) => {
+                            const selectedId = e.target.value;
+                            const match = metaAccounts.find(a => a.id === selectedId);
+                            if (match) {
+                              setFormData({
+                                ...formData,
+                                facebookPageId: match.facebookPageId || "",
+                                instagramUserId: match.instagramUserId || "",
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                facebookPageId: "",
+                                instagramUserId: "",
+                              });
+                            }
+                          }}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent text-sm"
+                        >
+                          <option value="">-- No Linked Meta Page --</option>
+                          {metaAccounts.map((acc) => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.name} (FB: {acc.facebookPageId} {acc.instagramUserId ? `| IG: ${acc.instagramUserId}` : ''})
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                     <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
@@ -262,10 +300,15 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
                           <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">GTM: {site.gtmContainerId}</span>
                         ) : null}
                         {site.facebookPageId ? (
-                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">FB: {site.facebookPageId}</span>
+                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
+                            FB Page: {(() => {
+                              const match = metaAccounts.find(a => a.facebookPageId === site.facebookPageId);
+                              return match ? match.name : site.facebookPageId;
+                            })()}
+                          </span>
                         ) : null}
                         {site.instagramUserId ? (
-                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">IG: {site.instagramUserId}</span>
+                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">IG Account</span>
                         ) : null}
                         {!site.gtmContainerId && !site.facebookPageId && !site.instagramUserId && (
                           <span className="text-gray-400 italic">No tracking IDs configured</span>
