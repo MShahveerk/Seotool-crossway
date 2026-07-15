@@ -1,0 +1,300 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { FiX, FiPlus, FiEdit2, FiTrash2, FiSave, FiAlertCircle, FiCheck, FiGlobe } from "react-icons/fi";
+
+export default function SiteAssociationsModal({ isOpen, onClose }) {
+  const [sites, setSites] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
+    siteUrl: "",
+    gtmContainerId: "",
+    facebookPageId: "",
+    instagramUserId: ""
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchSites();
+    }
+  }, [isOpen]);
+
+  const fetchSites = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/sites");
+      if (!res.ok) throw new Error("Failed to fetch sites");
+      const data = await res.json();
+      setSites(data.sites || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (site) => {
+    setEditingId(site.id);
+    setFormData({
+      siteUrl: site.siteUrl,
+      gtmContainerId: site.gtmContainerId || "",
+      facebookPageId: site.facebookPageId || "",
+      instagramUserId: site.instagramUserId || ""
+    });
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setFormData({ siteUrl: "", gtmContainerId: "", facebookPageId: "", instagramUserId: "" });
+    setError(null);
+  };
+
+  const handleCreateNew = () => {
+    setEditingId("new");
+    setFormData({ siteUrl: "", gtmContainerId: "", facebookPageId: "", instagramUserId: "" });
+  };
+
+  const handleSave = async () => {
+    setError(null);
+    if (!formData.siteUrl.trim()) {
+      setError("Site URL is required");
+      return;
+    }
+
+    try {
+      const url = editingId === "new" ? "/api/admin/sites" : `/api/admin/sites/${editingId}`;
+      const method = editingId === "new" ? "POST" : "PATCH";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save site");
+
+      await fetchSites();
+      handleCancel();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this site configuration? Users will lose access to its metrics.")) return;
+
+    try {
+      const res = await fetch(`/api/admin/sites/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete site");
+      await fetchSites();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <FiGlobe className="w-5 h-5 text-gray-900 dark:text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Manage Site Associations</h2>
+              <p className="text-sm text-gray-500">Configure global website metrics and Social Media bindings</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 rounded-xl transition-colors"
+          >
+            <FiX className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 overflow-y-auto flex-1 bg-gray-50 dark:bg-gray-900/50">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-start gap-3 border border-red-100">
+              <FiAlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-sm">Error saving configuration</p>
+                <p className="text-sm mt-1">{error}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="mb-6 flex justify-between items-center">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Registered Sites</h3>
+            {editingId !== "new" && (
+              <button
+                onClick={handleCreateNew}
+                className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg text-sm font-semibold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+              >
+                <FiPlus className="w-4 h-4" />
+                Onboard Website
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {editingId === "new" && (
+              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-[#0EFF2A]/50 shadow-sm ring-1 ring-[#0EFF2A]/20">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Website URL *</label>
+                    <input
+                      type="url"
+                      value={formData.siteUrl}
+                      onChange={(e) => setFormData({ ...formData, siteUrl: e.target.value })}
+                      placeholder="https://example.com"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">GTM Container ID</label>
+                    <input
+                      type="text"
+                      value={formData.gtmContainerId}
+                      onChange={(e) => setFormData({ ...formData, gtmContainerId: e.target.value })}
+                      placeholder="GTM-XXXXXXX"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Facebook Page ID</label>
+                    <input
+                      type="text"
+                      value={formData.facebookPageId}
+                      onChange={(e) => setFormData({ ...formData, facebookPageId: e.target.value })}
+                      placeholder="e.g. 1029384756"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Instagram User ID</label>
+                    <input
+                      type="text"
+                      value={formData.instagramUserId}
+                      onChange={(e) => setFormData({ ...formData, instagramUserId: e.target.value })}
+                      placeholder="e.g. 17841400000000"
+                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <button onClick={handleCancel} className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">Cancel</button>
+                  <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-[#0EFF2A] text-black rounded-lg text-sm font-bold hover:bg-[#0EFF2A]/90 transition-colors">
+                    <FiSave className="w-4 h-4" /> Save
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {loading && sites.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">Loading sites...</div>
+            ) : sites.length === 0 && editingId !== "new" ? (
+              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                <FiGlobe className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No websites onboarded yet.</p>
+              </div>
+            ) : (
+              sites.map((site) => (
+                editingId === site.id ? (
+                  <div key={site.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-[#0EFF2A]/50 shadow-sm ring-1 ring-[#0EFF2A]/20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Website URL *</label>
+                        <input
+                          type="url"
+                          value={formData.siteUrl}
+                          onChange={(e) => setFormData({ ...formData, siteUrl: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">GTM Container ID</label>
+                        <input
+                          type="text"
+                          value={formData.gtmContainerId}
+                          onChange={(e) => setFormData({ ...formData, gtmContainerId: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Facebook Page ID</label>
+                        <input
+                          type="text"
+                          value={formData.facebookPageId}
+                          onChange={(e) => setFormData({ ...formData, facebookPageId: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Instagram User ID</label>
+                        <input
+                          type="text"
+                          value={formData.instagramUserId}
+                          onChange={(e) => setFormData({ ...formData, instagramUserId: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                      <button onClick={handleCancel} className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">Cancel</button>
+                      <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-[#0EFF2A] text-black rounded-lg text-sm font-bold hover:bg-[#0EFF2A]/90 transition-colors">
+                        <FiCheck className="w-4 h-4" /> Update
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div key={site.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-gray-300 transition-colors">
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 dark:text-white text-lg">{site.siteUrl}</h4>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs font-mono text-gray-600 dark:text-gray-400">
+                        {site.gtmContainerId ? (
+                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">GTM: {site.gtmContainerId}</span>
+                        ) : null}
+                        {site.facebookPageId ? (
+                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">FB: {site.facebookPageId}</span>
+                        ) : null}
+                        {site.instagramUserId ? (
+                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">IG: {site.instagramUserId}</span>
+                        ) : null}
+                        {!site.gtmContainerId && !site.facebookPageId && !site.instagramUserId && (
+                          <span className="text-gray-400 italic">No tracking IDs configured</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleEdit(site)}
+                        className="p-2 text-gray-500 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        title="Edit"
+                      >
+                        <FiEdit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(site.id)}
+                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Delete"
+                      >
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

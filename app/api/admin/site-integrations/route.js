@@ -86,6 +86,11 @@ export async function GET() {
     const users = await getAllUsers(true);
     const currentSuperAdmin = users.find((u) => u.id === session.user.id) || null;
 
+    // Fetch Global Sites
+    const { PrismaClient } = require("@prisma/client");
+    const prisma = new PrismaClient();
+    const globalSites = await prisma.site.findMany();
+
     // Fetch Meta accounts from token
     const metaToken = process.env.META_PAGE_ACCESS_TOKEN || process.env.META_APP_ACCESS_TOKEN;
     let metaAccounts = [];
@@ -137,6 +142,15 @@ export async function GET() {
           instagramUserId: u.instagramUserId || "",
           isSuperAdminSite: u.id === session.user.id,
         })),
+      ...globalSites.map((s) => ({
+          userId: null,
+          userName: s.siteUrl,
+          userEmail: "",
+          siteLink: s.siteUrl,
+          facebookPageId: s.facebookPageId || "",
+          instagramUserId: s.instagramUserId || "",
+          isSuperAdminSite: false,
+      })),
       ...metaAccounts
     ];
 

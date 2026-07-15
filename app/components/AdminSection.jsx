@@ -43,6 +43,7 @@ const SMM_BASELINE_PLATFORM_LABEL = {
   youtube: "YouTube",
   tiktok: "TikTok",
 };
+import SiteAssociationsModal from "./SiteAssociationsModal";
 
 export default function AdminSection() {
   const { data: session } = useSession();
@@ -734,6 +735,7 @@ export default function AdminSection() {
   };
 
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [showSiteAssociations, setShowSiteAssociations] = useState(false);
 
   const showFullUserSetup = Boolean(
     (!editingUser || (editingUser && editingUser.role !== ROLES.SUPER_ADMIN)) && showAdvancedSettings
@@ -768,11 +770,19 @@ export default function AdminSection() {
 
       {/* Users Table */}
       <div className="rounded-xl border border-gray-200 bg-[#ffffff] overflow-hidden">
-        <div className="px-4 sm:px-6 pb-4 border-b border-gray-200 py-5">
-          <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Manage users, roles, and site access
-          </p>
+        <div className="px-4 sm:px-6 pb-4 border-b border-gray-200 py-5 flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Manage users, roles, and site access
+            </p>
+          </div>
+          <button
+            onClick={() => setShowSiteAssociations(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold bg-white text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+          >
+            Manage Sites & Tracking
+          </button>
         </div>
         <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="text-sm text-gray-700 font-semibold">All Users <span className="text-gray-500 font-medium">{filteredUsers.length}</span></div>
@@ -1170,12 +1180,21 @@ export default function AdminSection() {
                   onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
                   className="text-xs font-semibold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors flex items-center gap-1"
                 >
-                  {showAdvancedSettings ? "Hide Advanced Tracking Settings" : "Show Advanced Tracking Settings (GTM, Site Link)"}
+                  {showAdvancedSettings ? "Hide Advanced Tracking Settings" : "Show Advanced Tracking Settings (Site Link)"}
                 </button>
               </div>
 
               {showFullUserSetup && (
                 <div className="space-y-4 pt-2">
+                  <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                    <div className="flex items-start gap-2 mb-2">
+                      <FiAlertCircle className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                      <p className="text-sm text-blue-800">
+                        <span className="font-semibold">Heads up:</span> Tracking IDs (GTM, Facebook, Instagram) are now configured globally in the <button type="button" onClick={() => setShowSiteAssociations(true)} className="underline font-semibold hover:text-blue-900">Manage Sites & Tracking</button> modal.
+                        You only need to set the Site Link here for this user.
+                      </p>
+                    </div>
+                  </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
                       Site Link
@@ -1191,43 +1210,6 @@ export default function AdminSection() {
                       placeholder="https://example.com"
                       className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
-                      GTM Container ID
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.gtmContainerId || ""}
-                      onChange={(e) => setFormData({ ...formData, gtmContainerId: e.target.value })}
-                      placeholder="GTM-XXXXXXX"
-                      className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Add GTM container ID to ingest social metrics via `/api/smm/collect`.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Facebook Page ID (Manual)</label>
-                      <input
-                        type="text"
-                        value={formData.facebookPageId || ""}
-                        onChange={(e) => setFormData({ ...formData, facebookPageId: e.target.value })}
-                        placeholder="Manual ID entry..."
-                        className="w-full px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-700 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Instagram User ID (Manual)</label>
-                      <input
-                        type="text"
-                        value={formData.instagramUserId || ""}
-                        onChange={(e) => setFormData({ ...formData, instagramUserId: e.target.value })}
-                        placeholder="Manual ID entry..."
-                        className="w-full px-3 py-1.5 border border-gray-200 rounded text-sm text-gray-700 bg-white"
-                      />
-                    </div>
                   </div>
                 </div>
               )}

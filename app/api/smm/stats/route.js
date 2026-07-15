@@ -137,17 +137,33 @@ export async function GET(req) {
     // Resolve targetSite to siteLink if it is a Meta Page ID
     let resolvedSiteLink = targetSite;
     if (targetSite) {
-      const mappedUser = await prisma.user.findFirst({
+      const mappedSite = await prisma.site.findFirst({
         where: {
           OR: [
             { facebookPageId: targetSite },
-            { instagramUserId: targetSite }
+            { instagramUserId: targetSite },
+            { siteUrl: targetSite }
           ]
         },
-        select: { siteLink: true }
+        select: { siteUrl: true }
       });
-      if (mappedUser?.siteLink) {
-        resolvedSiteLink = mappedUser.siteLink;
+
+      if (mappedSite?.siteUrl) {
+        resolvedSiteLink = mappedSite.siteUrl;
+      } else {
+        // Fallback for older configurations mapped to users
+        const mappedUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { facebookPageId: targetSite },
+              { instagramUserId: targetSite }
+            ]
+          },
+          select: { siteLink: true }
+        });
+        if (mappedUser?.siteLink) {
+          resolvedSiteLink = mappedUser.siteLink;
+        }
       }
     }
 
@@ -230,13 +246,17 @@ export async function GET(req) {
     });
     const rows = rawRows.filter((r) => String(r.platform || "").toLowerCase() !== "linkedin");
 
+    const globalSite = await prisma.site.findUnique({
+      where: { siteUrl: targetSiteNormalized }
+    });
+
     const usersForSite = await prisma.user.findMany({
       where: { siteLink: targetSiteNormalized },
       select: { id: true, email: true, name: true, gtmContainerId: true },
       orderBy: { createdAt: "asc" },
     });
 
-    const gtmContainerId = usersForSite[0]?.gtmContainerId || null;
+    const gtmContainerId = globalSite?.gtmContainerId || usersForSite[0]?.gtmContainerId || null;
 
     const monthlyBreakdown = buildMonthlyBreakdownFromRows(rows);
 
