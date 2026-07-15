@@ -192,7 +192,6 @@ export async function GET(req) {
         }
       }
     }
-  }
 
     // Normalize: for regular URLs use normalizeSiteOrigin; for numeric Meta page IDs pass through as-is
     const isRawMetaId = /^\d+$/.test(String(resolvedSiteLink || "").trim());
