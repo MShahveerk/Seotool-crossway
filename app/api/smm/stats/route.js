@@ -183,34 +183,23 @@ export async function GET(req) {
             if (fallbackSite && /^https?:\/\//i.test(fallbackSite)) {
               resolvedSiteLink = fallbackSite;
             } else {
-              // Numeric page ID with no site or user record linked yet and no fallback site.
-              // Return empty-data 200 so the dashboard loads cleanly with a setup prompt.
-              return new Response(
-              JSON.stringify({
-                siteUrl: targetSite,
-                range,
-                platform,
-                monthlyBreakdown: [],
-                summary: { totalReach: 0, totalEngagements: 0, followers: 0, queuedPosts: 0, queuedReels: 0 },
-                platformCards: [],
-                timeSeries: [],
-                accounts: [],
-                setup: {
-                  message: "No site URL is linked to this Meta page yet. Edit the user for this page and set their Site Link, or go to User Management \u2192 Manage Sites & Tracking to register the site.",
-                  gtmContainerId: null,
-                },
-                currentYearMonth: formatYearMonth(new Date()),
-                reportMeta: { mode: "rolling", start: new Date().toISOString(), end: new Date().toISOString(), periodLabel: "No site linked" },
-              }),
-              { status: 200, headers: { "Content-Type": "application/json" } }
-            );
+              // Numeric Meta page ID with no linked website yet.
+              // Use the page ID itself as the storage key — insights will still be fetched
+              // from the Graph API and stored under this key, so the dashboard works standalone.
+              resolvedSiteLink = targetSite;
+            }
           }
         }
       }
     }
   }
 
-    const targetSiteNormalized = normalizeSiteOrigin(resolvedSiteLink);
+    // Normalize: for regular URLs use normalizeSiteOrigin; for numeric Meta page IDs pass through as-is
+    const isRawMetaId = /^\d+$/.test(String(resolvedSiteLink || "").trim());
+    const targetSiteNormalized = isRawMetaId
+      ? String(resolvedSiteLink).trim()
+      : normalizeSiteOrigin(resolvedSiteLink);
+
     if (!targetSiteNormalized) {
       return new Response(
         JSON.stringify({
@@ -239,6 +228,9 @@ export async function GET(req) {
       );
       const ownLink = normalizeSiteOrigin(session.user.siteLink || "");
       if (ownLink) allowed.add(ownLink);
+      // Also allow access if the target is a Meta page ID linked to this user
+      if (session.user.facebookPageId) allowed.add(String(session.user.facebookPageId).trim());
+      if (session.user.instagramUserId) allowed.add(String(session.user.instagramUserId).trim());
       if (!allowed.size || !allowed.has(targetSiteNormalized)) {
         return new Response(JSON.stringify({ error: "Access denied for selected site." }), {
           status: 403,
@@ -261,12 +253,28 @@ export async function GET(req) {
         });
 
         if (!existingToday || forceRefresh) {
-          const siteRecord = await prisma.site.findUnique({
-            where: { siteUrl: targetSiteNormalized }
+          // Try to find a Site record for lookup of linked page IDs
+          const siteRecord = await prisma.site.findFirst({
+            where: {
+              OR: [
+                { siteUrl: targetSiteNormalized },
+                { facebookPageId: targetSiteNormalized },
+                { instagramUserId: targetSiteNormalized },
+              ]
+            }
           });
-          
-          const fbPageId = siteRecord?.facebookPageId || session.user.facebookPageId;
-          const igUserId = siteRecord?.instagramUserId || session.user.instagramUserId;
+
+          // If targetSiteNormalized is itself a numeric Meta ID, use it directly
+          const targetIsMetaId = /^\d+$/.test(String(targetSiteNormalized).trim());
+
+          const fbPageId =
+            siteRecord?.facebookPageId ||
+            session.user.facebookPageId ||
+            (targetIsMetaId ? targetSiteNormalized : null);
+
+          const igUserId =
+            siteRecord?.instagramUserId ||
+            session.user.instagramUserId;
 
           // 1. Fetch Facebook Page Insights (Reach & Engagement history)
           if (fbPageId && /^\d+$/.test(String(fbPageId).trim())) {
