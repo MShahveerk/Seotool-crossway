@@ -71,24 +71,59 @@ export async function GET(req) {
         : null);
 
     // Get site URL based on role
-    let siteUrl;
+    let siteUrl = req.nextUrl.searchParams.get("url") || sessionSiteFallback;
+
+    // Resolve Meta Page ID to website URL if needed
+    if (siteUrl && !isValidUrl(siteUrl)) {
+      const { PrismaClient } = require("@prisma/client");
+      const prisma = new PrismaClient();
+      const mappedSite = await prisma.site.findFirst({
+        where: {
+          OR: [
+            { facebookPageId: siteUrl },
+            { instagramUserId: siteUrl }
+          ]
+        },
+        select: { siteUrl: true }
+      });
+
+      if (mappedSite?.siteUrl) {
+        siteUrl = mappedSite.siteUrl;
+      } else {
+        const mappedUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { facebookPageId: siteUrl },
+              { instagramUserId: siteUrl }
+            ]
+          },
+          select: { siteLink: true }
+        });
+        if (mappedUser?.siteLink) {
+          siteUrl = mappedUser.siteLink;
+        }
+      }
+    }
+
     if (userRole === ROLES.SUPER_ADMIN) {
-      // Super Admin can specify URL or use their own if available
-      siteUrl = req.nextUrl.searchParams.get("url") || sessionSiteFallback;
       if (!siteUrl || !isValidUrl(siteUrl)) {
-        return new Response(
-          JSON.stringify({ 
-            error: "Please provide a valid 'url' parameter or ensure your account has a linked website URL." 
-          }),
-          {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          }
-        );
+        // Safe fallback for Super Admin if unlinked
+        if (sessionSiteFallback && isValidUrl(sessionSiteFallback)) {
+          siteUrl = sessionSiteFallback;
+        } else {
+          return new Response(
+            JSON.stringify({ 
+              error: "Please provide a valid 'url' parameter or ensure your account has a linked website URL." 
+            }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
       }
     } else {
-      siteUrl = sessionSiteFallback;
-      if (!siteUrl) {
+      if (!siteUrl || !isValidUrl(siteUrl)) {
         return new Response(
           JSON.stringify({
             error: "No website URL linked to your account. Please contact an administrator.",

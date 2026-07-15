@@ -229,38 +229,65 @@ export default function SmmApprovalCardsGrid({ isSuperAdmin = false, activeSite 
     setError("");
     try {
       if (isSuperAdmin) {
-        const [approvalsRes, usersRes] = await Promise.all([
+        const [approvalsRes, usersRes, integrationsRes] = await Promise.all([
           fetch("/api/admin/approvals"),
           fetch("/api/admin/users"),
+          fetch("/api/admin/site-integrations"),
         ]);
         const approvalsData = await approvalsRes.json();
         const usersData = await usersRes.json();
-        if (!approvalsRes.ok) {
-          throw new Error(approvalsData.error || "Failed to load approvals");
-        }
-        if (!usersRes.ok) {
-          throw new Error(usersData.error || "Failed to load users");
-        }
+        const integrationsData = await integrationsRes.json();
+        
+        if (!approvalsRes.ok) throw new Error(approvalsData.error || "Failed to load approvals");
+        if (!usersRes.ok) throw new Error(usersData.error || "Failed to load users");
+        if (!integrationsRes.ok) throw new Error(integrationsData.error || "Failed to load integrations");
+
         const users = usersData.users || [];
         const all = approvalsData.approvals || [];
-        const ownerId = ownerIdForSite(users, activeSite);
+        const integrations = integrationsData.sites || [];
+
         if (!activeSite.trim()) {
           setItems([]);
           setError("");
           setLoading(false);
           return;
         }
-        if (!ownerId) {
-          setItems([]);
-          setError("No user found for this site link. Assign a primary site to a user to match approvals.");
-          setLoading(false);
-          return;
+
+        // Resolve activeSite and facebookPageId
+        let resolvedSite = activeSite;
+        let resolvedFbPageId = "";
+
+        if (/^\d+$/.test(activeSite.trim())) {
+          resolvedFbPageId = activeSite.trim();
+          const match = integrations.find(
+            (s) => s.facebookPageId === activeSite || s.instagramUserId === activeSite
+          );
+          if (match && match.siteLink) {
+            resolvedSite = match.siteLink;
+          }
+        } else {
+          const match = integrations.find(
+            (s) => normalizeSiteUrl(s.siteLink) === normalizeSiteUrl(activeSite)
+          );
+          if (match && match.facebookPageId) {
+            resolvedFbPageId = match.facebookPageId;
+          }
         }
+
+        const ownerId = ownerIdForSite(users, resolvedSite);
         const filtered = all
-          .filter(
-            (a) =>
-              (a.assigneeId === ownerId || a.assignee?.id === ownerId) && !a.hiddenFromAssignee
-          )
+          .filter((a) => {
+            if (a.hiddenFromAssignee) return false;
+            
+            // Match by siteLink or facebookPageId
+            const matchSite = resolvedSite && a.siteLink && normalizeSiteUrl(a.siteLink) === normalizeSiteUrl(resolvedSite);
+            const matchFb = resolvedFbPageId && a.facebookPageId && String(a.facebookPageId).trim() === String(resolvedFbPageId).trim();
+            
+            // Fallback match by ownerId
+            const matchOwner = ownerId && (a.assigneeId === ownerId || a.assignee?.id === ownerId);
+            
+            return matchSite || matchFb || matchOwner;
+          })
           .map((a) => ({
             id: a.id,
             title: a.title,
