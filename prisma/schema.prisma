@@ -174,3 +174,18 @@ model SocialMediaDailyStat {
   @@index([platform, statDate], map: "smm_platform_date_idx")
   @@map("social_media_daily_stats")
 }
+
+model Site {
+  id              String   @id @default(cuid()) @db.VarChar(191)
+  siteUrl         String   @unique @map("site_url") @db.VarChar(512)
+  gtmContainerId  String?  @map("gtm_container_id") @db.VarChar(64)
+  facebookPageId  String?  @map("facebook_page_id") @db.VarChar(191)
+  instagramUserId String?  @map("instagram_user_id") @db.VarChar(191)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([gtmContainerId], map: "sites_gtm_container_id_idx")
+  @@index([facebookPageId], map: "sites_facebook_page_id_idx")
+  @@index([instagramUserId], map: "sites_instagram_user_id_idx")
+  @@map("sites")
+}

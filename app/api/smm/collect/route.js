@@ -81,16 +81,24 @@ export async function POST(req) {
       });
     }
 
+    const globalSite = await prisma.site.findUnique({
+      where: { siteUrl: normalizedSite }
+    });
+
+    const isGtmValid =
+      (globalSite && globalSite.gtmContainerId === String(gtmContainerId).trim());
+
     const user = await prisma.user.findFirst({
-      where: {
+      where: isGtmValid ? { siteLink: normalizedSite } : {
         gtmContainerId: String(gtmContainerId).trim(),
         siteLink: normalizedSite,
       },
       select: { id: true },
     });
+
     if (!user) {
       return new Response(
-        JSON.stringify({ error: "No integrated user found for this GTM container and site." }),
+        JSON.stringify({ error: "No integrated user found for this site (or GTM container mismatch)." }),
         { status: 404, headers: CORS_HEADERS }
       );
     }

@@ -802,6 +802,12 @@ export async function POST(req) {
       });
     }
 
+    const { PrismaClient } = require("@prisma/client");
+    const prisma = new PrismaClient();
+    const globalSite = await prisma.site.findUnique({
+      where: { siteUrl: normalizedSite }
+    });
+
     const rows = Array.isArray(accounts) ? accounts : [];
     if (!rows.length) {
       return new Response(JSON.stringify({ error: "accounts array is required." }), {
@@ -813,8 +819,8 @@ export async function POST(req) {
     const youtubeApiKey = process.env.YOUTUBE_API_KEY || process.env.PAGESPEED_API_KEY || "";
     const metaToken =
       process.env.META_PAGE_ACCESS_TOKEN || process.env.META_APP_ACCESS_TOKEN || "";
-    const fbPageIdResolved = String(facebookPageId || user.facebookPageId || "").trim();
-    const igUserIdResolved = String(instagramUserId || user.instagramUserId || "").trim();
+    const fbPageIdResolved = String(facebookPageId || globalSite?.facebookPageId || user.facebookPageId || "").trim();
+    const igUserIdResolved = String(instagramUserId || globalSite?.instagramUserId || user.instagramUserId || "").trim();
     const resolved = [];
     const skipped = [];
 
