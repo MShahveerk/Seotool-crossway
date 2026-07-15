@@ -323,75 +323,81 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
             )}
           </div>
 
-          <div className="mt-5 rounded-xl border border-gray-200 p-4">
-            {showSmmChartOnly ? (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-gray-900">Post/Reels Analytics</p>
-                  <div className="flex items-center gap-3 text-[11px] text-gray-600">
-                    <span className="inline-flex items-center gap-1">
-                      <span className="inline-block h-2 w-2 rounded-full bg-[#33d56a]" />
-                      Reels
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <span className="inline-block h-2 w-2 rounded-full bg-[#7a79d8]" />
-                      Posts
-                    </span>
-                  </div>
-                </div>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={monthlyChartData}>
-                      <defs>
-                        <linearGradient id="reelsGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#39d86e" stopOpacity={0.32} />
-                          <stop offset="95%" stopColor="#39d86e" stopOpacity={0.04} />
-                        </linearGradient>
-                        <linearGradient id="postsGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#7a79d8" stopOpacity={0.24} />
-                          <stop offset="95%" stopColor="#7a79d8" stopOpacity={0.03} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="2 2" stroke="#d7d7d7" />
-                      <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-                      <Tooltip
-                        content={(tipProps) => <AnalyticsTooltip {...tipProps} chartYear={chartYearFromSeries} />}
-                        cursor={{ stroke: "#bfc3ca", strokeWidth: 1 }}
-                      />
-                      <Area type="monotone" dataKey="reels" stroke="transparent" fill="url(#reelsGradient)" />
-                      <Area type="monotone" dataKey="posts" stroke="transparent" fill="url(#postsGradient)" />
-                      <Line
-                        type="monotone"
-                        dataKey="reels"
-                        stroke="#33d56a"
-                        strokeWidth={2.5}
-                        dot={false}
-                        activeDot={{ r: 3, fill: "#33d56a" }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="posts"
-                        stroke="#7a79d8"
-                        strokeWidth={2.2}
-                        dot={false}
-                        activeDot={{ r: 3, fill: "#7a79d8" }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <p className="mt-2 text-[11px] text-gray-500">Followers total: {formatNumber(totalFollowers)}</p>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-gray-900">Approvals</p>
-                  <span className="text-[11px] text-gray-500 hidden sm:inline">Approved items only</span>
-                </div>
-                <SmmApprovalCardsGrid isSuperAdmin={isSuperAdmin} activeSite={activeSite} />
-              </>
-            )}
+          {/* SMM Performance Trends */}
+          <div className="mt-5 rounded-xl border border-gray-200 p-5 bg-white">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-base font-bold text-gray-900">SMM Performance Trends (Reels & Posts)</p>
+                <p className="text-xs text-gray-500 mt-0.5">Reach and engagements comparison over the last 3 months</p>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-gray-600 font-medium">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#33d56a]" />
+                  Reach
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#7a79d8]" />
+                  Engagements
+                </span>
+              </div>
+            </div>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlyChartData}>
+                  <defs>
+                    <linearGradient id="reelsGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#39d86e" stopOpacity={0.32} />
+                      <stop offset="95%" stopColor="#39d86e" stopOpacity={0.04} />
+                    </linearGradient>
+                    <linearGradient id="postsGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#7a79d8" stopOpacity={0.24} />
+                      <stop offset="95%" stopColor="#7a79d8" stopOpacity={0.03} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    content={(tipProps) => <AnalyticsTooltip {...tipProps} chartYear={chartYearFromSeries} />}
+                    cursor={{ stroke: "#bfc3ca", strokeWidth: 1 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="reels"
+                    stroke="#33d56a"
+                    strokeWidth={3}
+                    dot={{ r: 2 }}
+                    activeDot={{ r: 5, fill: "#33d56a" }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="posts"
+                    stroke="#7a79d8"
+                    strokeWidth={2.5}
+                    dot={{ r: 2 }}
+                    activeDot={{ r: 5, fill: "#7a79d8" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="mt-3 text-xs text-gray-500 font-medium">Total Followers Across Platforms: {formatNumber(totalFollowers)}</p>
           </div>
+
+          {/* SMM Approvals Section */}
+          {(isSuperAdmin || session?.user?.role === "smm" || session?.user?.role === "approver") && (
+            <div className="mt-6 rounded-xl border border-gray-200 p-5 bg-white">
+              <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-3">
+                <div>
+                  <p className="text-base font-bold text-gray-900">SMM Content Approvals</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Review, approve, or edit scheduled Facebook and Instagram draft posts</p>
+                </div>
+                <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-700">
+                  Approved Items Only
+                </span>
+              </div>
+              <SmmApprovalCardsGrid isSuperAdmin={isSuperAdmin} activeSite={activeSite} />
+            </div>
+          )}
         </>
       )}
     </div>
