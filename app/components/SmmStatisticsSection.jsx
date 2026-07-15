@@ -126,7 +126,7 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
 
   const activeSite = hasGlobalAccess ? (selectedSite || ownSite) : ownSite;
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (forceRefresh = false) => {
     if (!activeSite) {
       setPayload(null);
       setError("No site selected. Please integrate a site first.");
@@ -141,6 +141,7 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
         range: SMM_STATS_RANGE,
         platform,
         ...(hasGlobalAccess ? { url: activeSite } : {}),
+        ...(forceRefresh ? { refresh: "true" } : {}),
       });
       const res = await fetch(`/api/smm/stats?${query.toString()}`);
       const data = await res.json();
@@ -254,7 +255,7 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
           </select>
           <button
             type="button"
-            onClick={fetchStats}
+            onClick={() => fetchStats(true)}
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-gray-200 text-sm text-gray-700 bg-white"
           >
             <FiRefreshCw className="w-4 h-4" />

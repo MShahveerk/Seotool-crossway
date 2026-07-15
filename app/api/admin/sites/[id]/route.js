@@ -77,12 +77,42 @@ export async function DELETE(req, { params }) {
     await requireSuperAdmin();
     const { id } = params;
 
-    await prisma.site.delete({
+    // Find the site first to get its URL for cascading deletes
+    const site = await prisma.site.findUnique({
       where: { id },
     });
 
+    if (!site) {
+      return new Response(JSON.stringify({ error: "Site not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const targetUrl = site.siteUrl;
+
+    // Cascading cleanups across all references to this site link
+    await prisma.$transaction([
+      prisma.site.delete({
+        where: { id },
+      }),
+      prisma.user.updateMany({
+        where: { siteLink: targetUrl },
+        data: { siteLink: null },
+      }),
+      prisma.userAccessibleSite.deleteMany({
+        where: { siteLink: targetUrl },
+      }),
+      prisma.socialMediaDailyStat.deleteMany({
+        where: { siteLink: targetUrl },
+      }),
+      prisma.approval.deleteMany({
+        where: { siteLink: targetUrl },
+      }),
+    ]);
+
     return new Response(
-      JSON.stringify({ message: "Site deleted successfully." }),
+      JSON.stringify({ message: "Site and all associated records deleted successfully." }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {

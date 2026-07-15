@@ -3,6 +3,7 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import prisma from "../../../../lib/prisma";
 import { ROLES } from "../../../../lib/rbac";
 import { normalizeSiteOrigin } from "../../../../lib/validation";
+import axios from "axios";
 import {
   describeReportPeriod,
   formatYearMonth,
@@ -243,6 +244,123 @@ export async function GET(req) {
           status: 403,
           headers: { "Content-Type": "application/json" },
         });
+      }
+    }
+
+    // Auto-fetch live Meta statistics if meta token is configured and we don't have stats for today yet
+    const metaToken = process.env.META_PAGE_ACCESS_TOKEN || process.env.META_APP_ACCESS_TOKEN;
+    if (metaToken) {
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Check if we already have stats for today
+        const existingToday = await prisma.socialMediaDailyStat.findFirst({
+          where: {
+            siteLink: targetSiteNormalized,
+            statDate: today,
+          }
+        });
+
+        const forceRefresh = req.nextUrl.searchParams.get("refresh") === "true";
+        if (!existingToday || forceRefresh) {
+          // Find associated Facebook/Instagram Page IDs
+          const siteRecord = await prisma.site.findUnique({
+            where: { siteUrl: targetSiteNormalized }
+          });
+          
+          const fbPageId = siteRecord?.facebookPageId || session.user.facebookPageId;
+          const igUserId = siteRecord?.instagramUserId || session.user.instagramUserId;
+
+          // Fetch Facebook Page followers
+          if (fbPageId && /^\d+$/.test(String(fbPageId).trim())) {
+            try {
+              const fbUrl = `https://graph.facebook.com/v20.0/${fbPageId}?fields=fan_count,name&access_token=${metaToken}`;
+              const fbRes = await axios.get(fbUrl);
+              if (fbRes.data && fbRes.data.fan_count !== undefined) {
+                const followers = Number(fbRes.data.fan_count || 0);
+                const accountName = fbRes.data.name || "Facebook Page";
+                
+                await prisma.socialMediaDailyStat.upsert({
+                  where: {
+                    userId_siteLink_platform_statDate: {
+                      userId: session.user.id,
+                      siteLink: targetSiteNormalized,
+                      platform: "facebook",
+                      statDate: today,
+                    }
+                  },
+                  update: {
+                    followers,
+                    accountName,
+                    accountHandle: fbPageId,
+                  },
+                  create: {
+                    userId: session.user.id,
+                    siteLink: targetSiteNormalized,
+                    platform: "facebook",
+                    statDate: today,
+                    followers,
+                    accountName,
+                    accountHandle: fbPageId,
+                    reach: 0,
+                    engagements: 0,
+                    queuedPosts: 0,
+                    queuedReels: 0,
+                  }
+                });
+              }
+            } catch (fbErr) {
+              console.warn(`Failed to auto-fetch FB live stats for ${fbPageId}:`, fbErr.response?.data || fbErr.message);
+            }
+          }
+
+          // Fetch Instagram Business followers
+          if (igUserId && /^\d+$/.test(String(igUserId).trim())) {
+            try {
+              const igUrl = `https://graph.facebook.com/v20.0/${igUserId}?fields=followers_count,name,username&access_token=${metaToken}`;
+              const igRes = await axios.get(igUrl);
+              if (igRes.data && igRes.data.followers_count !== undefined) {
+                const followers = Number(igRes.data.followers_count || 0);
+                const accountName = igRes.data.name || "Instagram Account";
+                const accountHandle = igRes.data.username || igUserId;
+
+                await prisma.socialMediaDailyStat.upsert({
+                  where: {
+                    userId_siteLink_platform_statDate: {
+                      userId: session.user.id,
+                      siteLink: targetSiteNormalized,
+                      platform: "instagram",
+                      statDate: today,
+                    }
+                  },
+                  update: {
+                    followers,
+                    accountName,
+                    accountHandle,
+                  },
+                  create: {
+                    userId: session.user.id,
+                    siteLink: targetSiteNormalized,
+                    platform: "instagram",
+                    statDate: today,
+                    followers,
+                    accountName,
+                    accountHandle,
+                    reach: 0,
+                    engagements: 0,
+                    queuedPosts: 0,
+                    queuedReels: 0,
+                  }
+                });
+              }
+            } catch (igErr) {
+              console.warn(`Failed to auto-fetch IG live stats for ${igUserId}:`, igErr.response?.data || igErr.message);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Auto-fetch error during smm stats request:", err.message);
       }
     }
 

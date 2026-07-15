@@ -202,17 +202,29 @@ export default function DashboardLayout({
   };
 
   const getPageDisplayName = (siteEntryOrVal) => {
-    const val = typeof siteEntryOrVal === "string" ? siteEntryOrVal : (siteEntryOrVal.siteLink || siteEntryOrVal.facebookPageId);
-    const metaMatch = metaAccounts.find(a => a.facebookPageId === val || a.siteLink === val);
-    if (metaMatch) {
-      return metaMatch.name;
+    if (!siteEntryOrVal) return "No Account Selected";
+    const isString = typeof siteEntryOrVal === "string";
+    const entry = isString 
+      ? availableSites.find(s => s.siteLink === siteEntryOrVal || s.facebookPageId === siteEntryOrVal) 
+      : siteEntryOrVal;
+      
+    if (entry) {
+      // Find matching Meta account by facebookPageId
+      const metaMatch = metaAccounts.find(
+        (a) => a.facebookPageId && entry.facebookPageId && String(a.facebookPageId).trim() === String(entry.facebookPageId).trim()
+      );
+      if (metaMatch) {
+        return metaMatch.name;
+      }
+      
+      const name = entry.userName || entry.siteLink || entry.facebookPageId;
+      if (name && name.startsWith("http")) {
+        return getSiteHostName(name);
+      }
+      return name;
     }
-    const entryMatch = typeof siteEntryOrVal === "object" ? siteEntryOrVal : availableSites.find(s => s.siteLink === val || s.facebookPageId === val);
-    const name = entryMatch?.userName || val;
-    if (name && name.startsWith("http")) {
-      return getSiteHostName(name);
-    }
-    return name || getSiteHostName(val);
+    
+    return isString ? getSiteHostName(siteEntryOrVal) : "No Account Selected";
   };
 
   const getFaviconUrl = (siteUrl) => {
