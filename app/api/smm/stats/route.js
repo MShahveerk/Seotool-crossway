@@ -207,6 +207,7 @@ export async function GET(req) {
         }
       }
     }
+  }
 
     const targetSiteNormalized = normalizeSiteOrigin(resolvedSiteLink);
     if (!targetSiteNormalized) {
