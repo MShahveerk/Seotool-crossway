@@ -137,6 +137,8 @@ export async function GET(req) {
     // Resolve targetSite to siteLink if it is a Meta Page ID
     let resolvedSiteLink = targetSite;
     if (targetSite) {
+      const isLikelyMetaId = /^\d+$/.test(String(targetSite).trim());
+
       const mappedSite = await prisma.site.findFirst({
         where: {
           OR: [
@@ -163,6 +165,28 @@ export async function GET(req) {
         });
         if (mappedUser?.siteLink) {
           resolvedSiteLink = mappedUser.siteLink;
+        } else if (isLikelyMetaId) {
+          // Numeric page ID with no site or user record linked yet.
+          // Return empty-data 200 so the dashboard loads cleanly with a setup prompt.
+          return new Response(
+            JSON.stringify({
+              siteUrl: targetSite,
+              range,
+              platform,
+              monthlyBreakdown: [],
+              summary: { totalReach: 0, totalEngagements: 0, followers: 0, queuedPosts: 0, queuedReels: 0 },
+              platformCards: [],
+              timeSeries: [],
+              accounts: [],
+              setup: {
+                message: "No site URL is linked to this Meta page yet. Edit the user for this page and set their Site Link, or go to User Management \u2192 Manage Sites & Tracking to register the site.",
+                gtmContainerId: null,
+              },
+              currentYearMonth: formatYearMonth(new Date()),
+              reportMeta: { mode: "rolling", start: new Date().toISOString(), end: new Date().toISOString(), periodLabel: "No site linked" },
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
         }
       }
     }

@@ -317,7 +317,7 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
               </>
             ) : (
               <div className="rounded-lg border border-dashed border-gray-300 p-6 text-sm text-gray-500">
-                No platform data yet. Send stats via GTM to `/api/smm/collect`.
+                {setup?.message || "No platform data yet. Send stats via GTM to `/api/smm/collect`."}
               </div>
             )}
           </div>

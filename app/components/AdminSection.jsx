@@ -1472,7 +1472,10 @@ export default function AdminSection() {
           </div>
         </div>
       )}
+      <SiteAssociationsModal
+        isOpen={showSiteAssociations}
+        onClose={() => setShowSiteAssociations(false)}
+      />
     </div>
   );
 }
-
