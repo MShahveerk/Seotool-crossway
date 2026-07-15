@@ -208,7 +208,11 @@ export default function DashboardLayout({
       return metaMatch.name;
     }
     const entryMatch = typeof siteEntryOrVal === "object" ? siteEntryOrVal : availableSites.find(s => s.facebookPageId === val || s.siteLink === val);
-    return entryMatch?.userName || getSiteHostName(val);
+    const name = entryMatch?.userName || val;
+    if (name && name.startsWith("http")) {
+      return getSiteHostName(name);
+    }
+    return name || getSiteHostName(val);
   };
 
   const getFaviconUrl = (siteUrl) => {
