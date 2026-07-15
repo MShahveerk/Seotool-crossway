@@ -3,9 +3,6 @@ const nextConfig = {
   // Use webpack instead of Turbopack for stable dev behavior on Windows
   // Do NOT include turbopack config when using webpack - it causes conflicts
 
-  experimental: {
-    instrumentationHook: true,
-  },
 
   // Docker / self-hosted: produces a minimal server bundle (see DEPLOYMENT.md)
   output: process.env.DOCKER_BUILD === "1" ? "standalone" : undefined,
