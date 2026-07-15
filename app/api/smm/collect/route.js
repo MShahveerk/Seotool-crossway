@@ -88,13 +88,21 @@ export async function POST(req) {
     const isGtmValid =
       (globalSite && globalSite.gtmContainerId === String(gtmContainerId).trim());
 
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
       where: isGtmValid ? { siteLink: normalizedSite } : {
         gtmContainerId: String(gtmContainerId).trim(),
         siteLink: normalizedSite,
       },
       select: { id: true },
     });
+
+    if (!user && isGtmValid) {
+      // Fallback for disassociated setup: use the first super admin to satisfy foreign key constraints
+      user = await prisma.user.findFirst({
+        where: { role: "super_admin" },
+        select: { id: true },
+      });
+    }
 
     if (!user) {
       return new Response(

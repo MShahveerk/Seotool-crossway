@@ -24,12 +24,20 @@ export async function GET(req) {
     }
 
     // Attempt to fetch accounts/pages the token has access to
-    // The `me/accounts` endpoint works for User Access Tokens. If the token is already a Page Access Token,
-    // this might fail or return just that page. Let's try `me/accounts` first.
+    // Let's query the `website` field to see if we can resolve the site URL automatically.
     let accounts = [];
 
+    const extractFirstUrl = (text) => {
+      if (!text) return "";
+      const match = String(text).match(/https?:\/\/[^\s,;]+/i);
+      if (match) return match[0];
+      const domainMatch = String(text).match(/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/[^\s,;]*)?/i);
+      if (domainMatch) return `https://${domainMatch[0]}`;
+      return text;
+    };
+
     try {
-      const url = `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,instagram_business_account&access_token=${metaToken}`;
+      const url = `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,website,instagram_business_account&access_token=${metaToken}`;
       const response = await axios.get(url);
 
       if (response.data && response.data.data) {
@@ -38,6 +46,7 @@ export async function GET(req) {
           name: page.name,
           facebookPageId: page.id,
           instagramUserId: page.instagram_business_account?.id || null,
+          siteLink: page.website ? extractFirstUrl(page.website) : "",
         }));
       }
     } catch (err) {
@@ -45,7 +54,7 @@ export async function GET(req) {
 
       // Fallback: If it's a direct Page Access Token, we might just be able to fetch "me"
       try {
-        const url = `https://graph.facebook.com/v20.0/me?fields=id,name,instagram_business_account&access_token=${metaToken}`;
+        const url = `https://graph.facebook.com/v20.0/me?fields=id,name,website,instagram_business_account&access_token=${metaToken}`;
         const response = await axios.get(url);
 
         if (response.data && response.data.id) {
@@ -54,6 +63,7 @@ export async function GET(req) {
             name: response.data.name || "Configured Page",
             facebookPageId: response.data.id,
             instagramUserId: response.data.instagram_business_account?.id || null,
+            siteLink: response.data.website ? extractFirstUrl(response.data.website) : "",
           }];
         }
       } catch (innerErr) {

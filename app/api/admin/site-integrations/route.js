@@ -94,16 +94,26 @@ export async function GET() {
     // Fetch Meta accounts from token
     const metaToken = process.env.META_PAGE_ACCESS_TOKEN || process.env.META_APP_ACCESS_TOKEN;
     let metaAccounts = [];
+
+    const extractFirstUrl = (text) => {
+      if (!text) return "";
+      const match = String(text).match(/https?:\/\/[^\s,;]+/i);
+      if (match) return match[0];
+      const domainMatch = String(text).match(/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/[^\s,;]*)?/i);
+      if (domainMatch) return `https://${domainMatch[0]}`;
+      return text;
+    };
+
     if (metaToken) {
       try {
-        const url = `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,instagram_business_account&access_token=${metaToken}`;
+        const url = `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,website,instagram_business_account&access_token=${metaToken}`;
         const res = await axios.get(url);
         if (res.data?.data) {
           metaAccounts = res.data.data.map(page => ({
             userId: null,
             userName: page.name,
             userEmail: "",
-            siteLink: "",
+            siteLink: page.website ? extractFirstUrl(page.website) : "",
             facebookPageId: page.id,
             instagramUserId: page.instagram_business_account?.id || "",
             isSuperAdminSite: false,
@@ -111,14 +121,14 @@ export async function GET() {
         }
       } catch (err) {
         try {
-          const url = `https://graph.facebook.com/v20.0/me?fields=id,name,instagram_business_account&access_token=${metaToken}`;
+          const url = `https://graph.facebook.com/v20.0/me?fields=id,name,website,instagram_business_account&access_token=${metaToken}`;
           const res = await axios.get(url);
           if (res.data?.id) {
             metaAccounts = [{
               userId: null,
               userName: res.data.name || "Configured Page",
               userEmail: "",
-              siteLink: "",
+              siteLink: res.data.website ? extractFirstUrl(res.data.website) : "",
               facebookPageId: res.data.id,
               instagramUserId: res.data.instagram_business_account?.id || "",
               isSuperAdminSite: false,

@@ -101,6 +101,19 @@ export async function GET(req) {
         });
         if (mappedUser?.siteLink) {
           siteUrl = mappedUser.siteLink;
+        } else {
+          const statMatch = await prisma.socialMediaDailyStat.findFirst({
+            where: {
+              OR: [
+                { accountHandle: siteUrl },
+                { accountName: siteUrl }
+              ]
+            },
+            select: { siteLink: true }
+          });
+          if (statMatch?.siteLink) {
+            siteUrl = statMatch.siteLink;
+          }
         }
       }
     }

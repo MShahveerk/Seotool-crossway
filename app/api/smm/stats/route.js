@@ -165,13 +165,26 @@ export async function GET(req) {
         });
         if (mappedUser?.siteLink) {
           resolvedSiteLink = mappedUser.siteLink;
-        } else if (isLikelyMetaId) {
-          if (fallbackSite && /^https?:\/\//i.test(fallbackSite)) {
-            resolvedSiteLink = fallbackSite;
-          } else {
-            // Numeric page ID with no site or user record linked yet and no fallback site.
-            // Return empty-data 200 so the dashboard loads cleanly with a setup prompt.
-            return new Response(
+        } else {
+          // Check daily stats history for page-to-site link mapping
+          const statMatch = await prisma.socialMediaDailyStat.findFirst({
+            where: {
+              OR: [
+                { accountHandle: targetSite },
+                { accountName: targetSite }
+              ]
+            },
+            select: { siteLink: true }
+          });
+          if (statMatch?.siteLink) {
+            resolvedSiteLink = statMatch.siteLink;
+          } else if (isLikelyMetaId) {
+            if (fallbackSite && /^https?:\/\//i.test(fallbackSite)) {
+              resolvedSiteLink = fallbackSite;
+            } else {
+              // Numeric page ID with no site or user record linked yet and no fallback site.
+              // Return empty-data 200 so the dashboard loads cleanly with a setup prompt.
+              return new Response(
               JSON.stringify({
                 siteUrl: targetSite,
                 range,
