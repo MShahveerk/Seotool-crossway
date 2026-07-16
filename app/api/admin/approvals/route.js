@@ -256,10 +256,18 @@ export async function POST(req) {
 
     const imagePath = `/api/uploads/${fileName}`;
 
+    const targetPlatform = form.get("targetPlatform") ? String(form.get("targetPlatform")).trim().toLowerCase() : null;
+
     const isMeta = !selectedSite.startsWith("http");
-    const fbPageId = isMeta ? (selectedSite === assignee.facebookPageId ? selectedSite : (assignee.facebookPageId || selectedSite)) : null;
-    const igUserId = isMeta ? (selectedSite === assignee.instagramUserId ? selectedSite : (assignee.instagramUserId || null)) : null;
+    let fbPageId = isMeta ? (selectedSite === assignee.facebookPageId ? selectedSite : (assignee.facebookPageId || selectedSite)) : null;
+    let igUserId = isMeta ? (selectedSite === assignee.instagramUserId ? selectedSite : (assignee.instagramUserId || null)) : null;
     const siteUrlLink = isMeta ? (assignee.siteLink || null) : selectedSite;
+
+    if (targetPlatform === "facebook") {
+      igUserId = null;
+    } else if (targetPlatform === "instagram") {
+      fbPageId = null;
+    }
 
     const now = new Date();
     const approval = await prisma.approval.create({

@@ -460,8 +460,45 @@ export async function GET(req) {
           ? { platform: { in: ["tiktok", "x"] } }
           : { platform }
         : {};
+    // Resolve equivalents (both website URLs and Meta IDs)
+    const equivalentSites = [targetSiteNormalized];
+    const linkedSite = await prisma.site.findFirst({
+      where: {
+        OR: [
+          { siteUrl: targetSiteNormalized },
+          { facebookPageId: targetSiteNormalized },
+          { instagramUserId: targetSiteNormalized }
+        ]
+      }
+    });
+    if (linkedSite) {
+      if (linkedSite.siteUrl) equivalentSites.push(linkedSite.siteUrl);
+      if (linkedSite.facebookPageId) equivalentSites.push(linkedSite.facebookPageId);
+      if (linkedSite.instagramUserId) equivalentSites.push(linkedSite.instagramUserId);
+    }
+    const linkedUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { siteLink: targetSiteNormalized },
+          { facebookPageId: targetSiteNormalized },
+          { instagramUserId: targetSiteNormalized }
+        ]
+      }
+    });
+    for (const u of linkedUsers) {
+      if (u.siteLink) equivalentSites.push(u.siteLink);
+      if (u.facebookPageId) equivalentSites.push(u.facebookPageId);
+      if (u.instagramUserId) equivalentSites.push(u.instagramUserId);
+    }
+    const uniqueEquivalents = Array.from(new Set(
+      equivalentSites.map(s => {
+        if (/^\d+$/.test(String(s).trim())) return String(s).trim();
+        return normalizeSiteOrigin(s);
+      }).filter(Boolean)
+    ));
+
     const filter = {
-      siteLink: targetSiteNormalized,
+      siteLink: { in: uniqueEquivalents },
       statDate: { gte: start, lte: end },
       ...platformWhere,
     };
@@ -472,12 +509,24 @@ export async function GET(req) {
     });
     const rows = rawRows.filter((r) => String(r.platform || "").toLowerCase() !== "linkedin");
 
-    const globalSite = await prisma.site.findUnique({
-      where: { siteUrl: targetSiteNormalized }
+    const globalSite = await prisma.site.findFirst({
+      where: {
+        OR: [
+          { siteUrl: { in: uniqueEquivalents } },
+          { facebookPageId: { in: uniqueEquivalents } },
+          { instagramUserId: { in: uniqueEquivalents } }
+        ]
+      }
     });
 
     const usersForSite = await prisma.user.findMany({
-      where: { siteLink: targetSiteNormalized },
+      where: {
+        OR: [
+          { siteLink: { in: uniqueEquivalents } },
+          { facebookPageId: { in: uniqueEquivalents } },
+          { instagramUserId: { in: uniqueEquivalents } }
+        ]
+      },
       select: { id: true, email: true, name: true, gtmContainerId: true },
       orderBy: { createdAt: "asc" },
     });

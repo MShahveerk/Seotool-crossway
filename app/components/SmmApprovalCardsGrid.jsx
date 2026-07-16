@@ -33,13 +33,16 @@ function assigneeApprovalTitle(a) {
 }
 
 /** Thumbnail inside black frame (approval card). */
-function MediaThumbnail({ mediaPath, title }) {
+function MediaThumbnail({ mediaPath, title, facebookPageId, instagramUserId }) {
+  const isInstagramOnly = instagramUserId && !facebookPageId;
+  const aspectClass = isInstagramOnly ? "aspect-square" : "aspect-video";
+
   return (
-    <div className="relative w-full overflow-hidden rounded-lg border-[3px] border-black bg-black aspect-video pointer-events-none">
+    <div className={`relative w-full overflow-hidden rounded-lg border-[3px] border-black bg-black ${aspectClass} pointer-events-none`}>
       <ApprovalMediaPreview
         src={mediaPath}
         alt={String(title || "Post or reel preview").trim() || "Preview"}
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-contain"
       />
       {mediaPath && isApprovalVideoPath(mediaPath) ? (
         <span className="pointer-events-none absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
@@ -297,6 +300,8 @@ export default function SmmApprovalCardsGrid({ isSuperAdmin = false, activeSite 
             createdAt: a.createdAt,
             updatedAt: a.updatedAt,
             respondedAt: a.respondedAt,
+            facebookPageId: a.facebookPageId,
+            instagramUserId: a.instagramUserId,
           }));
         setItems(filtered);
       } else {
@@ -401,7 +406,12 @@ export default function SmmApprovalCardsGrid({ isSuperAdmin = false, activeSite 
                     </p>
                   </div>
                 </header>
-                <MediaThumbnail mediaPath={a.imagePath} title={assigneeApprovalTitle(a)} />
+                <MediaThumbnail
+                  mediaPath={a.imagePath}
+                  title={assigneeApprovalTitle(a)}
+                  facebookPageId={a.facebookPageId}
+                  instagramUserId={a.instagramUserId}
+                />
               </div>
             );
           })}

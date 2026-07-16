@@ -122,10 +122,19 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
   // Crop modal state
   const [cropPendingFile, setCropPendingFile] = useState(null);  // raw file awaiting crop
   const [cropPreviews, setCropPreviews] = useState({});           // { facebook?: string, instagram?: string } object URLs
+  const [croppedFilesState, setCroppedFilesState] = useState(null); // stores { facebook?: File, instagram?: File }
+  const [publishFacebook, setPublishFacebook] = useState(true);
+  const [publishInstagram, setPublishInstagram] = useState(true);
 
   // Determine which Meta platforms the selected site belongs to
   const isMeta = selectedSite && !selectedSite.startsWith("http");
-  const cropPlatforms = isMeta ? ["facebook", "instagram"] : [];
+  
+  // Crop platforms determined dynamically based on checkboxes
+  const cropPlatforms = [];
+  if (isMeta) {
+    if (publishFacebook) cropPlatforms.push("facebook");
+    if (publishInstagram) cropPlatforms.push("instagram");
+  }
 
   // Revoke object URLs on unmount or when they change
   useEffect(() => {
@@ -143,6 +152,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
     if (isVideo || cropPlatforms.length === 0) {
       setForm((f) => ({ ...f, imageFile: rawFile }));
       setCropPreviews({});
+      setCroppedFilesState(null);
       return;
     }
     // Open crop modal
@@ -150,6 +160,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
   };
 
   const handleCropConfirm = (croppedFiles) => {
+    setCroppedFilesState(croppedFiles);
     // Use the facebook crop as the upload file (primary), fall back to instagram or original
     const uploadFile = croppedFiles.facebook || croppedFiles.instagram || cropPendingFile;
     setForm((f) => ({ ...f, imageFile: uploadFile }));
@@ -164,11 +175,13 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
   const handleCropUseOriginal = () => {
     setForm((f) => ({ ...f, imageFile: cropPendingFile }));
     setCropPreviews({});
+    setCroppedFilesState(null);
     setCropPendingFile(null);
   };
 
   const handleCropCancel = () => {
     setCropPendingFile(null);
+    setCroppedFilesState(null);
     // Reset file input so user can re-select
     if (approvalImageInputRef.current) approvalImageInputRef.current.value = "";
   };
@@ -283,28 +296,55 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
       setError("Please select a site from Site Dashboard before creating an approval.");
       return;
     }
+    if (isMeta && !publishFacebook && !publishInstagram) {
+      setError("Please select at least one platform (Facebook or Instagram) to publish to.");
+      return;
+    }
     setSubmitting(true);
     try {
       const wasApproveOnAssignment = form.approveOnAssignment;
-      const fd = new FormData();
-      fd.append("image", form.imageFile);
-      fd.append("title", form.title.trim());
-      fd.append("caption", form.caption.trim());
-      fd.append("selectedSite", selectedSite);
-      fd.append("approveOnAssignment", wasApproveOnAssignment ? "1" : "0");
-      if (form.scheduledFor) {
-        // Convert the local datetime string into a precise UTC ISO string before sending
-        fd.append("scheduledFor", new Date(form.scheduledFor).toISOString());
+      
+      const submitSingle = async (fileObj, platformName) => {
+        const fd = new FormData();
+        fd.append("image", fileObj);
+        fd.append("title", form.title.trim());
+        fd.append("caption", form.caption.trim());
+        fd.append("selectedSite", selectedSite);
+        fd.append("approveOnAssignment", wasApproveOnAssignment ? "1" : "0");
+        if (platformName) {
+          fd.append("targetPlatform", platformName);
+        }
+        if (form.scheduledFor) {
+          fd.append("scheduledFor", new Date(form.scheduledFor).toISOString());
+        }
+        const res = await fetch("/api/admin/approvals", { method: "POST", body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `Failed to create ${platformName || 'approval'} post`);
+        return data;
+      };
+
+      if (isMeta) {
+        // Submit separately for Facebook and Instagram
+        if (publishFacebook) {
+          const fileToUse = croppedFilesState?.facebook || form.imageFile;
+          await submitSingle(fileToUse, "facebook");
+        }
+        if (publishInstagram) {
+          const fileToUse = croppedFilesState?.instagram || form.imageFile;
+          await submitSingle(fileToUse, "instagram");
+        }
+      } else {
+        // Regular site post
+        await submitSingle(form.imageFile, null);
       }
-      const res = await fetch("/api/admin/approvals", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create approval");
+
       setSuccess(
         wasApproveOnAssignment
           ? "Approval created and recorded as approved (assignee does not need to review)."
-          : "Approval created and assigned."
+          : "Approval(s) created and assigned."
       );
       setForm({ title: "", caption: "", imageFile: null, approveOnAssignment: false, scheduledFor: "" });
+      setCroppedFilesState(null);
       if (approvalImageInputRef.current) approvalImageInputRef.current.value = "";
       await load();
       if (typeof window !== "undefined") {
@@ -377,6 +417,31 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
             />
             <p className="text-xs text-gray-500 mt-1">Max 2000 characters. {form.caption.length}/2000</p>
           </div>
+          {isMeta && (
+            <div>
+              <span className="block text-sm font-semibold text-gray-700 mb-2">Publish To</span>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={publishFacebook}
+                    onChange={(e) => setPublishFacebook(e.target.checked)}
+                    className="rounded border-gray-300 text-gray-900 focus:ring-gray-400"
+                  />
+                  🟦 Facebook Page
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={publishInstagram}
+                    onChange={(e) => setPublishInstagram(e.target.checked)}
+                    className="rounded border-gray-300 text-gray-900 focus:ring-gray-400"
+                  />
+                  🟣 Instagram Account
+                </label>
+              </div>
+            </div>
+          )}
           <div>
             <span className="block text-sm font-semibold text-gray-700 mb-2">Image or video</span>
             <div className="flex flex-wrap items-center gap-2">

@@ -89,14 +89,57 @@ export async function GET(req) {
       }
     }
 
+    // Resolve equivalents (both website URLs and Meta IDs)
+    const equivalentSites = [targetSiteNormalized];
+    const linkedSite = await prisma.site.findFirst({
+      where: {
+        OR: [
+          { siteUrl: targetSiteNormalized },
+          { facebookPageId: targetSiteNormalized },
+          { instagramUserId: targetSiteNormalized }
+        ]
+      }
+    });
+    if (linkedSite) {
+      if (linkedSite.siteUrl) equivalentSites.push(linkedSite.siteUrl);
+      if (linkedSite.facebookPageId) equivalentSites.push(linkedSite.facebookPageId);
+      if (linkedSite.instagramUserId) equivalentSites.push(linkedSite.instagramUserId);
+    }
+    const linkedUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { siteLink: targetSiteNormalized },
+          { facebookPageId: targetSiteNormalized },
+          { instagramUserId: targetSiteNormalized }
+        ]
+      }
+    });
+    for (const u of linkedUsers) {
+      if (u.siteLink) equivalentSites.push(u.siteLink);
+      if (u.facebookPageId) equivalentSites.push(u.facebookPageId);
+      if (u.instagramUserId) equivalentSites.push(u.instagramUserId);
+    }
+    const uniqueEquivalents = Array.from(new Set(
+      equivalentSites.map(s => {
+        if (/^\d+$/.test(String(s).trim())) return String(s).trim();
+        return normalizeSiteOrigin(s);
+      }).filter(Boolean)
+    ));
+
     let ownerUser = await prisma.user.findFirst({
-      where: { siteLink: targetSiteNormalized },
+      where: {
+        OR: [
+          { siteLink: { in: uniqueEquivalents } },
+          { facebookPageId: { in: uniqueEquivalents } },
+          { instagramUserId: { in: uniqueEquivalents } }
+        ]
+      },
       orderBy: { createdAt: "asc" },
       select: { id: true },
     });
     if (!ownerUser) {
       const statOwner = await prisma.socialMediaDailyStat.findFirst({
-        where: { siteLink: targetSiteNormalized },
+        where: { siteLink: { in: uniqueEquivalents } },
         orderBy: { statDate: "desc" },
         select: { userId: true },
       });
@@ -117,7 +160,7 @@ export async function GET(req) {
     const rawRows = await prisma.socialMediaDailyStat.findMany({
       where: {
         userId: ownerUser.id,
-        siteLink: targetSiteNormalized,
+        siteLink: { in: uniqueEquivalents },
       },
       orderBy: [{ statDate: "desc" }, { updatedAt: "desc" }],
     });
