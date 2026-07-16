@@ -535,6 +535,22 @@ export async function GET(req) {
 
     const monthlyBreakdown = buildMonthlyBreakdownFromRows(rows);
 
+    const hasMetaConfig = Boolean(
+      globalSite?.facebookPageId || 
+      globalSite?.instagramUserId || 
+      usersForSite.some(u => u.facebookPageId || u.instagramUserId) ||
+      /^\d+$/.test(String(targetSiteNormalized).trim())
+    );
+
+    let setupMessage = "No SMM stats received yet. Configure GTM and push daily platform metrics to /api/smm/collect.";
+    if (metaToken) {
+      if (!hasMetaConfig) {
+        setupMessage = "No Facebook Page or Instagram Account is linked to this website. Link a Facebook Page ID or Instagram User ID in User Management or Site Settings to view live SMM analytics.";
+      } else {
+        setupMessage = "No SMM statistics found in the database. Click the Refresh button in the top right to pull the latest live data from Meta.";
+      }
+    }
+
     if (!rows.length) {
       return new Response(
         JSON.stringify({
@@ -553,7 +569,7 @@ export async function GET(req) {
           timeSeries: [],
           accounts: [],
           setup: {
-            message: "No SMM stats received yet. Configure GTM and push daily platform metrics to /api/smm/collect.",
+            message: setupMessage,
             gtmContainerId,
           },
           currentYearMonth: formatYearMonth(new Date()),
