@@ -1,7 +1,7 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 
-export async function proxy(req) {
+export async function middleware(req) {
   // Validate NEXTAUTH_SECRET is set
   const secret = process.env.NEXTAUTH_SECRET;
   const isProduction = process.env.NODE_ENV === "production";

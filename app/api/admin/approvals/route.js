@@ -183,7 +183,8 @@ export async function POST(req) {
       );
     }
 
-    const normalizedSelectedSite = normalizeSiteForMatch(selectedSite);
+    const isRawMetaId = /^\d+$/.test(String(selectedSite || "").trim());
+    const normalizedSelectedSite = isRawMetaId ? String(selectedSite).trim() : normalizeSiteForMatch(selectedSite);
     const candidateUsers = await prisma.user.findMany({
       where: { role: { not: ROLES.SUPER_ADMIN } },
       select: {
@@ -199,7 +200,7 @@ export async function POST(req) {
     });
 
     const matchedUsers = candidateUsers.filter((u) => {
-      const matchPrimarySite = u.siteLink && normalizeSiteForMatch(u.siteLink) === normalizedSelectedSite;
+      const matchPrimarySite = u.siteLink && (isRawMetaId ? String(u.siteLink).trim() === normalizedSelectedSite : normalizeSiteForMatch(u.siteLink) === normalizedSelectedSite);
       const matchPrimaryFb = u.facebookPageId && String(u.facebookPageId).trim() === String(selectedSite).trim();
       const matchPrimaryIg = u.instagramUserId && String(u.instagramUserId).trim() === String(selectedSite).trim();
 
@@ -207,7 +208,7 @@ export async function POST(req) {
         if (!entry.siteLink) return false;
         const entryVal = String(entry.siteLink).trim();
         const selectedVal = String(selectedSite).trim();
-        return entryVal === selectedVal || normalizeSiteForMatch(entry.siteLink) === normalizedSelectedSite;
+        return entryVal === selectedVal || (isRawMetaId ? entryVal === normalizedSelectedSite : normalizeSiteForMatch(entry.siteLink) === normalizedSelectedSite);
       });
 
       return matchPrimarySite || matchPrimaryFb || matchPrimaryIg || matchAccessible;
