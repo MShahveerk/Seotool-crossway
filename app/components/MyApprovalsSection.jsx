@@ -1,6 +1,6 @@
 import ApprovalsUserPanel from "./ApprovalsUserPanel";
 
-export default function MyApprovalsSection() {
+export default function MyApprovalsSection({ selectedSite = "" }) {
   return (
     <div className="mx-auto max-w-7xl">
       <div className="mb-6">
@@ -9,7 +9,7 @@ export default function MyApprovalsSection() {
           Review, edit, and approve content assigned to you by administrators.
         </p>
       </div>
-      <ApprovalsUserPanel />
+      <ApprovalsUserPanel selectedSite={selectedSite} />
     </div>
   );
 }

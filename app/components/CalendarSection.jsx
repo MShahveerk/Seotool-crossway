@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import CalendarView from "./CalendarView";
 
-export default function CalendarSection() {
+export default function CalendarSection({ selectedSite = "" }) {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/calendar")
+    const query = selectedSite ? `?site=${encodeURIComponent(selectedSite)}` : "";
+    setLoading(true);
+    fetch(`/api/calendar${query}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.approvals) {
@@ -18,7 +20,7 @@ export default function CalendarSection() {
         console.error("Failed to load calendar", err);
         setLoading(false);
       });
-  }, []);
+  }, [selectedSite]);
 
   if (loading) {
     return (

@@ -68,7 +68,32 @@ export async function GET(req) {
       });
     }
 
+    let whereClause = {};
+    const siteParam = req.nextUrl.searchParams.get("site") || req.nextUrl.searchParams.get("url");
+    if (siteParam) {
+      const cleanSite = String(siteParam).trim();
+      const normalizeLocal = (s) => {
+        try {
+          const u = new URL(s.startsWith("http") ? s : `https://${s}`);
+          return u.hostname.replace(/^www\./i, "").toLowerCase();
+        } catch {
+          return s.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/+$/, "").toLowerCase();
+        }
+      };
+      const normSite = normalizeLocal(cleanSite);
+      
+      whereClause = {
+        OR: [
+          { facebookPageId: cleanSite },
+          { instagramUserId: cleanSite },
+          { siteLink: cleanSite },
+          { siteLink: { contains: normSite } }
+        ]
+      };
+    }
+
     const rows = await prisma.approval.findMany({
+      where: whereClause,
       orderBy: { createdAt: "desc" },
       include: {
         assignee: { select: { id: true, email: true, name: true, role: true } },

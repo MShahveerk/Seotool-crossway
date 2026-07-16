@@ -56,6 +56,35 @@ export async function GET(req) {
       }
     }
 
+    // Filter by selected site / meta page ID if specified in the query
+    const siteParam = req.nextUrl.searchParams.get("site") || req.nextUrl.searchParams.get("url");
+    if (siteParam) {
+      const cleanSite = String(siteParam).trim();
+      const normalizeLocal = (s) => {
+        try {
+          const u = new URL(s.startsWith("http") ? s : `https://${s}`);
+          return u.hostname.replace(/^www\./i, "").toLowerCase();
+        } catch {
+          return s.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/+$/, "").toLowerCase();
+        }
+      };
+      
+      const normSite = normalizeLocal(cleanSite);
+      
+      const siteFilter = {
+        OR: [
+          { facebookPageId: cleanSite },
+          { instagramUserId: cleanSite },
+          { siteLink: cleanSite },
+          { siteLink: { contains: normSite } }
+        ]
+      };
+
+      whereClause = whereClause.AND 
+        ? { AND: [...whereClause.AND, siteFilter] }
+        : { AND: [whereClause, siteFilter] };
+    }
+
     const approvals = await prisma.approval.findMany({
       where: whereClause,
       include: {

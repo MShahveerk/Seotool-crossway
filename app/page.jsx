@@ -72,9 +72,9 @@ export default function Home() {
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
       case "calendar":
-        return <CalendarSection />;
+        return <CalendarSection selectedSite={selectedSite} />;
       case "my-approvals":
-        return <MyApprovalsSection />;
+        return <MyApprovalsSection selectedSite={selectedSite} />;
       case "user-management":
         return session?.user?.role === "super_admin" ? (
           <AdminSection />

@@ -192,7 +192,8 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
     setApprovalsListWarning("");
     try {
       try {
-        const aRes = await fetch("/api/admin/approvals");
+        const query = selectedSite ? `?site=${encodeURIComponent(selectedSite)}` : "";
+        const aRes = await fetch(`/api/admin/approvals${query}`);
         const aData = await aRes.json();
         if (aRes.ok) {
           setApprovals(aData.approvals || []);
@@ -215,7 +216,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedSite]);
 
   useEffect(() => {
     load();

@@ -84,7 +84,7 @@ function ReviewReadonlySubmitted({ id, label, value, rows = 3 }) {
   );
 }
 
-export default function ApprovalsUserPanel() {
+export default function ApprovalsUserPanel({ selectedSite = "" }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -99,7 +99,8 @@ export default function ApprovalsUserPanel() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/approvals");
+      const query = selectedSite ? `?site=${encodeURIComponent(selectedSite)}` : "";
+      const res = await fetch(`/api/approvals${query}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load approvals");
       setItems(data.approvals || []);
@@ -108,7 +109,7 @@ export default function ApprovalsUserPanel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedSite]);
 
   useEffect(() => {
     load();
