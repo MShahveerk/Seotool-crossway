@@ -103,7 +103,8 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
 
     try {
       const res = await fetch(`/api/admin/sites/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete site");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to delete site");
       await fetchSites();
     } catch (err) {
       setError(err.message);
