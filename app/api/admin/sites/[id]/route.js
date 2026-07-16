@@ -91,23 +91,47 @@ export async function DELETE(req, { params }) {
 
     const targetUrl = site.siteUrl;
 
-    // Cascading cleanups across all references to this site link
+    // Cascading cleanups across all references: perform child/related updates first to prevent FK constraint violations
     await prisma.$transaction([
-      prisma.site.delete({
-        where: { id },
-      }),
       prisma.user.updateMany({
         where: { siteLink: targetUrl },
         data: { siteLink: null },
+      }),
+      prisma.user.updateMany({
+        where: {
+          OR: [
+            site.facebookPageId ? { facebookPageId: site.facebookPageId } : null,
+            site.instagramUserId ? { instagramUserId: site.instagramUserId } : null
+          ].filter(Boolean)
+        },
+        data: {
+          facebookPageId: null,
+          instagramUserId: null
+        }
       }),
       prisma.userAccessibleSite.deleteMany({
         where: { siteLink: targetUrl },
       }),
       prisma.socialMediaDailyStat.deleteMany({
-        where: { siteLink: targetUrl },
+        where: {
+          OR: [
+            { siteLink: targetUrl },
+            site.facebookPageId ? { siteLink: site.facebookPageId } : null,
+            site.instagramUserId ? { siteLink: site.instagramUserId } : null
+          ].filter(Boolean)
+        },
       }),
       prisma.approval.deleteMany({
-        where: { siteLink: targetUrl },
+        where: {
+          OR: [
+            { siteLink: targetUrl },
+            site.facebookPageId ? { facebookPageId: site.facebookPageId } : null,
+            site.instagramUserId ? { instagramUserId: site.instagramUserId } : null
+          ].filter(Boolean)
+        },
+      }),
+      prisma.site.delete({
+        where: { id },
       }),
     ]);
 
