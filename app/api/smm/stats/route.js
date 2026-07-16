@@ -266,14 +266,87 @@ export async function GET(req) {
           // If targetSiteNormalized is itself a numeric Meta ID, use it directly
           const targetIsMetaId = /^\d+$/.test(String(targetSiteNormalized).trim());
 
-          const fbPageId =
+          let fbPageId =
             siteRecord?.facebookPageId ||
             session.user.facebookPageId ||
             (targetIsMetaId ? targetSiteNormalized : null);
 
-          const igUserId =
+          let igUserId =
             siteRecord?.instagramUserId ||
             session.user.instagramUserId;
+
+          // Auto-discovery from Meta Token if website is selected but has no linked page IDs in DB
+          if (!fbPageId && !igUserId && !targetIsMetaId) {
+            try {
+              const accountsUrl = `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,website,instagram_business_account&access_token=${metaToken}`;
+              const accountsRes = await axios.get(accountsUrl);
+              
+              const extractFirstUrl = (text) => {
+                if (!text) return "";
+                const match = String(text).match(/https?:\/\/[^\s,;]+/i);
+                if (match) return match[0];
+                const domainMatch = String(text).match(/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/[^\s,;]*)?/i);
+                if (domainMatch) return `https://${domainMatch[0]}`;
+                return text;
+              };
+
+              if (accountsRes.data && accountsRes.data.data) {
+                const matchedPage = accountsRes.data.data.find(page => {
+                  if (!page.website) return false;
+                  const parsedWeb = normalizeSiteOrigin(extractFirstUrl(page.website));
+                  return parsedWeb && parsedWeb === targetSiteNormalized;
+                });
+
+                if (matchedPage) {
+                  fbPageId = matchedPage.id;
+                  igUserId = matchedPage.instagram_business_account?.id || null;
+                  
+                  // Auto-persist in database Site table
+                  await prisma.site.upsert({
+                    where: { siteUrl: targetSiteNormalized },
+                    update: {
+                      facebookPageId: fbPageId,
+                      instagramUserId: igUserId
+                    },
+                    create: {
+                      siteUrl: targetSiteNormalized,
+                      facebookPageId: fbPageId,
+                      instagramUserId: igUserId
+                    }
+                  });
+                  console.log(`[INFO] Auto-discovered and persisted Meta Page ID ${fbPageId} and Instagram User ID ${igUserId} for website ${targetSiteNormalized}`);
+                }
+              }
+
+              // Fallback to /me (single page token)
+              if (!fbPageId) {
+                const meUrl = `https://graph.facebook.com/v20.0/me?fields=id,name,website,instagram_business_account&access_token=${metaToken}`;
+                const meRes = await axios.get(meUrl);
+                if (meRes.data && meRes.data.id) {
+                  const parsedWeb = normalizeSiteOrigin(extractFirstUrl(meRes.data.website));
+                  if (parsedWeb && parsedWeb === targetSiteNormalized) {
+                    fbPageId = meRes.data.id;
+                    igUserId = meRes.data.instagram_business_account?.id || null;
+                    
+                    await prisma.site.upsert({
+                      where: { siteUrl: targetSiteNormalized },
+                      update: {
+                        facebookPageId: fbPageId,
+                        instagramUserId: igUserId
+                      },
+                      create: {
+                        siteUrl: targetSiteNormalized,
+                        facebookPageId: fbPageId,
+                        instagramUserId: igUserId
+                      }
+                    });
+                  }
+                }
+              }
+            } catch (discErr) {
+              console.warn("Failed to auto-discover Meta accounts:", discErr.message);
+            }
+          }
 
           // 1. Fetch Facebook Page Insights (Reach & Engagement history)
           if (fbPageId && /^\d+$/.test(String(fbPageId).trim())) {
