@@ -290,18 +290,22 @@ export async function GET(req) {
                 return text;
               };
 
-              if (accountsRes.data && accountsRes.data.data) {
+              if (accountsRes.data && accountsRes.data.data && accountsRes.data.data.length > 0) {
+                // 1. Try to find a match by website URL
                 const matchedPage = accountsRes.data.data.find(page => {
                   if (!page.website) return false;
                   const parsedWeb = normalizeSiteOrigin(extractFirstUrl(page.website));
                   return parsedWeb && parsedWeb === targetSiteNormalized;
                 });
 
-                if (matchedPage) {
-                  fbPageId = matchedPage.id;
-                  igUserId = matchedPage.instagram_business_account?.id || null;
+                // 2. Fallback to the first available page if no match was found
+                const pageToUse = matchedPage || accountsRes.data.data[0];
+
+                if (pageToUse) {
+                  fbPageId = pageToUse.id;
+                  igUserId = pageToUse.instagram_business_account?.id || null;
                   
-                  // Auto-persist in database Site table
+                  // Auto-persist in database Site table to connect them
                   await prisma.site.upsert({
                     where: { siteUrl: targetSiteNormalized },
                     update: {
@@ -314,33 +318,31 @@ export async function GET(req) {
                       instagramUserId: igUserId
                     }
                   });
-                  console.log(`[INFO] Auto-discovered and persisted Meta Page ID ${fbPageId} and Instagram User ID ${igUserId} for website ${targetSiteNormalized}`);
+                  console.log(`[INFO] Auto-linked Meta Page ID ${fbPageId} (first available) to website ${targetSiteNormalized}`);
                 }
               }
 
-              // Fallback to /me (single page token)
+              // Fallback to /me (single page token) if accounts was empty or failed
               if (!fbPageId) {
                 const meUrl = `https://graph.facebook.com/v20.0/me?fields=id,name,website,instagram_business_account&access_token=${metaToken}`;
                 const meRes = await axios.get(meUrl);
                 if (meRes.data && meRes.data.id) {
-                  const parsedWeb = normalizeSiteOrigin(extractFirstUrl(meRes.data.website));
-                  if (parsedWeb && parsedWeb === targetSiteNormalized) {
-                    fbPageId = meRes.data.id;
-                    igUserId = meRes.data.instagram_business_account?.id || null;
-                    
-                    await prisma.site.upsert({
-                      where: { siteUrl: targetSiteNormalized },
-                      update: {
-                        facebookPageId: fbPageId,
-                        instagramUserId: igUserId
-                      },
-                      create: {
-                        siteUrl: targetSiteNormalized,
-                        facebookPageId: fbPageId,
-                        instagramUserId: igUserId
-                      }
-                    });
-                  }
+                  fbPageId = meRes.data.id;
+                  igUserId = meRes.data.instagram_business_account?.id || null;
+                  
+                  await prisma.site.upsert({
+                    where: { siteUrl: targetSiteNormalized },
+                    update: {
+                      facebookPageId: fbPageId,
+                      instagramUserId: igUserId
+                    },
+                    create: {
+                      siteUrl: targetSiteNormalized,
+                      facebookPageId: fbPageId,
+                      instagramUserId: igUserId
+                    }
+                  });
+                  console.log(`[INFO] Auto-linked Meta /me ID ${fbPageId} to website ${targetSiteNormalized}`);
                 }
               }
             } catch (discErr) {
