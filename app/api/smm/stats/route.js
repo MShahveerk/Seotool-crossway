@@ -250,8 +250,10 @@ export async function GET(req) {
         const existingToday = await prisma.socialMediaDailyStat.findFirst({
           where: { siteLink: targetSiteNormalized, statDate: today }
         });
-
         if (!existingToday || forceRefresh) {
+          const since = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+          const until = Math.floor(Date.now() / 1000);
+
           // Try to find a Site record for lookup of linked page IDs
           const siteRecord = await prisma.site.findFirst({
             where: {
@@ -305,20 +307,17 @@ export async function GET(req) {
                   fbPageId = pageToUse.id;
                   igUserId = pageToUse.instagram_business_account?.id || null;
                   
-                  // Auto-persist in database Site table to connect them
-                  await prisma.site.upsert({
-                    where: { siteUrl: targetSiteNormalized },
-                    update: {
-                      facebookPageId: fbPageId,
-                      instagramUserId: igUserId
-                    },
-                    create: {
-                      siteUrl: targetSiteNormalized,
-                      facebookPageId: fbPageId,
-                      instagramUserId: igUserId
-                    }
-                  });
-                  console.log(`[INFO] Auto-linked Meta Page ID ${fbPageId} (first available) to website ${targetSiteNormalized}`);
+                  // Only update existing Site record in DB, do not auto-add new ones
+                  if (siteRecord) {
+                    await prisma.site.update({
+                      where: { id: siteRecord.id },
+                      data: {
+                        facebookPageId: fbPageId,
+                        instagramUserId: igUserId
+                      }
+                    });
+                  }
+                  console.log(`[INFO] Auto-discovered Meta Page ID ${fbPageId} for website ${targetSiteNormalized}`);
                 }
               }
 
@@ -330,19 +329,16 @@ export async function GET(req) {
                   fbPageId = meRes.data.id;
                   igUserId = meRes.data.instagram_business_account?.id || null;
                   
-                  await prisma.site.upsert({
-                    where: { siteUrl: targetSiteNormalized },
-                    update: {
-                      facebookPageId: fbPageId,
-                      instagramUserId: igUserId
-                    },
-                    create: {
-                      siteUrl: targetSiteNormalized,
-                      facebookPageId: fbPageId,
-                      instagramUserId: igUserId
-                    }
-                  });
-                  console.log(`[INFO] Auto-linked Meta /me ID ${fbPageId} to website ${targetSiteNormalized}`);
+                  if (siteRecord) {
+                    await prisma.site.update({
+                      where: { id: siteRecord.id },
+                      data: {
+                        facebookPageId: fbPageId,
+                        instagramUserId: igUserId
+                      }
+                    });
+                  }
+                  console.log(`[INFO] Auto-discovered Meta /me ID ${fbPageId} for website ${targetSiteNormalized}`);
                 }
               }
             } catch (discErr) {
@@ -353,7 +349,7 @@ export async function GET(req) {
           // 1. Fetch Facebook Page Insights (Reach & Engagement history)
           if (fbPageId && /^\d+$/.test(String(fbPageId).trim())) {
             try {
-              const fbInsightsUrl = `https://graph.facebook.com/v20.0/${fbPageId}/insights?metric=page_impressions_unique,page_post_engagements&period=day&access_token=${metaToken}`;
+              const fbInsightsUrl = `https://graph.facebook.com/v20.0/${fbPageId}/insights?metric=page_impressions_unique,page_post_engagements&period=day&since=${since}&until=${until}&access_token=${metaToken}`;
               const fbInsightsRes = await axios.get(fbInsightsUrl);
               
               if (fbInsightsRes.data && fbInsightsRes.data.data) {
@@ -373,6 +369,12 @@ export async function GET(req) {
                   existing.engagements = Number(item.value || 0);
                   mergedDaily.set(dateStr, existing);
                 });
+
+                // Fallback: If insights list is empty, always seed today to save follower metadata
+                if (mergedDaily.size === 0) {
+                  const todayStr = new Date().toISOString().split("T")[0];
+                  mergedDaily.set(todayStr, { statDate: new Date(todayStr), reach: 0, engagements: 0 });
+                }
 
                 // Fetch current follower count to use as baseline
                 let currentFollowers = 0;
@@ -426,10 +428,11 @@ export async function GET(req) {
             }
           }
 
+
           // 2. Fetch Instagram Account Insights (Reach & Impression history)
           if (igUserId && /^\d+$/.test(String(igUserId).trim())) {
             try {
-              const igInsightsUrl = `https://graph.facebook.com/v20.0/${igUserId}/insights?metric=reach,impressions&period=day&access_token=${metaToken}`;
+              const igInsightsUrl = `https://graph.facebook.com/v20.0/${igUserId}/insights?metric=reach,impressions&period=day&since=${since}&until=${until}&access_token=${metaToken}`;
               const igInsightsRes = await axios.get(igInsightsUrl);
               
               if (igInsightsRes.data && igInsightsRes.data.data) {
@@ -449,6 +452,12 @@ export async function GET(req) {
                   existing.engagements = Number(item.value || 0); // Map impressions to engagements
                   mergedDaily.set(dateStr, existing);
                 });
+
+                // Fallback: If insights list is empty, always seed today to save follower metadata
+                if (mergedDaily.size === 0) {
+                  const todayStr = new Date().toISOString().split("T")[0];
+                  mergedDaily.set(todayStr, { statDate: new Date(todayStr), reach: 0, engagements: 0 });
+                }
 
                 let currentFollowers = 0;
                 let igUsername = "Instagram Account";
