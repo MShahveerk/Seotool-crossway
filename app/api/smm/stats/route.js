@@ -345,9 +345,20 @@ export async function GET(req) {
               console.warn("Failed to auto-discover Meta accounts:", discErr.message);
             }
           }
-
-          // 1. Fetch Facebook Page Insights (Reach & Engagement history)
+          // 1. Fetch Facebook Page Details & Insights
           if (fbPageId && /^\d+$/.test(String(fbPageId).trim())) {
+            let currentFollowers = 0;
+            let fbPageName = "Facebook Page";
+            try {
+              const fbPageUrl = `https://graph.facebook.com/v20.0/${fbPageId}?fields=fan_count,name&access_token=${metaToken}`;
+              const fbPageRes = await axios.get(fbPageUrl);
+              currentFollowers = Number(fbPageRes.data?.fan_count || 0);
+              fbPageName = fbPageRes.data?.name || fbPageName;
+            } catch (err) {
+              console.warn(`Failed to fetch basic FB Page info for ${fbPageId}:`, err.message);
+            }
+
+            const mergedDaily = new Map();
             try {
               const fbInsightsUrl = `https://graph.facebook.com/v20.0/${fbPageId}/insights?metric=page_impressions_unique,page_post_engagements&period=day&since=${since}&until=${until}&access_token=${metaToken}`;
               const fbInsightsRes = await axios.get(fbInsightsUrl);
@@ -356,8 +367,6 @@ export async function GET(req) {
                 const reachData = fbInsightsRes.data.data.find(d => d.name === "page_impressions_unique")?.values || [];
                 const engagementData = fbInsightsRes.data.data.find(d => d.name === "page_post_engagements")?.values || [];
 
-                const mergedDaily = new Map();
-                
                 reachData.forEach(item => {
                   const dateStr = item.end_time.split("T")[0]; // YYYY-MM-DD
                   mergedDaily.set(dateStr, { statDate: new Date(dateStr), reach: Number(item.value || 0), engagements: 0 });
@@ -369,68 +378,73 @@ export async function GET(req) {
                   existing.engagements = Number(item.value || 0);
                   mergedDaily.set(dateStr, existing);
                 });
-
-                // Fallback: If insights list is empty, always seed today to save follower metadata
-                if (mergedDaily.size === 0) {
-                  const todayStr = new Date().toISOString().split("T")[0];
-                  mergedDaily.set(todayStr, { statDate: new Date(todayStr), reach: 0, engagements: 0 });
-                }
-
-                // Fetch current follower count to use as baseline
-                let currentFollowers = 0;
-                let fbPageName = "Facebook Page";
-                try {
-                  const fbPageUrl = `https://graph.facebook.com/v20.0/${fbPageId}?fields=fan_count,name&access_token=${metaToken}`;
-                  const fbPageRes = await axios.get(fbPageUrl);
-                  currentFollowers = Number(fbPageRes.data?.fan_count || 0);
-                  fbPageName = fbPageRes.data?.name || fbPageName;
-                } catch {}
-
-                // Upsert daily rows
-                for (const [dateStr, val] of mergedDaily.entries()) {
-                  const statDate = val.statDate;
-                  statDate.setHours(0, 0, 0, 0);
-
-                  await prisma.socialMediaDailyStat.upsert({
-                    where: {
-                      userId_siteLink_platform_statDate: {
-                        userId: session.user.id,
-                        siteLink: targetSiteNormalized,
-                        platform: "facebook",
-                        statDate,
-                      }
-                    },
-                    update: {
-                      reach: val.reach,
-                      engagements: val.engagements,
-                      accountName: fbPageName,
-                      accountHandle: fbPageId,
-                      followers: currentFollowers,
-                    },
-                    create: {
-                      userId: session.user.id,
-                      siteLink: targetSiteNormalized,
-                      platform: "facebook",
-                      statDate,
-                      followers: currentFollowers,
-                      reach: val.reach,
-                      engagements: val.engagements,
-                      accountName: fbPageName,
-                      accountHandle: fbPageId,
-                      queuedPosts: 0,
-                      queuedReels: 0,
-                    }
-                  });
-                }
               }
             } catch (fbErr) {
               console.warn(`Failed to fetch FB Insights for ${fbPageId}:`, fbErr.response?.data || fbErr.message);
             }
+
+            // Fallback: If insights list is empty or failed, seed today with basic metadata
+            if (mergedDaily.size === 0) {
+              const todayStr = new Date().toISOString().split("T")[0];
+              mergedDaily.set(todayStr, { statDate: new Date(todayStr), reach: 0, engagements: 0 });
+            }
+
+            // Upsert daily rows
+            try {
+              for (const [dateStr, val] of mergedDaily.entries()) {
+                const statDate = val.statDate;
+                statDate.setHours(0, 0, 0, 0);
+
+                await prisma.socialMediaDailyStat.upsert({
+                  where: {
+                    userId_siteLink_platform_statDate: {
+                      userId: session.user.id,
+                      siteLink: targetSiteNormalized,
+                      platform: "facebook",
+                      statDate,
+                    }
+                  },
+                  update: {
+                    reach: val.reach,
+                    engagements: val.engagements,
+                    accountName: fbPageName,
+                    accountHandle: fbPageId,
+                    followers: currentFollowers,
+                  },
+                  create: {
+                    userId: session.user.id,
+                    siteLink: targetSiteNormalized,
+                    platform: "facebook",
+                    statDate,
+                    followers: currentFollowers,
+                    reach: val.reach,
+                    engagements: val.engagements,
+                    accountName: fbPageName,
+                    accountHandle: fbPageId,
+                    queuedPosts: 0,
+                    queuedReels: 0,
+                  }
+                });
+              }
+            } catch (dbErr) {
+              console.error(`Failed to write FB stats to DB for ${fbPageId}:`, dbErr.message);
+            }
           }
 
-
-          // 2. Fetch Instagram Account Insights (Reach & Impression history)
+          // 2. Fetch Instagram Account Details & Insights
           if (igUserId && /^\d+$/.test(String(igUserId).trim())) {
+            let currentFollowers = 0;
+            let igUsername = "Instagram Account";
+            try {
+              const igPageUrl = `https://graph.facebook.com/v20.0/${igUserId}?fields=followers_count,name,username&access_token=${metaToken}`;
+              const igPageRes = await axios.get(igPageUrl);
+              currentFollowers = Number(igPageRes.data?.followers_count || 0);
+              igUsername = igPageRes.data?.username || igUsername;
+            } catch (err) {
+              console.warn(`Failed to fetch basic IG info for ${igUserId}:`, err.message);
+            }
+
+            const mergedDaily = new Map();
             try {
               const igInsightsUrl = `https://graph.facebook.com/v20.0/${igUserId}/insights?metric=reach,impressions&period=day&since=${since}&until=${until}&access_token=${metaToken}`;
               const igInsightsRes = await axios.get(igInsightsUrl);
@@ -439,8 +453,6 @@ export async function GET(req) {
                 const reachData = igInsightsRes.data.data.find(d => d.name === "reach")?.values || [];
                 const impressionsData = igInsightsRes.data.data.find(d => d.name === "impressions")?.values || [];
 
-                const mergedDaily = new Map();
-                
                 reachData.forEach(item => {
                   const dateStr = item.end_time.split("T")[0];
                   mergedDaily.set(dateStr, { statDate: new Date(dateStr), reach: Number(item.value || 0), engagements: 0 });
@@ -452,41 +464,37 @@ export async function GET(req) {
                   existing.engagements = Number(item.value || 0); // Map impressions to engagements
                   mergedDaily.set(dateStr, existing);
                 });
+              }
+            } catch (igErr) {
+              console.warn(`Failed to fetch IG Insights for ${igUserId}:`, igErr.response?.data || igErr.message);
+            }
 
-                // Fallback: If insights list is empty, always seed today to save follower metadata
-                if (mergedDaily.size === 0) {
-                  const todayStr = new Date().toISOString().split("T")[0];
-                  mergedDaily.set(todayStr, { statDate: new Date(todayStr), reach: 0, engagements: 0 });
-                }
+            // Fallback: If insights list is empty or failed, seed today with basic metadata
+            if (mergedDaily.size === 0) {
+              const todayStr = new Date().toISOString().split("T")[0];
+              mergedDaily.set(todayStr, { statDate: new Date(todayStr), reach: 0, engagements: 0 });
+            }
 
-                let currentFollowers = 0;
-                let igUsername = "Instagram Account";
-                try {
-                  const igPageUrl = `https://graph.facebook.com/v20.0/${igUserId}?fields=followers_count,name,username&access_token=${metaToken}`;
-                  const igPageRes = await axios.get(igPageUrl);
-                  currentFollowers = Number(igPageRes.data?.followers_count || 0);
-                  igUsername = igPageRes.data?.username || igUsername;
-                } catch {}
+            try {
+              for (const [dateStr, val] of mergedDaily.entries()) {
+                const statDate = val.statDate;
+                statDate.setHours(0, 0, 0, 0);
 
-                for (const [dateStr, val] of mergedDaily.entries()) {
-                  const statDate = val.statDate;
-                  statDate.setHours(0, 0, 0, 0);
-
-                  await prisma.socialMediaDailyStat.upsert({
-                    where: {
-                      userId_siteLink_platform_statDate: {
-                        userId: session.user.id,
-                        siteLink: targetSiteNormalized,
-                        platform: "instagram",
-                        statDate,
-                      }
-                    },
-                    update: {
-                      reach: val.reach,
-                      engagements: val.engagements,
-                      accountName: igUsername,
-                      accountHandle: igUsername,
-                      followers: currentFollowers,
+                await prisma.socialMediaDailyStat.upsert({
+                  where: {
+                    userId_siteLink_platform_statDate: {
+                      userId: session.user.id,
+                      siteLink: targetSiteNormalized,
+                      platform: "instagram",
+                      statDate,
+                    }
+                  },
+                  update: {
+                    reach: val.reach,
+                    engagements: val.engagements,
+                    accountName: igUsername,
+                    accountHandle: igUsername,
+                    followers: currentFollowers,
                     },
                     create: {
                       userId: session.user.id,
@@ -503,11 +511,11 @@ export async function GET(req) {
                     }
                   });
                 }
-              }
-            } catch (igErr) {
-              console.warn(`Failed to fetch IG Insights for ${igUserId}:`, igErr.response?.data || igErr.message);
+            } catch (dbErr) {
+              console.error(`Failed to write IG stats to DB for ${igUserId}:`, dbErr.message);
             }
           }
+
         }
       } catch (err) {
         console.error("Auto-fetch error during SMM stats request:", err.message);
