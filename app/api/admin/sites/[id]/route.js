@@ -91,49 +91,67 @@ export async function DELETE(req, { params }) {
 
     const targetUrl = site.siteUrl;
 
-    // Cascading cleanups across all references: perform child/related updates first to prevent FK constraint violations
-    await prisma.$transaction([
+    const operations = [];
+
+    // 1. Clean user siteLink fields
+    operations.push(
       prisma.user.updateMany({
         where: { siteLink: targetUrl },
         data: { siteLink: null },
-      }),
-      prisma.user.updateMany({
-        where: {
-          OR: [
-            site.facebookPageId ? { facebookPageId: site.facebookPageId } : null,
-            site.instagramUserId ? { instagramUserId: site.instagramUserId } : null
-          ].filter(Boolean)
-        },
-        data: {
-          facebookPageId: null,
-          instagramUserId: null
-        }
-      }),
+      })
+    );
+
+    // 2. Detach Meta Page IDs on User table
+    const userMetaOr = [];
+    if (site.facebookPageId) userMetaOr.push({ facebookPageId: site.facebookPageId });
+    if (site.instagramUserId) userMetaOr.push({ instagramUserId: site.instagramUserId });
+    if (userMetaOr.length > 0) {
+      operations.push(
+        prisma.user.updateMany({
+          where: { OR: userMetaOr },
+          data: {
+            facebookPageId: null,
+            instagramUserId: null
+          }
+        })
+      );
+    }
+
+    // 3. Delete user accessible site links
+    operations.push(
       prisma.userAccessibleSite.deleteMany({
         where: { siteLink: targetUrl },
-      }),
+      })
+    );
+
+    // 4. Delete social media daily stats
+    const statsOr = [{ siteLink: targetUrl }];
+    if (site.facebookPageId) statsOr.push({ siteLink: site.facebookPageId });
+    if (site.instagramUserId) statsOr.push({ siteLink: site.instagramUserId });
+    operations.push(
       prisma.socialMediaDailyStat.deleteMany({
-        where: {
-          OR: [
-            { siteLink: targetUrl },
-            site.facebookPageId ? { siteLink: site.facebookPageId } : null,
-            site.instagramUserId ? { siteLink: site.instagramUserId } : null
-          ].filter(Boolean)
-        },
-      }),
+        where: { OR: statsOr },
+      })
+    );
+
+    // 5. Delete approvals targeting this site or its pages
+    const approvalsOr = [{ siteLink: targetUrl }];
+    if (site.facebookPageId) approvalsOr.push({ facebookPageId: site.facebookPageId });
+    if (site.instagramUserId) approvalsOr.push({ instagramUserId: site.instagramUserId });
+    operations.push(
       prisma.approval.deleteMany({
-        where: {
-          OR: [
-            { siteLink: targetUrl },
-            site.facebookPageId ? { facebookPageId: site.facebookPageId } : null,
-            site.instagramUserId ? { instagramUserId: site.instagramUserId } : null
-          ].filter(Boolean)
-        },
-      }),
+        where: { OR: approvalsOr },
+      })
+    );
+
+    // 6. Finally delete the site record
+    operations.push(
       prisma.site.delete({
         where: { id },
-      }),
-    ]);
+      })
+    );
+
+    await prisma.$transaction(operations);
 
     return new Response(
       JSON.stringify({ message: "Site and all associated records deleted successfully." }),
