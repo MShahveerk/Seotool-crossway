@@ -1,11 +1,11 @@
-import prisma from "../../../lib/prisma";
-import { normalizeSiteOrigin } from "../../../lib/validation";
-import { normalizeInboundPayload, normalizeSiteForMatch } from "../../../lib/blogPayload.js";
-import { findAssigneesForSite, notifyBlogApprovers, createBlogQuickActionToken } from "../../../lib/blogAssignee.js";
-import { getSitePublishConfig } from "../../../lib/blogPublishConfig.js";
-import { saveBlogFeaturedImageFromUrl } from "../../../lib/blogMedia.js";
-import { BLOG_INCLUDE } from "../../../lib/blogAccess.js";
-import { recordBlogRevision } from "../../../lib/blogRevisions.js";
+import prisma from "../../../../lib/prisma";
+import { normalizeSiteOrigin } from "../../../../lib/validation";
+import { normalizeInboundPayload, normalizeSiteForMatch } from "../../../../lib/blogPayload.js";
+import { findAssigneesForSite, notifyBlogApprovers, createBlogQuickActionToken } from "../../../../lib/blogAssignee.js";
+import { getSitePublishConfig } from "../../../../lib/blogPublishConfig.js";
+import { saveBlogFeaturedImageFromUrl } from "../../../../lib/blogMedia.js";
+import { BLOG_INCLUDE } from "../../../../lib/blogAccess.js";
+import { recordBlogRevision } from "../../../../lib/blogRevisions.js";
 
 export const runtime = "nodejs";
 
