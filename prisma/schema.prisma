@@ -189,3 +189,23 @@ model Site {
   @@index([instagramUserId], map: "sites_instagram_user_id_idx")
   @@map("sites")
 }
+
+/// Key/value app config (e.g. seo_digest_enabled).
+model AppSetting {
+  key       String   @id @db.VarChar(191)
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
+/// Extra emails that receive the weekly SEO opportunities digest.
+model SeoDigestRecipient {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  email     String   @unique @db.VarChar(191)
+  label     String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("seo_digest_recipients")
+}
