@@ -190,22 +190,9 @@ export async function PATCH(req, { params }) {
 
     const updated = await prisma.approval.findUnique({
       where: { id },
-      select: {
-        id: true,
-        title: true,
-        userEditedTitle: true,
-        caption: true,
-        userEditedCaption: true,
-        instructions: true,
-        userEditedInstructions: true,
-        bodyText: true,
-        imagePath: true,
-        status: true,
-        userEditedText: true,
-        respondedAt: true,
-        lastAction: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        assignee: { select: { id: true, email: true, name: true, role: true } },
+        createdBy: { select: { id: true, email: true, name: true } },
       },
     });
 
@@ -214,6 +201,24 @@ export async function PATCH(req, { params }) {
         status: 404,
         headers: { "Content-Type": "application/json" },
       });
+    }
+
+    // Trigger status change email notification asynchronously
+    try {
+      const { sendPostStatusChangeNotification } = await import("../../../../lib/email");
+      let detailText = "";
+      if (action === "edit" || action === "approve") {
+        const parts = [];
+        if (body.editedTitle) parts.push(`Heading: ${body.editedTitle}`);
+        if (body.editedCaption) parts.push(`Caption: ${body.editedCaption}`);
+        if (body.editedText) parts.push(`Accompanying Text: ${body.editedText}`);
+        if (body.editedInstructions) parts.push(`Instructions: ${body.editedInstructions}`);
+        detailText = parts.join("\n\n");
+      }
+      // Trigger status notification
+      await sendPostStatusChangeNotification(updated, session.user, updated.status, detailText);
+    } catch (err) {
+      console.error("Failed to send status change notification email", err);
     }
 
     const capMap = await fetchCaptionMapByApprovalIds(prisma, [id]);

@@ -89,6 +89,44 @@ export async function GET(req) {
         : { AND: [whereClause, siteFilter] };
     }
 
+    const countOnly = req.nextUrl?.searchParams?.get("countOnly") === "1";
+    if (countOnly) {
+      let hiddenIds = new Set();
+      try {
+        const hiddenRows = await prisma.$queryRaw(
+          Prisma.sql`SELECT id FROM approvals WHERE assignee_id = ${assigneeId} AND hidden_from_assignee = true`
+        );
+        hiddenIds = new Set(
+          Array.isArray(hiddenRows) ? hiddenRows.map((r) => String((r && r.id) || "")).filter(Boolean) : []
+        );
+      } catch {}
+
+      let skippedIds = new Set();
+      try {
+        const skippedRows = await prisma.$queryRaw(
+          Prisma.sql`SELECT id FROM approvals WHERE assignee_id = ${assigneeId} AND skipped_assignee_review = true`
+        );
+        skippedIds = new Set(
+          Array.isArray(skippedRows) ? skippedRows.map((r) => String((r && r.id) || "")).filter(Boolean) : []
+        );
+      } catch {}
+
+      const matchRows = await prisma.approval.findMany({
+        where: {
+          ...whereClause,
+          status: { in: ["pending", "edited"] },
+        },
+        select: { id: true },
+      });
+
+      const count = matchRows.filter((a) => !hiddenIds.has(a.id) && !skippedIds.has(a.id)).length;
+
+      return new Response(JSON.stringify({ count }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const rows = await prisma.approval.findMany({
       where: whereClause,
       orderBy: { createdAt: "desc" },

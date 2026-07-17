@@ -325,12 +325,14 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
       };
 
       if (isMeta) {
-        // Submit separately for Facebook and Instagram
-        if (publishFacebook) {
+        // Submit as a single combined record if both are selected, or separately if only one is
+        if (publishFacebook && publishInstagram) {
+          const fileToUse = croppedFilesState?.facebook || croppedFilesState?.instagram || form.imageFile;
+          await submitSingle(fileToUse, "both");
+        } else if (publishFacebook) {
           const fileToUse = croppedFilesState?.facebook || form.imageFile;
           await submitSingle(fileToUse, "facebook");
-        }
-        if (publishInstagram) {
+        } else if (publishInstagram) {
           const fileToUse = croppedFilesState?.instagram || form.imageFile;
           await submitSingle(fileToUse, "instagram");
         }

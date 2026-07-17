@@ -26,7 +26,7 @@ const mainMenuItems = [
   { id: "website-statistics", label: "Website Statistics", icon: FiSearch },
   { id: "smm-statistics", label: "SMM Statistics", icon: FiTrendingUp },
   { id: "calendar", label: "Content Calendar", icon: FiCalendar },
-  { id: "my-approvals", label: "My Approvals", icon: FiCheckSquare },
+  { id: "my-approvals", label: "Approvals", icon: FiCheckSquare },
 ];
 
 const userManagementMenuItem = {
@@ -37,7 +37,7 @@ const userManagementMenuItem = {
 };
 
 const adminMenuItems = [
-  { id: "admin-approvals", label: "Approvals", icon: FiClipboard, role: "super_admin" },
+  { id: "admin-approvals", label: "Create Post", icon: FiClipboard, role: "super_admin" },
 ];
 
 export default function DashboardLayout({
@@ -60,6 +60,7 @@ export default function DashboardLayout({
   const [superAdminPrimarySite, setSuperAdminPrimarySite] = useState("");
   const [failedSiteLogos, setFailedSiteLogos] = useState({});
   const [approvalAdminUnread, setApprovalAdminUnread] = useState(0);
+  const [approvalUserUnread, setApprovalUserUnread] = useState(0);
   const [metaAccounts, setMetaAccounts] = useState([]);
   const isSuperAdmin = session?.user?.role === "super_admin";
   const hasGlobalSiteAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
@@ -106,6 +107,31 @@ export default function DashboardLayout({
   }, [isSuperAdmin]);
 
   useEffect(() => {
+    if (isSuperAdmin) return undefined;
+    const loadUserUnread = async () => {
+      try {
+        const res = await fetch("/api/approvals?countOnly=1");
+        const data = await res.json();
+        if (res.ok) setApprovalUserUnread(Number(data.count) || 0);
+      } catch {
+        setApprovalUserUnread(0);
+      }
+    };
+    loadUserUnread();
+    const interval = setInterval(loadUserUnread, 45000);
+    const onRefresh = () => loadUserUnread();
+    if (typeof window !== "undefined") {
+      window.addEventListener("approvals:user-updated", onRefresh);
+    }
+    return () => {
+      clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("approvals:user-updated", onRefresh);
+      }
+    };
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
     if (!isSuperAdmin || activeSection !== "admin-approvals") return;
     (async () => {
       try {
@@ -114,6 +140,19 @@ export default function DashboardLayout({
         if (res.ok) setApprovalAdminUnread(Number(data.count) || 0);
       } catch {
         setApprovalAdminUnread(0);
+      }
+    })();
+  }, [isSuperAdmin, activeSection]);
+
+  useEffect(() => {
+    if (isSuperAdmin || activeSection !== "my-approvals") return;
+    (async () => {
+      try {
+        const res = await fetch("/api/approvals?countOnly=1");
+        const data = await res.json();
+        if (res.ok) setApprovalUserUnread(Number(data.count) || 0);
+      } catch {
+        setApprovalUserUnread(0);
       }
     })();
   }, [isSuperAdmin, activeSection]);
@@ -445,6 +484,7 @@ export default function DashboardLayout({
               }
               const IconComponent = item.icon;
               const isActive = activeSection === item.id;
+              const showUserApprovalDot = item.id === "my-approvals" && approvalUserUnread > 0;
               return (
                 <button
                   key={item.id}
@@ -463,10 +503,20 @@ export default function DashboardLayout({
                   }`}
                   aria-current={isActive ? "page" : undefined}
                 >
-                  <IconComponent className={`w-4 h-4 ${isActive ? "text-[#1d9c35]" : ""}`} />
+                  <span className="relative inline-flex">
+                    <IconComponent className={`w-4 h-4 ${isActive ? "text-[#1d9c35]" : ""}`} />
+                    {showUserApprovalDot && (
+                      <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-[#1d9c35] ring-2 ring-white" />
+                    )}
+                  </span>
                   {!isCompactSidebar && (
-                    <span className={`font-medium text-sm ${isActive ? "text-gray-900" : ""} transition-colors duration-200`}>
+                    <span className={`font-medium text-sm flex items-center gap-2 ${isActive ? "text-gray-900" : ""} transition-colors duration-200`}>
                       {item.label}
+                      {showUserApprovalDot && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#dff7de] text-[#1d9c35]">
+                          {approvalUserUnread > 9 ? "9+" : approvalUserUnread}
+                        </span>
+                      )}
                     </span>
                   )}
                 </button>
