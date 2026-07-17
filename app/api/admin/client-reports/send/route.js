@@ -1,5 +1,5 @@
-import { requireSuperAdmin } from "../../../../lib/middleware/auth";
-import { runManualClientReports } from "../../../../lib/clientReportJobs";
+import { requireSuperAdmin } from "../../../../../lib/middleware/auth";
+import { runManualClientReports } from "../../../../../lib/clientReportJobs";
 
 export const runtime = "nodejs";
 
