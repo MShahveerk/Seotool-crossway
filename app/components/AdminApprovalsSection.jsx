@@ -579,7 +579,11 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
             </div>
             <div className="divide-y divide-gray-100">
               {approvals.length === 0 && (
-                <div className="px-4 py-8 text-center text-sm text-gray-500">No approvals yet.</div>
+                <div className="px-4 py-8 text-center text-sm text-gray-500">
+                  {selectedSite
+                    ? "No approvals found for this client account yet."
+                    : "No approvals yet. Select a client account to view history."}
+                </div>
               )}
               {approvals.map((a) => {
                 const expanded = expandedApprovalId === a.id;

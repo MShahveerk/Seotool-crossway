@@ -11,6 +11,8 @@ import {
   densifyTimeSeries,
   clampSearchConsoleQueryRange,
 } from "../../../../lib/searchConsoleDateRanges";
+import prisma from "../../../../lib/prisma";
+import { resolveSiteEquivalents, sessionCanAccessSiteAsync } from "../../../../lib/siteAccess";
 
 // Ensure this route runs in the Node.js runtime
 export const runtime = "nodejs";
@@ -73,10 +75,10 @@ export async function GET(req) {
     // Get site URL based on role
     let siteUrl = req.nextUrl.searchParams.get("url") || sessionSiteFallback;
 
+    const requestedSiteKey = siteUrl;
+
     // Resolve Meta Page ID to website URL if needed
     if (siteUrl && !isValidUrl(siteUrl)) {
-      const { PrismaClient } = require("@prisma/client");
-      const prisma = new PrismaClient();
       const mappedSite = await prisma.site.findFirst({
         where: {
           OR: [
@@ -118,15 +120,25 @@ export async function GET(req) {
       }
     }
 
-    if (userRole === ROLES.SUPER_ADMIN) {
+    if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.SMM) {
       if (!siteUrl || !isValidUrl(siteUrl)) {
-        // Safe fallback for Super Admin if unlinked
+        // Safe fallback if unlinked Meta page has no website
         if (sessionSiteFallback && isValidUrl(sessionSiteFallback)) {
           siteUrl = sessionSiteFallback;
-        } else {
+        } else if (userRole === ROLES.SUPER_ADMIN) {
           return new Response(
             JSON.stringify({ 
               error: "Please provide a valid 'url' parameter or ensure your account has a linked website URL." 
+            }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        } else {
+          return new Response(
+            JSON.stringify({
+              error: "No website URL is linked to this client account. Search Console needs a website URL.",
             }),
             {
               status: 400,
@@ -161,12 +173,10 @@ export async function GET(req) {
     }
 
     if (userRole === ROLES.VIEWER || userRole === ROLES.SMM) {
-      const allowed = new Set(
-        (session.user.accessibleSites || []).map((s) => normalizeSiteOrigin(s)).filter(Boolean)
-      );
-      const own = normalizeSiteOrigin(session.user.siteLink || "");
-      if (own) allowed.add(own);
-      if (!allowed.size || !allowed.has(normalizedUrl)) {
+      const equivalents = await resolveSiteEquivalents(prisma, requestedSiteKey || normalizedUrl);
+      if (!equivalents.includes(normalizedUrl)) equivalents.push(normalizedUrl);
+      if (requestedSiteKey) equivalents.push(String(requestedSiteKey).trim());
+      if (!(await sessionCanAccessSiteAsync(prisma, session.user, equivalents))) {
         return new Response(
           JSON.stringify({
             error: "Access denied. You can only view Search Console data for sites assigned to your account.",

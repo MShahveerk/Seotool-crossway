@@ -3,6 +3,11 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import prisma from "../../../../lib/prisma";
 import { ROLES } from "../../../../lib/rbac";
 import { normalizeSiteOrigin } from "../../../../lib/validation";
+import {
+  isMetaPageId,
+  resolveSiteEquivalents,
+  sessionCanAccessSiteAsync,
+} from "../../../../lib/siteAccess";
 import axios from "axios";
 import {
   describeReportPeriod,
@@ -194,7 +199,7 @@ export async function GET(req) {
     }
 
     // Normalize: for regular URLs use normalizeSiteOrigin; for numeric Meta page IDs pass through as-is
-    const isRawMetaId = /^\d+$/.test(String(resolvedSiteLink || "").trim());
+    const isRawMetaId = isMetaPageId(resolvedSiteLink);
     const targetSiteNormalized = isRawMetaId
       ? String(resolvedSiteLink).trim()
       : normalizeSiteOrigin(resolvedSiteLink);
@@ -211,9 +216,21 @@ export async function GET(req) {
       );
     }
 
+    const siteEquivalents = await resolveSiteEquivalents(prisma, targetSite || targetSiteNormalized);
+    if (!siteEquivalents.includes(targetSiteNormalized)) {
+      siteEquivalents.push(targetSiteNormalized);
+    }
+    if (targetSite && !siteEquivalents.includes(String(targetSite).trim())) {
+      siteEquivalents.push(String(targetSite).trim());
+    }
+
     if (role === ROLES.USER) {
       const ownSite = normalizeSiteOrigin(session.user.siteLink || "");
-      if (!ownSite || ownSite !== targetSiteNormalized) {
+      const ownOk =
+        ownSite &&
+        (ownSite === targetSiteNormalized ||
+          siteEquivalents.some((k) => normalizeSiteOrigin(k) === ownSite || k === ownSite));
+      if (!ownOk) {
         return new Response(JSON.stringify({ error: "Access denied for selected site." }), {
           status: 403,
           headers: { "Content-Type": "application/json" },
@@ -222,15 +239,7 @@ export async function GET(req) {
     }
 
     if (role === ROLES.VIEWER || role === ROLES.SMM) {
-      const allowed = new Set(
-        (session.user.accessibleSites || []).map((s) => normalizeSiteOrigin(s)).filter(Boolean)
-      );
-      const ownLink = normalizeSiteOrigin(session.user.siteLink || "");
-      if (ownLink) allowed.add(ownLink);
-      // Also allow access if the target is a Meta page ID linked to this user
-      if (session.user.facebookPageId) allowed.add(String(session.user.facebookPageId).trim());
-      if (session.user.instagramUserId) allowed.add(String(session.user.instagramUserId).trim());
-      if (!allowed.size || !allowed.has(targetSiteNormalized)) {
+      if (!(await sessionCanAccessSiteAsync(prisma, session.user, siteEquivalents))) {
         return new Response(JSON.stringify({ error: "Access denied for selected site." }), {
           status: 403,
           headers: { "Content-Type": "application/json" },

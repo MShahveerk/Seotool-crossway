@@ -3,6 +3,8 @@ import { assignAccessibleSites, assignSiteLink, getAllUsers, getUserById } from 
 import { getSearchAnalyticsTimeSeries } from "../../../../lib/searchconsole";
 import { normalizeSiteOrigin } from "../../../../lib/validation";
 import { PERMISSIONS, ROLES } from "../../../../lib/rbac";
+import { isMetaPageId, pickClientDisplayName } from "../../../../lib/siteAccess";
+import prisma from "../../../../lib/prisma";
 import axios from "axios";
 
 function resolveSiteProperty(siteUrl, propertyId) {
@@ -87,8 +89,6 @@ export async function GET() {
     const currentSuperAdmin = users.find((u) => u.id === session.user.id) || null;
 
     // Fetch Global Sites
-    const { PrismaClient } = require("@prisma/client");
-    const prisma = new PrismaClient();
     const globalSites = await prisma.site.findMany();
 
     // Fetch Meta accounts from token
@@ -210,32 +210,80 @@ export async function GET() {
     let filteredMetaPages = metaPagesList;
 
     if (session.user.role === ROLES.SMM) {
-      const allowedSites = new Set(
-        (session.user.accessibleSites || []).map((s) => s.toLowerCase().trim()).filter(Boolean)
-      );
+      const rawAllowed = (session.user.accessibleSites || [])
+        .map((s) => String(s || "").trim())
+        .filter(Boolean);
+      const allowedSites = new Set(rawAllowed.map((s) => s.toLowerCase()));
       const ownLink = (session.user.siteLink || "").toLowerCase().trim();
       if (ownLink) allowedSites.add(ownLink);
 
+      // Accessible sites are often stored as Meta page IDs (see Admin user associations).
+      const allowedFbIds = new Set(
+        [(session.user.facebookPageId || "").trim()].filter(Boolean)
+      );
+      for (const s of rawAllowed) {
+        if (isMetaPageId(s)) allowedFbIds.add(s);
+      }
+
       filteredWebsites = websitesList.filter((w) => {
         const link = (w.siteLink || "").toLowerCase().trim();
-        return link && allowedSites.has(link);
+        const fb = (w.facebookPageId || "").trim();
+        return (link && allowedSites.has(link)) || (fb && allowedFbIds.has(fb));
       });
 
-      const allowedFbIds = new Set([
-        (session.user.facebookPageId || "").trim()
-      ].filter(Boolean));
-      
-      filteredWebsites.forEach(w => {
-        if (w.facebookPageId) allowedFbIds.add(w.facebookPageId.trim());
+      filteredWebsites.forEach((w) => {
+        if (w.facebookPageId) allowedFbIds.add(String(w.facebookPageId).trim());
       });
 
       filteredMetaPages = metaPagesList.filter((m) => {
         const fbId = (m.facebookPageId || "").trim();
-        return fbId && allowedFbIds.has(fbId);
+        const link = (m.siteLink || "").toLowerCase().trim();
+        return (fbId && allowedFbIds.has(fbId)) || (link && allowedSites.has(link));
       });
+
+      // Ensure every assigned Meta page ID appears even if Graph listing is incomplete.
+      for (const fbId of allowedFbIds) {
+        const already =
+          filteredMetaPages.some((m) => String(m.facebookPageId).trim() === fbId) ||
+          filteredWebsites.some((w) => String(w.facebookPageId || "").trim() === fbId);
+        if (already) continue;
+        const fromAll = metaPagesList.find((m) => String(m.facebookPageId).trim() === fbId);
+        if (fromAll) {
+          filteredMetaPages.push(fromAll);
+        } else {
+          filteredMetaPages.push({
+            userId: null,
+            userName: "",
+            userEmail: "",
+            siteLink: "",
+            facebookPageId: fbId,
+            instagramUserId: "",
+            isSuperAdminSite: false,
+            type: "meta_page",
+          });
+        }
+      }
     }
 
-    const uniqueEntries = [...filteredWebsites, ...filteredMetaPages];
+    const uniqueEntries = [...filteredWebsites, ...filteredMetaPages].map((entry) => {
+      const metaMatch = metaAccounts.find(
+        (a) =>
+          a.facebookPageId &&
+          entry.facebookPageId &&
+          String(a.facebookPageId).trim() === String(entry.facebookPageId).trim()
+      );
+      const displayName = pickClientDisplayName({
+        userName: entry.userName,
+        siteLink: entry.siteLink,
+        facebookPageId: entry.facebookPageId,
+        metaName: metaMatch?.userName || metaMatch?.name,
+      });
+      return {
+        ...entry,
+        userName: displayName,
+        displayName,
+      };
+    });
 
     // Sort to keep super admin site first, then websites, then meta pages
     uniqueEntries.sort((a, b) => {
@@ -243,8 +291,8 @@ export async function GET() {
       if (!a.isSuperAdminSite && b.isSuperAdminSite) return 1;
       if (a.type === "website" && b.type === "meta_page") return -1;
       if (a.type === "meta_page" && b.type === "website") return 1;
-      const nameA = a.userName || "";
-      const nameB = b.userName || "";
+      const nameA = a.displayName || a.userName || "";
+      const nameB = b.displayName || b.userName || "";
       return nameA.localeCompare(nameB);
     });
 

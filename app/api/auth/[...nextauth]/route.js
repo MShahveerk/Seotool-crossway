@@ -79,6 +79,8 @@ export const authOptions = {
           role: user.role || "user",
           siteLink: user.siteLink || null,
           gtmContainerId: user.gtmContainerId || null,
+          facebookPageId: user.facebookPageId || null,
+          instagramUserId: user.instagramUserId || null,
           accessibleSites: user.accessibleSites || (user.siteLink ? [user.siteLink] : []),
         };
       },
@@ -101,6 +103,8 @@ export const authOptions = {
         token.role = user.role;
         token.siteLink = user.siteLink;
         token.gtmContainerId = user.gtmContainerId || null;
+        token.facebookPageId = user.facebookPageId || null;
+        token.instagramUserId = user.instagramUserId || null;
         token.accessibleSites = user.accessibleSites;
       } else if (token.email) {
         // Refresh user data on each token refresh (must not throw — breaks /api/auth/session)
@@ -114,6 +118,8 @@ export const authOptions = {
             token.role = userData.role || "user";
             token.siteLink = userData.siteLink || null;
             token.gtmContainerId = userData.gtmContainerId || null;
+            token.facebookPageId = userData.facebookPageId || null;
+            token.instagramUserId = userData.instagramUserId || null;
             token.accessibleSites =
               userData.accessibleSites || (userData.siteLink ? [userData.siteLink] : []);
           }
@@ -131,6 +137,8 @@ export const authOptions = {
         session.user.role = token.role || "user";
         session.user.siteLink = token.siteLink || null;
         session.user.gtmContainerId = token.gtmContainerId || null;
+        session.user.facebookPageId = token.facebookPageId || null;
+        session.user.instagramUserId = token.instagramUserId || null;
         session.user.accessibleSites = token.accessibleSites || [];
       }
       return session;

@@ -202,7 +202,8 @@ export default function DashboardLayout({
       return;
     }
     if (availableSites.length > 0) {
-      const firstVal = availableSites[0].siteLink || availableSites[0].facebookPageId;
+      // Prefer Meta page ID when present — matches how client associations are stored.
+      const firstVal = availableSites[0].facebookPageId || availableSites[0].siteLink;
       onSelectedSiteChange?.(firstVal);
     }
   }, [availableSites, hasGlobalSiteAccess, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
@@ -211,7 +212,7 @@ export default function DashboardLayout({
     if (!hasGlobalSiteAccess || !availableSites.length || !selectedSite) return;
     const isValIncluded = availableSites.some(s => s.facebookPageId === selectedSite || s.siteLink === selectedSite);
     if (!isValIncluded) {
-      const firstVal = availableSites[0].siteLink || availableSites[0].facebookPageId;
+      const firstVal = availableSites[0].facebookPageId || availableSites[0].siteLink;
       onSelectedSiteChange?.(superAdminPrimarySite || firstVal);
     }
   }, [availableSites, hasGlobalSiteAccess, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
@@ -244,26 +245,36 @@ export default function DashboardLayout({
   const getPageDisplayName = (siteEntryOrVal) => {
     if (!siteEntryOrVal) return "No Account Selected";
     const isString = typeof siteEntryOrVal === "string";
-    const entry = isString 
-      ? availableSites.find(s => s.siteLink === siteEntryOrVal || s.facebookPageId === siteEntryOrVal) 
+    const entry = isString
+      ? availableSites.find(
+          (s) => s.siteLink === siteEntryOrVal || s.facebookPageId === siteEntryOrVal
+        )
       : siteEntryOrVal;
-      
+
     if (entry) {
-      // Find matching Meta account by facebookPageId
       const metaMatch = metaAccounts.find(
-        (a) => a.facebookPageId && entry.facebookPageId && String(a.facebookPageId).trim() === String(entry.facebookPageId).trim()
+        (a) =>
+          a.facebookPageId &&
+          entry.facebookPageId &&
+          String(a.facebookPageId).trim() === String(entry.facebookPageId).trim()
       );
-      if (metaMatch) {
-        return metaMatch.name;
-      }
-      
-      const name = entry.userName || entry.siteLink || entry.facebookPageId;
-      if (name && name.startsWith("http")) {
-        return getSiteHostName(name);
-      }
-      return name;
+      if (metaMatch?.name) return metaMatch.name;
+
+      const name = entry.displayName || entry.userName || entry.siteLink || "";
+      if (name && String(name).startsWith("http")) return getSiteHostName(name);
+      // Never show raw numeric Meta page IDs in the client picker
+      if (name && !/^\d+$/.test(String(name).trim())) return name;
+      if (entry.siteLink) return getSiteHostName(entry.siteLink);
+      return metaMatch?.name || "Facebook Page";
     }
-    
+
+    if (isString && /^\d+$/.test(siteEntryOrVal.trim())) {
+      const metaMatch = metaAccounts.find(
+        (a) => String(a.facebookPageId || "").trim() === siteEntryOrVal.trim()
+      );
+      return metaMatch?.name || "Facebook Page";
+    }
+
     return isString ? getSiteHostName(siteEntryOrVal) : "No Account Selected";
   };
 
@@ -415,7 +426,7 @@ export default function DashboardLayout({
                       aria-label="Select client account"
                     >
                       {availableSites.map((siteEntry) => {
-                        const val = siteEntry.siteLink || siteEntry.facebookPageId;
+                        const val = siteEntry.facebookPageId || siteEntry.siteLink;
                         const label = getPageDisplayName(siteEntry);
                         const isMetaPage = siteEntry.type === "meta_page";
                         return (

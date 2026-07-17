@@ -1,6 +1,11 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import prisma from "../../../lib/prisma";
+import {
+  buildApprovalSiteOrFilter,
+  resolveSiteEquivalents,
+  sessionCanAccessSiteAsync,
+} from "../../../lib/siteAccess";
 
 export const runtime = "nodejs";
 
@@ -41,7 +46,8 @@ export async function GET(req) {
             {
               OR: [
                 { facebookPageId: { in: allowedSites } },
-                { siteLink: { in: allowedSites } }
+                { siteLink: { in: allowedSites } },
+                { instagramUserId: { in: allowedSites } },
               ]
             }
           ]
@@ -59,30 +65,19 @@ export async function GET(req) {
     // Filter by selected site / meta page ID if specified in the query
     const siteParam = req.nextUrl.searchParams.get("site") || req.nextUrl.searchParams.get("url");
     if (siteParam) {
-      const cleanSite = String(siteParam).trim();
-      const normalizeLocal = (s) => {
-        try {
-          const u = new URL(s.startsWith("http") ? s : `https://${s}`);
-          return u.hostname.replace(/^www\./i, "").toLowerCase();
-        } catch {
-          return s.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/+$/, "").toLowerCase();
-        }
-      };
-      
-      const normSite = normalizeLocal(cleanSite);
-      
-      const siteFilter = {
-        OR: [
-          { facebookPageId: cleanSite },
-          { instagramUserId: cleanSite },
-          { siteLink: cleanSite },
-          { siteLink: { contains: normSite } }
-        ]
-      };
-
-      whereClause = whereClause.AND 
-        ? { AND: [...whereClause.AND, siteFilter] }
-        : { AND: [whereClause, siteFilter] };
+      const equivalents = await resolveSiteEquivalents(prisma, siteParam);
+      if (role === "smm" && !(await sessionCanAccessSiteAsync(prisma, session.user, equivalents))) {
+        return new Response(JSON.stringify({ error: "Access denied for selected site." }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const siteFilter = buildApprovalSiteOrFilter(equivalents);
+      if (siteFilter) {
+        whereClause = Object.keys(whereClause).length
+          ? { AND: [whereClause, siteFilter] }
+          : siteFilter;
+      }
     }
 
     const approvals = await prisma.approval.findMany({

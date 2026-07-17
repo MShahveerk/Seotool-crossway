@@ -3,6 +3,11 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import prisma from "../../../../lib/prisma";
 import { ROLES } from "../../../../lib/rbac";
 import { normalizeSiteOrigin } from "../../../../lib/validation";
+import {
+  isMetaPageId,
+  resolveSiteEquivalents,
+  sessionCanAccessSiteAsync,
+} from "../../../../lib/siteAccess";
 
 export const runtime = "nodejs";
 
@@ -43,21 +48,37 @@ export async function GET(req) {
     // Resolve targetSite to siteLink if it is a Meta Page ID
     let resolvedSiteLink = targetSite;
     if (targetSite) {
-      const mappedUser = await prisma.user.findFirst({
+      const mappedSite = await prisma.site.findFirst({
         where: {
           OR: [
             { facebookPageId: targetSite },
-            { instagramUserId: targetSite }
-          ]
+            { instagramUserId: targetSite },
+            { siteUrl: targetSite },
+          ],
         },
-        select: { siteLink: true }
+        select: { siteUrl: true },
       });
-      if (mappedUser?.siteLink) {
-        resolvedSiteLink = mappedUser.siteLink;
+      if (mappedSite?.siteUrl) {
+        resolvedSiteLink = mappedSite.siteUrl;
+      } else {
+        const mappedUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { facebookPageId: targetSite },
+              { instagramUserId: targetSite },
+            ],
+          },
+          select: { siteLink: true },
+        });
+        if (mappedUser?.siteLink) {
+          resolvedSiteLink = mappedUser.siteLink;
+        }
       }
     }
 
-    const targetSiteNormalized = normalizeSiteOrigin(resolvedSiteLink);
+    const targetSiteNormalized = isMetaPageId(resolvedSiteLink)
+      ? String(resolvedSiteLink).trim()
+      : normalizeSiteOrigin(resolvedSiteLink);
     if (!targetSiteNormalized) {
       return new Response(
         JSON.stringify({ baselines: [], siteUrl: null, message: "No site selected." }),
@@ -65,9 +86,16 @@ export async function GET(req) {
       );
     }
 
+    const siteEquivalents = await resolveSiteEquivalents(prisma, targetSite || targetSiteNormalized);
+    if (!siteEquivalents.includes(targetSiteNormalized)) siteEquivalents.push(targetSiteNormalized);
+
     if (role === ROLES.USER) {
       const ownSite = normalizeSiteOrigin(session.user.siteLink || "");
-      if (!ownSite || ownSite !== targetSiteNormalized) {
+      const ownOk =
+        ownSite &&
+        (ownSite === targetSiteNormalized ||
+          siteEquivalents.some((k) => normalizeSiteOrigin(k) === ownSite || k === ownSite));
+      if (!ownOk) {
         return new Response(JSON.stringify({ error: "Access denied for selected site." }), {
           status: 403,
           headers: { "Content-Type": "application/json" },
@@ -76,12 +104,7 @@ export async function GET(req) {
     }
 
     if (role === ROLES.VIEWER || role === ROLES.SMM) {
-      const allowed = new Set(
-        (session.user.accessibleSites || []).map((s) => normalizeSiteOrigin(s)).filter(Boolean)
-      );
-      const ownLink = normalizeSiteOrigin(session.user.siteLink || "");
-      if (ownLink) allowed.add(ownLink);
-      if (!allowed.size || !allowed.has(targetSiteNormalized)) {
+      if (!(await sessionCanAccessSiteAsync(prisma, session.user, siteEquivalents))) {
         return new Response(JSON.stringify({ error: "Access denied for selected site." }), {
           status: 403,
           headers: { "Content-Type": "application/json" },
