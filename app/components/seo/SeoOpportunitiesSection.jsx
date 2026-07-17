@@ -1,8 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiRefreshCw, FiAlertTriangle, FiTarget, FiTrendingDown, FiLayers } from "react-icons/fi";
+import {
+  FiRefreshCw,
+  FiAlertTriangle,
+  FiTarget,
+  FiTrendingDown,
+  FiLayers,
+  FiChevronDown,
+} from "react-icons/fi";
 import SeoPanelShell, { formatNum, formatPct, formatPos } from "./SeoPanelShell";
+import {
+  buildGuidedSeoTasks,
+  guideForStrikingQuery,
+  guideForCannibalization,
+  guideForDecayingQuery,
+  guideForDecayingPage,
+} from "../../../lib/seoOpportunityGuides";
 
 function SeverityBadge({ severity }) {
   const s = severity || "medium";
@@ -19,6 +33,86 @@ function SeverityBadge({ severity }) {
   );
 }
 
+function StepsDropdown({ summary, steps = [], defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1d9c35] hover:underline"
+      >
+        <FiChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+        {open ? "Hide" : "Show"} step-by-step guide ({steps.length} steps)
+      </button>
+      {open ? (
+        <div className="mt-3 rounded-lg border border-gray-200 bg-white p-3">
+          {summary ? <p className="text-sm text-gray-700 mb-3 leading-relaxed">{summary}</p> : null}
+          <ol className="space-y-3">
+            {steps.map((s, i) => (
+              <li key={`${s.title}-${i}`} className="rounded-lg border border-gray-100 bg-gray-50/80 p-3">
+                <p className="text-sm font-semibold text-gray-900">
+                  <span className="text-[#1d9c35] mr-1.5">{i + 1}.</span>
+                  {s.title}
+                </p>
+                <p className="mt-1.5 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{s.detail}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function GuidedTaskRow({ task }) {
+  const [open, setOpen] = useState(false);
+  const steps = task.steps || [];
+  return (
+    <li className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full text-left px-3 py-3 flex items-start gap-3 hover:bg-gray-50/80"
+        aria-expanded={open}
+      >
+        <FiChevronDown
+          className={`w-4 h-4 mt-0.5 shrink-0 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+        <SeverityBadge severity={task.severity} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{task.group}</p>
+          <p className="text-sm text-gray-900 mt-0.5 font-medium">{task.label}</p>
+          {!open ? (
+            <p className="text-xs text-gray-400 mt-1">Expand for complete start-to-finish guidance ({steps.length} steps)</p>
+          ) : null}
+        </div>
+      </button>
+      {open ? (
+        <div className="border-t border-gray-100 px-4 py-4 bg-gray-50/40">
+          {task.summary ? (
+            <p className="text-sm text-gray-700 mb-4 leading-relaxed">{task.summary}</p>
+          ) : null}
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+            Complete guide — start to finish
+          </p>
+          <ol className="space-y-3">
+            {steps.map((s, i) => (
+              <li key={`${task.id}-${i}`} className="rounded-lg border border-gray-200 bg-white p-3">
+                <p className="text-sm font-semibold text-gray-900">
+                  <span className="text-[#1d9c35] mr-2">{i + 1}.</span>
+                  {s.title}
+                </p>
+                <p className="mt-1.5 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{s.detail}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
 function TaskCard({ icon: Icon, title, count, children }) {
   return (
     <section className="rounded-xl border border-gray-200 overflow-hidden">
@@ -31,6 +125,16 @@ function TaskCard({ icon: Icon, title, count, children }) {
       </div>
       <div className="p-4">{children}</div>
     </section>
+  );
+}
+
+function ExpandableItem({ title, subtitle, guide }) {
+  return (
+    <div className="border-b border-gray-50 pb-3 last:border-0 last:pb-0">
+      <p className="text-sm font-semibold text-gray-900">{title}</p>
+      {subtitle ? <p className="text-xs text-gray-500 mt-1">{subtitle}</p> : null}
+      <StepsDropdown summary={guide.summary} steps={guide.steps} />
+    </div>
   );
 }
 
@@ -65,49 +169,12 @@ export default function SeoOpportunitiesSection({ selectedSite = "" }) {
     load();
   }, [load]);
 
-  const weeklyTasks = useMemo(() => {
-    if (!pack) return [];
-    const tasks = [];
-    for (const w of pack.sitemapWarnings || []) {
-      tasks.push({ id: `sm-${w.type}`, severity: w.severity, label: w.message, group: "Sitemap" });
-    }
-    for (const g of pack.deviceGaps?.gaps || []) {
-      tasks.push({ id: `dev-${g.type}`, severity: g.severity, label: g.message, group: "Device" });
-    }
-    const strike = (pack.strikingDistance || []).slice(0, 5);
-    if (strike.length) {
-      tasks.push({
-        id: "strike",
-        severity: "medium",
-        label: `Polish ${strike.length} striking-distance queries (pos 8–20) — e.g. “${strike[0].query}”.`,
-        group: "Rankings",
-      });
-    }
-    const cann = (pack.cannibalization || []).slice(0, 3);
-    if (cann.length) {
-      tasks.push({
-        id: "cann",
-        severity: "high",
-        label: `Resolve keyword cannibalization on ${cann.length}+ queries (same keyword → multiple URLs).`,
-        group: "Content",
-      });
-    }
-    const decayQ = (pack.decayingQueries || []).slice(0, 3);
-    if (decayQ.length) {
-      tasks.push({
-        id: "decay",
-        severity: "high",
-        label: `Investigate ${decayQ.length}+ decaying queries vs prior period (largest drop: “${decayQ[0].query}”).`,
-        group: "Decay",
-      });
-    }
-    return tasks;
-  }, [pack]);
+  const weeklyTasks = useMemo(() => buildGuidedSeoTasks(pack), [pack]);
 
   return (
     <SeoPanelShell
       title="SEO Opportunities"
-      description="Actionable queue for this week: striking distance, cannibalization, traffic decay, device gaps, and sitemap health."
+      description="Actionable queue for this week with complete step-by-step guidance: striking distance, cannibalization, traffic decay, device gaps, and sitemap health."
       selectedSite={selectedSite}
       range={range}
       onRangeChange={setRange}
@@ -156,44 +223,18 @@ export default function SeoOpportunitiesSection({ selectedSite = "" }) {
               <FiAlertTriangle className="w-4 h-4 text-amber-600" />
               <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">SEO tasks this week</h2>
             </div>
+            <p className="text-xs text-gray-500 mb-3">
+              Expand any task for a complete start-to-finish playbook tailored to this site’s data.
+            </p>
             {weeklyTasks.length === 0 ? (
               <p className="text-sm text-gray-500">No urgent SEO tasks for this period — keep monitoring.</p>
             ) : (
               <ul className="space-y-2">
                 {weeklyTasks.map((t) => (
-                  <li
-                    key={t.id}
-                    className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2.5"
-                  >
-                    <SeverityBadge severity={t.severity} />
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{t.group}</p>
-                      <p className="text-sm text-gray-800 mt-0.5">{t.label}</p>
-                    </div>
-                  </li>
+                  <GuidedTaskRow key={t.id} task={t} />
                 ))}
               </ul>
             )}
-            {(pack.deviceGaps?.gaps || []).length > 0 || (pack.sitemapWarnings || []).length > 0 ? (
-              <div className="mt-4 space-y-2">
-                {(pack.sitemapWarnings || []).map((w) => (
-                  <div
-                    key={w.type}
-                    className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
-                  >
-                    {w.message}
-                  </div>
-                ))}
-                {(pack.deviceGaps?.gaps || []).map((g) => (
-                  <div
-                    key={g.type}
-                    className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-900"
-                  >
-                    {g.message}
-                  </div>
-                ))}
-              </div>
-            ) : null}
           </section>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -201,27 +242,18 @@ export default function SeoOpportunitiesSection({ selectedSite = "" }) {
               {(pack.strikingDistance || []).length === 0 ? (
                 <p className="text-sm text-gray-500">No striking-distance queries in this range.</p>
               ) : (
-                <div className="overflow-x-auto max-h-80 overflow-y-auto">
-                  <table className="w-full text-sm min-w-[420px]">
-                    <thead className="sticky top-0 bg-white">
-                      <tr className="text-left text-xs uppercase tracking-wider text-gray-500 border-b">
-                        <th className="py-2 pr-2">Query</th>
-                        <th className="py-2 pr-2">Pos</th>
-                        <th className="py-2 pr-2">Impr</th>
-                        <th className="py-2">CTR</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(pack.strikingDistance || []).slice(0, 40).map((r) => (
-                        <tr key={r.query} className="border-b border-gray-50">
-                          <td className="py-2 pr-2 font-medium text-gray-900 max-w-[220px] truncate">{r.query}</td>
-                          <td className="py-2 pr-2 tabular-nums">{formatPos(r.position)}</td>
-                          <td className="py-2 pr-2 tabular-nums">{formatNum(r.impressions)}</td>
-                          <td className="py-2 tabular-nums">{formatPct(r.ctr)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
+                  {(pack.strikingDistance || []).slice(0, 25).map((r) => {
+                    const guide = guideForStrikingQuery(r, pack.siteUrl);
+                    return (
+                      <ExpandableItem
+                        key={r.query}
+                        title={r.query}
+                        subtitle={`Pos ${formatPos(r.position)} · ${formatNum(r.impressions)} impr · CTR ${formatPct(r.ctr)}`}
+                        guide={guide}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </TaskCard>
@@ -230,17 +262,19 @@ export default function SeoOpportunitiesSection({ selectedSite = "" }) {
               {(pack.cannibalization || []).length === 0 ? (
                 <p className="text-sm text-gray-500">No multi-URL query conflicts detected.</p>
               ) : (
-                <ul className="space-y-3 max-h-80 overflow-y-auto">
-                  {(pack.cannibalization || []).slice(0, 25).map((c) => (
-                    <li key={c.query} className="border-b border-gray-50 pb-3 last:border-0">
-                      <p className="text-sm font-semibold text-gray-900">{c.query}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {c.pageCount} pages · {formatNum(c.totalImpressions)} impr · primary:{" "}
-                        <span className="break-all">{c.primaryPage}</span>
-                      </p>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
+                  {(pack.cannibalization || []).slice(0, 20).map((c) => {
+                    const guide = guideForCannibalization(c, pack.siteUrl);
+                    return (
+                      <ExpandableItem
+                        key={c.query}
+                        title={c.query}
+                        subtitle={`${c.pageCount} pages · ${formatNum(c.totalImpressions)} impr · primary: ${c.primaryPage || "—"}`}
+                        guide={guide}
+                      />
+                    );
+                  })}
+                </div>
               )}
             </TaskCard>
 
@@ -248,29 +282,18 @@ export default function SeoOpportunitiesSection({ selectedSite = "" }) {
               {(pack.decayingQueries || []).length === 0 ? (
                 <p className="text-sm text-gray-500">No significant query decay vs prior period.</p>
               ) : (
-                <div className="overflow-x-auto max-h-80 overflow-y-auto">
-                  <table className="w-full text-sm min-w-[420px]">
-                    <thead className="sticky top-0 bg-white">
-                      <tr className="text-left text-xs uppercase tracking-wider text-gray-500 border-b">
-                        <th className="py-2 pr-2">Query</th>
-                        <th className="py-2 pr-2">Clicks</th>
-                        <th className="py-2">Δ%</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(pack.decayingQueries || []).slice(0, 40).map((r) => (
-                        <tr key={r.query} className="border-b border-gray-50">
-                          <td className="py-2 pr-2 font-medium text-gray-900 max-w-[220px] truncate">{r.query}</td>
-                          <td className="py-2 pr-2 tabular-nums">
-                            {formatNum(r.clicks)} ← {formatNum(r.previousClicks)}
-                          </td>
-                          <td className="py-2 tabular-nums text-red-600 font-semibold">
-                            {Number(r.clickChangePct || 0).toFixed(0)}%
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
+                  {(pack.decayingQueries || []).slice(0, 25).map((r) => {
+                    const guide = guideForDecayingQuery(r, pack.siteUrl);
+                    return (
+                      <ExpandableItem
+                        key={r.query}
+                        title={r.query}
+                        subtitle={`${formatNum(r.clicks)} ← ${formatNum(r.previousClicks)} clicks (${Number(r.clickChangePct || 0).toFixed(0)}%)`}
+                        guide={guide}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </TaskCard>
@@ -279,29 +302,18 @@ export default function SeoOpportunitiesSection({ selectedSite = "" }) {
               {(pack.decayingPages || []).length === 0 ? (
                 <p className="text-sm text-gray-500">No significant page decay vs prior period.</p>
               ) : (
-                <div className="overflow-x-auto max-h-80 overflow-y-auto">
-                  <table className="w-full text-sm min-w-[420px]">
-                    <thead className="sticky top-0 bg-white">
-                      <tr className="text-left text-xs uppercase tracking-wider text-gray-500 border-b">
-                        <th className="py-2 pr-2">Page</th>
-                        <th className="py-2 pr-2">Clicks</th>
-                        <th className="py-2">Δ%</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(pack.decayingPages || []).slice(0, 40).map((r) => (
-                        <tr key={r.page} className="border-b border-gray-50">
-                          <td className="py-2 pr-2 font-medium text-gray-900 max-w-[260px] truncate">{r.page}</td>
-                          <td className="py-2 pr-2 tabular-nums">
-                            {formatNum(r.clicks)} ← {formatNum(r.previousClicks)}
-                          </td>
-                          <td className="py-2 tabular-nums text-red-600 font-semibold">
-                            {Number(r.clickChangePct || 0).toFixed(0)}%
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-3 max-h-[28rem] overflow-y-auto pr-1">
+                  {(pack.decayingPages || []).slice(0, 25).map((r) => {
+                    const guide = guideForDecayingPage(r, pack.siteUrl);
+                    return (
+                      <ExpandableItem
+                        key={r.page}
+                        title={r.page}
+                        subtitle={`${formatNum(r.clicks)} ← ${formatNum(r.previousClicks)} clicks (${Number(r.clickChangePct || 0).toFixed(0)}%)`}
+                        guide={guide}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </TaskCard>
