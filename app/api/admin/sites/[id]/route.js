@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function PATCH(req, { params }) {
   try {
     await requireSuperAdmin();
-    const { id } = params;
+    const { id } = await params;
 
     const body = await req.json();
     const { siteUrl, gtmContainerId, facebookPageId, instagramUserId } = body || {};
@@ -21,13 +21,12 @@ export async function PATCH(req, { params }) {
       });
     }
 
-    // Check if another site already uses this URL
     const existingUrl = await prisma.site.findUnique({
       where: { siteUrl: normalizedSiteUrl },
     });
 
     if (existingUrl && existingUrl.id !== id) {
-       return new Response(JSON.stringify({ error: "Another site is already using this URL." }), {
+      return new Response(JSON.stringify({ error: "Another site is already using this URL." }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
@@ -75,9 +74,8 @@ export async function PATCH(req, { params }) {
 export async function DELETE(req, { params }) {
   try {
     await requireSuperAdmin();
-    const { id } = params;
+    const { id } = await params;
 
-    // Find the site first to get its URL for cascading deletes
     const site = await prisma.site.findUnique({
       where: { id },
     });
@@ -90,54 +88,54 @@ export async function DELETE(req, { params }) {
     }
 
     const targetUrl = site.siteUrl;
+    const fbId = site.facebookPageId ? String(site.facebookPageId).trim() : "";
+    const igId = site.instagramUserId ? String(site.instagramUserId).trim() : "";
+    const accessibleKeys = [targetUrl, fbId, igId].filter(Boolean);
 
     const operations = [];
 
-    // 1. Clean user siteLink fields
+    // 1. Clean user siteLink fields (exact + common variants)
     operations.push(
       prisma.user.updateMany({
-        where: { siteLink: targetUrl },
+        where: { siteLink: { in: accessibleKeys } },
         data: { siteLink: null },
       })
     );
 
     // 2. Detach Meta Page IDs on User table
     const userMetaOr = [];
-    if (site.facebookPageId) userMetaOr.push({ facebookPageId: site.facebookPageId });
-    if (site.instagramUserId) userMetaOr.push({ instagramUserId: site.instagramUserId });
+    if (fbId) userMetaOr.push({ facebookPageId: fbId });
+    if (igId) userMetaOr.push({ instagramUserId: igId });
     if (userMetaOr.length > 0) {
       operations.push(
         prisma.user.updateMany({
           where: { OR: userMetaOr },
           data: {
             facebookPageId: null,
-            instagramUserId: null
-          }
+            instagramUserId: null,
+          },
         })
       );
     }
 
-    // 3. Delete user accessible site links
+    // 3. Delete user accessible site links (URL and Meta IDs used as association keys)
     operations.push(
       prisma.userAccessibleSite.deleteMany({
-        where: { siteLink: targetUrl },
+        where: { siteLink: { in: accessibleKeys } },
       })
     );
 
     // 4. Delete social media daily stats
-    const statsOr = [{ siteLink: targetUrl }];
-    if (site.facebookPageId) statsOr.push({ siteLink: site.facebookPageId });
-    if (site.instagramUserId) statsOr.push({ siteLink: site.instagramUserId });
     operations.push(
       prisma.socialMediaDailyStat.deleteMany({
-        where: { OR: statsOr },
+        where: { siteLink: { in: accessibleKeys } },
       })
     );
 
     // 5. Delete approvals targeting this site or its pages
-    const approvalsOr = [{ siteLink: targetUrl }];
-    if (site.facebookPageId) approvalsOr.push({ facebookPageId: site.facebookPageId });
-    if (site.instagramUserId) approvalsOr.push({ instagramUserId: site.instagramUserId });
+    const approvalsOr = [{ siteLink: { in: accessibleKeys } }];
+    if (fbId) approvalsOr.push({ facebookPageId: fbId });
+    if (igId) approvalsOr.push({ instagramUserId: igId });
     operations.push(
       prisma.approval.deleteMany({
         where: { OR: approvalsOr },

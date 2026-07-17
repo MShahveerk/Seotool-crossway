@@ -18,8 +18,13 @@ import {
   FiUsers,
   FiCalendar,
   FiCheckSquare,
+  FiMonitor,
+  FiCrosshair,
+  FiMap,
+  FiFileText,
 } from "react-icons/fi";
 import { SiFacebook } from "react-icons/si";
+import { isMetaPageId } from "../../lib/siteAccess";
 
 const mainMenuItems = [
   { id: "dashboard", label: "Dashboard", icon: FiBarChart2 },
@@ -27,6 +32,14 @@ const mainMenuItems = [
   { id: "smm-statistics", label: "SMM Statistics", icon: FiTrendingUp },
   { id: "calendar", label: "Content Calendar", icon: FiCalendar },
   { id: "my-approvals", label: "Approvals", icon: FiCheckSquare },
+];
+
+/** SEO tools shown only when a website (not Meta-only page) is selected */
+const websiteSeoMenuItems = [
+  { id: "device-appearance", label: "Device & Appearance", icon: FiMonitor },
+  { id: "url-inspection", label: "URL Inspection", icon: FiCrosshair },
+  { id: "query-page-matrix", label: "Query × Page", icon: FiMap },
+  { id: "sitemap-health", label: "Sitemap Health", icon: FiFileText },
 ];
 
 const userManagementMenuItem = {
@@ -202,8 +215,12 @@ export default function DashboardLayout({
       return;
     }
     if (availableSites.length > 0) {
-      // Prefer Meta page ID when present — matches how client associations are stored.
-      const firstVal = availableSites[0].facebookPageId || availableSites[0].siteLink;
+      const first = availableSites[0];
+      // Websites: prefer URL so SEO tools unlock; Meta pages: use page ID
+      const firstVal =
+        first.type === "website"
+          ? first.siteLink || first.facebookPageId
+          : first.facebookPageId || first.siteLink;
       onSelectedSiteChange?.(firstVal);
     }
   }, [availableSites, hasGlobalSiteAccess, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
@@ -212,10 +229,29 @@ export default function DashboardLayout({
     if (!hasGlobalSiteAccess || !availableSites.length || !selectedSite) return;
     const isValIncluded = availableSites.some(s => s.facebookPageId === selectedSite || s.siteLink === selectedSite);
     if (!isValIncluded) {
-      const firstVal = availableSites[0].facebookPageId || availableSites[0].siteLink;
+      const first = availableSites[0];
+      const firstVal =
+        first.type === "website"
+          ? first.siteLink || first.facebookPageId
+          : first.facebookPageId || first.siteLink;
       onSelectedSiteChange?.(superAdminPrimarySite || firstVal);
     }
   }, [availableSites, hasGlobalSiteAccess, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
+
+  const selectedSiteEntry = availableSites.find(
+    (s) => s.siteLink === selectedSite || s.facebookPageId === selectedSite
+  );
+  const effectiveSiteForSeo = hasGlobalSiteAccess
+    ? selectedSite
+    : userSiteLink || selectedSite;
+  const isWebsiteSelected = Boolean(
+    effectiveSiteForSeo &&
+      (String(effectiveSiteForSeo).startsWith("http") ||
+        String(effectiveSiteForSeo).startsWith("sc-domain:") ||
+        selectedSiteEntry?.type === "website" ||
+        (!isMetaPageId(effectiveSiteForSeo) &&
+          (selectedSiteEntry?.siteLink?.startsWith("http") || String(effectiveSiteForSeo).includes("."))))
+  );
 
   useEffect(() => {
     setSiteLogoVisible(true);
@@ -426,7 +462,10 @@ export default function DashboardLayout({
                       aria-label="Select client account"
                     >
                       {availableSites.map((siteEntry) => {
-                        const val = siteEntry.facebookPageId || siteEntry.siteLink;
+                        const val =
+                          siteEntry.type === "website"
+                            ? siteEntry.siteLink || siteEntry.facebookPageId
+                            : siteEntry.facebookPageId || siteEntry.siteLink;
                         const label = getPageDisplayName(siteEntry);
                         const isMetaPage = siteEntry.type === "meta_page";
                         return (
@@ -493,6 +532,9 @@ export default function DashboardLayout({
               if (session?.user?.role === "approver" && item.id !== "calendar" && item.id !== "my-approvals") {
                 return null;
               }
+              if (item.id === "website-statistics" && hasGlobalSiteAccess && !isWebsiteSelected) {
+                return null;
+              }
               const IconComponent = item.icon;
               const isActive = activeSection === item.id;
               const showUserApprovalDot = item.id === "my-approvals" && approvalUserUnread > 0;
@@ -533,6 +575,45 @@ export default function DashboardLayout({
                 </button>
               );
             })}
+
+            {/* Website-only SEO tools */}
+            {isWebsiteSelected && session?.user?.role !== "approver" && (
+              <div className={isCompactSidebar ? "" : "pt-3"}>
+                {!isCompactSidebar && (
+                  <p className="px-3 pb-2 text-[10px] font-semibold tracking-wider text-gray-500 uppercase">
+                    Website SEO
+                  </p>
+                )}
+                {websiteSeoMenuItems.map((item) => {
+                  const IconComponent = item.icon;
+                  const isActive = activeSection === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        onSectionChange?.(item.id);
+                        if (isMobile) setSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center ${isCompactSidebar ? "justify-center px-2" : "space-x-3.5 px-4"} py-3 rounded-xl transition-all duration-300 group relative ${
+                        isActive
+                          ? "bg-[#dff7de] text-gray-900 border border-[#c4edc2]"
+                          : "text-gray-700 hover:bg-white hover:text-gray-900 border border-transparent"
+                      }`}
+                      aria-current={isActive ? "page" : undefined}
+                      title={item.label}
+                    >
+                      <IconComponent className={`w-4 h-4 ${isActive ? "text-[#1d9c35]" : ""}`} />
+                      {!isCompactSidebar && (
+                        <span className={`font-medium text-sm ${isActive ? "text-gray-900" : ""}`}>
+                          {item.label}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             
             {/* Admin items (excludes User Management — see footer) */}
             {(hasGlobalSiteAccess || adminMenuItems.some((item) => !item.role)) && (

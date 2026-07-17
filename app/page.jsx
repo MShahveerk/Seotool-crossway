@@ -11,6 +11,19 @@ import AdminApprovalsSection from "./components/AdminApprovalsSection";
 import SmmStatisticsSection from "./components/SmmStatisticsSection";
 import CalendarSection from "./components/CalendarSection";
 import MyApprovalsSection from "./components/MyApprovalsSection";
+import DeviceAppearanceSection from "./components/seo/DeviceAppearanceSection";
+import UrlInspectionSection from "./components/seo/UrlInspectionSection";
+import QueryPageMatrixSection from "./components/seo/QueryPageMatrixSection";
+import SitemapHealthSection from "./components/seo/SitemapHealthSection";
+import { isMetaPageId } from "../lib/siteAccess";
+
+const WEBSITE_SEO_SECTIONS = new Set([
+  "website-statistics",
+  "device-appearance",
+  "url-inspection",
+  "query-page-matrix",
+  "sitemap-health",
+]);
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -25,6 +38,18 @@ export default function Home() {
       setActiveSection("calendar");
     }
   }, [status, router, session, activeSection]);
+
+  // Leave website SEO tools when a Meta-only page is selected
+  useEffect(() => {
+    if (!selectedSite || !WEBSITE_SEO_SECTIONS.has(activeSection)) return;
+    const isWebsite =
+      String(selectedSite).startsWith("http") ||
+      String(selectedSite).startsWith("sc-domain:") ||
+      (!isMetaPageId(selectedSite) && String(selectedSite).includes("."));
+    if (!isWebsite && isMetaPageId(selectedSite)) {
+      setActiveSection("dashboard");
+    }
+  }, [selectedSite, activeSection]);
 
   if (status === "loading") {
     return (
@@ -63,12 +88,26 @@ export default function Home() {
     );
   }
 
+  const seoSite =
+    selectedSite ||
+    session?.user?.siteLink ||
+    (Array.isArray(session?.user?.accessibleSites) && session.user.accessibleSites[0]) ||
+    "";
+
   const renderSection = () => {
     switch (activeSection) {
       case "dashboard":
         return <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />;
       case "website-statistics":
-        return <SearchConsoleSection selectedSite={selectedSite} />;
+        return <SearchConsoleSection selectedSite={seoSite} />;
+      case "device-appearance":
+        return <DeviceAppearanceSection selectedSite={seoSite} />;
+      case "url-inspection":
+        return <UrlInspectionSection selectedSite={seoSite} />;
+      case "query-page-matrix":
+        return <QueryPageMatrixSection selectedSite={seoSite} />;
+      case "sitemap-health":
+        return <SitemapHealthSection selectedSite={seoSite} />;
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
       case "calendar":
@@ -82,13 +121,17 @@ export default function Home() {
           <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
         );
       case "admin-approvals":
-        return (session?.user?.role === "super_admin" || session?.user?.role === "smm") ? (
+        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
           <AdminApprovalsSection selectedSite={selectedSite} />
         ) : (
           <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
         );
       default:
-        return session?.user?.role === "approver" ? <CalendarSection /> : <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />;
+        return session?.user?.role === "approver" ? (
+          <CalendarSection />
+        ) : (
+          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+        );
     }
   };
 

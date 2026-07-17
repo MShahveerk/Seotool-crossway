@@ -103,7 +103,7 @@ export default function CalendarView({
         </p>
       )}
 
-      <div className="mt-4 grid grid-cols-7 gap-px rounded-lg bg-gray-200 overflow-hidden ring-1 ring-gray-200">
+      <div className="mt-4 grid grid-cols-7 gap-px rounded-lg bg-gray-200 ring-1 ring-gray-200 overflow-visible">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
           <div
             key={day}

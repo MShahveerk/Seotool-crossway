@@ -139,7 +139,7 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
             <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-start gap-3 border border-red-100">
               <FiAlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-sm">Error saving configuration</p>
+                <p className="font-semibold text-sm">Something went wrong</p>
                 <p className="text-sm mt-1">{error}</p>
               </div>
             </div>

@@ -275,29 +275,29 @@ export default function CalendarSection({ selectedSite = "" }) {
 
       {/* Day detail modal */}
       {dayModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
-            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-100">
-              <div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-lg my-auto max-h-[min(92vh,880px)] rounded-2xl bg-white shadow-xl border border-gray-200 flex flex-col overflow-hidden">
+            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
+              <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
                   Selected day
                 </p>
                 <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mt-0.5">
-                  <FiCalendar className="text-[#1d9c35]" />
-                  {dayLabel}
+                  <FiCalendar className="text-[#1d9c35] shrink-0" />
+                  <span className="truncate">{dayLabel}</span>
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setDayModalOpen(false)}
-                className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 shrink-0"
                 aria-label="Close"
               >
                 <FiX className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="px-5 py-4 max-h-[50vh] overflow-y-auto space-y-3">
+            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
               {dayPosts.length === 0 ? (
                 <p className="text-sm text-gray-500 py-6 text-center">
                   No posts scheduled for this day.
@@ -326,7 +326,7 @@ export default function CalendarSection({ selectedSite = "" }) {
               )}
             </div>
 
-            <div className="px-5 py-4 border-t border-gray-100 flex flex-wrap gap-2 justify-end bg-gray-50">
+            <div className="px-5 py-4 border-t border-gray-100 flex flex-wrap gap-2 justify-end bg-gray-50 shrink-0">
               <button
                 type="button"
                 onClick={() => setDayModalOpen(false)}
@@ -350,9 +350,9 @@ export default function CalendarSection({ selectedSite = "" }) {
 
       {/* Post actions modal */}
       {postModalOpen && activePost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
-            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-md my-auto max-h-[min(92vh,880px)] rounded-2xl bg-white shadow-xl border border-gray-200 flex flex-col overflow-hidden">
+            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
                   Scheduled post
@@ -367,20 +367,20 @@ export default function CalendarSection({ selectedSite = "" }) {
                   setPostModalOpen(false);
                   setActivePost(null);
                 }}
-                className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 shrink-0"
                 aria-label="Close"
               >
                 <FiX className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="px-5 py-4 space-y-3">
+            <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
               {activePost.imagePath && (
                 <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
                   <ApprovalMediaPreview src={activePost.imagePath} className="w-full max-h-48 object-cover" />
                 </div>
               )}
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">
+              <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">
                 {activePost.userEditedCaption || activePost.caption || "No caption"}
               </p>
               <div className="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
@@ -397,7 +397,7 @@ export default function CalendarSection({ selectedSite = "" }) {
               </div>
             </div>
 
-            <div className="px-5 py-4 border-t border-gray-100 flex flex-wrap gap-2 justify-end bg-gray-50">
+            <div className="px-5 py-4 border-t border-gray-100 flex flex-wrap gap-2 justify-end bg-gray-50 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -436,94 +436,96 @@ export default function CalendarSection({ selectedSite = "" }) {
 
       {/* Create / schedule modal */}
       {createOpen && canManage && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
-            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-100">
-              <div>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-lg my-auto max-h-[min(92vh,880px)] rounded-2xl bg-white shadow-xl border border-gray-200 flex flex-col overflow-hidden">
+            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
+              <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
                   New scheduled post
                 </p>
-                <h3 className="text-lg font-bold text-gray-900">Schedule for {dayLabel}</h3>
+                <h3 className="text-lg font-bold text-gray-900 truncate">Schedule for {dayLabel}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setCreateOpen(false)}
-                className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 shrink-0"
                 aria-label="Close"
               >
                 <FiX className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={submitCreate} className="px-5 py-4 space-y-4">
-              {!selectedSite && (
-                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-                  Select a client account in the sidebar before scheduling.
-                </p>
-              )}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Title</label>
-                <input
-                  type="text"
-                  value={form.title}
-                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EFF2A]/30"
-                  required
-                  maxLength={255}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Caption</label>
-                <textarea
-                  value={form.caption}
-                  onChange={(e) => setForm((f) => ({ ...f, caption: e.target.value }))}
-                  rows={3}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EFF2A]/30"
-                  maxLength={2000}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Schedule time
-                </label>
-                <input
-                  type="datetime-local"
-                  value={form.scheduledFor}
-                  onChange={(e) => setForm((f) => ({ ...f, scheduledFor: e.target.value }))}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EFF2A]/30"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Media</label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, imageFile: e.target.files?.[0] || null }))
-                  }
-                  className="w-full text-sm"
-                  required
-                />
-              </div>
-              <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
-                <input
-                  type="checkbox"
-                  checked={form.approveOnAssignment}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, approveOnAssignment: e.target.checked }))
-                  }
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300"
-                />
-                <span className="text-sm text-gray-700">
-                  <span className="font-semibold text-gray-900">Skip client approval</span>
-                  <span className="block text-xs text-gray-500 mt-0.5">
-                    Mark approved immediately so it can publish when scheduled.
+            <form onSubmit={submitCreate} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1 min-h-0">
+                {!selectedSite && (
+                  <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                    Select a client account in the sidebar before scheduling.
+                  </p>
+                )}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Title</label>
+                  <input
+                    type="text"
+                    value={form.title}
+                    onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EFF2A]/30"
+                    required
+                    maxLength={255}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Caption</label>
+                  <textarea
+                    value={form.caption}
+                    onChange={(e) => setForm((f) => ({ ...f, caption: e.target.value }))}
+                    rows={3}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EFF2A]/30 resize-y max-h-48"
+                    maxLength={2000}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Schedule time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={form.scheduledFor}
+                    onChange={(e) => setForm((f) => ({ ...f, scheduledFor: e.target.value }))}
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EFF2A]/30"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Media</label>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, imageFile: e.target.files?.[0] || null }))
+                    }
+                    className="w-full text-sm"
+                    required
+                  />
+                </div>
+                <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={form.approveOnAssignment}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, approveOnAssignment: e.target.checked }))
+                    }
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                  />
+                  <span className="text-sm text-gray-700">
+                    <span className="font-semibold text-gray-900">Skip client approval</span>
+                    <span className="block text-xs text-gray-500 mt-0.5">
+                      Mark approved immediately so it can publish when scheduled.
+                    </span>
                   </span>
-                </span>
-              </label>
+                </label>
+              </div>
 
-              <div className="flex flex-wrap gap-2 justify-end pt-2">
+              <div className="px-5 py-4 border-t border-gray-100 flex flex-wrap gap-2 justify-end bg-gray-50 shrink-0">
                 <button
                   type="button"
                   onClick={() => setCreateOpen(false)}
