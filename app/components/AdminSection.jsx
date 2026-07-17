@@ -45,6 +45,7 @@ const SMM_BASELINE_PLATFORM_LABEL = {
 };
 import SiteAssociationsModal from "./SiteAssociationsModal";
 import SeoDigestSettingsPanel from "./SeoDigestSettingsPanel";
+import ReportsManagementPanel from "./ReportsManagementPanel";
 
 export default function AdminSection() {
   const { data: session } = useSession();
@@ -770,6 +771,8 @@ export default function AdminSection() {
       )}
 
       <SeoDigestSettingsPanel />
+
+      <ReportsManagementPanel />
 
       {/* Users Table */}
       <div className="rounded-xl border border-gray-200 bg-[#ffffff] overflow-hidden">

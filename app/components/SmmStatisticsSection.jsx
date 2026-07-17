@@ -8,6 +8,7 @@ import { SiFacebook, SiInstagram, SiYoutube, SiTiktok } from "react-icons/si";
 import { isSmmRole } from "../../lib/rbac";
 import SmmApprovalCardsGrid from "./SmmApprovalCardsGrid";
 import SmmDownloadReportModal from "./SmmDownloadReportModal";
+import ReportSectionActions from "./ReportSectionActions";
 import { formatYearMonth } from "../../lib/smmReportMonthRange";
 
 /** Fixed window for `/api/smm/stats` (range controls removed from UI). */
@@ -238,6 +239,12 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
               <FiDownload className="w-4 h-4 shrink-0" aria-hidden />
               Download reports
             </button>
+            <ReportSectionActions
+              section="smm"
+              activeSite={activeSite}
+              month={viewMonth}
+              showSend
+            />
           </div>
         </div>
 

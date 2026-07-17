@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiSearch, FiRefreshCw, FiCheckCircle, FiXCircle, FiHelpCircle } from "react-icons/fi";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
+import ReportSectionActions from "../ReportSectionActions";
 import IndexingTasksPanel from "./IndexingTasksPanel";
 
 function StatusPill({ label, tone = "neutral" }) {
@@ -169,14 +170,13 @@ export default function UrlInspectionSection({ selectedSite = "" }) {
       loading={false}
       error={error || monitorError}
       action={
-        <button
-          type="button"
-          onClick={loadMonitor}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          <FiRefreshCw className={`w-4 h-4 ${monitorLoading ? "animate-spin" : ""}`} />
-          Refresh daily
-        </button>
+        <ReportSectionActions
+          section="url-inspection"
+          activeSite={selectedSite}
+          onRefresh={loadMonitor}
+          loading={monitorLoading}
+          refreshLabel="Refresh daily"
+        />
       }
     >
       <form onSubmit={runInspect} className="flex flex-col sm:flex-row gap-3 mb-8">

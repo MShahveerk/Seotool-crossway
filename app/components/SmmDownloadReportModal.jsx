@@ -28,6 +28,7 @@ export default function SmmDownloadReportModal({
   const maxMonth = formatYearMonth(new Date());
   const [reportMonth, setReportMonth] = useState(() => initialMonth || maxMonth);
   const [includeWebsite, setIncludeWebsite] = useState(true);
+  const [websiteReportsAvailable, setWebsiteReportsAvailable] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [smmPayload, setSmmPayload] = useState(null);
@@ -47,6 +48,29 @@ export default function SmmDownloadReportModal({
       setSeoOppError("");
     }
   }, [open, initialMonth, maxMonth]);
+
+  useEffect(() => {
+    if (!open || !activeSite) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const q = new URLSearchParams();
+        if (isSuperAdmin) q.set("url", activeSite);
+        const res = await fetch(`/api/reports/context?${q.toString()}`);
+        const data = await res.json();
+        if (!cancelled && res.ok) {
+          const canInclude = data.includeWebsiteReports === true;
+          setWebsiteReportsAvailable(canInclude);
+          setIncludeWebsite(canInclude);
+        }
+      } catch {
+        /* keep default */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, activeSite, isSuperAdmin]);
 
   const loadPreview = useCallback(async () => {
     if (!activeSite) {
@@ -255,12 +279,13 @@ export default function SmmDownloadReportModal({
               className="mt-1 h-4 w-4 rounded border-gray-300"
               checked={includeWebsite}
               onChange={(e) => setIncludeWebsite(e.target.checked)}
+              disabled={!websiteReportsAvailable}
             />
             <span>
               <span className="block text-sm font-semibold text-gray-900">Include website statistics</span>
               <span className="block text-xs text-gray-600 mt-0.5">
                 Adds Google Search totals, top queries, and landing page URLs for the same calendar month (when data is
-                available).
+                available). Disabled for Meta-only accounts without a linked website and GTM container.
               </span>
             </span>
           </label>

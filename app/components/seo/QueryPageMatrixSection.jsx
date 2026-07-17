@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import SeoPanelShell, { formatNum, formatPct, formatPos } from "./SeoPanelShell";
+import ReportSectionActions from "../ReportSectionActions";
 
 export default function QueryPageMatrixSection({ selectedSite = "" }) {
   const [range, setRange] = useState("28d");
@@ -65,25 +66,28 @@ export default function QueryPageMatrixSection({ selectedSite = "" }) {
       loading={loading}
       error={error}
       action={
-        <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
-          <button
-            type="button"
-            onClick={() => setTab("matrix")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md ${
-              tab === "matrix" ? "bg-white shadow-sm text-gray-900" : "text-gray-500"
-            }`}
-          >
-            Query × Page
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("striking")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md ${
-              tab === "striking" ? "bg-white shadow-sm text-gray-900" : "text-gray-500"
-            }`}
-          >
-            Striking distance
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <ReportSectionActions section="query-page-matrix" activeSite={selectedSite} onRefresh={load} loading={loading} />
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+            <button
+              type="button"
+              onClick={() => setTab("matrix")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md ${
+                tab === "matrix" ? "bg-white shadow-sm text-gray-900" : "text-gray-500"
+              }`}
+            >
+              Query × Page
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("striking")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md ${
+                tab === "striking" ? "bg-white shadow-sm text-gray-900" : "text-gray-500"
+              }`}
+            >
+              Striking distance
+            </button>
+          </div>
         </div>
       }
     >

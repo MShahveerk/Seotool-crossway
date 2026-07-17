@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  FiRefreshCw,
   FiAlertTriangle,
   FiTarget,
   FiTrendingDown,
@@ -10,6 +9,7 @@ import {
   FiChevronDown,
 } from "react-icons/fi";
 import SeoPanelShell, { formatNum, formatPct, formatPos } from "./SeoPanelShell";
+import ReportSectionActions from "../ReportSectionActions";
 import {
   buildGuidedSeoTasks,
   guideForStrikingQuery,
@@ -181,14 +181,12 @@ export default function SeoOpportunitiesSection({ selectedSite = "" }) {
       loading={loading}
       error={error}
       action={
-        <button
-          type="button"
-          onClick={load}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          <FiRefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <ReportSectionActions
+          section="seo-opportunities"
+          activeSite={selectedSite}
+          onRefresh={load}
+          loading={loading}
+        />
       }
     >
       {pack ? (

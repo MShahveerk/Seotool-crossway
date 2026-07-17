@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { FiRefreshCw, FiCheckCircle, FiClock, FiUpload, FiAlertTriangle } from "react-icons/fi";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
+import ReportSectionActions from "../ReportSectionActions";
 
 export default function SitemapHealthSection({ selectedSite = "" }) {
   const [loading, setLoading] = useState(true);
@@ -93,7 +94,12 @@ export default function SitemapHealthSection({ selectedSite = "" }) {
       loading={loading}
       error={error}
       action={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ReportSectionActions
+            section="sitemap-health"
+            activeSite={selectedSite}
+            showSend
+          />
           <button
             type="button"
             onClick={submitAll}

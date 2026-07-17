@@ -12,6 +12,7 @@ import {
   Cell,
 } from "recharts";
 import SeoPanelShell, { formatNum, formatPct, formatPos } from "./SeoPanelShell";
+import ReportSectionActions from "../ReportSectionActions";
 import { buildDeviceGaps } from "../../../lib/seoOpportunityHelpers";
 
 const DEVICE_COLORS = { DESKTOP: "#111827", MOBILE: "#1d9c35", TABLET: "#64748b" };
@@ -80,6 +81,14 @@ export default function DeviceAppearanceSection({ selectedSite = "" }) {
       onRangeChange={setRange}
       loading={loading}
       error={error}
+      action={
+        <ReportSectionActions
+          section="device-appearance"
+          activeSite={selectedSite}
+          onRefresh={load}
+          loading={loading}
+        />
+      }
     >
       {deviceGaps.hasGap ? (
         <div className="mb-6 space-y-2">

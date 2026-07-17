@@ -22,6 +22,7 @@ import { mergeCompareTimeSeries } from "../../lib/searchConsoleDateRanges";
 import WebsiteStatisticsDateRangeModal, {
   formatDisplayRange,
 } from "./WebsiteStatisticsDateRangeModal";
+import ReportSectionActions from "./ReportSectionActions";
 
 const RANGE_OPTIONS = [
   { id: "7d", label: "7 days" },
@@ -518,14 +519,12 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
       ) : (
         <>
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <button
-          onClick={fetchData}
-          className="inline-flex items-center justify-center h-8 w-8 border border-gray-300 rounded bg-white text-gray-600"
-          aria-label="Refresh"
-          title="Refresh"
-        >
-          <FiRefreshCw className={`${loading ? "animate-spin" : ""} w-3.5 h-3.5`} />
-        </button>
+        <ReportSectionActions
+          section="website"
+          activeSite={selectedSite}
+          onRefresh={fetchData}
+          loading={loading}
+        />
         {RANGE_OPTIONS.map((option) => {
           const active =
             timeSelection.type === "preset" && timeSelection.range === option.id;
