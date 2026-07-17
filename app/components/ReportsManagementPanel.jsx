@@ -154,8 +154,8 @@ export default function ReportsManagementPanel() {
                 Send reports now
               </p>
               <p className="text-xs text-gray-500">
-                Sends client-ready PDFs (followers + website performance when linked) to approvers for the
-                selected site, or everyone if no site is specified. Internal SEO reports are never emailed.
+                Emails your latest PDF reports (Social Media Report + Website Performance when linked) to approvers
+                for the selected site, or everyone if no site is specified. Internal SEO reports are never emailed.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <input

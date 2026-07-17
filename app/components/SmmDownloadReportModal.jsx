@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FiDownload, FiX } from "react-icons/fi";
-import { formatYearMonth, getCalendarMonthYmdBounds, humanMonthYear } from "../../lib/smmReportMonthRange";
-import { buildStandardFollowerRows, buildUnifiedMarketingReportPdfBytes } from "../../lib/unifiedMarketingReportPdf";
+import { formatYearMonth, humanMonthYear } from "../../lib/smmReportMonthRange";
+import { buildStandardFollowerRows } from "../../lib/unifiedMarketingReportPdf";
 
 function siteFileSlug(url) {
   try {
@@ -152,41 +152,26 @@ export default function SmmDownloadReportModal({
   }, [open, loadPreview]);
 
   const downloadPdf = async () => {
-    if (!smmPayload?.siteUrl) return;
+    if (!activeSite) return;
     setPdfWorking(true);
     setError("");
     try {
-      const boundsPdf = getCalendarMonthYmdBounds(reportMonth);
-      const websiteStats = includeWebsite
-        ? {
-            periodLabel: gscPayload?.dateRange
-              ? `${gscPayload.dateRange.startDate} → ${gscPayload.dateRange.endDate}`
-              : boundsPdf
-                ? `${boundsPdf.startDate} → ${boundsPdf.endDate}`
-                : reportMonth,
-            totals: gscPayload?.totals ?? null,
-            topQueries: gscPayload?.topQueries?.queries ?? [],
-            topPages: gscPayload?.topPages?.pages ?? [],
-            errorNote: gscError || undefined,
-          }
-        : null;
-
-      const bytes = await buildUnifiedMarketingReportPdfBytes({
-        siteUrl: smmPayload.siteUrl,
-        reportTitle: "SMM & website statistics report",
-        smmPeriodLabel: smmPayload.reportMeta?.periodLabel || humanMonthYear(reportMonth),
-        smmPlatformCards: baselineRows,
-        platformFilter: platform,
-        websiteStats,
-        seoOpportunities: null,
-        includeSeo: false,
-        internal: false,
-      });
-      const blob = new Blob([bytes], { type: "application/pdf" });
+      const section = includeWebsite && websiteReportsAvailable ? "full" : "smm";
+      const q = new URLSearchParams({ section, month: reportMonth });
+      if (isSuperAdmin) q.set("url", activeSite);
+      const res = await fetch(`/api/reports/export?${q.toString()}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Export failed");
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get("Content-Disposition") || "";
+      const match = /filename="([^"]+)"/.exec(cd);
+      const filename = match?.[1] || `site-report-${siteFileSlug(activeSite)}-${reportMonth}.pdf`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `site-report-${siteFileSlug(smmPayload.siteUrl)}-${reportMonth}.pdf`;
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -213,9 +198,8 @@ export default function SmmDownloadReportModal({
               Download report
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Choose a month. Follower accounts and counts come from <strong>SMM baseline</strong> data for the
-              selected site (same source as User Management → SMM baseline). Optional <strong>Search</strong> section
-              adds clicks, impressions, and top queries/pages.
+              Choose a month. Your PDF includes a <strong>Social Media Report</strong> with follower trends vs last
+              week and last month, plus optional <strong>Website Performance</strong> for the same month.
             </p>
           </div>
           <button
@@ -253,10 +237,10 @@ export default function SmmDownloadReportModal({
               disabled={!websiteReportsAvailable}
             />
             <span>
-              <span className="block text-sm font-semibold text-gray-900">Include website statistics</span>
+              <span className="block text-sm font-semibold text-gray-900">Include Website Performance</span>
               <span className="block text-xs text-gray-600 mt-0.5">
-                Adds Google Search totals, top queries, and landing page URLs for the same calendar month (when data is
-                available). Disabled for Meta-only accounts without a linked website and GTM container.
+                Adds how your site performed on Google for the same calendar month. Disabled for Meta-only accounts
+                without a linked website and GTM container.
               </span>
             </span>
           </label>
@@ -268,7 +252,7 @@ export default function SmmDownloadReportModal({
           ) : smmPayload ? (
             <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4 text-sm space-y-2">
               <p className="font-semibold text-gray-900">Preview</p>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Followers (SMM baseline)</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Social media snapshot</p>
               <ul className="text-gray-800 space-y-1">
                 {buildStandardFollowerRows(baselineRows).map((c) => (
                   <li key={c.platform} className="flex justify-between gap-2">
