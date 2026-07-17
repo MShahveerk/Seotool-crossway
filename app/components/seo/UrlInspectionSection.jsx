@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiSearch, FiRefreshCw, FiCheckCircle, FiXCircle, FiHelpCircle } from "react-icons/fi";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
+import IndexingTasksPanel from "./IndexingTasksPanel";
 
 function StatusPill({ label, tone = "neutral" }) {
   const styles = {
@@ -399,6 +400,8 @@ export default function UrlInspectionSection({ selectedSite = "" }) {
           </>
         )}
       </section>
+
+      <IndexingTasksPanel selectedSite={selectedSite} />
     </SeoPanelShell>
   );
 }

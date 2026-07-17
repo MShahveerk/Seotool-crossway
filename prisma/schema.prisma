@@ -254,3 +254,28 @@ model UrlInspectionResult {
   @@index([inspectionUrl], map: "url_inspection_result_url_idx")
   @@map("url_inspection_results")
 }
+
+/// Actionable indexing fix tasks auto-created from not-indexed URL inspections.
+model SeoIndexingTask {
+  id               String    @id @default(cuid()) @db.VarChar(191)
+  siteUrl          String    @map("site_url") @db.VarChar(512)
+  pageUrl          String    @map("page_url") @db.VarChar(2048)
+  title            String    @db.VarChar(512)
+  issueType        String    @map("issue_type") @db.VarChar(64)
+  cause            String?   @db.Text
+  coverageState    String?   @map("coverage_state") @db.VarChar(255)
+  verdict          String?   @db.VarChar(64)
+  summary          String?   @db.Text
+  /// Array of { title, detail } step objects
+  steps            Json
+  status           String    @default("open") @db.VarChar(32)
+  sourceSnapshotId String?   @map("source_snapshot_id") @db.VarChar(191)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  completedAt      DateTime? @map("completed_at")
+
+  @@unique([siteUrl, pageUrl], map: "seo_indexing_task_site_page_unique")
+  @@index([siteUrl, status], map: "seo_indexing_task_site_status_idx")
+  @@index([issueType], map: "seo_indexing_task_issue_idx")
+  @@map("seo_indexing_tasks")
+}
