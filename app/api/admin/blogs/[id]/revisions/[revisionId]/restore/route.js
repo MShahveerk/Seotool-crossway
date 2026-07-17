@@ -1,8 +1,8 @@
-import { requirePermission } from "../../../../../../../lib/middleware/auth";
-import prisma from "../../../../../../../lib/prisma";
-import { PERMISSIONS } from "../../../../../../../lib/rbac";
-import { BLOG_INCLUDE } from "../../../../../../../lib/blogAccess.js";
-import { recordBlogRevision, restoreBlogRevision } from "../../../../../../../lib/blogRevisions.js";
+import { requirePermission } from "../../../../../../../../lib/middleware/auth";
+import prisma from "../../../../../../../../lib/prisma";
+import { PERMISSIONS } from "../../../../../../../../lib/rbac";
+import { BLOG_INCLUDE } from "../../../../../../../../lib/blogAccess.js";
+import { recordBlogRevision, restoreBlogRevision } from "../../../../../../../../lib/blogRevisions.js";
 
 export const runtime = "nodejs";
 
