@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "../auth/[...nextauth]/route";
 import prisma from "../../../lib/prisma";
 import { ROLES } from "../../../lib/rbac";
 import { buildBlogSiteFilter, BLOG_INCLUDE } from "../../../lib/blogAccess.js";
