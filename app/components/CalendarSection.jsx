@@ -35,6 +35,7 @@ export default function CalendarSection({ selectedSite = "" }) {
     session?.user?.role === "super_admin" || session?.user?.role === "smm";
 
   const [approvals, setApprovals] = useState([]);
+  const [contentFilter, setContentFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -65,7 +66,9 @@ export default function CalendarSection({ selectedSite = "" }) {
       const res = await fetch(`/api/calendar${query}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load calendar");
-      setApprovals(data.approvals || []);
+      const social = (data.approvals || []).map((a) => ({ ...a, itemType: "social" }));
+      const blogs = (data.blogPosts || []).map((b) => ({ ...b, itemType: "blog", title: b.title }));
+      setApprovals([...social, ...blogs]);
     } catch (err) {
       console.error("Failed to load calendar", err);
       setError(err.message || "Failed to load calendar");
@@ -78,6 +81,12 @@ export default function CalendarSection({ selectedSite = "" }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  const filteredApprovals = useMemo(() => {
+    if (contentFilter === "social") return approvals.filter((item) => item.itemType !== "blog");
+    if (contentFilter === "blog") return approvals.filter((item) => item.itemType === "blog");
+    return approvals;
+  }, [approvals, contentFilter]);
 
   const refreshDayPosts = useCallback((dayDate, list) => {
     if (!dayDate) return;
@@ -95,9 +104,9 @@ export default function CalendarSection({ selectedSite = "" }) {
 
   useEffect(() => {
     if (dayModalOpen && selectedDay) {
-      refreshDayPosts(selectedDay, approvals);
+      refreshDayPosts(selectedDay, filteredApprovals);
     }
-  }, [approvals, dayModalOpen, selectedDay, refreshDayPosts]);
+  }, [filteredApprovals, dayModalOpen, selectedDay, refreshDayPosts]);
 
   const openDay = (date, posts) => {
     setSelectedDay(date);
@@ -145,14 +154,16 @@ export default function CalendarSection({ selectedSite = "" }) {
     setActionBusy(true);
     setError("");
     try {
-      const res = await fetch(`/api/admin/approvals/${post.id}`, {
+      const isBlog = post.itemType === "blog";
+      const url = isBlog ? `/api/admin/blogs/${post.id}` : `/api/admin/approvals/${post.id}`;
+      const res = await fetch(url, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scheduledFor: null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to unschedule");
-      setSuccess("Post removed from the calendar schedule.");
+      setSuccess(isBlog ? "Blog removed from the calendar schedule." : "Post removed from the calendar schedule.");
       setPostModalOpen(false);
       setActivePost(null);
       await load();
@@ -165,14 +176,16 @@ export default function CalendarSection({ selectedSite = "" }) {
 
   const deletePost = async (post) => {
     if (!canManage || !post?.id) return;
-    if (!window.confirm("Delete this post permanently? This cannot be undone.")) return;
+    if (!window.confirm(`Delete this ${post.itemType === "blog" ? "blog" : "post"} permanently? This cannot be undone.`)) return;
     setActionBusy(true);
     setError("");
     try {
-      const res = await fetch(`/api/admin/approvals/${post.id}`, { method: "DELETE" });
+      const isBlog = post.itemType === "blog";
+      const url = isBlog ? `/api/admin/blogs/${post.id}` : `/api/admin/approvals/${post.id}`;
+      const res = await fetch(url, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete");
-      setSuccess("Post deleted.");
+      setSuccess(isBlog ? "Blog deleted." : "Post deleted.");
       setPostModalOpen(false);
       setActivePost(null);
       await load();
@@ -247,9 +260,29 @@ export default function CalendarSection({ selectedSite = "" }) {
         <h1 className="text-2xl font-bold text-gray-900">Content Calendar</h1>
         <p className="mt-1 text-sm text-gray-500">
           {canManage
-            ? "Plan, schedule, and manage posts for the selected client account."
-            : "View upcoming scheduled posts and content pipeline."}
+            ? "Plan, schedule, and manage social posts and blogs for the selected client account."
+            : "View upcoming scheduled social posts and blogs."}
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[
+            { id: "all", label: "All content" },
+            { id: "social", label: "Social only" },
+            { id: "blog", label: "Blogs only" },
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setContentFilter(opt.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                contentFilter === opt.id
+                  ? "bg-gray-900 text-white border-gray-900"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {(error || success) && (
@@ -266,7 +299,7 @@ export default function CalendarSection({ selectedSite = "" }) {
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <CalendarView
-          approvals={approvals}
+          approvals={filteredApprovals}
           canManage={canManage}
           onDayClick={openDay}
           onPostClick={openPost}
@@ -355,7 +388,7 @@ export default function CalendarSection({ selectedSite = "" }) {
             <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                  Scheduled post
+                  {activePost.itemType === "blog" ? "Scheduled blog" : "Scheduled post"}
                 </p>
                 <h3 className="text-lg font-bold text-gray-900 truncate">
                   {activePost.userEditedTitle || activePost.title}
@@ -375,14 +408,22 @@ export default function CalendarSection({ selectedSite = "" }) {
             </div>
 
             <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              {activePost.imagePath && (
-                <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                  <ApprovalMediaPreview src={activePost.imagePath} className="w-full max-h-48 object-cover" />
-                </div>
+              {activePost.itemType === "blog" ? (
+                <p className="text-sm text-gray-600 whitespace-pre-wrap break-words line-clamp-6">
+                  {activePost.userEditedExcerpt || activePost.excerpt || activePost.userEditedContent || activePost.content || "No excerpt"}
+                </p>
+              ) : (
+                <>
+                  {activePost.imagePath && (
+                    <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                      <ApprovalMediaPreview src={activePost.imagePath} className="w-full max-h-48 object-cover" />
+                    </div>
+                  )}
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">
+                    {activePost.userEditedCaption || activePost.caption || "No caption"}
+                  </p>
+                </>
               )}
-              <p className="text-sm text-gray-600 whitespace-pre-wrap break-words">
-                {activePost.userEditedCaption || activePost.caption || "No caption"}
-              </p>
               <div className="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
                 <span>
                   When:{" "}

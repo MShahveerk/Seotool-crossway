@@ -88,7 +88,32 @@ export async function GET(req) {
       orderBy: { scheduledFor: "asc" }
     });
 
-    return new Response(JSON.stringify({ approvals }), {
+    let blogWhere = {};
+    if (role !== "super_admin" && role !== "smm") {
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        include: { accessibleSites: true },
+      });
+      const allowedSites = [
+        user?.siteLink,
+        ...(user?.accessibleSites || []).map((s) => s.siteLink),
+      ].filter(Boolean);
+      blogWhere = allowedSites.length
+        ? { siteLink: { in: allowedSites }, hiddenFromAssignee: false }
+        : { assigneeId: session.user.id };
+    }
+    if (siteParam) {
+      const equivalents = await resolveSiteEquivalents(prisma, siteParam);
+      blogWhere = { ...blogWhere, siteLink: { in: equivalents } };
+    }
+
+    const blogPosts = await prisma.blogPost.findMany({
+      where: blogWhere,
+      include: { assignee: { select: { id: true, name: true, email: true } } },
+      orderBy: { scheduledFor: "asc" },
+    }).catch(() => []);
+
+    return new Response(JSON.stringify({ approvals, blogPosts }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });

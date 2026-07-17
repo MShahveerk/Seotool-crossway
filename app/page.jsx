@@ -11,6 +11,8 @@ import AdminApprovalsSection from "./components/AdminApprovalsSection";
 import SmmStatisticsSection from "./components/SmmStatisticsSection";
 import CalendarSection from "./components/CalendarSection";
 import MyApprovalsSection from "./components/MyApprovalsSection";
+import MyBlogApprovalsSection from "./components/MyBlogApprovalsSection";
+import AdminBlogSection from "./components/AdminBlogSection";
 import DeviceAppearanceSection from "./components/seo/DeviceAppearanceSection";
 import UrlInspectionSection from "./components/seo/UrlInspectionSection";
 import QueryPageMatrixSection from "./components/seo/QueryPageMatrixSection";
@@ -118,6 +120,8 @@ export default function Home() {
         return <CalendarSection selectedSite={selectedSite} />;
       case "my-approvals":
         return <MyApprovalsSection selectedSite={selectedSite} />;
+      case "my-blog-approvals":
+        return <MyBlogApprovalsSection selectedSite={selectedSite} />;
       case "user-management":
         return session?.user?.role === "super_admin" ? (
           <AdminSection />
@@ -127,6 +131,12 @@ export default function Home() {
       case "admin-approvals":
         return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
           <AdminApprovalsSection selectedSite={selectedSite} />
+        ) : (
+          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+        );
+      case "admin-blogs":
+        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+          <AdminBlogSection selectedSite={selectedSite} />
         ) : (
           <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
         );

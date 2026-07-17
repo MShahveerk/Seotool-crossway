@@ -33,6 +33,7 @@ const mainMenuItems = [
   { id: "smm-statistics", label: "SMM Statistics", icon: FiTrendingUp },
   { id: "calendar", label: "Content Calendar", icon: FiCalendar },
   { id: "my-approvals", label: "Approvals", icon: FiCheckSquare },
+  { id: "my-blog-approvals", label: "Blog Approvals", icon: FiFileText },
 ];
 
 /** SEO tools shown only when a website (not Meta-only page) is selected */
@@ -53,6 +54,7 @@ const userManagementMenuItem = {
 
 const adminMenuItems = [
   { id: "admin-approvals", label: "Create Post", icon: FiClipboard, role: "super_admin" },
+  { id: "admin-blogs", label: "Create Blog", icon: FiFileText, role: "super_admin" },
 ];
 
 export default function DashboardLayout({
@@ -621,7 +623,7 @@ export default function DashboardLayout({
             {(hasGlobalSiteAccess || adminMenuItems.some((item) => !item.role)) && (
               <div className={isCompactSidebar ? "" : "pt-4"}>
                 {adminMenuItems
-                  .filter((item) => !item.role || session?.user?.role === item.role || (item.id === "admin-approvals" && session?.user?.role === "smm"))
+                  .filter((item) => !item.role || session?.user?.role === item.role || ((item.id === "admin-approvals" || item.id === "admin-blogs") && session?.user?.role === "smm"))
                   .map((item) => {
                   const IconComponent = item.icon;
                   const isActive = activeSection === item.id;

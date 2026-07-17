@@ -32,6 +32,9 @@ model User {
   smmDailyStats        SocialMediaDailyStat[]
   approvalsReceived  Approval[]             @relation("ApprovalAssignee")
   approvalsCreated   Approval[]             @relation("ApprovalCreatedBy")
+  blogsReceived      BlogPost[]             @relation("BlogAssignee")
+  blogsCreated       BlogPost[]             @relation("BlogCreatedBy")
+  blogRevisions      BlogPostRevision[]     @relation("BlogRevisionActor")
 
   @@index([role])
   @@index([isActive], map: "users_is_active_idx")
@@ -294,4 +297,110 @@ model ClientReportSendLog {
   @@index([siteKey, createdAt], map: "client_report_send_site_created_idx")
   @@index([recipientEmail], map: "client_report_send_recipient_idx")
   @@map("client_report_send_logs")
+}
+
+/// Blog content awaiting approval and scheduled publishing (WordPress-shaped payload).
+model BlogPost {
+  id                    String    @id @default(cuid()) @db.VarChar(191)
+  siteLink              String    @map("site_link") @db.VarChar(512)
+  assigneeId            String    @map("assignee_id") @db.VarChar(191)
+  createdById           String    @map("created_by_id") @db.VarChar(191)
+  status                String    @default("pending") @db.VarChar(32)
+  source                String    @default("manual") @db.VarChar(32)
+  externalId            String?   @map("external_id") @db.VarChar(191)
+  title                 String    @db.VarChar(512)
+  slug                  String?   @db.VarChar(255)
+  excerpt               String?   @db.Text
+  content               String    @db.Text
+  wpStatus              String    @default("draft") @map("wp_status") @db.VarChar(32)
+  featuredImagePath     String?   @map("featured_image_path") @db.VarChar(512)
+  featuredImageAlt      String?   @map("featured_image_alt") @db.VarChar(512)
+  payload               Json
+  userEditedTitle       String?   @map("user_edited_title") @db.VarChar(512)
+  userEditedSlug        String?   @map("user_edited_slug") @db.VarChar(255)
+  userEditedExcerpt     String?   @map("user_edited_excerpt") @db.Text
+  userEditedContent     String?   @map("user_edited_content") @db.Text
+  scheduledFor          DateTime? @map("scheduled_for")
+  publishStatus         String?   @default("unpublish") @map("publish_status") @db.VarChar(32)
+  publishError          String?   @map("publish_error") @db.Text
+  externalPostId        String?   @map("external_post_id") @db.VarChar(191)
+  respondedAt           DateTime? @map("responded_at")
+  lastAction            String?   @map("last_action") @db.VarChar(32)
+  awaitingAdminReview   Boolean   @default(false) @map("awaiting_admin_review")
+  hiddenFromAssignee    Boolean   @default(false) @map("hidden_from_assignee")
+  skippedAssigneeReview Boolean   @default(false) @map("skipped_assignee_review")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  assignee     User             @relation("BlogAssignee", fields: [assigneeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdBy    User             @relation("BlogCreatedBy", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  publishLogs  BlogPublishLog[]
+  revisions    BlogPostRevision[]
+
+  @@unique([siteLink, externalId], map: "blog_post_site_external_unique")
+  @@index([assigneeId], map: "blog_posts_assignee_id_idx")
+  @@index([siteLink], map: "blog_posts_site_link_idx")
+  @@index([status], map: "blog_posts_status_idx")
+  @@index([scheduledFor], map: "blog_posts_scheduled_for_idx")
+  @@index([publishStatus], map: "blog_posts_publish_status_idx")
+  @@map("blog_posts")
+}
+
+/// Per-site blog delivery settings (webhook, API, WordPress, email fallback chain).
+model SitePublishConfig {
+  id                   String   @id @default(cuid()) @db.VarChar(191)
+  siteLink             String   @unique @map("site_link") @db.VarChar(512)
+  enabled              Boolean  @default(true)
+  inboundSecret        String?  @map("inbound_secret") @db.VarChar(191)
+  deliveryChain        Json     @default("[\"webhook\",\"wordpress\",\"api\",\"email\"]") @map("delivery_chain")
+  webhookUrl           String?  @map("webhook_url") @db.VarChar(2048)
+  webhookSecret        String?  @map("webhook_secret") @db.VarChar(512)
+  apiUrl               String?  @map("api_url") @db.VarChar(2048)
+  apiKey               String?  @map("api_key") @db.VarChar(512)
+  apiHeaders           Json?    @map("api_headers")
+  wordpressUrl         String?  @map("wordpress_url") @db.VarChar(2048)
+  wordpressUsername    String?  @map("wordpress_username") @db.VarChar(191)
+  wordpressAppPassword String?  @map("wordpress_app_password") @db.VarChar(512)
+  emailRecipients      String?  @map("email_recipients") @db.Text
+  defaultCategories    Json?    @map("default_categories")
+  defaultTags          Json?    @map("default_tags")
+  wordpressPullEnabled Boolean  @default(false) @map("wordpress_pull_enabled")
+  wordpressPullStatuses Json?   @default("[\"draft\",\"future\"]") @map("wordpress_pull_statuses")
+  lastWordpressPullAt  DateTime? @map("last_wordpress_pull_at")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("site_publish_configs")
+}
+
+/// Audit trail for blog publish attempts.
+model BlogPublishLog {
+  id           String   @id @default(cuid()) @db.VarChar(191)
+  blogPostId   String   @map("blog_post_id") @db.VarChar(191)
+  method       String   @db.VarChar(32)
+  success      Boolean  @default(false)
+  externalId   String?  @map("external_id") @db.VarChar(191)
+  responseBody String?  @map("response_body") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  blogPost BlogPost @relation(fields: [blogPostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([blogPostId, createdAt], map: "blog_publish_logs_post_created_idx")
+  @@map("blog_publish_logs")
+}
+
+/// Snapshot history for blog edits while pending or in review.
+model BlogPostRevision {
+  id         String   @id @default(cuid()) @db.VarChar(191)
+  blogPostId String   @map("blog_post_id") @db.VarChar(191)
+  action     String   @db.VarChar(32)
+  actorId    String?  @map("actor_id") @db.VarChar(191)
+  snapshot   Json
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  blogPost BlogPost @relation(fields: [blogPostId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  actor    User?    @relation("BlogRevisionActor", fields: [actorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([blogPostId, createdAt], map: "blog_post_revisions_post_created_idx")
+  @@map("blog_post_revisions")
 }

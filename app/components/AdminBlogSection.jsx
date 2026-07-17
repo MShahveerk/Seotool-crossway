@@ -1,0 +1,622 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { FiFileText, FiRefreshCw, FiSave, FiSettings, FiZap } from "react-icons/fi";
+import BlogRichTextEditor, { isRichTextEmpty } from "./BlogRichTextEditor";
+
+function toDatetimeLocalValue(date) {
+  if (!date) return "";
+  const d = new Date(date);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+const DEFAULT_CONFIG = {
+  enabled: true,
+  deliveryChain: ["webhook", "wordpress", "api", "email"],
+  webhookUrl: "",
+  webhookSecret: "",
+  apiUrl: "",
+  apiKey: "",
+  wordpressUrl: "",
+  wordpressUsername: "",
+  wordpressAppPassword: "",
+  emailRecipients: "",
+  inboundSecret: "",
+  wordpressPullEnabled: false,
+  wordpressPullStatuses: ["draft", "future"],
+  lastWordpressPullAt: null,
+};
+
+export default function AdminBlogSection({ selectedSite = "" }) {
+  const { data: session } = useSession();
+  const isSuperAdmin = session?.user?.role === "super_admin";
+  const [form, setForm] = useState({
+    title: "",
+    slug: "",
+    excerpt: "",
+    content: "",
+    wpStatus: "draft",
+    scheduledFor: "",
+    categories: "",
+    tags: "",
+    featuredImageAlt: "",
+    seoTitle: "",
+    metaDescription: "",
+    focusKeyword: "",
+    approveOnAssignment: false,
+  });
+  const [featuredFile, setFeaturedFile] = useState(null);
+  const [config, setConfig] = useState(DEFAULT_CONFIG);
+  const [showConfig, setShowConfig] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [configLoading, setConfigLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [blogs, setBlogs] = useState([]);
+  const [blogsLoading, setBlogsLoading] = useState(false);
+  const [wpTesting, setWpTesting] = useState(false);
+  const [wpPulling, setWpPulling] = useState(false);
+  const [publishBusyId, setPublishBusyId] = useState("");
+  const [logsForId, setLogsForId] = useState(null);
+  const [logs, setLogs] = useState([]);
+  const [revisionsForId, setRevisionsForId] = useState(null);
+  const [revisions, setRevisions] = useState([]);
+
+  const loadConfig = useCallback(async () => {
+    if (!selectedSite || !isSuperAdmin) return;
+    setConfigLoading(true);
+    try {
+      const q = new URLSearchParams({ siteLink: selectedSite });
+      const res = await fetch(`/api/admin/blog-publish-config?${q}`);
+      const data = await res.json();
+      if (res.ok && data.config) setConfig({ ...DEFAULT_CONFIG, ...data.config });
+    } catch {
+      /* ignore */
+    } finally {
+      setConfigLoading(false);
+    }
+  }, [selectedSite, isSuperAdmin]);
+
+  useEffect(() => {
+    loadConfig();
+  }, [loadConfig]);
+
+  const loadBlogs = useCallback(async () => {
+    if (!selectedSite || !isSuperAdmin) return;
+    setBlogsLoading(true);
+    try {
+      const q = new URLSearchParams({ site: selectedSite });
+      const res = await fetch(`/api/admin/blogs?${q}`);
+      const data = await res.json();
+      if (res.ok) setBlogs(data.blogs || []);
+    } catch {
+      /* ignore */
+    } finally {
+      setBlogsLoading(false);
+    }
+  }, [selectedSite, isSuperAdmin]);
+
+  useEffect(() => {
+    loadBlogs();
+  }, [loadBlogs]);
+
+  const saveConfig = async () => {
+    if (!selectedSite) {
+      setError("Select a site first.");
+      return;
+    }
+    setConfigLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/blog-publish-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...config, siteLink: selectedSite }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save settings");
+      setConfig({ ...DEFAULT_CONFIG, ...data.config });
+      setMessage("Publish settings saved.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setConfigLoading(false);
+    }
+  };
+
+  const testWordpress = async () => {
+    if (!selectedSite) {
+      setError("Select a site first.");
+      return;
+    }
+    setWpTesting(true);
+    setError("");
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/wordpress/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteLink: selectedSite, ...config }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Connection test failed");
+      setMessage(`WordPress connected as ${data.name || "user"}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setWpTesting(false);
+    }
+  };
+
+  const pullWordpressDrafts = async () => {
+    if (!selectedSite) {
+      setError("Select a site first.");
+      return;
+    }
+    setWpPulling(true);
+    setError("");
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/wordpress/pull", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteLink: selectedSite }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Pull failed");
+      setMessage(
+        `WordPress pull complete: ${data.imported || 0} imported, ${data.updated || 0} updated, ${data.skipped || 0} skipped.`
+      );
+      await loadConfig();
+      await loadBlogs();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setWpPulling(false);
+    }
+  };
+
+  const publishNow = async (blogId) => {
+    setPublishBusyId(blogId);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/blogs/${blogId}/publish-now`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || data.errors?.join(" | ") || "Publish failed");
+      setMessage(`Blog published via ${data.method || "delivery chain"}.`);
+      await loadBlogs();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPublishBusyId("");
+    }
+  };
+
+  const loadRevisions = async (blogId) => {
+    setRevisionsForId(blogId);
+    setLogsForId(null);
+    setRevisions([]);
+    try {
+      const res = await fetch(`/api/admin/blogs/${blogId}/revisions`);
+      const data = await res.json();
+      if (res.ok) setRevisions(data.revisions || []);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const restoreRevision = async (blogId, revisionId) => {
+    if (!window.confirm("Restore this revision? Current content will be replaced.")) return;
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/blogs/${blogId}/revisions/${revisionId}/restore`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Restore failed");
+      setMessage("Revision restored.");
+      await loadBlogs();
+      await loadRevisions(blogId);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const loadLogs = async (blogId) => {
+    setLogsForId(blogId);
+    setRevisionsForId(null);
+    setLogs([]);
+    try {
+      const res = await fetch(`/api/admin/blogs/${blogId}/logs`);
+      const data = await res.json();
+      if (res.ok) setLogs(data.logs || []);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const submitBlog = async (e) => {
+    e.preventDefault();
+    if (!selectedSite) {
+      setError("Select a client site first.");
+      return;
+    }
+    if (isRichTextEmpty(form.content)) {
+      setError("Content is required.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setMessage("");
+    try {
+      const fd = new FormData();
+      fd.set("title", form.title);
+      fd.set("content", form.content);
+      fd.set("excerpt", form.excerpt);
+      fd.set("slug", form.slug);
+      fd.set("selectedSite", selectedSite);
+      fd.set("wpStatus", form.wpStatus);
+      fd.set("categories", form.categories);
+      fd.set("tags", form.tags);
+      fd.set("featuredImageAlt", form.featuredImageAlt);
+      fd.set("seoTitle", form.seoTitle);
+      fd.set("metaDescription", form.metaDescription);
+      fd.set("focusKeyword", form.focusKeyword);
+      if (form.scheduledFor) fd.set("scheduledFor", new Date(form.scheduledFor).toISOString());
+      if (form.approveOnAssignment) fd.set("approveOnAssignment", "1");
+      if (featuredFile) fd.set("featuredImage", featuredFile);
+
+      const res = await fetch("/api/admin/blogs", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create blog");
+
+      setMessage(`Blog "${data.blog?.title}" created and sent for approval.`);
+      setForm({
+        title: "",
+        slug: "",
+        excerpt: "",
+        content: "",
+        wpStatus: "draft",
+        scheduledFor: "",
+        categories: "",
+        tags: "",
+        featuredImageAlt: "",
+        seoTitle: "",
+        metaDescription: "",
+        focusKeyword: "",
+        approveOnAssignment: false,
+      });
+      setFeaturedFile(null);
+      await loadBlogs();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <FiFileText className="text-[#1d9c35]" />
+          Create Blog
+        </h1>
+        <p className="mt-1 text-sm text-gray-500">
+          WordPress-shaped content goes through approval, then publishes via your site delivery chain (webhook, WordPress, API, or email).
+        </p>
+      </div>
+
+      {isSuperAdmin ? (
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <button
+            type="button"
+            onClick={() => setShowConfig((v) => !v)}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-800"
+          >
+            <FiSettings /> Site publish settings {showConfig ? "▾" : "▸"}
+          </button>
+          {showConfig ? (
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <label className="block md:col-span-2">
+                <span className="text-xs font-semibold uppercase text-gray-500">Delivery order (comma-separated)</span>
+                <input
+                  className="mt-1 w-full border rounded-lg px-3 py-2"
+                  value={(config.deliveryChain || []).join(", ")}
+                  onChange={(e) =>
+                    setConfig((c) => ({
+                      ...c,
+                      deliveryChain: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                    }))
+                  }
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold uppercase text-gray-500">Webhook URL</span>
+                <input className="mt-1 w-full border rounded-lg px-3 py-2" value={config.webhookUrl || ""} onChange={(e) => setConfig((c) => ({ ...c, webhookUrl: e.target.value }))} />
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold uppercase text-gray-500">Webhook secret</span>
+                <input className="mt-1 w-full border rounded-lg px-3 py-2" value={config.webhookSecret || ""} onChange={(e) => setConfig((c) => ({ ...c, webhookSecret: e.target.value }))} />
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold uppercase text-gray-500">WordPress site URL</span>
+                <input className="mt-1 w-full border rounded-lg px-3 py-2" value={config.wordpressUrl || ""} onChange={(e) => setConfig((c) => ({ ...c, wordpressUrl: e.target.value }))} />
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold uppercase text-gray-500">WP username</span>
+                <input className="mt-1 w-full border rounded-lg px-3 py-2" value={config.wordpressUsername || ""} onChange={(e) => setConfig((c) => ({ ...c, wordpressUsername: e.target.value }))} />
+              </label>
+              <label className="block md:col-span-2">
+                <span className="text-xs font-semibold uppercase text-gray-500">WP application password</span>
+                <input className="mt-1 w-full border rounded-lg px-3 py-2" type="password" value={config.wordpressAppPassword || ""} onChange={(e) => setConfig((c) => ({ ...c, wordpressAppPassword: e.target.value }))} />
+              </label>
+              <label className="flex items-center gap-2 md:col-span-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={Boolean(config.wordpressPullEnabled)}
+                  onChange={(e) => setConfig((c) => ({ ...c, wordpressPullEnabled: e.target.checked }))}
+                />
+                Enable automatic WordPress draft pull (hourly cron)
+              </label>
+              <label className="block md:col-span-2">
+                <span className="text-xs font-semibold uppercase text-gray-500">Pull statuses (comma-separated)</span>
+                <input
+                  className="mt-1 w-full border rounded-lg px-3 py-2"
+                  value={(config.wordpressPullStatuses || ["draft", "future"]).join(", ")}
+                  onChange={(e) =>
+                    setConfig((c) => ({
+                      ...c,
+                      wordpressPullStatuses: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                    }))
+                  }
+                />
+              </label>
+              {config.lastWordpressPullAt ? (
+                <p className="md:col-span-2 text-xs text-gray-500">
+                  Last pull: {new Date(config.lastWordpressPullAt).toLocaleString()}
+                </p>
+              ) : null}
+              <div className="md:col-span-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={testWordpress}
+                  disabled={wpTesting || configLoading}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm font-semibold disabled:opacity-50"
+                >
+                  {wpTesting ? "Testing…" : "Test WordPress connection"}
+                </button>
+                <button
+                  type="button"
+                  onClick={pullWordpressDrafts}
+                  disabled={wpPulling || configLoading}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#1d9c35] text-[#1d9c35] text-sm font-semibold disabled:opacity-50"
+                >
+                  <FiRefreshCw /> {wpPulling ? "Pulling…" : "Pull WordPress drafts"}
+                </button>
+              </div>
+              <label className="block">
+                <span className="text-xs font-semibold uppercase text-gray-500">Custom API URL</span>
+                <input className="mt-1 w-full border rounded-lg px-3 py-2" value={config.apiUrl || ""} onChange={(e) => setConfig((c) => ({ ...c, apiUrl: e.target.value }))} />
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold uppercase text-gray-500">API key</span>
+                <input className="mt-1 w-full border rounded-lg px-3 py-2" type="password" value={config.apiKey || ""} onChange={(e) => setConfig((c) => ({ ...c, apiKey: e.target.value }))} />
+              </label>
+              <label className="block md:col-span-2">
+                <span className="text-xs font-semibold uppercase text-gray-500">Email fallback recipients</span>
+                <input className="mt-1 w-full border rounded-lg px-3 py-2" value={config.emailRecipients || ""} onChange={(e) => setConfig((c) => ({ ...c, emailRecipients: e.target.value }))} />
+              </label>
+              <label className="block md:col-span-2">
+                <span className="text-xs font-semibold uppercase text-gray-500">Inbound webhook secret</span>
+                <input className="mt-1 w-full border rounded-lg px-3 py-2" value={config.inboundSecret || ""} onChange={(e) => setConfig((c) => ({ ...c, inboundSecret: e.target.value }))} />
+              </label>
+              <button type="button" onClick={saveConfig} disabled={configLoading} className="md:col-span-2 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold disabled:opacity-50">
+                <FiSave /> {configLoading ? "Saving…" : "Save publish settings"}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {isSuperAdmin && selectedSite ? (
+        <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-gray-900">Blog queue for {selectedSite}</h2>
+            <button
+              type="button"
+              onClick={loadBlogs}
+              disabled={blogsLoading}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-900"
+            >
+              <FiRefreshCw /> Refresh
+            </button>
+          </div>
+          {blogsLoading ? (
+            <p className="text-sm text-gray-500">Loading blogs…</p>
+          ) : blogs.length === 0 ? (
+            <p className="text-sm text-gray-500">No blogs for this site yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase text-gray-500 border-b">
+                    <th className="py-2 pr-3">Title</th>
+                    <th className="py-2 pr-3">Status</th>
+                    <th className="py-2 pr-3">Publish</th>
+                    <th className="py-2 pr-3">Source</th>
+                    <th className="py-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {blogs.map((blog) => (
+                    <tr key={blog.id} className="border-b border-gray-100 align-top">
+                      <td className="py-2 pr-3 font-medium text-gray-900">{blog.title}</td>
+                      <td className="py-2 pr-3">
+                        <span className="block">{blog.status}</span>
+                        <span className="text-xs text-gray-500">{blog.publishStatus}</span>
+                      </td>
+                      <td className="py-2 pr-3 text-xs text-gray-600">
+                        {blog.scheduledFor ? new Date(blog.scheduledFor).toLocaleString() : "—"}
+                      </td>
+                      <td className="py-2 pr-3 text-xs text-gray-600">{blog.source || "manual"}</td>
+                      <td className="py-2">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={publishBusyId === blog.id || blog.publishStatus === "published"}
+                            onClick={() => publishNow(blog.id)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-gray-300 text-xs font-semibold disabled:opacity-50"
+                          >
+                            <FiZap /> {publishBusyId === blog.id ? "Publishing…" : "Publish now"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => loadLogs(blog.id)}
+                            className="px-2 py-1 rounded border border-gray-200 text-xs font-semibold text-gray-700"
+                          >
+                            Logs
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => loadRevisions(blog.id)}
+                            className="px-2 py-1 rounded border border-gray-200 text-xs font-semibold text-gray-700"
+                          >
+                            History
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {revisionsForId ? (
+            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs space-y-2">
+              <p className="font-semibold text-gray-800">Revision history</p>
+              {revisions.length === 0 ? (
+                <p className="text-gray-500">No revisions recorded yet.</p>
+              ) : (
+                revisions.map((rev) => (
+                  <div key={rev.id} className="border-b border-gray-200 pb-2 last:border-0 flex flex-wrap items-center gap-2">
+                    <span className="font-medium text-gray-800">{rev.action}</span>
+                    <span className="text-gray-500">{new Date(rev.createdAt).toLocaleString()}</span>
+                    {rev.actor?.name ? <span className="text-gray-500">by {rev.actor.name}</span> : null}
+                    <button
+                      type="button"
+                      onClick={() => restoreRevision(revisionsForId, rev.id)}
+                      className="ml-auto px-2 py-1 rounded border border-gray-300 text-xs font-semibold"
+                    >
+                      Restore
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : null}
+          {logsForId ? (
+            <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs space-y-2">
+              <p className="font-semibold text-gray-800">Publish logs</p>
+              {logs.length === 0 ? (
+                <p className="text-gray-500">No publish attempts yet.</p>
+              ) : (
+                logs.map((log) => (
+                  <div key={log.id} className="border-b border-gray-200 pb-2 last:border-0">
+                    <span className={log.success ? "text-green-700" : "text-red-700"}>
+                      {log.success ? "OK" : "FAIL"}
+                    </span>{" "}
+                    · {log.method} · {new Date(log.createdAt).toLocaleString()}
+                    {log.responseBody ? <pre className="mt-1 whitespace-pre-wrap text-gray-600">{log.responseBody}</pre> : null}
+                  </div>
+                ))
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <form onSubmit={submitBlog} className="rounded-xl border border-gray-200 bg-white p-5 space-y-4">
+        <label className="block">
+          <span className="text-xs font-semibold uppercase text-gray-500">Title</span>
+          <input required className="mt-1 w-full border rounded-lg px-3 py-2 text-lg font-medium" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+        </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="text-xs font-semibold uppercase text-gray-500">Slug</span>
+            <input className="mt-1 w-full border rounded-lg px-3 py-2 font-mono text-sm" value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} placeholder="auto-from-title" />
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold uppercase text-gray-500">Status</span>
+            <select className="mt-1 w-full border rounded-lg px-3 py-2" value={form.wpStatus} onChange={(e) => setForm((f) => ({ ...f, wpStatus: e.target.value }))}>
+              <option value="draft">Draft</option>
+              <option value="future">Scheduled</option>
+              <option value="publish">Publish</option>
+            </select>
+          </label>
+        </div>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase text-gray-500">Excerpt</span>
+          <textarea className="mt-1 w-full border rounded-lg px-3 py-2 min-h-[72px]" value={form.excerpt} onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))} />
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase text-gray-500">Content</span>
+          <div className="mt-1">
+            <BlogRichTextEditor
+              value={form.content}
+              onChange={(html) => setForm((f) => ({ ...f, content: html }))}
+              minHeight={260}
+            />
+          </div>
+        </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="text-xs font-semibold uppercase text-gray-500">Featured image</span>
+            <input type="file" accept="image/*" className="mt-1 w-full text-sm" onChange={(e) => setFeaturedFile(e.target.files?.[0] || null)} />
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold uppercase text-gray-500">Featured image alt text</span>
+            <input className="mt-1 w-full border rounded-lg px-3 py-2" value={form.featuredImageAlt} onChange={(e) => setForm((f) => ({ ...f, featuredImageAlt: e.target.value }))} />
+          </label>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="block md:col-span-2">
+            <span className="text-xs font-semibold uppercase text-gray-500">SEO title</span>
+            <input className="mt-1 w-full border rounded-lg px-3 py-2" value={form.seoTitle} onChange={(e) => setForm((f) => ({ ...f, seoTitle: e.target.value }))} placeholder="Optional — overrides default title in search results" />
+          </label>
+          <label className="block md:col-span-2">
+            <span className="text-xs font-semibold uppercase text-gray-500">Meta description</span>
+            <textarea className="mt-1 w-full border rounded-lg px-3 py-2 min-h-[64px]" value={form.metaDescription} onChange={(e) => setForm((f) => ({ ...f, metaDescription: e.target.value }))} placeholder="Optional — search snippet" />
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold uppercase text-gray-500">Focus keyword</span>
+            <input className="mt-1 w-full border rounded-lg px-3 py-2" value={form.focusKeyword} onChange={(e) => setForm((f) => ({ ...f, focusKeyword: e.target.value }))} />
+          </label>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="text-xs font-semibold uppercase text-gray-500">Categories (comma or JSON array)</span>
+            <input className="mt-1 w-full border rounded-lg px-3 py-2" value={form.categories} onChange={(e) => setForm((f) => ({ ...f, categories: e.target.value }))} />
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold uppercase text-gray-500">Tags (comma or JSON array)</span>
+            <input className="mt-1 w-full border rounded-lg px-3 py-2" value={form.tags} onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))} />
+          </label>
+        </div>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase text-gray-500">Publish date & time</span>
+          <input type="datetime-local" className="mt-1 w-full max-w-xs border rounded-lg px-3 py-2" value={form.scheduledFor} onChange={(e) => setForm((f) => ({ ...f, scheduledFor: e.target.value }))} />
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={form.approveOnAssignment} onChange={(e) => setForm((f) => ({ ...f, approveOnAssignment: e.target.checked }))} />
+          Approve immediately (skip client review)
+        </label>
+        {error ? <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p> : null}
+        {message ? <p className="text-sm text-green-800 bg-green-50 border border-green-100 rounded-lg px-3 py-2">{message}</p> : null}
+        <button type="submit" disabled={loading} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gray-900 text-white text-sm font-semibold disabled:opacity-50">
+          <FiFileText /> {loading ? "Saving…" : "Send blog for approval"}
+        </button>
+      </form>
+    </div>
+  );
+}

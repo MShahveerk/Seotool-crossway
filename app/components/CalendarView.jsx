@@ -186,6 +186,9 @@ export default function CalendarView({
                         )}
                       </div>
                       <div className="truncate text-gray-500 font-medium">
+                        {post.itemType === "blog" ? (
+                          <span className="text-[10px] font-bold uppercase text-indigo-600 mr-1">Blog</span>
+                        ) : null}
                         {post.userEditedTitle || post.title}
                       </div>
 
@@ -207,7 +210,9 @@ export default function CalendarView({
                           </div>
                         )}
                         <div className="line-clamp-2 text-xs text-gray-300">
-                          {post.userEditedCaption || post.caption || "No caption"}
+                          {post.itemType === "blog"
+                            ? post.userEditedExcerpt || post.excerpt || "Blog post"
+                            : post.userEditedCaption || post.caption || "No caption"}
                         </div>
                         <div className="text-xs font-medium mt-1 flex justify-between">
                           <span>
