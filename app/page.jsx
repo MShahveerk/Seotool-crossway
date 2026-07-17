@@ -15,10 +15,12 @@ import DeviceAppearanceSection from "./components/seo/DeviceAppearanceSection";
 import UrlInspectionSection from "./components/seo/UrlInspectionSection";
 import QueryPageMatrixSection from "./components/seo/QueryPageMatrixSection";
 import SitemapHealthSection from "./components/seo/SitemapHealthSection";
+import SeoOpportunitiesSection from "./components/seo/SeoOpportunitiesSection";
 import { isMetaPageId } from "../lib/siteAccess";
 
 const WEBSITE_SEO_SECTIONS = new Set([
   "website-statistics",
+  "seo-opportunities",
   "device-appearance",
   "url-inspection",
   "query-page-matrix",
@@ -100,6 +102,8 @@ export default function Home() {
         return <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />;
       case "website-statistics":
         return <SearchConsoleSection selectedSite={seoSite} />;
+      case "seo-opportunities":
+        return <SeoOpportunitiesSection selectedSite={seoSite} />;
       case "device-appearance":
         return <DeviceAppearanceSection selectedSite={seoSite} />;
       case "url-inspection":

@@ -22,6 +22,7 @@ import {
   FiCrosshair,
   FiMap,
   FiFileText,
+  FiZap,
 } from "react-icons/fi";
 import { SiFacebook } from "react-icons/si";
 import { isMetaPageId } from "../../lib/siteAccess";
@@ -36,6 +37,7 @@ const mainMenuItems = [
 
 /** SEO tools shown only when a website (not Meta-only page) is selected */
 const websiteSeoMenuItems = [
+  { id: "seo-opportunities", label: "SEO Opportunities", icon: FiZap },
   { id: "device-appearance", label: "Device & Appearance", icon: FiMonitor },
   { id: "url-inspection", label: "URL Inspection", icon: FiCrosshair },
   { id: "query-page-matrix", label: "Query × Page", icon: FiMap },

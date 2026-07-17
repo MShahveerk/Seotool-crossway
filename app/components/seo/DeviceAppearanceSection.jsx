@@ -12,6 +12,7 @@ import {
   Cell,
 } from "recharts";
 import SeoPanelShell, { formatNum, formatPct, formatPos } from "./SeoPanelShell";
+import { buildDeviceGaps } from "../../../lib/seoOpportunityHelpers";
 
 const DEVICE_COLORS = { DESKTOP: "#111827", MOBILE: "#1d9c35", TABLET: "#64748b" };
 
@@ -68,6 +69,8 @@ export default function DeviceAppearanceSection({ selectedSite = "" }) {
     [devices]
   );
 
+  const deviceGaps = useMemo(() => buildDeviceGaps(devices), [devices]);
+
   return (
     <SeoPanelShell
       title="Device & Search Appearance"
@@ -78,6 +81,19 @@ export default function DeviceAppearanceSection({ selectedSite = "" }) {
       loading={loading}
       error={error}
     >
+      {deviceGaps.hasGap ? (
+        <div className="mb-6 space-y-2">
+          {deviceGaps.gaps.map((g) => (
+            <div
+              key={g.type}
+              className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900"
+            >
+              {g.message}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <section className="rounded-xl border border-gray-200 p-4">
           <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Device breakdown</h2>
