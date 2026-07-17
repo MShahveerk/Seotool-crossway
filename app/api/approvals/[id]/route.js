@@ -113,6 +113,19 @@ export async function PATCH(req, { params }) {
         data: approveData,
       });
     } else if (action === "decline") {
+      const declineReason = String(body.declineReason ?? body.reason ?? "").trim();
+      if (!declineReason) {
+        return new Response(JSON.stringify({ error: "A reason for declining is required." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (declineReason.length > INSTRUCTIONS_MAX) {
+        return new Response(
+          JSON.stringify({ error: `Decline reason must be ${INSTRUCTIONS_MAX} characters or fewer.` }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
       await prisma.approval.update({
         where: { id },
         data: {
@@ -120,6 +133,7 @@ export async function PATCH(req, { params }) {
           lastAction: "decline",
           respondedAt: now,
           awaitingAdminReview: true,
+          userEditedInstructions: declineReason,
         },
       });
     } else if (action === "edit") {
@@ -207,7 +221,9 @@ export async function PATCH(req, { params }) {
     try {
       const { sendPostStatusChangeNotification } = await import("../../../../lib/email");
       let detailText = "";
-      if (action === "edit" || action === "approve") {
+      if (action === "decline") {
+        detailText = `Rejection reason:\n${String(body.declineReason ?? body.reason ?? "").trim()}`;
+      } else if (action === "edit" || action === "approve") {
         const parts = [];
         if (body.editedTitle) parts.push(`Heading: ${body.editedTitle}`);
         if (body.editedCaption) parts.push(`Caption: ${body.editedCaption}`);

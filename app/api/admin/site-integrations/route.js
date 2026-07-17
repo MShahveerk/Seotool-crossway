@@ -205,65 +205,94 @@ export async function GET() {
       }
     }
 
-    // 3. Filter lists by role
-    let filteredWebsites = websitesList;
-    let filteredMetaPages = metaPagesList;
-
+    // 3. Filter lists by role — SMM sees ONLY explicitly assigned client accounts
     if (session.user.role === ROLES.SMM) {
-      const rawAllowed = (session.user.accessibleSites || [])
-        .map((s) => String(s || "").trim())
-        .filter(Boolean);
-      const allowedSites = new Set(rawAllowed.map((s) => s.toLowerCase()));
-      const ownLink = (session.user.siteLink || "").toLowerCase().trim();
-      if (ownLink) allowedSites.add(ownLink);
-
-      // Accessible sites are often stored as Meta page IDs (see Admin user associations).
-      const allowedFbIds = new Set(
-        [(session.user.facebookPageId || "").trim()].filter(Boolean)
+      const smmUser = await getUserById(session.user.id);
+      const assignedKeys = Array.from(
+        new Set(
+          (smmUser?.accessibleSites || [])
+            .map((s) => String(s || "").trim())
+            .filter(Boolean)
+        )
       );
-      for (const s of rawAllowed) {
-        if (isMetaPageId(s)) allowedFbIds.add(s);
-      }
 
-      filteredWebsites = websitesList.filter((w) => {
-        const link = (w.siteLink || "").toLowerCase().trim();
-        const fb = (w.facebookPageId || "").trim();
-        return (link && allowedSites.has(link)) || (fb && allowedFbIds.has(fb));
-      });
+      const lookupByFbId = new Map(
+        metaAccounts
+          .filter((m) => m.facebookPageId)
+          .map((m) => [String(m.facebookPageId).trim(), m])
+      );
+      const lookupBySiteUrl = new Map(
+        [...websitesList, ...metaPagesList]
+          .filter((e) => e.siteLink)
+          .map((e) => [String(e.siteLink).toLowerCase().trim(), e])
+      );
 
-      filteredWebsites.forEach((w) => {
-        if (w.facebookPageId) allowedFbIds.add(String(w.facebookPageId).trim());
-      });
+      const smmEntries = [];
+      const seenValues = new Set();
 
-      filteredMetaPages = metaPagesList.filter((m) => {
-        const fbId = (m.facebookPageId || "").trim();
-        const link = (m.siteLink || "").toLowerCase().trim();
-        return (fbId && allowedFbIds.has(fbId)) || (link && allowedSites.has(link));
-      });
+      for (const key of assignedKeys) {
+        const val = isMetaPageId(key) ? String(key).trim() : key;
+        if (seenValues.has(val)) continue;
+        seenValues.add(val);
 
-      // Ensure every assigned Meta page ID appears even if Graph listing is incomplete.
-      for (const fbId of allowedFbIds) {
-        const already =
-          filteredMetaPages.some((m) => String(m.facebookPageId).trim() === fbId) ||
-          filteredWebsites.some((w) => String(w.facebookPageId || "").trim() === fbId);
-        if (already) continue;
-        const fromAll = metaPagesList.find((m) => String(m.facebookPageId).trim() === fbId);
-        if (fromAll) {
-          filteredMetaPages.push(fromAll);
-        } else {
-          filteredMetaPages.push({
+        let entry;
+        if (isMetaPageId(val)) {
+          const meta = lookupByFbId.get(val);
+          entry = {
             userId: null,
-            userName: "",
+            userName: meta?.userName || "",
             userEmail: "",
-            siteLink: "",
-            facebookPageId: fbId,
-            instagramUserId: "",
+            siteLink: meta?.siteLink || "",
+            facebookPageId: val,
+            instagramUserId: meta?.instagramUserId || "",
             isSuperAdminSite: false,
             type: "meta_page",
-          });
+          };
+        } else {
+          const norm = val.toLowerCase().trim();
+          const known = lookupBySiteUrl.get(norm);
+          entry = known
+            ? { ...known, type: known.type || "website" }
+            : {
+                userId: null,
+                userName: val,
+                userEmail: "",
+                siteLink: val,
+                facebookPageId: "",
+                instagramUserId: "",
+                isSuperAdminSite: false,
+                type: "website",
+              };
         }
+
+        const metaMatch = lookupByFbId.get(String(entry.facebookPageId || "").trim());
+        const displayName = pickClientDisplayName({
+          userName: entry.userName,
+          siteLink: entry.siteLink,
+          facebookPageId: entry.facebookPageId,
+          metaName: metaMatch?.userName,
+        });
+        smmEntries.push({ ...entry, userName: displayName, displayName });
       }
+
+      smmEntries.sort((a, b) =>
+        (a.displayName || a.userName || "").localeCompare(b.displayName || b.userName || "")
+      );
+
+      return new Response(
+        JSON.stringify({
+          sites: smmEntries,
+          superAdminSite: null,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
+
+    let filteredWebsites = websitesList;
+    let filteredMetaPages = metaPagesList;
 
     const uniqueEntries = [...filteredWebsites, ...filteredMetaPages].map((entry) => {
       const metaMatch = metaAccounts.find(

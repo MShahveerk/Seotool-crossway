@@ -84,7 +84,9 @@ function userResponseSummary(a) {
   if (action === "decline" || a.status === "declined") {
     return {
       label: "Declined",
-      detail: `User declined on ${when}.`,
+      detail: a.userEditedInstructions
+        ? `User declined on ${when}. Reason: ${String(a.userEditedInstructions).trim()}`
+        : `User declined on ${when}.`,
     };
   }
   if (action === "edit" || a.status === "edited") {

@@ -451,7 +451,17 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                           <button
                             type="button"
                             disabled={acting}
-                            onClick={() => patch(a.id, { action: "decline" })}
+                            onClick={() => {
+                              const reason = window.prompt(
+                                "Please provide a reason for declining this post (required):"
+                              );
+                              if (reason === null) return;
+                              if (!String(reason).trim()) {
+                                setError("A reason for declining is required.");
+                                return;
+                              }
+                              patch(a.id, { action: "decline", declineReason: reason.trim() });
+                            }}
                             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold disabled:opacity-50"
                           >
                             <FiX className="w-4 h-4" />
