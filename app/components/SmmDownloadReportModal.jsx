@@ -34,8 +34,6 @@ export default function SmmDownloadReportModal({
   const [smmPayload, setSmmPayload] = useState(null);
   const [gscPayload, setGscPayload] = useState(null);
   const [gscError, setGscError] = useState("");
-  const [seoOppPayload, setSeoOppPayload] = useState(null);
-  const [seoOppError, setSeoOppError] = useState("");
   const [baselineRows, setBaselineRows] = useState([]);
   const [pdfWorking, setPdfWorking] = useState(false);
 
@@ -45,7 +43,6 @@ export default function SmmDownloadReportModal({
       setReportMonth(m);
       setError("");
       setGscError("");
-      setSeoOppError("");
     }
   }, [open, initialMonth, maxMonth]);
 
@@ -77,14 +74,12 @@ export default function SmmDownloadReportModal({
       setError("No site is selected.");
       setSmmPayload(null);
       setGscPayload(null);
-      setSeoOppPayload(null);
       setBaselineRows([]);
       return;
     }
     setLoading(true);
     setError("");
     setGscError("");
-    setSeoOppError("");
     setBaselineRows([]);
     try {
       const smmQ = new URLSearchParams({
@@ -133,28 +128,14 @@ export default function SmmDownloadReportModal({
             setGscPayload(gscData);
             setGscError("");
           }
-
-          const oq = new URLSearchParams({ range: "28d", url: activeSite });
-          const oppRes = await fetch(`/api/searchconsole/opportunities?${oq.toString()}`);
-          const oppData = await oppRes.json();
-          if (!oppRes.ok) {
-            setSeoOppPayload(null);
-            setSeoOppError(oppData.error || "SEO opportunities could not be loaded.");
-          } else {
-            setSeoOppPayload(oppData);
-            setSeoOppError("");
-          }
         }
       } else {
         setGscPayload(null);
         setGscError("");
-        setSeoOppPayload(null);
-        setSeoOppError("");
       }
     } catch (e) {
       setSmmPayload(null);
       setGscPayload(null);
-      setSeoOppPayload(null);
       setBaselineRows([]);
       setError(e.message || "Something went wrong.");
     } finally {
@@ -190,18 +171,6 @@ export default function SmmDownloadReportModal({
           }
         : null;
 
-      const seoOpportunities = includeWebsite
-        ? seoOppPayload
-          ? {
-              strikingDistance: seoOppPayload.strikingDistance || [],
-              cannibalization: seoOppPayload.cannibalization || [],
-              decayingQueries: seoOppPayload.decayingQueries || [],
-              deviceGaps: seoOppPayload.deviceGaps || null,
-              sitemapWarnings: seoOppPayload.sitemapWarnings || [],
-            }
-          : { errorNote: seoOppError || "SEO opportunities unavailable." }
-        : null;
-
       const bytes = await buildUnifiedMarketingReportPdfBytes({
         siteUrl: smmPayload.siteUrl,
         reportTitle: "SMM & website statistics report",
@@ -209,7 +178,9 @@ export default function SmmDownloadReportModal({
         smmPlatformCards: baselineRows,
         platformFilter: platform,
         websiteStats,
-        seoOpportunities,
+        seoOpportunities: null,
+        includeSeo: false,
+        internal: false,
       });
       const blob = new Blob([bytes], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);

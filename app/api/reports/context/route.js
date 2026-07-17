@@ -3,7 +3,7 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { ROLES } from "../../../../lib/rbac";
 import prisma from "../../../../lib/prisma";
 import { sessionCanAccessSiteAsync } from "../../../../lib/siteAccess";
-import { resolveSiteReportContext } from "../../../../lib/siteReportContext";
+import { resolveSiteReportContext, INTERNAL_REPORT_SECTIONS, CLIENT_REPORT_SECTIONS } from "../../../../lib/siteReportContext";
 
 export const runtime = "nodejs";
 
@@ -57,7 +57,10 @@ export async function GET(req) {
         siteKey: context.siteKey,
         displayName: context.displayName,
         includeWebsiteReports: context.includeWebsiteReports,
-        applicableSections: context.applicableSections,
+        clientSections: context.clientSections,
+        exportSections: context.exportSections,
+        internalSections: INTERNAL_REPORT_SECTIONS,
+        clientReportSections: CLIENT_REPORT_SECTIONS,
         isMetaPage: context.isMetaPage,
         websiteUrl: context.websiteUrl,
       }),

@@ -3,7 +3,7 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { ROLES } from "../../../../lib/rbac";
 import prisma from "../../../../lib/prisma";
 import { sessionCanAccessSiteAsync } from "../../../../lib/siteAccess";
-import { resolveSiteReportContext } from "../../../../lib/siteReportContext";
+import { resolveSiteReportContext, isInternalReportSection } from "../../../../lib/siteReportContext";
 import { buildSectionReportPdf, siteFileSlug } from "../../../../lib/clientReportBuilder";
 import { logReportSend } from "../../../../lib/clientReportSettings";
 
@@ -84,6 +84,14 @@ export async function GET(req) {
 
     const reportMonth = String(req.nextUrl.searchParams.get("month") || "").trim() || undefined;
     const context = await resolveSiteReportContext(prisma, siteKey);
+
+    const canExportInternal = role === ROLES.SUPER_ADMIN || role === ROLES.SMM;
+    if (isInternalReportSection(section) && !canExportInternal) {
+      return new Response(
+        JSON.stringify({ error: "This report type is for internal use only and is not available for your role." }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
     if (section !== "smm" && !context.includeWebsiteReports) {
       return new Response(

@@ -90,9 +90,9 @@ export default function ReportsManagementPanel() {
             <h2 className="text-xl font-bold text-gray-900">Client Reports (Approvers)</h2>
           </div>
           <p className="text-sm text-gray-600 mt-1 max-w-2xl">
-            Auto-email PDF report packs to <strong>approver</strong> users for sites assigned to them. Meta-only
-            pages without website + GTM get <strong>SMM reports only</strong>. Internal weekly SEO digest is managed
-            separately above.
+            Auto-email plain-language PDFs to <strong>approver</strong> users for sites assigned to them.
+            Clients receive <strong>social media + website performance only</strong> — never internal SEO tools.
+            Meta-only pages without website + GTM get SMM reports only.
           </p>
         </div>
         <button
@@ -154,8 +154,8 @@ export default function ReportsManagementPanel() {
                 Send reports now
               </p>
               <p className="text-xs text-gray-500">
-                Sends all applicable PDFs (SMM + website/SEO when linked) to approvers for the selected site, or
-                everyone if no site is specified.
+                Sends client-ready PDFs (followers + website performance when linked) to approvers for the
+                selected site, or everyone if no site is specified. Internal SEO reports are never emailed.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <input

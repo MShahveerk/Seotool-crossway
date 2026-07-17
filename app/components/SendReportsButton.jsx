@@ -42,7 +42,7 @@ export default function SendReportsButton({ activeSite = "", className = "" }) {
         type="button"
         onClick={handleSend}
         disabled={working || !activeSite}
-        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#1d9c35]/30 bg-[#1d9c35]/10 text-sm font-semibold text-[#178a2d] hover:bg-[#1d9c35]/15 disabled:opacity-50"
+        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900 hover:bg-gray-50 disabled:opacity-50"
       >
         <FiSend className="w-4 h-4" />
         {working ? "Sending…" : "Send all reports"}
