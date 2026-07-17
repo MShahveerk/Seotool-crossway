@@ -209,3 +209,48 @@ model SeoDigestRecipient {
 
   @@map("seo_digest_recipients")
 }
+
+/// One daily URL-inspection run for a site property.
+model UrlInspectionSnapshot {
+  id             String                @id @default(cuid()) @db.VarChar(191)
+  siteUrl        String                @map("site_url") @db.VarChar(512)
+  runDate        DateTime              @map("run_date") @db.Date
+  status         String                @default("running") @db.VarChar(32)
+  totalUrls      Int                   @default(0) @map("total_urls")
+  indexedCount   Int                   @default(0) @map("indexed_count")
+  notIndexedCount Int                  @default(0) @map("not_indexed_count")
+  unknownCount   Int                   @default(0) @map("unknown_count")
+  errorCount     Int                   @default(0) @map("error_count")
+  startedAt      DateTime              @default(now()) @map("started_at")
+  finishedAt     DateTime?             @map("finished_at")
+  errorMessage   String?               @map("error_message") @db.Text
+  results        UrlInspectionResult[]
+
+  @@unique([siteUrl, runDate], map: "url_inspection_snapshot_site_date_unique")
+  @@index([siteUrl, runDate], map: "url_inspection_snapshot_site_date_idx")
+  @@map("url_inspection_snapshots")
+}
+
+/// Per-URL inspection result within a daily snapshot.
+model UrlInspectionResult {
+  id                 String               @id @default(cuid()) @db.VarChar(191)
+  snapshotId         String               @map("snapshot_id") @db.VarChar(191)
+  inspectionUrl      String               @map("inspection_url") @db.VarChar(2048)
+  category           String               @default("unknown") @db.VarChar(32)
+  verdict            String?              @db.VarChar(64)
+  coverageState      String?              @map("coverage_state") @db.VarChar(255)
+  indexingState      String?              @map("indexing_state") @db.VarChar(255)
+  robotsTxtState     String?              @map("robots_txt_state") @db.VarChar(128)
+  pageFetchState     String?              @map("page_fetch_state") @db.VarChar(128)
+  lastCrawlTime      DateTime?            @map("last_crawl_time")
+  googleCanonical    String?              @map("google_canonical") @db.VarChar(2048)
+  userCanonical      String?              @map("user_canonical") @db.VarChar(2048)
+  cause              String?              @db.Text
+  errorMessage       String?              @map("error_message") @db.Text
+  createdAt          DateTime             @default(now()) @map("created_at")
+  snapshot           UrlInspectionSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([snapshotId, category], map: "url_inspection_result_snapshot_cat_idx")
+  @@index([inspectionUrl], map: "url_inspection_result_url_idx")
+  @@map("url_inspection_results")
+}
