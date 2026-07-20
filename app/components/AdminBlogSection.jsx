@@ -152,12 +152,13 @@ export default function AdminBlogSection({ selectedSite = "" }) {
         [
           `WordPress connected as ${data.name || "user"} at ${data.wordpressUrl || config.wordpressUrl || "unknown URL"}.`,
           breakdown ? `API post counts — ${breakdown} (${data.apiTotal ?? "?"} total).` : null,
-          typeof data.draftCount === "number" && data.apiTotal && data.draftCount > data.apiTotal
-            ? "Draft count looks higher than total — verify the WordPress URL matches the site you are viewing in wp-admin."
+          data.statusFilterBroken
+            ? data.statusFilterNote ||
+              "Status filters look broken (often CDN caching). Counts above use actual post records."
             : null,
           data.sampleDrafts?.length
-            ? `Latest drafts: ${data.sampleDrafts.map((p) => p.title || `#${p.id}`).join("; ")}`
-            : null,
+            ? `Recent pullable posts: ${data.sampleDrafts.map((p) => `${p.title || `#${p.id}`}${p.status ? ` [${p.status}]` : ""}`).join("; ")}`
+            : "No draft/future/pending posts returned by the API.",
         ]
           .filter(Boolean)
           .join(" ")

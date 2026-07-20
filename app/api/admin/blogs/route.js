@@ -6,6 +6,7 @@ import { findAssigneesForSite, notifyBlogApprovers, createBlogQuickActionToken }
 import { saveBlogFeaturedImage } from "../../../../lib/blogMedia.js";
 import { BLOG_INCLUDE } from "../../../../lib/blogAccess.js";
 import { recordBlogRevision } from "../../../../lib/blogRevisions.js";
+import { resolveSiteEquivalents } from "../../../../lib/siteAccess.js";
 
 export const runtime = "nodejs";
 
@@ -13,7 +14,11 @@ export async function GET(req) {
   try {
     await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
     const site = req.nextUrl.searchParams.get("site") || req.nextUrl.searchParams.get("url") || "";
-    const where = site ? { siteLink: site } : {};
+    let where = {};
+    if (site) {
+      const siteKeys = await resolveSiteEquivalents(prisma, site);
+      where = { siteLink: { in: siteKeys.length ? siteKeys : [site] } };
+    }
     const blogs = await prisma.blogPost.findMany({
       where,
       include: BLOG_INCLUDE,
