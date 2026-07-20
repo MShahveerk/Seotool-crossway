@@ -58,6 +58,8 @@ export default function AdminBlogSection({ selectedSite = "" }) {
   const [blogsLoading, setBlogsLoading] = useState(false);
   const [wpTesting, setWpTesting] = useState(false);
   const [wpPulling, setWpPulling] = useState(false);
+  const [wpPostId, setWpPostId] = useState("");
+  const [wpIncludeTrash, setWpIncludeTrash] = useState(false);
   const [publishBusyId, setPublishBusyId] = useState("");
   const [logsForId, setLogsForId] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -151,11 +153,9 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       setMessage(
         [
           `WordPress connected as ${data.name || "user"} at ${data.wordpressUrl || config.wordpressUrl || "unknown URL"}.`,
+          data.roles?.length ? `Role: ${data.roles.join(", ")}.` : null,
           breakdown ? `API post counts — ${breakdown} (${data.apiTotal ?? "?"} total).` : null,
-          data.statusFilterBroken
-            ? data.statusFilterNote ||
-              "Status filters look broken (often CDN caching). Counts above use actual post records."
-            : null,
+          data.diagnosis || data.statusFilterNote || null,
           data.sampleDrafts?.length
             ? `Recent pullable posts: ${data.sampleDrafts.map((p) => `${p.title || `#${p.id}`}${p.status ? ` [${p.status}]` : ""}`).join("; ")}`
             : "No draft/future/pending posts returned by the API.",
@@ -170,9 +170,13 @@ export default function AdminBlogSection({ selectedSite = "" }) {
     }
   };
 
-  const pullWordpressDrafts = async (onlyScheduled = false) => {
+  const pullWordpressDrafts = async ({ onlyScheduled = false, byPostId = false } = {}) => {
     if (!selectedSite) {
       setError("Select a site first.");
+      return;
+    }
+    if (byPostId && !String(wpPostId || "").trim()) {
+      setError("Enter a WordPress post ID first.");
       return;
     }
     setWpPulling(true);
@@ -182,7 +186,12 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       const res = await fetch("/api/admin/wordpress/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ siteLink: selectedSite, onlyScheduled }),
+        body: JSON.stringify({
+          siteLink: selectedSite,
+          onlyScheduled,
+          includeTrash: wpIncludeTrash,
+          wordpressPostId: byPostId ? String(wpPostId).trim() : "",
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Pull failed");
@@ -197,7 +206,9 @@ export default function AdminBlogSection({ selectedSite = "" }) {
           : "";
       const summary = `Fetched ${data.fetched ?? data.total ?? 0} from WordPress: ${data.imported || 0} imported, ${data.updated || 0} updated, ${data.skipped || 0} skipped.`;
       setMessage(
-        [summary, counts ? `WP totals — ${counts}${scheduledHint}.` : null, data.message].filter(Boolean).join(" ")
+        [summary, counts ? `WP totals — ${counts}${scheduledHint}.` : null, data.diagnosis || data.message, ...(data.pullErrors || [])]
+          .filter(Boolean)
+          .join(" ")
       );
       await loadConfig();
       await loadBlogs();
@@ -411,6 +422,25 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                   Last pull: {new Date(config.lastWordpressPullAt).toLocaleString()}
                 </p>
               ) : null}
+              <div className="md:col-span-2 flex flex-wrap items-end gap-3">
+                <label className="block min-w-[160px]">
+                  <span className="text-xs font-semibold uppercase text-gray-500">WordPress post ID</span>
+                  <input
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+                    value={wpPostId}
+                    onChange={(e) => setWpPostId(e.target.value)}
+                    placeholder="e.g. 1234"
+                  />
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700 pb-2">
+                  <input
+                    type="checkbox"
+                    checked={wpIncludeTrash}
+                    onChange={(e) => setWpIncludeTrash(e.target.checked)}
+                  />
+                  Include trash
+                </label>
+              </div>
               <div className="md:col-span-2 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -422,7 +452,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => pullWordpressDrafts(false)}
+                  onClick={() => pullWordpressDrafts({ onlyScheduled: false })}
                   disabled={wpPulling || configLoading}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#1d9c35] text-[#1d9c35] text-sm font-semibold disabled:opacity-50"
                 >
@@ -430,13 +460,24 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => pullWordpressDrafts(true)}
+                  onClick={() => pullWordpressDrafts({ onlyScheduled: true })}
                   disabled={wpPulling || configLoading}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm font-semibold disabled:opacity-50"
                 >
                   Pull scheduled only
                 </button>
+                <button
+                  type="button"
+                  onClick={() => pullWordpressDrafts({ byPostId: true })}
+                  disabled={wpPulling || configLoading}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm font-semibold disabled:opacity-50"
+                >
+                  Pull by post ID
+                </button>
               </div>
+              <p className="md:col-span-2 text-xs text-gray-500">
+                If pulls return 0, create the application password on a WordPress Administrator/Editor account (not a limited user). In wp-admin, open the post and copy the ID from the URL (?post=123).
+              </p>
               <label className="block">
                 <span className="text-xs font-semibold uppercase text-gray-500">Custom API URL</span>
                 <input className="mt-1 w-full border rounded-lg px-3 py-2" value={config.apiUrl || ""} onChange={(e) => setConfig((c) => ({ ...c, apiUrl: e.target.value }))} />

@@ -17,6 +17,12 @@ export async function POST(req) {
       perPage: body.perPage || 50,
       statuses: Array.isArray(body.statuses) && body.statuses.length ? body.statuses : ["draft", "future", "pending"],
       onlyScheduled: Boolean(body.onlyScheduled),
+      includeTrash: Boolean(body.includeTrash),
+      wordpressPostIds: Array.isArray(body.wordpressPostIds)
+        ? body.wordpressPostIds
+        : body.wordpressPostId
+          ? [body.wordpressPostId]
+          : [],
     });
 
     return Response.json({ ok: true, ...result });
