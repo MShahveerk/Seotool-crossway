@@ -25,7 +25,7 @@ const DEFAULT_CONFIG = {
   emailRecipients: "",
   inboundSecret: "",
   wordpressPullEnabled: false,
-  wordpressPullStatuses: ["draft", "future"],
+  wordpressPullStatuses: ["draft", "future", "pending"],
   lastWordpressPullAt: null,
 };
 
@@ -145,10 +145,15 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       const draftHint =
         data.canListDrafts === false
           ? " Connected, but draft access could not be verified."
-          : typeof data.draftCount === "number"
-            ? ` Found ${data.draftCount} draft(s) accessible.`
-            : "";
-      setMessage(`WordPress connected as ${data.name || "user"}.${draftHint}`);
+          : [
+              typeof data.draftCount === "number" ? `${data.draftCount} draft(s)` : null,
+              typeof data.futureCount === "number" ? `${data.futureCount} scheduled/future` : null,
+            ]
+              .filter(Boolean)
+              .join(", ") || "";
+      setMessage(
+        `WordPress connected as ${data.name || "user"}.${draftHint ? ` Found ${draftHint}.` : ""}`
+      );
     } catch (err) {
       setError(err.message);
     } finally {
@@ -172,8 +177,19 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Pull failed");
+      const counts = data.statusCounts
+        ? Object.entries(data.statusCounts)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(", ")
+        : "";
+      const scheduledHint =
+        data.scheduledDraftCount > 0
+          ? ` (${data.scheduledDraftCount} draft(s) have a future publish date)`
+          : "";
       const summary = `Fetched ${data.fetched ?? data.total ?? 0} from WordPress: ${data.imported || 0} imported, ${data.updated || 0} updated, ${data.skipped || 0} skipped.`;
-      setMessage(data.message ? `${summary} ${data.message}` : summary);
+      setMessage(
+        [summary, counts ? `WP totals — ${counts}${scheduledHint}.` : null, data.message].filter(Boolean).join(" ")
+      );
       await loadConfig();
       await loadBlogs();
     } catch (err) {

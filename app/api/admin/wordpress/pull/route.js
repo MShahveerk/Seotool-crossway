@@ -15,7 +15,7 @@ export async function POST(req) {
       force: true,
       operatorUser: session.user,
       perPage: body.perPage || 50,
-      statuses: Array.isArray(body.statuses) && body.statuses.length ? body.statuses : ["draft", "future"],
+      statuses: Array.isArray(body.statuses) && body.statuses.length ? body.statuses : ["draft", "future", "pending"],
     });
 
     return Response.json({ ok: true, ...result });
