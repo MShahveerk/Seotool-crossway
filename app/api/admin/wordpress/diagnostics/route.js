@@ -2,6 +2,7 @@ import { requirePermission } from "../../../../../lib/middleware/auth";
 import { PERMISSIONS } from "../../../../../lib/rbac";
 import { getSitePublishConfig } from "../../../../../lib/blogPublishConfig.js";
 import { resolveEffectiveWordpressCredentials, runWordpressDiagnostics } from "../../../../../lib/wordpressDiagnostics.js";
+import { logWordpress } from "../../../../../lib/wordpressLogger.js";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,14 @@ export async function POST(req) {
 
     const savedConfig = await getSitePublishConfig(siteLink);
     const effective = resolveEffectiveWordpressCredentials({ savedConfig, body });
+    logWordpress("diagnostics_start", {
+      siteLink,
+      wordpressUrl: effective.wordpressUrl,
+      wordpressUsername: effective.wordpressUsername,
+      passwordSource: effective.passwordSource,
+      password: effective.effectivePassword,
+    });
+
     const diagnostics = await runWordpressDiagnostics(
       {
         wordpressUrl: effective.wordpressUrl,

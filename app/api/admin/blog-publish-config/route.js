@@ -6,6 +6,7 @@ import {
   upsertSitePublishConfig,
 } from "../../../../lib/blogPublishConfig.js";
 import { summarizePassword } from "../../../../lib/wordpressDiagnostics.js";
+import { logWordpressConfig } from "../../../../lib/wordpressLogger.js";
 
 export const runtime = "nodejs";
 
@@ -43,20 +44,30 @@ export async function POST(req) {
     const existingPassword = existing?.wordpressAppPassword || "";
     const config = await upsertSitePublishConfig(siteLink, merge);
     const savedPassword = config.wordpressAppPassword || "";
+    const saveAudit = {
+      siteLink: config.siteLink,
+      wordpressUrl: config.wordpressUrl || null,
+      wordpressUsername: config.wordpressUsername || null,
+      passwordUpdated: Boolean(merge.wordpressAppPassword) && savedPassword !== existingPassword,
+      passwordStored: Boolean(savedPassword),
+      password: summarizePassword(savedPassword),
+      note: merge.wordpressAppPassword
+        ? "New application password saved to database."
+        : "Password unchanged (kept existing saved password).",
+    };
+
+    logWordpressConfig("config_saved", {
+      siteLink: config.siteLink,
+      url: config.wordpressUrl,
+      username: config.wordpressUsername,
+      password: savedPassword,
+      passwordSource: "database",
+      extra: saveAudit,
+    });
 
     return Response.json({
       config: sanitizeConfigForClient(config),
-      saveAudit: {
-        siteLink: config.siteLink,
-        wordpressUrl: config.wordpressUrl || null,
-        wordpressUsername: config.wordpressUsername || null,
-        passwordUpdated: Boolean(merge.wordpressAppPassword) && savedPassword !== existingPassword,
-        passwordStored: Boolean(savedPassword),
-        password: summarizePassword(savedPassword),
-        note: merge.wordpressAppPassword
-          ? "New application password saved to database."
-          : "Password unchanged (kept existing saved password).",
-      },
+      saveAudit,
     });
   } catch (error) {
     return Response.json({ error: error.message || "Failed to save config." }, { status: error.status || 500 });

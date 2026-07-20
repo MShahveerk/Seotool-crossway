@@ -3,6 +3,7 @@ import { PERMISSIONS } from "../../../../../lib/rbac";
 import { getSitePublishConfig } from "../../../../../lib/blogPublishConfig.js";
 import { testWordpressConnection } from "../../../../../lib/wordpressClient.js";
 import { resolveEffectiveWordpressCredentials, runWordpressDiagnostics } from "../../../../../lib/wordpressDiagnostics.js";
+import { logWordpressConfig, logWordpress } from "../../../../../lib/wordpressLogger.js";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,14 @@ export async function POST(req) {
 
     const savedConfig = siteLink ? await getSitePublishConfig(siteLink) : null;
     const effective = resolveEffectiveWordpressCredentials({ savedConfig, body });
+
+    logWordpressConfig("test_start", {
+      siteLink,
+      url: effective.wordpressUrl,
+      username: effective.wordpressUsername,
+      password: effective.wordpressAppPassword,
+      passwordSource: effective.passwordSource,
+    });
 
     const testConfig = {
       wordpressUrl: effective.wordpressUrl,
@@ -42,6 +51,16 @@ export async function POST(req) {
       testWordpressConnection(testConfig),
       runWordpressDiagnostics(testConfig, { selectedSite: siteLink, savedConfig, body, effective }),
     ]);
+
+    logWordpress("test_complete", {
+      siteLink,
+      ok: true,
+      name: result.name,
+      roles: result.roles,
+      wordpressUrl: result.wordpressUrl,
+      apiTotal: result.apiTotal,
+      diagnosis: result.diagnosis || diagnostics?.access?.diagnosis || null,
+    });
 
     return Response.json({ ok: true, ...result, diagnostics });
   } catch (error) {

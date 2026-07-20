@@ -3,6 +3,7 @@ import { PERMISSIONS } from "../../../../../lib/rbac";
 import { getSitePublishConfig } from "../../../../../lib/blogPublishConfig.js";
 import { pullWordpressDraftsForSite } from "../../../../../lib/wordpressPull.js";
 import { resolveEffectiveWordpressCredentials, runWordpressDiagnostics } from "../../../../../lib/wordpressDiagnostics.js";
+import { logWordpress } from "../../../../../lib/wordpressLogger.js";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,13 @@ export async function POST(req) {
     const body = await req.json();
     const siteLink = String(body.siteLink || body.url || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
+
+    logWordpress("pull_request", {
+      siteLink,
+      onlyScheduled: Boolean(body.onlyScheduled),
+      includeTrash: Boolean(body.includeTrash),
+      wordpressPostId: body.wordpressPostId || null,
+    });
 
     const result = await pullWordpressDraftsForSite(siteLink, {
       force: true,
