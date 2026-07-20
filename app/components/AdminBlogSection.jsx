@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { FiFileText, FiRefreshCw, FiSave, FiSettings, FiZap } from "react-icons/fi";
 import BlogRichTextEditor, { isRichTextEmpty } from "./BlogRichTextEditor";
+import HumanizeTextButton from "./HumanizeTextButton";
 
 function toDatetimeLocalValue(date) {
   if (!date) return "";
@@ -771,7 +772,14 @@ export default function AdminBlogSection({ selectedSite = "" }) {
           <textarea className="mt-1 w-full border rounded-lg px-3 py-2 min-h-[72px]" value={form.excerpt} onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))} />
         </label>
         <label className="block">
-          <span className="text-xs font-semibold uppercase text-gray-500">Content</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+            <span className="text-xs font-semibold uppercase text-gray-500">Content</span>
+            <HumanizeTextButton
+              type="blog"
+              text={form.content}
+              onHumanized={(html) => setForm((f) => ({ ...f, content: html }))}
+            />
+          </div>
           <div className="mt-1">
             <BlogRichTextEditor
               value={form.content}

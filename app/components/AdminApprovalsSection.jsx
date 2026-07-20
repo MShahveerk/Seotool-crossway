@@ -16,6 +16,7 @@ import {
 } from "react-icons/fi";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
 import MediaCropModal from "./MediaCropModal";
+import HumanizeTextButton from "./HumanizeTextButton";
 
 function formatDateTime(iso) {
   if (!iso) return "—";
@@ -411,7 +412,15 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Caption</label>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <label className="text-sm font-semibold text-gray-700">Caption</label>
+              <HumanizeTextButton
+                type="caption"
+                text={form.caption}
+                onHumanized={(caption) => setForm((f) => ({ ...f, caption }))}
+                disabled={submitting}
+              />
+            </div>
             <textarea
               rows={3}
               maxLength={2000}

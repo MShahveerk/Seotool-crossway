@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { FiCheck, FiEdit2, FiX, FiRefreshCw, FiChevronDown, FiChevronUp, FiClock } from "react-icons/fi";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
+import HumanizeTextButton from "./HumanizeTextButton";
 
 function displayBody(a) {
   if (a.userEditedText && String(a.userEditedText).trim()) return a.userEditedText;
@@ -348,12 +349,20 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                             rows={4}
                           />
                           <div className="min-w-0 flex flex-col gap-1">
-                            <label
-                              htmlFor={`act-your-caption-${a.id}`}
-                              className="text-[11px] font-semibold uppercase tracking-wide text-gray-600"
-                            >
-                              Your caption (max 2000 characters)
-                            </label>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <label
+                                htmlFor={`act-your-caption-${a.id}`}
+                                className="text-[11px] font-semibold uppercase tracking-wide text-gray-600"
+                              >
+                                Your caption (max 2000 characters)
+                              </label>
+                              <HumanizeTextButton
+                                type="caption"
+                                text={captionDraft}
+                                onHumanized={setCaptionDraft}
+                                size="xs"
+                              />
+                            </div>
                             <textarea
                               id={`act-your-caption-${a.id}`}
                               rows={4}

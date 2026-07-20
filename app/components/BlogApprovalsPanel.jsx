@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { FiCheck, FiClock, FiX } from "react-icons/fi";
 import BlogRichTextEditor from "./BlogRichTextEditor";
+import HumanizeTextButton from "./HumanizeTextButton";
 
 function toDatetimeLocalValue(date) {
   if (!date) return "";
@@ -157,7 +158,15 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
               <textarea className="mt-1 w-full border rounded-lg px-3 py-2 min-h-[64px]" value={draft.editedExcerpt} onChange={(e) => setDraft((d) => ({ ...d, editedExcerpt: e.target.value }))} />
             </label>
             <label className="block text-sm">
-              Content
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                <span>Content</span>
+                <HumanizeTextButton
+                  type="blog"
+                  text={draft.editedContent}
+                  onHumanized={(html) => setDraft((d) => ({ ...d, editedContent: html }))}
+                  disabled={busy}
+                />
+              </div>
               <div className="mt-1">
                 <BlogRichTextEditor
                   value={draft.editedContent}
