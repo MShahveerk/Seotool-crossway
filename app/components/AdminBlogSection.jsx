@@ -365,7 +365,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                 Enable automatic WordPress draft pull (hourly cron)
               </label>
               <label className="block md:col-span-2">
-                <span className="text-xs font-semibold uppercase text-gray-500">Pull statuses (comma-separated)</span>
+                <span className="text-xs font-semibold uppercase text-gray-500">Automatic pull statuses (cron only)</span>
                 <input
                   className="mt-1 w-full border rounded-lg px-3 py-2"
                   value={(config.wordpressPullStatuses || ["draft", "future"]).join(", ")}
@@ -375,7 +375,11 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                       wordpressPullStatuses: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
                     }))
                   }
+                  placeholder="draft, future"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Manual &quot;Pull WordPress drafts&quot; always fetches draft and scheduled posts. Use both values here for hourly auto-pull.
+                </p>
               </label>
               {config.lastWordpressPullAt ? (
                 <p className="md:col-span-2 text-xs text-gray-500">

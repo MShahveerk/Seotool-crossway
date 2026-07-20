@@ -14,8 +14,8 @@ export async function POST(req) {
     const result = await pullWordpressDraftsForSite(siteLink, {
       force: true,
       operatorUser: session.user,
-      perPage: body.perPage || 25,
-      statuses: Array.isArray(body.statuses) ? body.statuses : undefined,
+      perPage: body.perPage || 50,
+      statuses: Array.isArray(body.statuses) && body.statuses.length ? body.statuses : ["draft", "future"],
     });
 
     return Response.json({ ok: true, ...result });
