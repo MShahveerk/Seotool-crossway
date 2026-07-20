@@ -142,7 +142,13 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "Connection test failed");
-      setMessage(`WordPress connected as ${data.name || "user"}.`);
+      const draftHint =
+        data.canListDrafts === false
+          ? " Connected, but draft access could not be verified."
+          : typeof data.draftCount === "number"
+            ? ` Found ${data.draftCount} draft(s) accessible.`
+            : "";
+      setMessage(`WordPress connected as ${data.name || "user"}.${draftHint}`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -166,9 +172,8 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Pull failed");
-      setMessage(
-        `WordPress pull complete: ${data.imported || 0} imported, ${data.updated || 0} updated, ${data.skipped || 0} skipped.`
-      );
+      const summary = `Fetched ${data.fetched ?? data.total ?? 0} from WordPress: ${data.imported || 0} imported, ${data.updated || 0} updated, ${data.skipped || 0} skipped.`;
+      setMessage(data.message ? `${summary} ${data.message}` : summary);
       await loadConfig();
       await loadBlogs();
     } catch (err) {

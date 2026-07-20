@@ -20,6 +20,7 @@ export async function POST(req) {
 
     return Response.json({ ok: true, ...result });
   } catch (error) {
-    return Response.json({ error: error.message || "WordPress pull failed." }, { status: error.status || 500 });
+    const status = error.status || 500;
+    return Response.json({ error: error.message || "WordPress pull failed." }, { status });
   }
 }
