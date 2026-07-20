@@ -19,11 +19,19 @@ export async function POST(req) {
     const testConfig = {
       wordpressUrl: body.wordpressUrl || config?.wordpressUrl,
       wordpressUsername: body.wordpressUsername || config?.wordpressUsername,
-      wordpressAppPassword: body.wordpressAppPassword || config?.wordpressAppPassword,
+      wordpressAppPassword: config?.wordpressAppPassword || "",
     };
 
-    if (body.wordpressAppPassword === "••••••••" && config?.wordpressAppPassword) {
-      testConfig.wordpressAppPassword = config.wordpressAppPassword;
+    const rawPassword = String(body.wordpressAppPassword || "").trim();
+    if (rawPassword && rawPassword !== "••••••••") {
+      testConfig.wordpressAppPassword = rawPassword.replace(/\s+/g, "");
+    }
+
+    if (!testConfig.wordpressAppPassword) {
+      return Response.json(
+        { ok: false, error: "Paste the WordPress application password and click Save publish settings before testing." },
+        { status: 400 }
+      );
     }
 
     const result = await testWordpressConnection(testConfig);

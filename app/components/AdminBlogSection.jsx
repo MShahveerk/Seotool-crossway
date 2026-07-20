@@ -390,7 +390,17 @@ export default function AdminBlogSection({ selectedSite = "" }) {
               </label>
               <label className="block md:col-span-2">
                 <span className="text-xs font-semibold uppercase text-gray-500">WP application password</span>
-                <input className="mt-1 w-full border rounded-lg px-3 py-2" type="password" value={config.wordpressAppPassword || ""} onChange={(e) => setConfig((c) => ({ ...c, wordpressAppPassword: e.target.value }))} />
+                <input
+                  className="mt-1 w-full border rounded-lg px-3 py-2"
+                  type="password"
+                  value={config.wordpressAppPassword || ""}
+                  onChange={(e) => setConfig((c) => ({ ...c, wordpressAppPassword: e.target.value }))}
+                  placeholder="Paste once, then Save publish settings"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  After creating a password in WordPress, paste it here and click <strong>Save publish settings</strong> before Test or Pull.
+                  Pull only uses the saved password — if WordPress shows &quot;never used&quot;, this password has not reached WordPress yet (or you are looking at a different app password entry).
+                </p>
               </label>
               <label className="flex items-center gap-2 md:col-span-2 text-sm">
                 <input
