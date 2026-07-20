@@ -142,17 +142,25 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "Connection test failed");
-      const draftHint =
-        data.canListDrafts === false
-          ? " Connected, but draft access could not be verified."
-          : [
-              typeof data.draftCount === "number" ? `${data.draftCount} draft(s)` : null,
-              typeof data.futureCount === "number" ? `${data.futureCount} scheduled/future` : null,
-            ]
-              .filter(Boolean)
-              .join(", ") || "";
+      const breakdown = data.statusCounts
+        ? Object.entries(data.statusCounts)
+            .filter(([, v]) => typeof v === "number")
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(", ")
+        : "";
       setMessage(
-        `WordPress connected as ${data.name || "user"}.${draftHint ? ` Found ${draftHint}.` : ""}`
+        [
+          `WordPress connected as ${data.name || "user"} at ${data.wordpressUrl || config.wordpressUrl || "unknown URL"}.`,
+          breakdown ? `API post counts — ${breakdown} (${data.apiTotal ?? "?"} total).` : null,
+          typeof data.draftCount === "number" && data.apiTotal && data.draftCount > data.apiTotal
+            ? "Draft count looks higher than total — verify the WordPress URL matches the site you are viewing in wp-admin."
+            : null,
+          data.sampleDrafts?.length
+            ? `Latest drafts: ${data.sampleDrafts.map((p) => p.title || `#${p.id}`).join("; ")}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" ")
       );
     } catch (err) {
       setError(err.message);
@@ -161,7 +169,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
     }
   };
 
-  const pullWordpressDrafts = async () => {
+  const pullWordpressDrafts = async (onlyScheduled = false) => {
     if (!selectedSite) {
       setError("Select a site first.");
       return;
@@ -173,7 +181,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       const res = await fetch("/api/admin/wordpress/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ siteLink: selectedSite }),
+        body: JSON.stringify({ siteLink: selectedSite, onlyScheduled }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Pull failed");
@@ -413,11 +421,19 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                 </button>
                 <button
                   type="button"
-                  onClick={pullWordpressDrafts}
+                  onClick={() => pullWordpressDrafts(false)}
                   disabled={wpPulling || configLoading}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#1d9c35] text-[#1d9c35] text-sm font-semibold disabled:opacity-50"
                 >
-                  <FiRefreshCw /> {wpPulling ? "Pulling…" : "Pull WordPress drafts"}
+                  <FiRefreshCw /> {wpPulling ? "Pulling…" : "Pull all drafts"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => pullWordpressDrafts(true)}
+                  disabled={wpPulling || configLoading}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm font-semibold disabled:opacity-50"
+                >
+                  Pull scheduled only
                 </button>
               </div>
               <label className="block">

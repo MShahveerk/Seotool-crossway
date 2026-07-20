@@ -16,6 +16,7 @@ export async function POST(req) {
       operatorUser: session.user,
       perPage: body.perPage || 50,
       statuses: Array.isArray(body.statuses) && body.statuses.length ? body.statuses : ["draft", "future", "pending"],
+      onlyScheduled: Boolean(body.onlyScheduled),
     });
 
     return Response.json({ ok: true, ...result });
