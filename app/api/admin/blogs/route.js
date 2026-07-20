@@ -91,7 +91,9 @@ export async function POST(req) {
         .filter(Boolean);
     }
 
-    const { assignee, allApprovers, siteUrlLink } = await findAssigneesForSite(selectedSite);
+    const { assignee, allApprovers, siteUrlLink } = await findAssigneesForSite(selectedSite, {
+      operatorUser: session.user,
+    });
 
     let featuredImagePath = null;
     if (featuredFile && typeof featuredFile !== "string" && featuredFile.size) {

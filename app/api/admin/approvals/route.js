@@ -14,6 +14,7 @@ import {
   buildApprovalSiteOrFilter,
   resolveSiteEquivalents,
 } from "../../../../lib/siteAccess";
+import { findAssigneesForSite } from "../../../../lib/blogAssignee.js";
 
 export const runtime = "nodejs";
 
@@ -196,66 +197,9 @@ export async function POST(req) {
       );
     }
 
-    const normalizedSelectedSite = normalizeSiteForMatch(selectedSite);
-    const candidateUsers = await prisma.user.findMany({
-      where: { role: { not: ROLES.SUPER_ADMIN } },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        siteLink: true,
-        facebookPageId: true,
-        instagramUserId: true,
-        accessibleSites: { select: { siteLink: true } },
-      },
+    const { assignee, allApprovers } = await findAssigneesForSite(selectedSite, {
+      operatorUser: session.user,
     });
-
-    const matchedUsers = candidateUsers.filter((u) => {
-      const matchPrimarySite = u.siteLink && normalizeSiteForMatch(u.siteLink) === normalizedSelectedSite;
-      const matchPrimaryFb = u.facebookPageId && String(u.facebookPageId).trim() === String(selectedSite).trim();
-      const matchPrimaryIg = u.instagramUserId && String(u.instagramUserId).trim() === String(selectedSite).trim();
-
-      const matchAccessible = (u.accessibleSites || []).some((entry) => {
-        if (!entry.siteLink) return false;
-        const entryVal = String(entry.siteLink).trim();
-        const selectedVal = String(selectedSite).trim();
-        return entryVal === selectedVal || normalizeSiteForMatch(entry.siteLink) === normalizedSelectedSite;
-      });
-
-      return matchPrimarySite || matchPrimaryFb || matchPrimaryIg || matchAccessible;
-    });
-
-    console.log(`[DEBUG] Selected Site for Approval: "${selectedSite}"`);
-    console.log(`[DEBUG] Candidate Users count: ${candidateUsers.length}`);
-    console.log("[DEBUG] Matched Users:", matchedUsers.map(u => ({ id: u.id, role: u.role, email: u.email })));
-
-    if (matchedUsers.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "No mapped user found for the selected site." }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-    // Primary assignee for DB record (first approver-role match, or fallback)
-    const assignee = matchedUsers.find(u => u.role === ROLES.APPROVER || u.role === ROLES.USER || u.role === "user") || matchedUsers[0];
-    if (!assignee) {
-      return new Response(JSON.stringify({ error: "Assignee user not found." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    if (assignee.role === ROLES.SUPER_ADMIN) {
-      return new Response(JSON.stringify({ error: "Cannot assign approvals to a Super Admin account." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    // All approver-role matches — each one gets the notification email
-    const allApprovers = matchedUsers.filter(u => u.role === ROLES.APPROVER || u.role === ROLES.USER || u.role === "user");
-    if (allApprovers.length === 0) allApprovers.push(assignee);
 
     const buf = Buffer.from(await image.arrayBuffer());
     const fileName = `${crypto.randomBytes(20).toString("hex")}${ext}`;

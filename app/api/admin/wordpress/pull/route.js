@@ -6,13 +6,14 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    const session = await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
     const body = await req.json();
     const siteLink = String(body.siteLink || body.url || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
 
     const result = await pullWordpressDraftsForSite(siteLink, {
       force: true,
+      operatorUser: session.user,
       perPage: body.perPage || 25,
       statuses: Array.isArray(body.statuses) ? body.statuses : undefined,
     });
