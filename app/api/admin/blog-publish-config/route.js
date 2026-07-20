@@ -5,6 +5,7 @@ import {
   sanitizeConfigForClient,
   upsertSitePublishConfig,
 } from "../../../../lib/blogPublishConfig.js";
+import { summarizePassword } from "../../../../lib/wordpressDiagnostics.js";
 
 export const runtime = "nodejs";
 
@@ -39,8 +40,24 @@ export async function POST(req) {
     if (!merge.wordpressAppPassword && existing?.wordpressAppPassword) merge.wordpressAppPassword = existing.wordpressAppPassword;
     if (!merge.inboundSecret && existing?.inboundSecret) merge.inboundSecret = existing.inboundSecret;
 
+    const existingPassword = existing?.wordpressAppPassword || "";
     const config = await upsertSitePublishConfig(siteLink, merge);
-    return Response.json({ config: sanitizeConfigForClient(config) });
+    const savedPassword = config.wordpressAppPassword || "";
+
+    return Response.json({
+      config: sanitizeConfigForClient(config),
+      saveAudit: {
+        siteLink: config.siteLink,
+        wordpressUrl: config.wordpressUrl || null,
+        wordpressUsername: config.wordpressUsername || null,
+        passwordUpdated: Boolean(merge.wordpressAppPassword) && savedPassword !== existingPassword,
+        passwordStored: Boolean(savedPassword),
+        password: summarizePassword(savedPassword),
+        note: merge.wordpressAppPassword
+          ? "New application password saved to database."
+          : "Password unchanged (kept existing saved password).",
+      },
+    });
   } catch (error) {
     return Response.json({ error: error.message || "Failed to save config." }, { status: error.status || 500 });
   }

@@ -29,6 +29,76 @@ const DEFAULT_CONFIG = {
   lastWordpressPullAt: null,
 };
 
+function WordpressDiagnosticsPanel({ diagnostics, title = "WordPress diagnostics" }) {
+  if (!diagnostics) return null;
+
+  const copyJson = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  return (
+    <div className="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50/80 p-4 space-y-3 text-xs text-gray-800">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-semibold text-gray-900">{title}</p>
+        <button type="button" onClick={copyJson} className="px-2 py-1 rounded border border-gray-300 bg-white text-xs font-semibold">
+          Copy JSON
+        </button>
+      </div>
+
+      {Array.isArray(diagnostics.summary) && diagnostics.summary.length ? (
+        <div>
+          <p className="font-semibold uppercase tracking-wide text-gray-600 mb-1">Summary</p>
+          <ul className="list-disc pl-5 space-y-1">
+            {diagnostics.summary.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {diagnostics.saveAudit ? (
+        <div>
+          <p className="font-semibold uppercase tracking-wide text-gray-600 mb-1">Last save</p>
+          <pre className="overflow-x-auto rounded bg-white border border-gray-200 p-2 whitespace-pre-wrap">
+            {JSON.stringify(diagnostics.saveAudit, null, 2)}
+          </pre>
+        </div>
+      ) : null}
+
+      {diagnostics.audit ? (
+        <div>
+          <p className="font-semibold uppercase tracking-wide text-gray-600 mb-1">Config audit (no full password)</p>
+          <pre className="overflow-x-auto rounded bg-white border border-gray-200 p-2 whitespace-pre-wrap">
+            {JSON.stringify(diagnostics.audit, null, 2)}
+          </pre>
+        </div>
+      ) : null}
+
+      {diagnostics.access ? (
+        <div>
+          <p className="font-semibold uppercase tracking-wide text-gray-600 mb-1">Access probes</p>
+          <pre className="overflow-x-auto rounded bg-white border border-gray-200 p-2 whitespace-pre-wrap">
+            {JSON.stringify(diagnostics.access, null, 2)}
+          </pre>
+        </div>
+      ) : null}
+
+      {Array.isArray(diagnostics.trace) && diagnostics.trace.length ? (
+        <div>
+          <p className="font-semibold uppercase tracking-wide text-gray-600 mb-1">HTTP requests</p>
+          <pre className="overflow-x-auto rounded bg-white border border-gray-200 p-2 whitespace-pre-wrap max-h-96">
+            {JSON.stringify(diagnostics.trace, null, 2)}
+          </pre>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function AdminBlogSection({ selectedSite = "" }) {
   const { data: session } = useSession();
   const isSuperAdmin = session?.user?.role === "super_admin";
@@ -60,6 +130,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
   const [wpPulling, setWpPulling] = useState(false);
   const [wpPostId, setWpPostId] = useState("");
   const [wpIncludeTrash, setWpIncludeTrash] = useState(false);
+  const [wpDiagnostics, setWpDiagnostics] = useState(null);
   const [publishBusyId, setPublishBusyId] = useState("");
   const [logsForId, setLogsForId] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -120,11 +191,47 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save settings");
       setConfig({ ...DEFAULT_CONFIG, ...data.config });
-      setMessage("Publish settings saved.");
+      setWpDiagnostics(
+        data.saveAudit
+          ? {
+              saveAudit: data.saveAudit,
+              summary: [data.saveAudit.note, `Password length: ${data.saveAudit.password?.length || 0}`, `Preview: ${data.saveAudit.password?.preview || "n/a"}`],
+            }
+          : null
+      );
+      setMessage(
+        data.saveAudit
+          ? `Publish settings saved. Password stored: ${data.saveAudit.passwordStored ? "yes" : "no"} (${data.saveAudit.password?.length || 0} chars, preview ${data.saveAudit.password?.preview || "n/a"}).`
+          : "Publish settings saved."
+      );
     } catch (err) {
       setError(err.message);
     } finally {
       setConfigLoading(false);
+    }
+  };
+
+  const runWordpressDiagnostics = async () => {
+    if (!selectedSite) {
+      setError("Select a site first.");
+      return;
+    }
+    setWpTesting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/wordpress/diagnostics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteLink: selectedSite, ...config }),
+      });
+      const data = await res.json();
+      setWpDiagnostics(data);
+      if (!res.ok || !data.ok) throw new Error(data.error || "Diagnostics failed");
+      setMessage(Array.isArray(data.summary) ? data.summary.join(" ") : "Diagnostics complete — see panel below.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setWpTesting(false);
     }
   };
 
@@ -143,6 +250,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
         body: JSON.stringify({ siteLink: selectedSite, ...config }),
       });
       const data = await res.json();
+      setWpDiagnostics(data.diagnostics || null);
       if (!res.ok || !data.ok) throw new Error(data.error || "Connection test failed");
       const breakdown = data.statusCounts
         ? Object.entries(data.statusCounts)
@@ -194,6 +302,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
         }),
       });
       const data = await res.json();
+      setWpDiagnostics(data.diagnostics || null);
       if (!res.ok) throw new Error(data.error || "Pull failed");
       const counts = data.statusCounts
         ? Object.entries(data.statusCounts)
@@ -478,6 +587,14 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                 </button>
                 <button
                   type="button"
+                  onClick={runWordpressDiagnostics}
+                  disabled={wpTesting || configLoading}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-400 text-amber-900 text-sm font-semibold disabled:opacity-50"
+                >
+                  {wpTesting ? "Running…" : "Show diagnostics"}
+                </button>
+                <button
+                  type="button"
                   onClick={() => pullWordpressDrafts({ byPostId: true })}
                   disabled={wpPulling || configLoading}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm font-semibold disabled:opacity-50"
@@ -485,6 +602,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                   Pull by post ID
                 </button>
               </div>
+              <WordpressDiagnosticsPanel diagnostics={wpDiagnostics} />
               <p className="md:col-span-2 text-xs text-gray-500">
                 If pulls return 0, create the application password on a WordPress Administrator/Editor account (not a limited user). In wp-admin, open the post and copy the ID from the URL (?post=123).
               </p>

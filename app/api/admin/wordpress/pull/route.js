@@ -1,6 +1,8 @@
 import { requirePermission } from "../../../../../lib/middleware/auth";
 import { PERMISSIONS } from "../../../../../lib/rbac";
+import { getSitePublishConfig } from "../../../../../lib/blogPublishConfig.js";
 import { pullWordpressDraftsForSite } from "../../../../../lib/wordpressPull.js";
+import { resolveEffectiveWordpressCredentials, runWordpressDiagnostics } from "../../../../../lib/wordpressDiagnostics.js";
 
 export const runtime = "nodejs";
 
@@ -25,7 +27,17 @@ export async function POST(req) {
           : [],
     });
 
-    return Response.json({ ok: true, ...result });
+    const savedConfig = await getSitePublishConfig(siteLink);
+    const diagnostics = await runWordpressDiagnostics(
+      {
+        wordpressUrl: savedConfig?.wordpressUrl,
+        wordpressUsername: savedConfig?.wordpressUsername,
+        wordpressAppPassword: savedConfig?.wordpressAppPassword,
+      },
+      { selectedSite: siteLink, savedConfig, body: {}, effective: resolveEffectiveWordpressCredentials({ savedConfig }) }
+    );
+
+    return Response.json({ ok: true, ...result, diagnostics });
   } catch (error) {
     const status = error.status || 500;
     return Response.json({ error: error.message || "WordPress pull failed." }, { status });
