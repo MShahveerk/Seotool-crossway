@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FiCheck, FiEdit2, FiX, FiRefreshCw, FiChevronDown, FiChevronUp, FiClock } from "react-icons/fi";
+import { formatScheduleShort } from "../../lib/timezone";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
 import HumanizeTextButton from "./HumanizeTextButton";
 
@@ -310,7 +311,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                         </label>
                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
                           <FiClock className="text-primary-500" />
-                          {new Date(a.scheduledFor).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {formatScheduleShort(a.scheduledFor)}
                         </div>
                       </div>
                     )}

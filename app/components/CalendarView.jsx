@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FiChevronLeft, FiChevronRight, FiCalendar, FiClock, FiPlus } from "react-icons/fi";
 import { isApprovalVideoPath } from "../../lib/approvalMedia";
+import { formatScheduleTime, getZonedParts } from "../../lib/timezone";
 
 export default function CalendarView({
   approvals,
@@ -49,13 +50,11 @@ export default function CalendarView({
   const scheduledPosts = approvals.filter((a) => a.scheduledFor);
 
   const getPostsForDay = (day) => {
+    const y = currentDate.getFullYear();
+    const m = currentDate.getMonth() + 1;
     return scheduledPosts.filter((post) => {
-      const postDate = new Date(post.scheduledFor);
-      return (
-        postDate.getDate() === day &&
-        postDate.getMonth() === currentDate.getMonth() &&
-        postDate.getFullYear() === currentDate.getFullYear()
-      );
+      const parts = getZonedParts(post.scheduledFor);
+      return parts && parts.year === y && parts.month === m && parts.day === day;
     });
   };
 
@@ -150,10 +149,7 @@ export default function CalendarView({
 
               <div className="mt-2 flex flex-col gap-1.5">
                 {posts.map((post) => {
-                  const postTime = new Date(post.scheduledFor).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  });
+                  const postTime = formatScheduleTime(post.scheduledFor);
                   const isPublished = post.publishStatus === "published";
 
                   return (

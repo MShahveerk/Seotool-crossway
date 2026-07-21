@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FiRefreshCw, FiX, FiZoomIn, FiZoomOut } from "react-icons/fi";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
 import { isApprovalVideoPath } from "../../lib/approvalMedia";
+import { formatScheduleShort, getAppTimezone } from "../../lib/timezone";
 
 function normalizeSiteUrl(raw) {
   const s = String(raw || "").trim();
@@ -19,11 +20,16 @@ function normalizeSiteUrl(raw) {
 
 function formatCardWhen(iso) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: "long",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  try {
+    return new Date(iso).toLocaleString("en-US", {
+      timeZone: getAppTimezone(),
+      weekday: "long",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return formatScheduleShort(iso) || "—";
+  }
 }
 
 /** Heading shown on cards: assignee edit wins when set. */

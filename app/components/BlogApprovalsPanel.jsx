@@ -1,16 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { FiCheck, FiClock, FiTrash2, FiX } from "react-icons/fi";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FiCheck, FiClock, FiImage, FiSave, FiTrash2, FiUpload, FiX } from "react-icons/fi";
+import {
+  datetimeLocalToUtcIso,
+  formatScheduleShort,
+  timezoneShortLabel,
+  toDatetimeLocalInTimezone,
+} from "../../lib/timezone";
 import BlogRichTextEditor from "./BlogRichTextEditor";
 import HumanizeTextButton from "./HumanizeTextButton";
-
-function toDatetimeLocalValue(date) {
-  if (!date) return "";
-  const d = new Date(date);
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 function statusBadge(status) {
   const map = {
@@ -26,6 +25,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [imageMessage, setImageMessage] = useState("");
   const [activeId, setActiveId] = useState(null);
   const [draft, setDraft] = useState({
     editedTitle: "",
@@ -36,8 +36,12 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     seoTitle: "",
     metaDescription: "",
     focusKeyword: "",
+    featuredImageAlt: "",
   });
+  const [featuredFile, setFeaturedFile] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
+  const fileInputRef = useRef(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,19 +64,51 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     load();
   }, [load]);
 
+  const activeBlog = useMemo(
+    () => (activeId ? blogs.find((b) => b.id === activeId) || null : null),
+    [activeId, blogs]
+  );
+
+  const [localPreviewUrl, setLocalPreviewUrl] = useState(null);
+
+  useEffect(() => {
+    if (!featuredFile) {
+      setLocalPreviewUrl(null);
+      return undefined;
+    }
+    const url = URL.createObjectURL(featuredFile);
+    setLocalPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [featuredFile]);
+
+  const featuredPreviewUrl = localPreviewUrl || activeBlog?.featuredImagePath || null;
+  const originalAlt = activeBlog?.featuredImageAlt || "";
+  const altChanged = draft.featuredImageAlt !== originalAlt;
+  const canSaveImage = Boolean(featuredFile) || altChanged;
+
   const openBlog = (blog) => {
     const meta = blog.payload?.meta || {};
     setActiveId(blog.id);
+    setFeaturedFile(null);
+    setImageMessage("");
+    setError("");
     setDraft({
       editedTitle: blog.userEditedTitle || blog.title || "",
       editedExcerpt: blog.userEditedExcerpt ?? blog.excerpt ?? "",
       editedContent: blog.userEditedContent || blog.content || "",
       editedSlug: blog.userEditedSlug || blog.slug || "",
-      scheduledFor: toDatetimeLocalValue(blog.scheduledFor),
+      scheduledFor: toDatetimeLocalInTimezone(blog.scheduledFor),
       seoTitle: meta.seo_title || meta.yoast_title || "",
       metaDescription: meta.meta_description || meta.yoast_metadesc || "",
       focusKeyword: meta.focus_keyword || meta.yoast_focuskw || "",
+      featuredImageAlt: blog.featuredImageAlt || "",
     });
+  };
+
+  const closeReview = () => {
+    setActiveId(null);
+    setFeaturedFile(null);
+    setImageMessage("");
   };
 
   const remove = async (id) => {
@@ -83,7 +119,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
       const res = await fetch(`/api/blogs/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Delete failed");
-      if (activeId === id) setActiveId(null);
+      if (activeId === id) closeReview();
       await load();
     } catch (err) {
       setError(err.message);
@@ -92,29 +128,73 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     }
   };
 
+  const saveFeaturedImage = async () => {
+    if (!activeId || !canSaveImage) return;
+    setImageBusy(true);
+    setError("");
+    setImageMessage("");
+    try {
+      const fd = new FormData();
+      fd.set("action", "save_image");
+      fd.set("featuredImageAlt", draft.featuredImageAlt || "");
+      if (featuredFile) fd.set("featuredImage", featuredFile);
+      const res = await fetch(`/api/blogs/${activeId}`, { method: "PATCH", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save image");
+      if (data.blog) {
+        setBlogs((prev) => prev.map((b) => (b.id === data.blog.id ? data.blog : b)));
+      }
+      setFeaturedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setImageMessage("Featured image saved.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
   const act = async (id, action, extra = {}) => {
     setBusy(true);
     setError("");
     try {
-      const body = { action, ...extra };
-      if (draft.scheduledFor) body.scheduledFor = new Date(draft.scheduledFor).toISOString();
-      if (action === "approve" || action === "edit") {
-        body.editedTitle = draft.editedTitle;
-        body.editedExcerpt = draft.editedExcerpt;
-        body.editedContent = draft.editedContent;
-        body.editedSlug = draft.editedSlug;
-        body.seoTitle = draft.seoTitle;
-        body.metaDescription = draft.metaDescription;
-        body.focusKeyword = draft.focusKeyword;
+      const useForm =
+        action === "approve" || action === "edit" || Boolean(featuredFile);
+
+      let res;
+      if (useForm) {
+        const fd = new FormData();
+        fd.set("action", action);
+        if (draft.scheduledFor) {
+          const iso = datetimeLocalToUtcIso(draft.scheduledFor);
+          if (iso) fd.set("scheduledFor", iso);
+        }
+        if (action === "approve" || action === "edit") {
+          fd.set("editedTitle", draft.editedTitle);
+          fd.set("editedExcerpt", draft.editedExcerpt);
+          fd.set("editedContent", draft.editedContent);
+          fd.set("editedSlug", draft.editedSlug);
+          fd.set("seoTitle", draft.seoTitle);
+          fd.set("metaDescription", draft.metaDescription);
+          fd.set("focusKeyword", draft.focusKeyword);
+          fd.set("featuredImageAlt", draft.featuredImageAlt);
+          if (featuredFile) fd.set("featuredImage", featuredFile);
+        }
+        Object.entries(extra).forEach(([k, v]) => {
+          if (v != null) fd.set(k, String(v));
+        });
+        res = await fetch(`/api/blogs/${id}`, { method: "PATCH", body: fd });
+      } else {
+        res = await fetch(`/api/blogs/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, ...extra }),
+        });
       }
-      const res = await fetch(`/api/blogs/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Action failed");
-      setActiveId(null);
+      closeReview();
       await load();
     } catch (err) {
       setError(err.message);
@@ -127,7 +207,9 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
 
   return (
     <div className="space-y-4">
-      {error ? <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p> : null}
+      {error && !activeId ? (
+        <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>
+      ) : null}
       {blogs.length === 0 ? (
         <p className="text-sm text-gray-500 py-8 text-center border border-dashed border-gray-200 rounded-xl">No blog posts awaiting review.</p>
       ) : (
@@ -142,7 +224,11 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                   loading="lazy"
                   onError={(e) => { e.currentTarget.style.display = "none"; }}
                 />
-              ) : null}
+              ) : (
+                <div className="w-full h-36 mb-3 rounded-lg border border-dashed border-gray-200 bg-gray-50 flex items-center justify-center text-gray-400 text-xs gap-1.5">
+                  <FiImage className="w-4 h-4" /> No featured image
+                </div>
+              )}
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-gray-500">Blog</p>
@@ -153,7 +239,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
               </div>
               {blog.scheduledFor ? (
                 <p className="text-xs text-gray-600 mt-2 flex items-center gap-1">
-                  <FiClock /> {new Date(blog.scheduledFor).toLocaleString()}
+                  <FiClock /> {formatScheduleShort(blog.scheduledFor)}
                 </p>
               ) : null}
               {blog.excerpt ? <p className="text-sm text-gray-600 mt-2 line-clamp-2">{blog.excerpt}</p> : null}
@@ -179,17 +265,100 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 space-y-3">
             <h3 className="text-lg font-semibold text-gray-900">Review blog</h3>
-            {(() => {
-              const active = blogs.find((b) => b.id === activeId);
-              return active?.featuredImagePath ? (
+            {error ? (
+              <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>
+            ) : null}
+
+            <div className="rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                  <FiImage className="w-4 h-4" /> Featured image
+                </p>
+                {featuredFile ? (
+                  <span className="text-xs font-medium text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                    Unsaved: {featuredFile.name}
+                  </span>
+                ) : null}
+              </div>
+
+              {featuredPreviewUrl ? (
                 <img
-                  src={active.featuredImagePath}
-                  alt={active.featuredImageAlt || active.title}
-                  className="w-full max-h-64 object-cover rounded-xl border border-gray-100"
+                  src={featuredPreviewUrl}
+                  alt={draft.featuredImageAlt || activeBlog?.title || "Featured"}
+                  className="w-full max-h-64 object-cover rounded-xl border border-gray-200 bg-white"
                   onError={(e) => { e.currentTarget.style.display = "none"; }}
                 />
-              ) : null;
-            })()}
+              ) : (
+                <div className="w-full h-40 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-400 text-sm gap-2">
+                  <FiImage className="w-5 h-5" /> No image yet — choose a file below
+                </div>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => {
+                  setFeaturedFile(e.target.files?.[0] || null);
+                  setImageMessage("");
+                }}
+              />
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold"
+                >
+                  <FiUpload /> {featuredPreviewUrl ? "Choose replacement image" : "Choose image"}
+                </button>
+                <button
+                  type="button"
+                  disabled={imageBusy || !canSaveImage}
+                  onClick={saveFeaturedImage}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-700 text-white text-sm font-semibold disabled:opacity-40"
+                >
+                  <FiSave /> {imageBusy ? "Saving…" : "Save image"}
+                </button>
+                {featuredFile ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFeaturedFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700"
+                  >
+                    Clear selection
+                  </button>
+                ) : null}
+              </div>
+
+              <label className="block text-sm text-gray-700">
+                Alt text
+                <input
+                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 bg-white"
+                  value={draft.featuredImageAlt}
+                  onChange={(e) => {
+                    setDraft((d) => ({ ...d, featuredImageAlt: e.target.value }));
+                    setImageMessage("");
+                  }}
+                  placeholder="Describe the image for accessibility / SEO"
+                />
+              </label>
+
+              {imageMessage ? (
+                <p className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+                  {imageMessage}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500">
+                  Choose an image, then click <span className="font-semibold">Save image</span> to store it on this blog (JPEG, PNG, WebP, or GIF, max 8&nbsp;MB).
+                </p>
+              )}
+            </div>
+
             <label className="block text-sm">
               Title
               <input className="mt-1 w-full border rounded-lg px-3 py-2" value={draft.editedTitle} onChange={(e) => setDraft((d) => ({ ...d, editedTitle: e.target.value }))} />
@@ -221,7 +390,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
               </div>
             </label>
             <label className="block text-sm">
-              Publish schedule
+              Publish schedule ({timezoneShortLabel()})
               <input type="datetime-local" className="mt-1 border rounded-lg px-3 py-2" value={draft.scheduledFor} onChange={(e) => setDraft((d) => ({ ...d, scheduledFor: e.target.value }))} />
             </label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
@@ -264,7 +433,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
               >
                 <FiTrash2 /> Delete
               </button>
-              <button type="button" onClick={() => setActiveId(null)} className="px-3 py-2 rounded-lg border border-gray-200 text-sm">
+              <button type="button" onClick={closeReview} className="px-3 py-2 rounded-lg border border-gray-200 text-sm">
                 Close
               </button>
             </div>

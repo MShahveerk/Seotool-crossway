@@ -14,20 +14,18 @@ import {
   FiEye,
   FiEyeOff,
 } from "react-icons/fi";
+import {
+  datetimeLocalToUtcIso,
+  formatScheduleShort,
+  timezoneShortLabel,
+} from "../../lib/timezone";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
 import MediaCropModal from "./MediaCropModal";
 import HumanizeTextButton from "./HumanizeTextButton";
 
 function formatDateTime(iso) {
   if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  } catch {
-    return String(iso);
-  }
+  return formatScheduleShort(iso) || String(iso);
 }
 
 /** Read-only multiline mirror (admin review): shows full text; scrolls when long. */
@@ -319,7 +317,8 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
           fd.append("targetPlatform", platformName);
         }
         if (form.scheduledFor) {
-          fd.append("scheduledFor", new Date(form.scheduledFor).toISOString());
+          const iso = datetimeLocalToUtcIso(form.scheduledFor);
+          if (iso) fd.append("scheduledFor", iso);
         }
         const res = await fetch("/api/admin/approvals", { method: "POST", body: fd });
         const data = await res.json();
@@ -541,7 +540,9 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
             </span>
           </label>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Schedule Post (Optional)</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Schedule Post (Optional, {timezoneShortLabel()})
+            </label>
             <input
               type="datetime-local"
               value={form.scheduledFor}

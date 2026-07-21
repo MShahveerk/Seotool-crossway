@@ -9,19 +9,20 @@ import {
   FiImage,
   FiCalendar,
 } from "react-icons/fi";
+import {
+  calendarDayDatetimeLocal,
+  datetimeLocalToUtcIso,
+  formatScheduleShort,
+  formatScheduleTime,
+  getZonedParts,
+  timezoneShortLabel,
+} from "../../lib/timezone";
 import CalendarView from "./CalendarView";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
 
-function toDatetimeLocalValue(date) {
-  if (!date) return "";
-  const d = new Date(date);
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 function formatDayLabel(date) {
   if (!date) return "";
-  return new Date(date).toLocaleDateString(undefined, {
+  return new Date(date).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -90,14 +91,13 @@ export default function CalendarSection({ selectedSite = "" }) {
 
   const refreshDayPosts = useCallback((dayDate, list) => {
     if (!dayDate) return;
+    const y = dayDate.getFullYear();
+    const m = dayDate.getMonth() + 1;
+    const d = dayDate.getDate();
     const posts = (list || []).filter((post) => {
       if (!post.scheduledFor) return false;
-      const postDate = new Date(post.scheduledFor);
-      return (
-        postDate.getDate() === dayDate.getDate() &&
-        postDate.getMonth() === dayDate.getMonth() &&
-        postDate.getFullYear() === dayDate.getFullYear()
-      );
+      const parts = getZonedParts(post.scheduledFor);
+      return parts && parts.year === y && parts.month === m && parts.day === d;
     });
     setDayPosts(posts);
   }, []);
@@ -114,10 +114,16 @@ export default function CalendarSection({ selectedSite = "" }) {
     setDayModalOpen(true);
     setSuccess("");
     setError("");
-    if (canManage) {
+    if (canManage && date) {
       setForm((f) => ({
         ...f,
-        scheduledFor: toDatetimeLocalValue(date),
+        scheduledFor: calendarDayDatetimeLocal(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          10,
+          0
+        ),
       }));
     }
   };
@@ -128,10 +134,17 @@ export default function CalendarSection({ selectedSite = "" }) {
       setError("Select a client account first.");
       return;
     }
+    const day = selectedDay || new Date();
     setForm({
       title: "",
       caption: "",
-      scheduledFor: toDatetimeLocalValue(selectedDay || new Date()),
+      scheduledFor: calendarDayDatetimeLocal(
+        day.getFullYear(),
+        day.getMonth(),
+        day.getDate(),
+        10,
+        0
+      ),
       imageFile: null,
       approveOnAssignment: true,
     });
@@ -220,7 +233,10 @@ export default function CalendarSection({ selectedSite = "" }) {
       fd.append("caption", form.caption || "");
       fd.append("selectedSite", selectedSite);
       fd.append("image", form.imageFile);
-      if (form.scheduledFor) fd.append("scheduledFor", new Date(form.scheduledFor).toISOString());
+      if (form.scheduledFor) {
+        const iso = datetimeLocalToUtcIso(form.scheduledFor);
+        if (iso) fd.append("scheduledFor", iso);
+      }
       if (form.approveOnAssignment) fd.append("approveOnAssignment", "1");
 
       const res = await fetch("/api/admin/approvals", { method: "POST", body: fd });
@@ -229,10 +245,17 @@ export default function CalendarSection({ selectedSite = "" }) {
 
       setSuccess("Post scheduled on the calendar.");
       setCreateOpen(false);
+      const day = selectedDay || new Date();
       setForm({
         title: "",
         caption: "",
-        scheduledFor: toDatetimeLocalValue(selectedDay || new Date()),
+        scheduledFor: calendarDayDatetimeLocal(
+          day.getFullYear(),
+          day.getMonth(),
+          day.getDate(),
+          10,
+          0
+        ),
         imageFile: null,
         approveOnAssignment: true,
       });
@@ -345,10 +368,7 @@ export default function CalendarSection({ selectedSite = "" }) {
                   >
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <FiClock className="w-3.5 h-3.5" />
-                      {new Date(post.scheduledFor).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatScheduleTime(post.scheduledFor)}
                       <span className="ml-auto capitalize">{post.status}</span>
                     </div>
                     <p className="mt-1 text-sm font-semibold text-gray-900 truncate">
@@ -428,7 +448,7 @@ export default function CalendarSection({ selectedSite = "" }) {
                 <span>
                   When:{" "}
                   {activePost.scheduledFor
-                    ? new Date(activePost.scheduledFor).toLocaleString()
+                    ? formatScheduleShort(activePost.scheduledFor)
                     : "—"}
                 </span>
                 <span className="capitalize">Status: {activePost.status}</span>
@@ -526,7 +546,7 @@ export default function CalendarSection({ selectedSite = "" }) {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Schedule time
+                    Schedule time ({timezoneShortLabel()})
                   </label>
                   <input
                     type="datetime-local"

@@ -3,15 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { FiFileText, FiRefreshCw, FiSave, FiSettings, FiTrash2, FiZap } from "react-icons/fi";
+import { datetimeLocalToUtcIso, formatScheduleShort, timezoneShortLabel } from "../../lib/timezone";
 import BlogRichTextEditor, { isRichTextEmpty } from "./BlogRichTextEditor";
 import HumanizeTextButton from "./HumanizeTextButton";
-
-function toDatetimeLocalValue(date) {
-  if (!date) return "";
-  const d = new Date(date);
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 const DEFAULT_CONFIG = {
   enabled: true,
@@ -457,7 +451,10 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       fd.set("seoTitle", form.seoTitle);
       fd.set("metaDescription", form.metaDescription);
       fd.set("focusKeyword", form.focusKeyword);
-      if (form.scheduledFor) fd.set("scheduledFor", new Date(form.scheduledFor).toISOString());
+      if (form.scheduledFor) {
+        const iso = datetimeLocalToUtcIso(form.scheduledFor);
+        if (iso) fd.set("scheduledFor", iso);
+      }
       if (form.approveOnAssignment) fd.set("approveOnAssignment", "1");
       if (featuredFile) fd.set("featuredImage", featuredFile);
 
@@ -578,7 +575,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                   placeholder="draft, future"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Manual &quot;Pull WordPress drafts&quot; always fetches draft and scheduled posts. Use both values here for hourly auto-pull.
+                  Hourly cron pulls all scheduled posts plus up to 3 unscheduled drafts (first at 11:59, then 12:59 on following days). Manual pull can fetch everything.
                 </p>
               </label>
               {config.lastWordpressPullAt ? (
@@ -738,7 +735,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                         <span className="text-xs text-gray-500">{blog.publishStatus}</span>
                       </td>
                       <td className="py-2 pr-3 text-xs text-gray-600">
-                        {blog.scheduledFor ? new Date(blog.scheduledFor).toLocaleString() : "—"}
+                        {blog.scheduledFor ? formatScheduleShort(blog.scheduledFor) : "—"}
                       </td>
                       <td className="py-2 pr-3 text-xs text-gray-600">{blog.source || "manual"}</td>
                       <td className="py-2">
@@ -900,7 +897,9 @@ export default function AdminBlogSection({ selectedSite = "" }) {
           </label>
         </div>
         <label className="block">
-          <span className="text-xs font-semibold uppercase text-gray-500">Publish date & time</span>
+          <span className="text-xs font-semibold uppercase text-gray-500">
+            Publish date & time ({timezoneShortLabel()})
+          </span>
           <input type="datetime-local" className="mt-1 w-full max-w-xs border rounded-lg px-3 py-2" value={form.scheduledFor} onChange={(e) => setForm((f) => ({ ...f, scheduledFor: e.target.value }))} />
         </label>
         <label className="flex items-center gap-2 text-sm">
