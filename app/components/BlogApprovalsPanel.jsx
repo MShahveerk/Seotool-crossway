@@ -117,6 +117,15 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {blogs.map((blog) => (
             <div key={blog.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+              {blog.featuredImagePath ? (
+                <img
+                  src={blog.featuredImagePath}
+                  alt={blog.featuredImageAlt || blog.title}
+                  className="w-full h-36 object-cover rounded-lg mb-3 border border-gray-100"
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
+              ) : null}
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-gray-500">Blog</p>
@@ -145,6 +154,17 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 space-y-3">
             <h3 className="text-lg font-semibold text-gray-900">Review blog</h3>
+            {(() => {
+              const active = blogs.find((b) => b.id === activeId);
+              return active?.featuredImagePath ? (
+                <img
+                  src={active.featuredImagePath}
+                  alt={active.featuredImageAlt || active.title}
+                  className="w-full max-h-64 object-cover rounded-xl border border-gray-100"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
+              ) : null;
+            })()}
             <label className="block text-sm">
               Title
               <input className="mt-1 w-full border rounded-lg px-3 py-2" value={draft.editedTitle} onChange={(e) => setDraft((d) => ({ ...d, editedTitle: e.target.value }))} />
