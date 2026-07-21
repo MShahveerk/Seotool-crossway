@@ -66,6 +66,12 @@ export async function PATCH(req, { params }) {
           publishError: reason,
         },
       });
+      try {
+        const { revertDeclinedBlogToDraft } = await import("../../../../lib/blogDecline.js");
+        await revertDeclinedBlogToDraft(blog);
+      } catch (err) {
+        console.error(`[blog] decline revert failed for ${id}: ${err.message}`);
+      }
     } else if (action === "edit") {
       const existingPayload =
         blog.payload && typeof blog.payload === "object" ? { ...blog.payload } : buildBlogPayload(blog);

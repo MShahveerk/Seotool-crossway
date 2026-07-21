@@ -30,6 +30,12 @@ export async function GET(req) {
       where: { id },
       data: { status: "declined", lastAction: "decline", respondedAt: now, awaitingAdminReview: true },
     });
+    try {
+      const { revertDeclinedBlogToDraft } = await import("../../../../lib/blogDecline.js");
+      await revertDeclinedBlogToDraft(blog);
+    } catch (err) {
+      console.error(`[blog] decline revert failed for ${id}: ${err.message}`);
+    }
   }
 
   return Response.redirect(`${baseUrl}/?section=my-blog-approvals`);
