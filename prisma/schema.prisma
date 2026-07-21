@@ -325,6 +325,7 @@ model BlogPost {
   publishError          String?   @map("publish_error") @db.Text
   externalPostId        String?   @map("external_post_id") @db.VarChar(191)
   respondedAt           DateTime? @map("responded_at")
+  approvalNotifiedAt    DateTime? @map("approval_notified_at")
   lastAction            String?   @map("last_action") @db.VarChar(32)
   awaitingAdminReview   Boolean   @default(false) @map("awaiting_admin_review")
   hiddenFromAssignee    Boolean   @default(false) @map("hidden_from_assignee")
