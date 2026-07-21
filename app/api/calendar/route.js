@@ -108,7 +108,7 @@ export async function GET(req) {
     }
 
     const blogPosts = await prisma.blogPost.findMany({
-      where: blogWhere,
+      where: { ...blogWhere, status: { not: "deleted" } },
       include: { assignee: { select: { id: true, name: true, email: true } } },
       orderBy: { scheduledFor: "asc" },
     }).catch(() => []);

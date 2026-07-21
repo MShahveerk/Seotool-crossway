@@ -108,3 +108,35 @@ export async function PATCH(req, { params }) {
     return Response.json({ error: error.message || "Failed to update blog." }, { status: 500 });
   }
 }
+
+export async function DELETE(_req, { params }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { id } = await params;
+    const blog = await prisma.blogPost.findUnique({ where: { id } });
+    if (!blog) return Response.json({ error: "Blog not found." }, { status: 404 });
+
+    const isAdmin = session.user.role === ROLES.SUPER_ADMIN || session.user.role === ROLES.SMM;
+    const isAssignee = blog.assigneeId === session.user.id;
+    if (!isAdmin && !isAssignee) return Response.json({ error: "Forbidden" }, { status: 403 });
+    if (blog.publishStatus === "published" && !isAdmin) {
+      return Response.json({ error: "Published blogs can only be deleted by an admin." }, { status: 403 });
+    }
+
+    if (blog.externalId) {
+      // WordPress-sourced: keep a tombstone so the hourly pull doesn't re-import it.
+      await prisma.blogPost.update({
+        where: { id },
+        data: { status: "deleted", hiddenFromAssignee: true, awaitingAdminReview: false, scheduledFor: null },
+      });
+    } else {
+      // Manual blog: hard delete (revisions and publish logs cascade).
+      await prisma.blogPost.delete({ where: { id } });
+    }
+    return Response.json({ ok: true });
+  } catch (error) {
+    return Response.json({ error: error.message || "Failed to delete blog." }, { status: 500 });
+  }
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FiCheck, FiClock, FiX } from "react-icons/fi";
+import { FiCheck, FiClock, FiTrash2, FiX } from "react-icons/fi";
 import BlogRichTextEditor from "./BlogRichTextEditor";
 import HumanizeTextButton from "./HumanizeTextButton";
 
@@ -75,6 +75,23 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     });
   };
 
+  const remove = async (id) => {
+    if (!window.confirm("Delete this blog from the approval queue? This cannot be undone.")) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/blogs/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Delete failed");
+      if (activeId === id) setActiveId(null);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const act = async (id, action, extra = {}) => {
     setBusy(true);
     setError("");
@@ -143,6 +160,14 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" onClick={() => openBlog(blog)} className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">
                   Review
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => remove(blog.id)}
+                  className="inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                >
+                  <FiTrash2 /> Delete
                 </button>
               </div>
             </div>
@@ -230,6 +255,14 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                 className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-red-700 text-white text-sm font-semibold disabled:opacity-50"
               >
                 <FiX /> Decline
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => remove(activeId)}
+                className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-red-200 text-red-700 text-sm font-semibold hover:bg-red-50 disabled:opacity-50"
+              >
+                <FiTrash2 /> Delete
               </button>
               <button type="button" onClick={() => setActiveId(null)} className="px-3 py-2 rounded-lg border border-gray-200 text-sm">
                 Close
