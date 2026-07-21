@@ -5,19 +5,22 @@ export const runtime = "nodejs";
 
 export async function GET(req, { params }) {
   try {
-    const { filename } = await params;
+    const { filename: rawFilename } = await params;
+    const filename = path.basename(String(rawFilename || ""));
     if (!filename) {
       return new Response("Filename is required", { status: 400 });
     }
 
-    // Resolve persistent disk path first
-    let filePath = path.join("/var/data/uploads/approvals", filename);
-    if (!fs.existsSync(filePath)) {
-      // Fallback to local development directory
-      filePath = path.join(process.cwd(), "public", "uploads", "approvals", filename);
-    }
+    // Persistent disk first, then local dev dirs; approvals and blog uploads share this route.
+    const candidates = [
+      path.join("/var/data/uploads/approvals", filename),
+      path.join("/var/data/uploads/blogs", filename),
+      path.join(process.cwd(), "public", "uploads", "approvals", filename),
+      path.join(process.cwd(), "public", "uploads", "blogs", filename),
+    ];
+    const filePath = candidates.find((candidate) => fs.existsSync(candidate));
 
-    if (!fs.existsSync(filePath)) {
+    if (!filePath) {
       return new Response("File not found", { status: 404 });
     }
 
