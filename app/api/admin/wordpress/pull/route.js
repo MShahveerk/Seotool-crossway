@@ -28,6 +28,7 @@ export async function POST(req) {
       statuses: Array.isArray(body.statuses) && body.statuses.length ? body.statuses : ["draft", "future", "pending"],
       onlyScheduled: Boolean(body.onlyScheduled),
       includeTrash: Boolean(body.includeTrash),
+      probeAccess: Boolean(body.probeAccess),
       wordpressPostIds: Array.isArray(body.wordpressPostIds)
         ? body.wordpressPostIds
         : body.wordpressPostId
@@ -35,15 +36,18 @@ export async function POST(req) {
           : [],
     });
 
-    const savedConfig = await getSitePublishConfig(siteLink);
-    const diagnostics = await runWordpressDiagnostics(
-      {
-        wordpressUrl: savedConfig?.wordpressUrl,
-        wordpressUsername: savedConfig?.wordpressUsername,
-        wordpressAppPassword: savedConfig?.wordpressAppPassword,
-      },
-      { selectedSite: siteLink, savedConfig, body: {}, effective: resolveEffectiveWordpressCredentials({ savedConfig }) }
-    );
+    let diagnostics = null;
+    if (body.includeDiagnostics && (!result.imported || !result.updated)) {
+      const savedConfig = await getSitePublishConfig(siteLink);
+      diagnostics = await runWordpressDiagnostics(
+        {
+          wordpressUrl: savedConfig?.wordpressUrl,
+          wordpressUsername: savedConfig?.wordpressUsername,
+          wordpressAppPassword: savedConfig?.wordpressAppPassword,
+        },
+        { selectedSite: siteLink, savedConfig, body: {}, effective: resolveEffectiveWordpressCredentials({ savedConfig }) }
+      );
+    }
 
     return Response.json({ ok: true, ...result, diagnostics });
   } catch (error) {

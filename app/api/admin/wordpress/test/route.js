@@ -47,10 +47,10 @@ export async function POST(req) {
       );
     }
 
-    const [result, diagnostics] = await Promise.all([
-      testWordpressConnection(testConfig),
-      runWordpressDiagnostics(testConfig, { selectedSite: siteLink, savedConfig, body, effective }),
-    ]);
+    const result = await testWordpressConnection(testConfig);
+    const diagnostics = body.includeDiagnostics
+      ? await runWordpressDiagnostics(testConfig, { selectedSite: siteLink, savedConfig, body, effective })
+      : null;
 
     logWordpress("test_complete", {
       siteLink,

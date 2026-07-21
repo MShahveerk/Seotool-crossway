@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { FiFileText, FiRefreshCw, FiSave, FiSettings, FiZap } from "react-icons/fi";
+import { FiFileText, FiRefreshCw, FiSave, FiSettings, FiTrash2, FiZap } from "react-icons/fi";
 import BlogRichTextEditor, { isRichTextEmpty } from "./BlogRichTextEditor";
 import HumanizeTextButton from "./HumanizeTextButton";
 
@@ -137,6 +137,10 @@ export default function AdminBlogSection({ selectedSite = "" }) {
   const [logs, setLogs] = useState([]);
   const [revisionsForId, setRevisionsForId] = useState(null);
   const [revisions, setRevisions] = useState([]);
+  const [deleteBusyId, setDeleteBusyId] = useState("");
+  const [purgeBusy, setPurgeBusy] = useState(false);
+
+  const softDeletedCount = blogs.filter((b) => b.status === "deleted").length;
 
   const loadConfig = useCallback(async () => {
     if (!selectedSite || !isSuperAdmin) return;
@@ -383,6 +387,46 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       if (res.ok) setLogs(data.logs || []);
     } catch {
       /* ignore */
+    }
+  };
+
+  const deleteBlog = async (blog) => {
+    const label = blog.status === "deleted" ? "Permanently remove this soft-deleted row" : "Delete this blog from the queue";
+    if (!window.confirm(`${label}? A WordPress pull can re-import it if the post still exists on the site.`)) return;
+    setDeleteBusyId(blog.id);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/blogs/${blog.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Delete failed");
+      setMessage(blog.status === "deleted" ? "Soft-deleted row removed." : "Blog deleted.");
+      await loadBlogs();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeleteBusyId("");
+    }
+  };
+
+  const purgeSoftDeleted = async () => {
+    if (!selectedSite || softDeletedCount === 0) return;
+    if (!window.confirm(`Hard-delete all ${softDeletedCount} soft-deleted row(s) for this site? WordPress posts are untouched — a pull can re-import them.`)) return;
+    setPurgeBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/blogs/purge-soft-deleted", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteLink: selectedSite }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Purge failed");
+      setMessage(`Removed ${data.purged || 0} soft-deleted row(s).`);
+      await loadBlogs();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPurgeBusy(false);
     }
   };
 
@@ -633,16 +677,28 @@ export default function AdminBlogSection({ selectedSite = "" }) {
 
       {isSuperAdmin && selectedSite ? (
         <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-3">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-gray-900">Blog queue for {selectedSite}</h2>
-            <button
-              type="button"
-              onClick={loadBlogs}
-              disabled={blogsLoading}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-900"
-            >
-              <FiRefreshCw /> Refresh
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {softDeletedCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={purgeSoftDeleted}
+                  disabled={purgeBusy || blogsLoading}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 border border-red-200 rounded-lg px-2 py-1 hover:bg-red-50 disabled:opacity-50"
+                >
+                  <FiTrash2 /> {purgeBusy ? "Purging…" : `Purge ${softDeletedCount} soft-deleted`}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={loadBlogs}
+                disabled={blogsLoading}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-gray-900"
+              >
+                <FiRefreshCw /> Refresh
+              </button>
+            </div>
           </div>
           {blogsLoading ? (
             <p className="text-sm text-gray-500">Loading blogs…</p>
@@ -662,8 +718,21 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                 </thead>
                 <tbody>
                   {blogs.map((blog) => (
-                    <tr key={blog.id} className="border-b border-gray-100 align-top">
-                      <td className="py-2 pr-3 font-medium text-gray-900">{blog.title}</td>
+                    <tr
+                      key={blog.id}
+                      className={`border-b border-gray-100 align-top ${blog.status === "deleted" ? "bg-red-50/60" : ""}`}
+                    >
+                      <td className="py-2 pr-3 font-medium text-gray-900">
+                        {blog.title}
+                        {blog.status === "deleted" ? (
+                          <span className="ml-2 text-[10px] uppercase font-bold text-red-700 bg-red-100 px-1.5 py-0.5 rounded">
+                            soft deleted
+                          </span>
+                        ) : null}
+                        {blog.externalId ? (
+                          <span className="block text-xs font-normal text-gray-500">WP #{blog.externalId}</span>
+                        ) : null}
+                      </td>
                       <td className="py-2 pr-3">
                         <span className="block">{blog.status}</span>
                         <span className="text-xs text-gray-500">{blog.publishStatus}</span>
@@ -695,6 +764,14 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                             className="px-2 py-1 rounded border border-gray-200 text-xs font-semibold text-gray-700"
                           >
                             History
+                          </button>
+                          <button
+                            type="button"
+                            disabled={deleteBusyId === blog.id}
+                            onClick={() => deleteBlog(blog)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-red-200 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                          >
+                            <FiTrash2 /> {blog.status === "deleted" ? "Hard delete" : "Delete"}
                           </button>
                         </div>
                       </td>
