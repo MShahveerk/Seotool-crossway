@@ -292,11 +292,11 @@ export async function POST(req) {
     if (!approveOnAssignment) {
       try {
         const { sendPostApprovalNotification } = await import("../../../../lib/email.js");
+        const { collectApprovalEmailRecipients } = await import("../../../../lib/approvalRecipients.js");
 
-        // Fetch full creator details for the email
         const creator = await prisma.user.findUnique({
           where: { id: session.user.id },
-          select: { name: true, email: true }
+          select: { id: true, name: true, email: true, role: true },
         });
 
         const emailApproval = {
@@ -307,62 +307,18 @@ export async function POST(req) {
           createdByEmail: creator?.email || session.user.email || "",
         };
 
-        // 1. Send to ALL matched Approvers
-        const notifiedEmails = new Set();
-        for (const approver of allApprovers) {
-          if (approver.email && !notifiedEmails.has(approver.email)) {
-            console.log(`[INFO] Sending main approval email to Approver: ${approver.email}`);
-            await sendPostApprovalNotification(approver.email, emailApproval, approver, token);
-            notifiedEmails.add(approver.email);
-          }
-        }
-
-        // 2. Send copy to all active Super Admins
-        const superAdmins = await prisma.user.findMany({
-          where: { role: ROLES.SUPER_ADMIN, isActive: true },
-          select: { email: true, name: true }
-        });
-        for (const admin of superAdmins) {
-          if (admin.email && !notifiedEmails.has(admin.email)) {
-            console.log(`[INFO] Sending copy of approval email to Super Admin: ${admin.email}`);
-            await sendPostApprovalNotification(admin.email, emailApproval, admin, token);
-            notifiedEmails.add(admin.email);
-          }
-        }
-
-        // 3. Send copy to relevant SMMs (creator or mapped)
-        const relevantSmms = await prisma.user.findMany({
-          where: { role: ROLES.SMM, isActive: true },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            siteLink: true,
-            facebookPageId: true,
-            instagramUserId: true,
-            accessibleSites: { select: { siteLink: true } }
-          }
+        // Identical recipient list for social posts and blogs.
+        const { recipients } = await collectApprovalEmailRecipients({
+          siteLink: siteUrlLink || selectedSite,
+          selectedSite,
+          creator,
+          creatorUserId: session.user.id,
+          operatorUser: session.user,
         });
 
-        for (const smm of relevantSmms) {
-          const isCreator = smm.id === session.user.id;
-          
-          const primary = smm.siteLink ? String(smm.siteLink).toLowerCase().trim() : "";
-          const normSelected = selectedSite ? String(selectedSite).toLowerCase().trim() : "";
-          
-          const isSiteMatch = (primary && primary === normSelected) || (smm.accessibleSites || []).some(
-            (entry) => entry.siteLink && String(entry.siteLink).toLowerCase().trim() === normSelected
-          );
-          const isMetaMatch = (smm.facebookPageId && String(smm.facebookPageId).toLowerCase().trim() === normSelected) || 
-                              (smm.instagramUserId && String(smm.instagramUserId).toLowerCase().trim() === normSelected);
-          
-          const isRelevant = isCreator || isSiteMatch || isMetaMatch;
-          
-          if (isRelevant && smm.email && !notifiedEmails.has(smm.email)) {
-            console.log(`[INFO] Sending copy of approval email to SMM: ${smm.email}`);
-            await sendPostApprovalNotification(smm.email, emailApproval, smm, token);
-            notifiedEmails.add(smm.email);
-          }
+        for (const recipient of recipients) {
+          console.log(`[INFO] Sending approval email to ${recipient.role || "recipient"}: ${recipient.email}`);
+          await sendPostApprovalNotification(recipient.email, emailApproval, recipient, token);
         }
       } catch (emailErr) {
         console.error("Failed to send approval email notifications", emailErr);

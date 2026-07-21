@@ -158,6 +158,7 @@ export async function POST(req) {
       creator: session.user,
       token,
       skipped: approveOnAssignment,
+      operatorUser: session.user,
     });
 
     return Response.json({ blog }, { status: 201 });

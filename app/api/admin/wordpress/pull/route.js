@@ -24,6 +24,8 @@ export async function POST(req) {
     const result = await pullWordpressDraftsForSite(siteLink, {
       force: true,
       operatorUser: session.user,
+      // Manual pulls re-send approval emails so recipient fixes take effect immediately.
+      resendApprovals: true,
       perPage: body.perPage || 50,
       statuses: Array.isArray(body.statuses) && body.statuses.length ? body.statuses : ["draft", "future", "pending"],
       onlyScheduled: Boolean(body.onlyScheduled),

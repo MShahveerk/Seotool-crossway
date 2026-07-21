@@ -38,12 +38,13 @@ function resultPage({ title, message, tone = "success", detail = "" }) {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)} · Crossway</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root { --ink: #111827; --muted: #6b7280; --card: #ffffff; --page: #f3f4f6; }
     * { box-sizing: border-box; }
     body {
       margin: 0; min-height: 100vh;
-      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      font-family: Nunito, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
       color: var(--ink);
       background:
         radial-gradient(1200px 500px at 10% -10%, rgba(14, 255, 42, 0.18), transparent 55%),
@@ -107,11 +108,12 @@ function declineFormPage({ id, token, approvalTitle }) {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Decline post · Crossway</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
     body {
       margin: 0; min-height: 100vh;
-      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #111827;
+      font-family: Nunito, "Segoe UI", "Helvetica Neue", Arial, sans-serif; color: #111827;
       background:
         radial-gradient(1200px 500px at 10% -10%, rgba(14, 255, 42, 0.12), transparent 55%),
         #f3f4f6;

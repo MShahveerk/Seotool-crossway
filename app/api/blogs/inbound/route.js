@@ -124,7 +124,14 @@ export async function POST(req) {
     await recordBlogRevision(blog, { action: "inbound_create", actorId: systemUser.id });
 
     const token = createBlogQuickActionToken(blog.id);
-    await notifyBlogApprovers({ blog, approvers: allApprovers, creator: systemUser, token, skipped: false });
+    await notifyBlogApprovers({
+      blog,
+      approvers: allApprovers,
+      creator: systemUser,
+      token,
+      skipped: false,
+      operatorUser: systemUser,
+    });
 
     return Response.json({ blog }, { status: 201, headers: CORS });
   } catch (error) {

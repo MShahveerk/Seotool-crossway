@@ -16,7 +16,7 @@ export async function proxy(req) {
   <meta charset="utf-8" />
   <title>Configuration Error</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+    body { font-family: Nunito, system-ui, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
     h1 { color: #e11d48; }
     code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
     pre { background: #1f2937; color: #f9fafb; padding: 15px; border-radius: 8px; overflow-x: auto; }

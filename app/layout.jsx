@@ -34,7 +34,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body
         suppressHydrationWarning
-        className={`${nunito.variable} antialiased`}
+        className={`${nunito.variable} font-sans antialiased`}
       >
         <Providers>{children}</Providers>
       </body>
