@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FiCheck, FiClock, FiImage, FiSave, FiTrash2, FiUpload, FiX } from "react-icons/fi";
+import { useSession } from "next-auth/react";
+import { FiCheck, FiClock, FiImage, FiRefreshCw, FiSave, FiTrash2, FiUpload, FiX } from "react-icons/fi";
 import {
   datetimeLocalToUtcIso,
   formatScheduleShort,
@@ -22,6 +23,9 @@ function statusBadge(status) {
 }
 
 export default function BlogApprovalsPanel({ selectedSite = "" }) {
+  const { data: session } = useSession();
+  const canResend =
+    session?.user?.role === "super_admin" || session?.user?.role === "smm";
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -159,7 +163,10 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     setError("");
     try {
       const useForm =
-        action === "approve" || action === "edit" || Boolean(featuredFile);
+        action === "approve" ||
+        action === "edit" ||
+        action === "resend_for_approval" ||
+        Boolean(featuredFile);
 
       let res;
       if (useForm) {
@@ -169,7 +176,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
           const iso = datetimeLocalToUtcIso(draft.scheduledFor);
           if (iso) fd.set("scheduledFor", iso);
         }
-        if (action === "approve" || action === "edit") {
+        if (action === "approve" || action === "edit" || action === "resend_for_approval") {
           fd.set("editedTitle", draft.editedTitle);
           fd.set("editedExcerpt", draft.editedExcerpt);
           fd.set("editedContent", draft.editedContent);
@@ -194,7 +201,38 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Action failed");
+      if (data.warning) setError(data.warning);
       closeReview();
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resendForApproval = async (id) => {
+    if (
+      !window.confirm(
+        "Resend this blog for approval? Approvers will get a new email, and the status will return to pending."
+      )
+    ) {
+      return;
+    }
+    if (activeId === id) {
+      await act(id, "resend_for_approval");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/blogs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resend_for_approval" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Resend failed");
       await load();
     } catch (err) {
       setError(err.message);
@@ -243,10 +281,25 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                 </p>
               ) : null}
               {blog.excerpt ? <p className="text-sm text-gray-600 mt-2 line-clamp-2">{blog.excerpt}</p> : null}
+              {blog.status === "declined" && blog.publishError ? (
+                <p className="text-xs text-red-700 mt-2 bg-red-50 border border-red-100 rounded-lg px-2 py-1.5">
+                  Declined: {blog.publishError}
+                </p>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" onClick={() => openBlog(blog)} className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50">
                   Review
                 </button>
+                {canResend && blog.status === "declined" ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => resendForApproval(blog.id)}
+                    className="inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                  >
+                    <FiRefreshCw /> Resend for approval
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   disabled={busy}
@@ -264,7 +317,14 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
       {activeId ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 space-y-3">
-            <h3 className="text-lg font-semibold text-gray-900">Review blog</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Review blog{activeBlog?.status === "declined" ? " (declined)" : ""}
+            </h3>
+            {activeBlog?.status === "declined" && activeBlog?.publishError ? (
+              <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                Previous decline reason: {activeBlog.publishError}
+              </p>
+            ) : null}
             {error ? (
               <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>
             ) : null}
@@ -408,23 +468,48 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
               </label>
             </div>
             <div className="flex flex-wrap gap-2 pt-2">
-              <button type="button" disabled={busy} onClick={() => act(activeId, "approve")} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-green-700 text-white text-sm font-semibold disabled:opacity-50">
-                <FiCheck /> Approve
-              </button>
-              <button type="button" disabled={busy} onClick={() => act(activeId, "edit")} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold disabled:opacity-50">
-                Save edits
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => {
-                  const reason = window.prompt("Reason for declining?");
-                  if (reason) act(activeId, "decline", { declineReason: reason });
-                }}
-                className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-red-700 text-white text-sm font-semibold disabled:opacity-50"
-              >
-                <FiX /> Decline
-              </button>
+              {activeBlog?.status === "declined" ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => act(activeId, "edit")}
+                    className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold disabled:opacity-50"
+                  >
+                    Save edits
+                  </button>
+                  {canResend ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => resendForApproval(activeId)}
+                      className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-amber-600 text-white text-sm font-semibold disabled:opacity-50"
+                    >
+                      <FiRefreshCw /> Resend for approval
+                    </button>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <button type="button" disabled={busy} onClick={() => act(activeId, "approve")} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-green-700 text-white text-sm font-semibold disabled:opacity-50">
+                    <FiCheck /> Approve
+                  </button>
+                  <button type="button" disabled={busy} onClick={() => act(activeId, "edit")} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-blue-700 text-white text-sm font-semibold disabled:opacity-50">
+                    Save edits
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      const reason = window.prompt("Reason for declining?");
+                      if (reason) act(activeId, "decline", { declineReason: reason });
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-red-700 text-white text-sm font-semibold disabled:opacity-50"
+                  >
+                    <FiX /> Decline
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 disabled={busy}

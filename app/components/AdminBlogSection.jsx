@@ -402,6 +402,34 @@ export default function AdminBlogSection({ selectedSite = "" }) {
     }
   };
 
+  const resendForApproval = async (blog) => {
+    if (
+      !window.confirm(
+        `Resend "${blog.title}" for approval? Approvers will get a new email and status will return to pending.`
+      )
+    ) {
+      return;
+    }
+    setPublishBusyId(blog.id);
+    setError("");
+    setMessage("");
+    try {
+      const res = await fetch(`/api/blogs/${blog.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resend_for_approval" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Resend failed");
+      setMessage(data.warning || `Resent "${blog.title}" for approval.`);
+      await loadBlogs();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPublishBusyId("");
+    }
+  };
+
   const purgeSoftDeleted = async () => {
     if (!selectedSite || softDeletedCount === 0) return;
     if (!window.confirm(`Hard-delete all ${softDeletedCount} soft-deleted row(s) for this site? WordPress posts are untouched — a pull can re-import them.`)) return;
@@ -748,6 +776,16 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                           >
                             <FiZap /> {publishBusyId === blog.id ? "Publishing…" : "Publish now"}
                           </button>
+                          {blog.status === "declined" ? (
+                            <button
+                              type="button"
+                              disabled={publishBusyId === blog.id || blog.publishStatus === "published"}
+                              onClick={() => resendForApproval(blog)}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded border border-amber-300 bg-amber-50 text-amber-900 text-xs font-semibold disabled:opacity-50"
+                            >
+                              <FiRefreshCw /> Resend for approval
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => loadLogs(blog.id)}

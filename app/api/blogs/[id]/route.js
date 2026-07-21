@@ -6,10 +6,17 @@ import { buildBlogPayload, parseScheduledDate, parseSeoMetaInput } from "../../.
 import { saveBlogFeaturedImage } from "../../../../lib/blogMedia.js";
 import { BLOG_INCLUDE } from "../../../../lib/blogAccess.js";
 import { recordBlogRevision } from "../../../../lib/blogRevisions.js";
+import {
+  createBlogQuickActionToken,
+  findAssigneesForSite,
+  notifyBlogApprovers,
+} from "../../../../lib/blogAssignee.js";
 
 export const runtime = "nodejs";
 
 const OPEN = new Set(["pending", "edited"]);
+/** Actions allowed on declined blogs (edit then resend). */
+const DECLINED_ACTIONS = new Set(["edit", "save_image", "resend_for_approval"]);
 
 async function parseBlogActionRequest(req) {
   const ct = req.headers.get("content-type") || "";
@@ -57,8 +64,18 @@ export async function PATCH(req, { params }) {
     const isAdmin = session.user.role === ROLES.SUPER_ADMIN || session.user.role === ROLES.SMM;
     const isAssignee = blog.assigneeId === session.user.id;
     if (!isAdmin && !isAssignee) return Response.json({ error: "Forbidden" }, { status: 403 });
-    if (!OPEN.has(blog.status) && action !== "schedule") {
+
+    const isOpen = OPEN.has(blog.status);
+    const declinedOk = blog.status === "declined" && DECLINED_ACTIONS.has(action);
+    const scheduleOk = action === "schedule" && (isAdmin || blog.status === "approved");
+    if (!isOpen && !declinedOk && !scheduleOk) {
       return Response.json({ error: "This blog is already closed." }, { status: 400 });
+    }
+    if (action === "resend_for_approval" && !isAdmin) {
+      return Response.json({ error: "Only an admin or SMM can resend for approval." }, { status: 403 });
+    }
+    if (action === "resend_for_approval" && blog.publishStatus === "published") {
+      return Response.json({ error: "Published blogs cannot be resent for approval." }, { status: 400 });
     }
 
     const now = new Date();
@@ -98,7 +115,7 @@ export async function PATCH(req, { params }) {
           payload: existingPayload,
         },
       });
-    } else if (action === "approve" || action === "edit") {
+    } else if (action === "approve" || action === "edit" || action === "resend_for_approval") {
       let existingPayload =
         blog.payload && typeof blog.payload === "object" ? { ...blog.payload } : buildBlogPayload(blog);
       if (Object.keys(seoMeta).length) {
@@ -112,26 +129,54 @@ export async function PATCH(req, { params }) {
         });
       }
 
-      await prisma.blogPost.update({
-        where: { id },
-        data: {
-          status: action === "approve" ? "approved" : "edited",
-          lastAction: action,
-          respondedAt: now,
-          awaitingAdminReview: true,
-          userEditedTitle: body.editedTitle !== undefined ? String(body.editedTitle).trim() || null : undefined,
-          userEditedExcerpt:
-            body.editedExcerpt !== undefined ? String(body.editedExcerpt).trim() || null : undefined,
-          userEditedContent:
-            body.editedContent !== undefined ? String(body.editedContent).trim() || null : undefined,
-          userEditedSlug: body.editedSlug !== undefined ? String(body.editedSlug).trim() || null : undefined,
-          scheduledFor: body.scheduledFor !== undefined ? parseScheduledDate(body.scheduledFor) : undefined,
-          featuredImagePath: featuredChanged ? featuredImagePath : undefined,
-          featuredImageAlt: featuredChanged ? featuredImageAlt : undefined,
-          payload:
-            Object.keys(seoMeta).length || featuredChanged ? existingPayload : undefined,
-        },
-      });
+      const editFields = {
+        userEditedTitle: body.editedTitle !== undefined ? String(body.editedTitle).trim() || null : undefined,
+        userEditedExcerpt:
+          body.editedExcerpt !== undefined ? String(body.editedExcerpt).trim() || null : undefined,
+        userEditedContent:
+          body.editedContent !== undefined ? String(body.editedContent).trim() || null : undefined,
+        userEditedSlug: body.editedSlug !== undefined ? String(body.editedSlug).trim() || null : undefined,
+        scheduledFor: body.scheduledFor !== undefined ? parseScheduledDate(body.scheduledFor) : undefined,
+        featuredImagePath: featuredChanged ? featuredImagePath : undefined,
+        featuredImageAlt: featuredChanged ? featuredImageAlt : undefined,
+        payload: Object.keys(seoMeta).length || featuredChanged ? existingPayload : undefined,
+      };
+
+      if (action === "resend_for_approval") {
+        await prisma.blogPost.update({
+          where: { id },
+          data: {
+            ...editFields,
+            status: "pending",
+            lastAction: "resend_for_approval",
+            respondedAt: null,
+            awaitingAdminReview: false,
+            publishError: null,
+            publishStatus: blog.publishStatus === "failed" ? "unpublish" : blog.publishStatus,
+          },
+        });
+      } else if (action === "edit" && blog.status === "declined") {
+        // Save edits on a declined blog without reopening approval yet.
+        await prisma.blogPost.update({
+          where: { id },
+          data: {
+            ...editFields,
+            lastAction: "edit",
+            status: "declined",
+          },
+        });
+      } else {
+        await prisma.blogPost.update({
+          where: { id },
+          data: {
+            ...editFields,
+            status: action === "approve" ? "approved" : "edited",
+            lastAction: action,
+            respondedAt: now,
+            awaitingAdminReview: true,
+          },
+        });
+      }
     } else if (action === "decline") {
       const reason = String(body.declineReason || body.reason || "").trim();
       if (!reason) return Response.json({ error: "Decline reason is required." }, { status: 400 });
@@ -161,6 +206,30 @@ export async function PATCH(req, { params }) {
 
     const updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
     await recordBlogRevision(updated, { action, actorId: session.user.id });
+
+    if (action === "resend_for_approval" && updated) {
+      try {
+        const { allApprovers } = await findAssigneesForSite(updated.siteLink, {
+          operatorUser: session.user,
+        });
+        const token = createBlogQuickActionToken(updated.id);
+        await notifyBlogApprovers({
+          blog: updated,
+          approvers: allApprovers,
+          creator: updated.createdBy || session.user,
+          token,
+          skipped: false,
+          operatorUser: session.user,
+        });
+      } catch (err) {
+        console.error(`[blog] resend approval emails failed for ${id}: ${err.message}`);
+        return Response.json({
+          blog: updated,
+          warning: `Reopened for approval, but email notify failed: ${err.message}`,
+        });
+      }
+    }
+
     return Response.json({ blog: updated });
   } catch (error) {
     return Response.json({ error: error.message || "Failed to update blog." }, { status: error.status || 500 });
