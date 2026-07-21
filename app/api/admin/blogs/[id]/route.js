@@ -82,18 +82,7 @@ export async function DELETE(_req, { params }) {
   try {
     await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
     const { id } = await params;
-    const blog = await prisma.blogPost.findUnique({ where: { id } });
-    if (!blog) return Response.json({ error: "Blog not found." }, { status: 404 });
-
-    if (blog.externalId) {
-      // WordPress-sourced: keep a tombstone so the hourly pull doesn't re-import it.
-      await prisma.blogPost.update({
-        where: { id },
-        data: { status: "deleted", hiddenFromAssignee: true, awaitingAdminReview: false, scheduledFor: null },
-      });
-    } else {
-      await prisma.blogPost.delete({ where: { id } });
-    }
+    await prisma.blogPost.delete({ where: { id } });
     return Response.json({ ok: true });
   } catch (error) {
     return Response.json({ error: error.message || "Failed to delete blog." }, { status: error.status || 500 });

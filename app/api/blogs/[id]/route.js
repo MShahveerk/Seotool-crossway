@@ -125,16 +125,9 @@ export async function DELETE(_req, { params }) {
       return Response.json({ error: "Published blogs can only be deleted by an admin." }, { status: 403 });
     }
 
-    if (blog.externalId) {
-      // WordPress-sourced: keep a tombstone so the hourly pull doesn't re-import it.
-      await prisma.blogPost.update({
-        where: { id },
-        data: { status: "deleted", hiddenFromAssignee: true, awaitingAdminReview: false, scheduledFor: null },
-      });
-    } else {
-      // Manual blog: hard delete (revisions and publish logs cascade).
-      await prisma.blogPost.delete({ where: { id } });
-    }
+    // Hard delete (revisions and publish logs cascade). A future pull can
+    // re-import the post from WordPress if it still exists there.
+    await prisma.blogPost.delete({ where: { id } });
     return Response.json({ ok: true });
   } catch (error) {
     return Response.json({ error: error.message || "Failed to delete blog." }, { status: 500 });

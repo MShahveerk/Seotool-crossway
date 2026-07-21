@@ -14,10 +14,10 @@ export async function GET(req) {
   try {
     await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
     const site = req.nextUrl.searchParams.get("site") || req.nextUrl.searchParams.get("url") || "";
-    let where = { status: { not: "deleted" } };
+    let where = {};
     if (site) {
       const siteKeys = await resolveSiteEquivalents(prisma, site);
-      where = { ...where, siteLink: { in: siteKeys.length ? siteKeys : [site] } };
+      where = { siteLink: { in: siteKeys.length ? siteKeys : [site] } };
     }
     const blogs = await prisma.blogPost.findMany({
       where,

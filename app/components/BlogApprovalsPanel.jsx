@@ -76,7 +76,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
   };
 
   const remove = async (id) => {
-    if (!window.confirm("Delete this blog from the approval queue? This cannot be undone.")) return;
+    if (!window.confirm("Delete this blog from the approval queue? A WordPress pull can re-import it later.")) return;
     setBusy(true);
     setError("");
     try {
