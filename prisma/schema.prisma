@@ -407,6 +407,39 @@ model PageSpeedSnapshot {
   @@map("pagespeed_snapshots")
 }
 
+/// One site-audit crawl run per website (history kept for health trends).
+model SiteAuditSnapshot {
+  id            String    @id @default(cuid()) @db.VarChar(191)
+  siteUrl       String    @map("site_url") @db.VarChar(512)
+  status        String    @default("running") @db.VarChar(32)
+  healthScore   Int?      @map("health_score")
+  totalPages    Int       @default(0) @map("total_pages")
+  criticalCount Int       @default(0) @map("critical_count")
+  warningCount  Int       @default(0) @map("warning_count")
+  noticeCount   Int       @default(0) @map("notice_count")
+  payload       Json?
+  errorMessage  String?   @map("error_message") @db.Text
+  startedAt     DateTime  @default(now()) @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+
+  @@index([siteUrl, startedAt], map: "site_audit_site_started_idx")
+  @@map("site_audit_snapshots")
+}
+
+/// Daily Open PageRank authority score per domain (own sites + checked competitors).
+model AuthoritySnapshot {
+  id          String   @id @default(cuid()) @db.VarChar(191)
+  domain      String   @db.VarChar(255)
+  score       Float?
+  globalRank  Int?     @map("global_rank")
+  fetchedDate DateTime @map("fetched_date") @db.Date
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([domain, fetchedDate], map: "authority_domain_date_unique")
+  @@index([domain, fetchedDate], map: "authority_domain_date_idx")
+  @@map("authority_snapshots")
+}
+
 /// Snapshot history for blog edits while pending or in review.
 model BlogPostRevision {
   id         String   @id @default(cuid()) @db.VarChar(191)

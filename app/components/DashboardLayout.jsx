@@ -24,6 +24,8 @@ import {
   FiFileText,
   FiZap,
   FiActivity,
+  FiShield,
+  FiAward,
 } from "react-icons/fi";
 import { SiFacebook } from "react-icons/si";
 import { isMetaPageId } from "../../lib/siteAccess";
@@ -40,6 +42,8 @@ const mainMenuItems = [
 
 /** SEO tools shown only when a website (not Meta-only page) is selected */
 const websiteSeoMenuItems = [
+  { id: "site-audit", label: "Site Audit", icon: FiShield },
+  { id: "domain-authority", label: "Domain Authority", icon: FiAward },
   { id: "seo-opportunities", label: "SEO Opportunities", icon: FiZap },
   { id: "device-appearance", label: "Device & Appearance", icon: FiMonitor },
   { id: "url-inspection", label: "URL Inspection", icon: FiCrosshair },

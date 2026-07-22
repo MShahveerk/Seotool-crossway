@@ -19,11 +19,15 @@ import QueryPageMatrixSection from "./components/seo/QueryPageMatrixSection";
 import SitemapHealthSection from "./components/seo/SitemapHealthSection";
 import SeoOpportunitiesSection from "./components/seo/SeoOpportunitiesSection";
 import PageSpeedSection from "./components/PageSpeedSection";
+import SiteAuditSection from "./components/SiteAuditSection";
+import DomainAuthoritySection from "./components/DomainAuthoritySection";
 import { isMetaPageId } from "../lib/siteAccess";
 
 const WEBSITE_SEO_SECTIONS = new Set([
   "website-statistics",
   "pagespeed-insights",
+  "site-audit",
+  "domain-authority",
   "seo-opportunities",
   "device-appearance",
   "url-inspection",
@@ -108,6 +112,10 @@ export default function Home() {
         return <SearchConsoleSection selectedSite={seoSite} />;
       case "pagespeed-insights":
         return <PageSpeedSection selectedSite={seoSite} />;
+      case "site-audit":
+        return <SiteAuditSection selectedSite={seoSite} onNavigateSection={setActiveSection} />;
+      case "domain-authority":
+        return <DomainAuthoritySection selectedSite={seoSite} />;
       case "seo-opportunities":
         return <SeoOpportunitiesSection selectedSite={seoSite} />;
       case "device-appearance":
