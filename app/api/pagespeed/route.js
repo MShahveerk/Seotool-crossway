@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-import { getPageSpeedReport } from "../../../lib/pagespeed";
+import { getPageSpeedSnapshot } from "../../../lib/pagespeedJobs";
 import { ROLES, hasPermission, PERMISSIONS } from "../../../lib/rbac";
 import { isValidUrl, normalizeSiteOrigin } from "../../../lib/validation";
 import prisma from "../../../lib/prisma";
@@ -93,8 +93,10 @@ async function resolveWebsiteUrl(req, session) {
 }
 
 /**
- * GET /api/pagespeed?url=
- * Returns PageSpeed Insights data for the selected website.
+ * GET /api/pagespeed?url=&strategy=mobile|desktop&refresh=1
+ * Returns the cached PageSpeed snapshot for the selected website.
+ * Snapshots are refreshed by cron every 2 hours; `refresh=1` forces a live run.
+ * A missing snapshot (first visit for a site) triggers a live fetch.
  */
 export async function GET(req) {
   try {
@@ -114,14 +116,22 @@ export async function GET(req) {
       });
     }
 
+    const strategyParam = String(req.nextUrl.searchParams.get("strategy") || "mobile").toLowerCase();
+    const strategy = strategyParam === "desktop" ? "desktop" : "mobile";
+    const forceRefresh = req.nextUrl.searchParams.get("refresh") === "1";
+
     const { siteUrl } = await resolveWebsiteUrl(req, session);
-    const pagespeed = await getPageSpeedReport(siteUrl);
+    const { snapshot, stale, fromCache } = await getPageSpeedSnapshot(siteUrl, strategy, { forceRefresh });
 
     return new Response(
       JSON.stringify({
         siteUrl,
-        strategy: "mobile",
-        pagespeed,
+        strategy,
+        fetchedAt: snapshot.fetchedAt,
+        stale,
+        fromCache,
+        lastError: snapshot.status === "error" ? snapshot.errorMessage : null,
+        pagespeed: snapshot.payload,
       }),
       {
         status: 200,
