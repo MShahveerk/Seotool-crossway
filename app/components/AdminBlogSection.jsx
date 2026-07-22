@@ -24,6 +24,49 @@ const DEFAULT_CONFIG = {
   lastWordpressPullAt: null,
 };
 
+function FocusKeywordPlannerHint({ keyword }) {
+  const [hint, setHint] = useState(null);
+
+  useEffect(() => {
+    const k = String(keyword || "").trim();
+    if (k.length < 3) {
+      setHint(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/keywords/validate?keyword=${encodeURIComponent(k)}&geo=us`);
+        const data = await res.json();
+        setHint(data);
+      } catch {
+        setHint(null);
+      }
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [keyword]);
+
+  if (!hint?.configured || !String(keyword || "").trim()) return null;
+  if (hint.error) {
+    return <p className="mt-1.5 text-xs text-amber-700">{hint.error}</p>;
+  }
+  if (!hint.metrics) {
+    return hint.suggestion ? <p className="mt-1.5 text-xs text-amber-700">{hint.suggestion}</p> : null;
+  }
+
+  const m = hint.metrics;
+  return (
+    <p className="mt-1.5 text-xs text-gray-600">
+      Planner (US):{" "}
+      <span className="font-semibold text-gray-800">
+        {m.avgMonthlySearches != null ? `${Number(m.avgMonthlySearches).toLocaleString()}/mo` : "—"}
+      </span>
+      {m.competition ? ` · ${m.competition} competition` : ""}
+      {m.lowTopOfPageBid && m.highTopOfPageBid ? ` · bids ${m.lowTopOfPageBid}–${m.highTopOfPageBid}` : ""}
+      {hint.suggestion ? <span className="block text-amber-700 mt-0.5">{hint.suggestion}</span> : null}
+    </p>
+  );
+}
+
 function WordpressDiagnosticsPanel({ diagnostics, title = "WordPress diagnostics" }) {
   if (!diagnostics) return null;
 
@@ -922,6 +965,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
           <label className="block">
             <span className="text-xs font-semibold uppercase text-gray-500">Focus keyword</span>
             <input className="mt-1 w-full border rounded-lg px-3 py-2" value={form.focusKeyword} onChange={(e) => setForm((f) => ({ ...f, focusKeyword: e.target.value }))} />
+            <FocusKeywordPlannerHint keyword={form.focusKeyword} />
           </label>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

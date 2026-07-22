@@ -426,6 +426,21 @@ model SiteAuditSnapshot {
   @@map("site_audit_snapshots")
 }
 
+/// Cached Google Ads Keyword Planner responses per site (metrics + ideas).
+model KeywordPlannerCache {
+  id          String   @id @default(cuid()) @db.VarChar(191)
+  siteUrl     String   @map("site_url") @db.VarChar(512)
+  cacheType   String   @map("cache_type") @db.VarChar(32)
+  geoTargetId Int      @map("geo_target_id")
+  languageId  Int      @default(1000) @map("language_id")
+  payload     Json
+  fetchedAt   DateTime @default(now()) @map("fetched_at")
+
+  @@unique([siteUrl, cacheType, geoTargetId, languageId], map: "kw_planner_cache_unique")
+  @@index([fetchedAt], map: "kw_planner_cache_fetched_idx")
+  @@map("keyword_planner_cache")
+}
+
 /// Daily Open PageRank authority score per domain (own sites + checked competitors).
 model AuthoritySnapshot {
   id          String   @id @default(cuid()) @db.VarChar(191)

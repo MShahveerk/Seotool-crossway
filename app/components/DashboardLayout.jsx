@@ -44,6 +44,7 @@ const mainMenuItems = [
 const websiteSeoMenuItems = [
   { id: "site-audit", label: "Site Audit", icon: FiShield },
   { id: "domain-authority", label: "Domain Authority", icon: FiAward },
+  { id: "keyword-research", label: "Keyword Research", icon: FiSearch },
   { id: "seo-opportunities", label: "SEO Opportunities", icon: FiZap },
   { id: "device-appearance", label: "Device & Appearance", icon: FiMonitor },
   { id: "url-inspection", label: "URL Inspection", icon: FiCrosshair },
