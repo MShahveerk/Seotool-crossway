@@ -51,6 +51,18 @@ function pathOf(url) {
   }
 }
 
+/** Host + path so "/" becomes "example.com/" instead of a bare slash. */
+function displayUrl(url, maxLen = 72) {
+  if (!url) return "";
+  try {
+    const u = new URL(url);
+    const label = u.hostname.replace(/^www\./, "") + (u.pathname + u.search || "/");
+    return label.length > maxLen ? `${label.slice(0, maxLen - 1)}…` : label;
+  } catch {
+    return String(url).slice(0, maxLen);
+  }
+}
+
 function formatDateTime(value) {
   if (!value) return "—";
   try {
@@ -141,8 +153,14 @@ function HealthRing({ score }) {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-4xl font-bold tabular-nums ${tone.text}`}>{value == null ? "—" : value}</span>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">/ 100</span>
+          <span className={`text-4xl font-bold tabular-nums ${tone.text}`}>
+            {value == null ? "N/A" : value}
+          </span>
+          {value != null ? (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">/ 100</span>
+          ) : (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">incomplete</span>
+          )}
         </div>
       </div>
       <p className="mt-2 text-sm font-bold text-gray-900">Health Score</p>
@@ -226,7 +244,7 @@ function IssueCard({ issue, expanded, onToggle }) {
                           className="block max-w-[420px] truncate text-[#1d9c35] hover:underline"
                           title={pg.url}
                         >
-                          {pathOf(pg.url)}
+                          {displayUrl(pg.url)}
                         </a>
                       </td>
                       <td className="px-3 py-2 text-gray-600 break-words max-w-[380px]">{pg.detail || "—"}</td>
@@ -539,6 +557,11 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
 
   const snapshot = data?.snapshot || null;
   const host = siteHost(data?.siteUrl || effectiveSite);
+  const crawlQuality = snapshot?.stats?.crawlQuality || "complete";
+  const crawlMessage = snapshot?.stats?.crawlMessage;
+  const lowCoverage =
+    crawlQuality !== "complete" ||
+    (snapshot?.totalPages != null && snapshot.totalPages <= 1 && (snapshot?.stats?.sitemapUrls || 0) > 3);
 
   if (needsWebsite) {
     return (
@@ -610,6 +633,24 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
           The last audit attempt failed ({data.lastError}). Try running it again.
         </div>
       ) : null}
+      {snapshot && lowCoverage ? (
+        <div className="mb-6 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <FiAlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden />
+          <div>
+            <p className="font-semibold">
+              {crawlQuality === "blocked"
+                ? "Crawler blocked — results are not trustworthy"
+                : "Incomplete crawl — only part of the site was checked"}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-800">
+              {crawlMessage ||
+                `Only ${snapshot.totalPages} page(s) were crawled${
+                  snapshot.stats?.sitemapUrls ? ` (sitemap has ${snapshot.stats.sitemapUrls} URLs)` : ""
+                }. A fast audit with identical scores across sites usually means this — not a real site-wide check.`}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -648,7 +689,12 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
                   Pages crawled
                 </p>
                 <p className="mt-2 text-3xl font-bold tabular-nums text-gray-900">{snapshot.totalPages}</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">{snapshot.stats?.indexablePages ?? "—"} indexable</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  {snapshot.stats?.indexablePages ?? "—"} indexable
+                  {snapshot.stats?.sitemapUrls
+                    ? ` · ${snapshot.stats.sitemapUrls} in sitemap`
+                    : ""}
+                </p>
               </div>
 
               <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">

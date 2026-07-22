@@ -235,27 +235,36 @@ export default function DomainAuthoritySection({ selectedSite = "" }) {
             </span>
             <h3 className="mt-4 text-lg font-bold text-gray-900">One-time setup needed</h3>
             <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-              Domain Authority uses the free Open PageRank API (1,000 requests/day — plenty for all sites plus
-              competitor checks). It takes two minutes to enable:
+              Domain Authority uses the Open PageRank API from Keywords Everywhere (free tier: 30,000 domains/month).
+              Create a Bearer key on their dashboard — it takes two minutes:
             </p>
             <ol className="mt-5 space-y-3 text-left text-sm text-gray-700">
               {[
                 <>
-                  Create a free account at{" "}
+                  Sign in at{" "}
                   <a
-                    href="https://www.domcop.com/openpagerank/"
+                    href="https://openpagerank.keywordseverywhere.com"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-semibold text-[#1d9c35] hover:underline inline-flex items-center gap-1"
                   >
-                    domcop.com/openpagerank <FiExternalLink className="h-3 w-3" aria-hidden />
-                  </a>
+                    openpagerank.keywordseverywhere.com <FiExternalLink className="h-3 w-3" aria-hidden />
+                  </a>{" "}
+                  (Keywords Everywhere account) and copy your API key — it starts with{" "}
+                  <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] border border-amber-200">
+                    opr_live_
+                  </code>
                 </>,
                 <>
-                  Copy your API key from the dashboard and add it to the server environment as{" "}
+                  Add it to the server environment as{" "}
                   <code className="rounded bg-white px-1.5 py-0.5 font-mono text-[12px] border border-amber-200">
                     OPENPAGERANK_API_KEY
+                  </code>{" "}
+                  (sent as{" "}
+                  <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] border border-amber-200">
+                    Authorization: Bearer …
                   </code>
+                  )
                 </>,
                 <>Restart the app — scores will appear here and refresh automatically every day at 4:30 AM.</>,
               ].map((step, idx) => (
