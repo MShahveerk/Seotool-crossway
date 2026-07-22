@@ -1,5 +1,6 @@
 import { getLatestSiteAudit, runSiteAudit } from "../../../lib/siteAuditJobs";
 import { getAuthorityScores, isAuthorityConfigured, toDomain } from "../../../lib/authority";
+import { buildSupplementalAudit, shouldUseSupplementalAudit } from "../../../lib/siteAuditFallback";
 import { ROLES, hasPermission, PERMISSIONS } from "../../../lib/rbac";
 import { resolveWebsiteAccess } from "../../../lib/resolveWebsiteAccess";
 
@@ -34,6 +35,37 @@ export async function GET(req) {
 
     const { snapshot, running, trend, lastError } = await getLatestSiteAudit(siteUrl);
 
+    let supplemental = null;
+    const snapshotPayload = snapshot
+      ? {
+          id: snapshot.id,
+          startedAt: snapshot.startedAt,
+          finishedAt: snapshot.finishedAt,
+          healthScore: snapshot.healthScore,
+          totalPages: snapshot.totalPages,
+          counts: {
+            critical: snapshot.criticalCount,
+            warning: snapshot.warningCount,
+            notice: snapshot.noticeCount,
+          },
+          ...snapshot.payload,
+        }
+      : null;
+
+    if (shouldUseSupplementalAudit(snapshotPayload)) {
+      try {
+        supplemental = await buildSupplementalAudit(siteUrl);
+      } catch (err) {
+        supplemental = {
+          mode: "supplemental",
+          available: false,
+          errors: [{ source: "supplemental", message: err.message || "Supplemental audit failed" }],
+          issues: [],
+          counts: { critical: 0, warning: 0, notice: 0 },
+        };
+      }
+    }
+
     let authority = null;
     const domain = toDomain(siteUrl);
     if (domain) {
@@ -50,29 +82,21 @@ export async function GET(req) {
       siteUrl,
       running,
       lastError,
+      auditMode: supplemental?.available
+        ? "supplemental"
+        : snapshotPayload
+          ? "crawl"
+          : "none",
       authority,
       authorityConfigured: isAuthorityConfigured(),
+      supplemental,
       trend: trend.map((t) => ({
         date: t.startedAt,
         healthScore: t.healthScore,
         critical: t.criticalCount,
         warning: t.warningCount,
       })),
-      snapshot: snapshot
-        ? {
-            id: snapshot.id,
-            startedAt: snapshot.startedAt,
-            finishedAt: snapshot.finishedAt,
-            healthScore: snapshot.healthScore,
-            totalPages: snapshot.totalPages,
-            counts: {
-              critical: snapshot.criticalCount,
-              warning: snapshot.warningCount,
-              notice: snapshot.noticeCount,
-            },
-            ...snapshot.payload,
-          }
-        : null,
+      snapshot: snapshotPayload,
     });
   } catch (error) {
     const status = error.status || 500;

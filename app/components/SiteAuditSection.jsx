@@ -125,7 +125,7 @@ const SEVERITY_META = {
 
 /* ------------------------------- health ring ------------------------------- */
 
-function HealthRing({ score }) {
+function HealthRing({ score, label = "Health Score", sublabel }) {
   const value = typeof score === "number" ? Math.max(0, Math.min(100, score)) : null;
   const radius = 62;
   const stroke = 11;
@@ -163,7 +163,8 @@ function HealthRing({ score }) {
           )}
         </div>
       </div>
-      <p className="mt-2 text-sm font-bold text-gray-900">Health Score</p>
+      <p className="mt-2 text-sm font-bold text-gray-900">{label}</p>
+      {sublabel ? <p className="text-[10px] text-gray-500 mt-0.5 text-center max-w-[140px]">{sublabel}</p> : null}
       <span className={`mt-1 inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${tone.bg} ${tone.text}`}>
         {tone.label}
       </span>
@@ -192,7 +193,14 @@ function IssueCard({ issue, expanded, onToggle }) {
           <span className="block text-xs text-gray-500 mt-0.5 line-clamp-1">{issue.description}</span>
         </span>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums ${sev.chip}`}>
-          {issue.count} {issue.count === 1 ? "page" : "pages"}
+          {issue.count}{" "}
+          {issue.source === "pagespeed" || issue.source === "gsc"
+            ? issue.count === 1
+              ? "finding"
+              : "findings"
+            : issue.count === 1
+              ? "page"
+              : "pages"}
         </span>
         {expanded ? (
           <FiChevronDown className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
@@ -557,11 +565,18 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
 
   const snapshot = data?.snapshot || null;
   const host = siteHost(data?.siteUrl || effectiveSite);
+  const supplemental = data?.supplemental;
+  const useSupplemental = data?.auditMode === "supplemental" && supplemental?.available;
+  const supplementalFailed = Boolean(supplemental && !supplemental.available);
+  const displayIssues = useSupplemental ? supplemental?.issues || [] : snapshot?.issues || [];
+  const displayCounts = useSupplemental ? supplemental?.counts : snapshot?.counts;
+  const showMainContent = Boolean(snapshot || useSupplemental);
   const crawlQuality = snapshot?.stats?.crawlQuality || "complete";
   const crawlMessage = snapshot?.stats?.crawlMessage;
   const lowCoverage =
-    crawlQuality !== "complete" ||
-    (snapshot?.totalPages != null && snapshot.totalPages <= 1 && (snapshot?.stats?.sitemapUrls || 0) > 3);
+    !useSupplemental &&
+    (crawlQuality !== "complete" ||
+      (snapshot?.totalPages != null && snapshot.totalPages <= 1 && (snapshot?.stats?.sitemapUrls || 0) > 3));
 
   if (needsWebsite) {
     return (
@@ -581,8 +596,9 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
         <div className="min-w-0">
           <h2 className="text-[26px] font-semibold text-gray-900">Site Audit</h2>
           <p className="text-sm text-gray-600 mt-1.5 max-w-2xl">
-            A full technical SEO crawl of the website — health score, every issue found, and exact steps to fix each
-            one. Audits run automatically every night for all websites.
+            {useSupplemental
+              ? "External crawl was blocked or incomplete. Showing a supplemental audit from Google PageSpeed (homepage) and Search Console — not a full sitewide HTML crawl."
+              : "A full technical SEO crawl of the website — health score, every issue found, and exact steps to fix each one. Audits run automatically every night for all websites."}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-gray-600">
             <a
@@ -639,15 +655,37 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
           <div>
             <p className="font-semibold">
               {crawlQuality === "blocked"
-                ? "Crawler blocked — results are not trustworthy"
-                : "Incomplete crawl — only part of the site was checked"}
+                ? data?.auditMode === "supplemental"
+                  ? "External crawl blocked — showing supplemental audit below"
+                  : "External crawl blocked — full HTML crawl unavailable from this server"
+                : data?.auditMode === "supplemental"
+                  ? "Incomplete crawl — supplemental data added below"
+                  : "Incomplete crawl — results may not cover the full site"}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-amber-800">
               {crawlMessage ||
                 `Only ${snapshot.totalPages} page(s) were crawled${
                   snapshot.stats?.sitemapUrls ? ` (sitemap has ${snapshot.stats.sitemapUrls} URLs)` : ""
-                }. A fast audit with identical scores across sites usually means this — not a real site-wide check.`}
+                }. Full sitewide HTML checks require server access or the WordPress plugin.`}
             </p>
+          </div>
+        </div>
+      ) : null}
+      {useSupplemental ? (
+        <div className="mb-6 flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          <FiInfo className="w-4 h-4 shrink-0 mt-0.5" aria-hidden />
+          <div>
+            <p className="font-semibold">{supplemental.label}</p>
+            <p className="mt-1 text-xs leading-relaxed text-sky-800">{supplemental.description}</p>
+            {supplemental.errors?.length ? (
+              <ul className="mt-2 text-xs text-sky-700 list-disc pl-4 space-y-0.5">
+                {supplemental.errors.map((e, i) => (
+                  <li key={i}>
+                    {e.source}: {e.message}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -657,12 +695,20 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
           <div className="inline-block h-10 w-10 animate-spin rounded-full border-2 border-gray-300 border-t-[#1d9c35]" />
           <p className="text-sm text-gray-500">Loading site audit…</p>
         </div>
-      ) : snapshot ? (
+      ) : showMainContent ? (
         <div className={`space-y-10 ${auditing ? "opacity-70 transition-opacity" : ""}`}>
           {/* Overview */}
           <section className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-5 items-stretch">
             <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex items-center justify-center lg:min-w-[220px]">
-              <HealthRing score={snapshot.healthScore} />
+              {useSupplemental ? (
+                <HealthRing
+                  score={supplemental.pagespeed?.seoScore}
+                  label="Lighthouse SEO"
+                  sublabel="Homepage · Google PageSpeed fetch"
+                />
+              ) : (
+                <HealthRing score={snapshot?.healthScore} />
+              )}
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -676,37 +722,109 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
                       {sev.label}
                     </p>
                     <p className={`mt-2 text-3xl font-bold tabular-nums ${sev.text}`}>
-                      {snapshot.counts?.[sevId] ?? 0}
+                      {displayCounts?.[sevId] ?? 0}
                     </p>
-                    <p className={`text-[11px] mt-0.5 ${sev.text} opacity-70`}>affected pages</p>
+                    <p className={`text-[11px] mt-0.5 ${sev.text} opacity-70`}>
+                      {useSupplemental ? "findings" : "affected pages"}
+                    </p>
                   </div>
                 );
               })}
 
-              <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
-                <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
-                  <FiGlobe className="h-3.5 w-3.5" aria-hidden />
-                  Pages crawled
-                </p>
-                <p className="mt-2 text-3xl font-bold tabular-nums text-gray-900">{snapshot.totalPages}</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  {snapshot.stats?.indexablePages ?? "—"} indexable
-                  {snapshot.stats?.sitemapUrls
-                    ? ` · ${snapshot.stats.sitemapUrls} in sitemap`
-                    : ""}
-                </p>
-              </div>
+              {useSupplemental && supplemental.gsc?.inspection ? (
+                <>
+                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                      <FiSearch className="h-3.5 w-3.5" aria-hidden />
+                      GSC indexed
+                    </p>
+                    <p className="mt-2 text-3xl font-bold tabular-nums text-emerald-700">
+                      {supplemental.gsc.inspection.indexedCount}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      of {supplemental.gsc.inspection.totalUrls} inspected URLs
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                      <FiSearch className="h-3.5 w-3.5" aria-hidden />
+                      Not indexed
+                    </p>
+                    <p className="mt-2 text-3xl font-bold tabular-nums text-red-700">
+                      {supplemental.gsc.inspection.notIndexedCount}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateSection?.("url-inspection")}
+                      className="text-[11px] text-[#1d9c35] hover:underline mt-0.5"
+                    >
+                      Open URL Inspection →
+                    </button>
+                  </div>
+                </>
+              ) : null}
 
-              <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
-                <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
-                  <FiZap className="h-3.5 w-3.5" aria-hidden />
-                  Avg response
-                </p>
-                <p className="mt-2 text-3xl font-bold tabular-nums text-gray-900">
-                  {snapshot.stats?.avgResponseMs != null ? `${(snapshot.stats.avgResponseMs / 1000).toFixed(1)}s` : "—"}
-                </p>
-                <p className="text-[11px] text-gray-400 mt-0.5">max depth {snapshot.stats?.maxDepth ?? "—"}</p>
-              </div>
+              {!useSupplemental ? (
+                <>
+                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                      <FiGlobe className="h-3.5 w-3.5" aria-hidden />
+                      Pages crawled
+                    </p>
+                    <p className="mt-2 text-3xl font-bold tabular-nums text-gray-900">{snapshot.totalPages}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      {snapshot.stats?.indexablePages ?? "—"} indexable
+                      {snapshot.stats?.sitemapUrls ? ` · ${snapshot.stats.sitemapUrls} in sitemap` : ""}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                      <FiZap className="h-3.5 w-3.5" aria-hidden />
+                      Avg response
+                    </p>
+                    <p className="mt-2 text-3xl font-bold tabular-nums text-gray-900">
+                      {snapshot.stats?.avgResponseMs != null ? `${(snapshot.stats.avgResponseMs / 1000).toFixed(1)}s` : "—"}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">max depth {snapshot.stats?.maxDepth ?? "—"}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                      <FiGlobe className="h-3.5 w-3.5" aria-hidden />
+                      GSC sitemaps
+                    </p>
+                    <p className="mt-2 text-3xl font-bold tabular-nums text-gray-900">
+                      {supplemental.gsc?.sitemaps?.length ?? 0}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateSection?.("sitemap-health")}
+                      className="text-[11px] text-[#1d9c35] hover:underline mt-0.5"
+                    >
+                      Sitemap Health →
+                    </button>
+                  </div>
+                  <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+                    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                      <FiZap className="h-3.5 w-3.5" aria-hidden />
+                      PageSpeed
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-gray-900 truncate">
+                      {supplemental.pagespeed?.finalUrl ? displayUrl(supplemental.pagespeed.finalUrl, 28) : host}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateSection?.("pagespeed-insights")}
+                      className="text-[11px] text-[#1d9c35] hover:underline mt-0.5"
+                    >
+                      Full PageSpeed report →
+                    </button>
+                  </div>
+                </>
+              )}
 
               <button
                 type="button"
@@ -732,76 +850,150 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
             </div>
           </section>
 
-          <TrendChart trend={data?.trend} />
+          {!useSupplemental ? <TrendChart trend={data?.trend} /> : null}
 
           {/* Issues by severity */}
-          {snapshot.issues?.length ? (
+          {displayIssues.length ? (
             <div className="space-y-8">
-              <SeverityGroup severity="critical" issues={snapshot.issues} expandedSet={expanded} onToggle={toggleIssue} />
-              <SeverityGroup severity="warning" issues={snapshot.issues} expandedSet={expanded} onToggle={toggleIssue} />
-              <SeverityGroup severity="notice" issues={snapshot.issues} expandedSet={expanded} onToggle={toggleIssue} />
+              {useSupplemental ? (
+                <p className="text-xs font-semibold uppercase tracking-wider text-sky-700">
+                  Findings from Google PageSpeed (homepage) & Search Console
+                </p>
+              ) : null}
+              <SeverityGroup severity="critical" issues={displayIssues} expandedSet={expanded} onToggle={toggleIssue} />
+              <SeverityGroup severity="warning" issues={displayIssues} expandedSet={expanded} onToggle={toggleIssue} />
+              <SeverityGroup severity="notice" issues={displayIssues} expandedSet={expanded} onToggle={toggleIssue} />
             </div>
           ) : (
             <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-8 text-center">
               <FiCheckCircle className="mx-auto h-10 w-10 text-emerald-600" aria-hidden />
-              <p className="mt-3 text-sm font-semibold text-emerald-900">No issues found across {snapshot.totalPages} crawled pages.</p>
+              <p className="mt-3 text-sm font-semibold text-emerald-900">
+                {useSupplemental
+                  ? "No supplemental issues flagged from PageSpeed or Search Console."
+                  : `No issues found across ${snapshot?.totalPages ?? 0} crawled pages.`}
+              </p>
             </div>
           )}
 
-          {/* Pages inventory */}
-          {snapshot.pages?.length ? <PagesTable pages={snapshot.pages} /> : null}
+          {/* Pages inventory — full crawl only */}
+          {!useSupplemental && snapshot?.pages?.length ? <PagesTable pages={snapshot.pages} /> : null}
 
           {/* Footer */}
           <section className="rounded-2xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-5">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Sitemap URLs found</p>
-                <p className="mt-1 font-medium text-gray-900 tabular-nums">{snapshot.stats?.sitemapUrls ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">External links checked</p>
-                <p className="mt-1 font-medium text-gray-900 tabular-nums">
-                  {snapshot.stats?.externalChecked ?? "—"}
-                  {snapshot.stats?.brokenExternal ? ` (${snapshot.stats.brokenExternal} broken)` : ""}
+            {useSupplemental ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">PageSpeed analyzed</p>
+                    <p className="mt-1 font-medium text-gray-900 break-all">
+                      {supplemental.pagespeed?.finalUrl || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">GSC inspection batch</p>
+                    <p className="mt-1 font-medium text-gray-900">
+                      {supplemental.gsc?.inspection?.runDate
+                        ? formatDateTime(supplemental.gsc.inspection.runDate)
+                        : "No daily inspection snapshot yet"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Generated</p>
+                    <p className="mt-1 font-medium text-gray-900">{formatDateTime(supplemental.generatedAt)}</p>
+                  </div>
+                </div>
+                <p className="mt-4 flex items-start gap-1.5 border-t border-gray-100 pt-4 text-xs text-gray-500 leading-relaxed">
+                  <FiInfo className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-400" aria-hidden />
+                  Supplemental mode does not replace a full crawl — it shows homepage Lighthouse SEO checks (via Google)
+                  and indexing/sitemap signals from Search Console. Enable SEO_URL_INSPECT_DAILY for richer GSC URL
+                  samples.
                 </p>
-              </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Crawl started</p>
-                <p className="mt-1 font-medium text-gray-900">{formatDateTime(snapshot.startedAt)}</p>
-              </div>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Crawl finished</p>
-                <p className="mt-1 font-medium text-gray-900">{formatDateTime(snapshot.finishedAt)}</p>
-              </div>
-            </div>
-            <p className="mt-4 flex items-start gap-1.5 border-t border-gray-100 pt-4 text-xs text-gray-500 leading-relaxed">
-              <FiInfo className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-400" aria-hidden />
-              The crawler visits same-domain pages (seeded from your sitemap, respecting robots.txt) and checks each
-              one against 25+ technical SEO rules. The health score reflects the share of pages free of critical
-              problems. Every website in the system is re-audited automatically each night at 3:30 AM.
-            </p>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Sitemap URLs found</p>
+                    <p className="mt-1 font-medium text-gray-900 tabular-nums">{snapshot.stats?.sitemapUrls ?? "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">External links checked</p>
+                    <p className="mt-1 font-medium text-gray-900 tabular-nums">
+                      {snapshot.stats?.externalChecked ?? "—"}
+                      {snapshot.stats?.brokenExternal ? ` (${snapshot.stats.brokenExternal} broken)` : ""}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Crawl started</p>
+                    <p className="mt-1 font-medium text-gray-900">{formatDateTime(snapshot.startedAt)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Crawl finished</p>
+                    <p className="mt-1 font-medium text-gray-900">{formatDateTime(snapshot.finishedAt)}</p>
+                  </div>
+                </div>
+                <p className="mt-4 flex items-start gap-1.5 border-t border-gray-100 pt-4 text-xs text-gray-500 leading-relaxed">
+                  <FiInfo className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-400" aria-hidden />
+                  The crawler visits same-domain pages (seeded from your sitemap, respecting robots.txt) and checks each
+                  one against 25+ technical SEO rules. The health score reflects the share of pages free of critical
+                  problems. Every website in the system is re-audited automatically each night at 3:30 AM.
+                </p>
+              </>
+            )}
           </section>
         </div>
       ) : !error && !auditing && !data?.running ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-          <span className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50">
-            <FiShield className="h-8 w-8 text-[#1d9c35]" aria-hidden />
-          </span>
-          <div>
-            <p className="text-base font-bold text-gray-900">No audit yet for {host}</p>
-            <p className="mt-1 text-sm text-gray-500 max-w-md">
-              Run the first crawl now — it takes a few minutes and will then refresh automatically every night.
-            </p>
+        supplementalFailed ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-4 text-center max-w-lg mx-auto">
+            <span className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50">
+              <FiAlertTriangle className="h-8 w-8 text-amber-600" aria-hidden />
+            </span>
+            <div>
+              <p className="text-base font-bold text-gray-900">Crawl blocked — supplemental data unavailable</p>
+              <p className="mt-1 text-sm text-gray-500">
+                The external crawler could not reach {host}. We tried PageSpeed and Search Console as a fallback, but
+                neither returned usable data yet.
+              </p>
+              {supplemental.errors?.length ? (
+                <ul className="mt-3 text-left text-xs text-amber-800 list-disc pl-5 space-y-1">
+                  {supplemental.errors.map((e, i) => (
+                    <li key={i}>
+                      {e.source}: {e.message}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={runAudit}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#1d9c35] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#178a2c]"
+            >
+              <FiRefreshCw className="w-4 h-4" aria-hidden />
+              Retry audit
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={runAudit}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#1d9c35] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#178a2c]"
-          >
-            <FiRefreshCw className="w-4 h-4" aria-hidden />
-            Run first audit
-          </button>
-        </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+            <span className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50">
+              <FiShield className="h-8 w-8 text-[#1d9c35]" aria-hidden />
+            </span>
+            <div>
+              <p className="text-base font-bold text-gray-900">No audit yet for {host}</p>
+              <p className="mt-1 text-sm text-gray-500 max-w-md">
+                Run the first crawl now — it takes a few minutes and will then refresh automatically every night.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={runAudit}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#1d9c35] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#178a2c]"
+            >
+              <FiRefreshCw className="w-4 h-4" aria-hidden />
+              Run first audit
+            </button>
+          </div>
+        )
       ) : null}
     </div>
   );
