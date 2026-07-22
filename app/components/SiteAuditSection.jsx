@@ -702,9 +702,13 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
             <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex items-center justify-center lg:min-w-[220px]">
               {useSupplemental ? (
                 <HealthRing
-                  score={supplemental.pagespeed?.seoScore}
-                  label="Lighthouse SEO"
-                  sublabel="Homepage · Google PageSpeed fetch"
+                  score={supplemental.healthScore}
+                  label="Supplemental Score"
+                  sublabel={
+                    supplemental.pagespeed?.lighthouseSeoScore != null
+                      ? `From ${displayCounts?.critical ?? 0} critical · ${displayCounts?.warning ?? 0} warning · Lighthouse SEO ${supplemental.pagespeed.lighthouseSeoScore}/100`
+                      : "Weighted from PageSpeed + Search Console findings"
+                  }
                 />
               ) : (
                 <HealthRing score={snapshot?.healthScore} />
@@ -882,12 +886,21 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
           <section className="rounded-2xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-5">
             {useSupplemental ? (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">PageSpeed analyzed</p>
                     <p className="mt-1 font-medium text-gray-900 break-all">
                       {supplemental.pagespeed?.finalUrl || "—"}
                     </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Lighthouse SEO</p>
+                    <p className="mt-1 font-medium text-gray-900 tabular-nums">
+                      {supplemental.pagespeed?.lighthouseSeoScore != null
+                        ? `${supplemental.pagespeed.lighthouseSeoScore} / 100`
+                        : "—"}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Homepage only · separate from supplemental score</p>
                   </div>
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">GSC inspection batch</p>
