@@ -23,6 +23,7 @@ import {
   FiMap,
   FiFileText,
   FiZap,
+  FiActivity,
 } from "react-icons/fi";
 import { SiFacebook } from "react-icons/si";
 import { isMetaPageId } from "../../lib/siteAccess";
@@ -30,6 +31,7 @@ import { isMetaPageId } from "../../lib/siteAccess";
 const mainMenuItems = [
   { id: "dashboard", label: "Dashboard", icon: FiBarChart2 },
   { id: "website-statistics", label: "Website Statistics", icon: FiSearch },
+  { id: "pagespeed-insights", label: "PageSpeed Insights", icon: FiActivity },
   { id: "smm-statistics", label: "SMM Statistics", icon: FiTrendingUp },
   { id: "calendar", label: "Content Calendar", icon: FiCalendar },
   { id: "my-approvals", label: "Approvals", icon: FiCheckSquare },
@@ -59,7 +61,7 @@ const adminMenuItems = [
 
 export default function DashboardLayout({
   children,
-  activeSection = "page-speed",
+  activeSection = "dashboard",
   onSectionChange,
   selectedSite = "",
   onSelectedSiteChange,

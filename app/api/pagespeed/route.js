@@ -1,161 +1,146 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { getPageSpeedReport } from "../../../lib/pagespeed";
-import { getAllUsers } from "../../../lib/auth";
-import { ROLES } from "../../../lib/rbac";
+import { ROLES, hasPermission, PERMISSIONS } from "../../../lib/rbac";
+import { isValidUrl, normalizeSiteOrigin } from "../../../lib/validation";
+import prisma from "../../../lib/prisma";
+import { resolveSiteEquivalents, sessionCanAccessSiteAsync } from "../../../lib/siteAccess";
 
-// Ensure this route runs in the Node.js runtime
 export const runtime = "nodejs";
 
+async function resolveWebsiteUrl(req, session) {
+  const userRole = session.user.role || ROLES.USER;
+  const sessionSiteFallback =
+    session.user.siteLink ||
+    (Array.isArray(session.user.accessibleSites) && session.user.accessibleSites.length
+      ? session.user.accessibleSites[0]
+      : null);
+
+  let siteUrl = req.nextUrl.searchParams.get("url") || sessionSiteFallback;
+  const requestedSiteKey = siteUrl;
+
+  if (siteUrl && !isValidUrl(siteUrl)) {
+    const mappedSite = await prisma.site.findFirst({
+      where: {
+        OR: [{ facebookPageId: siteUrl }, { instagramUserId: siteUrl }],
+      },
+      select: { siteUrl: true },
+    });
+
+    if (mappedSite?.siteUrl) {
+      siteUrl = mappedSite.siteUrl;
+    } else {
+      const mappedUser = await prisma.user.findFirst({
+        where: {
+          OR: [{ facebookPageId: siteUrl }, { instagramUserId: siteUrl }],
+        },
+        select: { siteLink: true },
+      });
+      if (mappedUser?.siteLink) {
+        siteUrl = mappedUser.siteLink;
+      }
+    }
+  }
+
+  if (userRole === ROLES.SUPER_ADMIN || userRole === ROLES.SMM) {
+    if (!siteUrl || !isValidUrl(siteUrl)) {
+      if (sessionSiteFallback && isValidUrl(sessionSiteFallback)) {
+        siteUrl = sessionSiteFallback;
+      } else {
+        const err = new Error(
+          userRole === ROLES.SMM
+            ? "No website URL is linked to this client account. PageSpeed needs a website URL."
+            : "Please select a website from the client dropdown (PageSpeed requires a valid URL)."
+        );
+        err.status = 400;
+        throw err;
+      }
+    }
+  } else if (!siteUrl || !isValidUrl(siteUrl)) {
+    const err = new Error("No website URL linked to your account. Please contact an administrator.");
+    err.status = 403;
+    throw err;
+  }
+
+  const normalizedUrl = normalizeSiteOrigin(siteUrl);
+  if (!normalizedUrl) {
+    const err = new Error("Invalid URL format.");
+    err.status = 400;
+    throw err;
+  }
+
+  if (userRole === ROLES.VIEWER || userRole === ROLES.SMM) {
+    const equivalents = await resolveSiteEquivalents(prisma, requestedSiteKey || normalizedUrl);
+    if (!equivalents.includes(normalizedUrl)) equivalents.push(normalizedUrl);
+    if (requestedSiteKey) equivalents.push(String(requestedSiteKey).trim());
+    if (!(await sessionCanAccessSiteAsync(prisma, session.user, equivalents))) {
+      const err = new Error("Access denied. You can only view PageSpeed data for sites assigned to your account.");
+      err.status = 403;
+      throw err;
+    }
+  }
+
+  if (userRole === ROLES.USER) {
+    const own = normalizeSiteOrigin(session.user.siteLink || "");
+    if (!own || own !== normalizedUrl) {
+      const err = new Error("Access denied. You can only query your own website URL.");
+      err.status = 403;
+      throw err;
+    }
+  }
+
+  return { siteUrl: normalizedUrl, requestedSiteKey };
+}
+
 /**
- * GET /api/pagespeed
- * Returns PageSpeed Insights data based on user role:
- * - Super Admin: All users' websites PageSpeed data
- * - User: Only their own website PageSpeed data
+ * GET /api/pagespeed?url=
+ * Returns PageSpeed Insights data for the selected website.
  */
-export async function GET() {
+export async function GET(req) {
   try {
-    // Check authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized. Please log in." }),
-        {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      return new Response(JSON.stringify({ error: "Unauthorized. Please log in." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     const userRole = session.user.role || ROLES.USER;
-
-    // Super Admin: Get all users' websites PageSpeed data
-    if (userRole === ROLES.SUPER_ADMIN) {
-      const users = await getAllUsers(false); // Only active users
-      
-      // Fetch PageSpeed data for each user's website
-      const pagespeedData = await Promise.all(
-        users
-          .filter((user) => user.siteLink) // Only users with site links
-          .map(async (user) => {
-            try {
-              const pagespeed = await getPageSpeedReport(user.siteLink);
-              return {
-                userId: user.id,
-                userName: user.name || user.email,
-                userEmail: user.email,
-                siteUrl: user.siteLink,
-                pagespeed: {
-                  performanceScore: pagespeed.performanceScore,
-                  seoScore: pagespeed.seoScore,
-                  accessibilityScore: pagespeed.accessibilityScore,
-                  bestPracticesScore: pagespeed.bestPracticesScore,
-                  fetchTime: pagespeed.fetchTime,
-                },
-              };
-            } catch (error) {
-              // If fetching fails, return user info without PageSpeed data
-              return {
-                userId: user.id,
-                userName: user.name || user.email,
-                userEmail: user.email,
-                siteUrl: user.siteLink,
-                pagespeed: null,
-                error: error.message || "Failed to fetch PageSpeed data",
-              };
-            }
-          })
-      );
-
-      return new Response(
-        JSON.stringify({
-          role: ROLES.SUPER_ADMIN,
-          totalUsers: users.length,
-          totalWebsites: pagespeedData.length,
-          websites: pagespeedData,
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // Regular User: Get only their own website PageSpeed data
-    if (userRole === ROLES.USER) {
-      const siteLink = session.user.siteLink;
-
-      if (!siteLink) {
-        return new Response(
-          JSON.stringify({
-            role: ROLES.USER,
-            siteUrl: null,
-            pagespeed: null,
-            message: "No website URL linked to your account. Please contact an administrator.",
-          }),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      try {
-        const pagespeed = await getPageSpeedReport(siteLink);
-        
-        return new Response(
-          JSON.stringify({
-            role: ROLES.USER,
-            siteUrl: siteLink,
-            pagespeed: {
-              performanceScore: pagespeed.performanceScore,
-              seoScore: pagespeed.seoScore,
-              accessibilityScore: pagespeed.accessibilityScore,
-              bestPracticesScore: pagespeed.bestPracticesScore,
-              fetchTime: pagespeed.fetchTime,
-              metrics: pagespeed.metrics,
-            },
-          }),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-      } catch (error) {
-        return new Response(
-          JSON.stringify({
-            role: ROLES.USER,
-            siteUrl: siteLink,
-            pagespeed: null,
-            error: error.message || "Failed to fetch PageSpeed data",
-          }),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-      }
-    }
-
-    // Viewer role or other roles
-    return new Response(
-      JSON.stringify({
-        error: "Access denied. Insufficient permissions.",
-      }),
-      {
+    if (!hasPermission(userRole, PERMISSIONS.ACCESS_PAGESPEED)) {
+      return new Response(JSON.stringify({ error: "Access denied. Insufficient permissions." }), {
         status: 403,
         headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const { siteUrl } = await resolveWebsiteUrl(req, session);
+    const pagespeed = await getPageSpeedReport(siteUrl);
+
+    return new Response(
+      JSON.stringify({
+        siteUrl,
+        strategy: "mobile",
+        pagespeed,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Cache-Control": "private, no-store" },
       }
     );
   } catch (error) {
-    console.error("PageSpeed API error:", error);
+    const status = error.status || 500;
+    const message = error.message || "Failed to fetch PageSpeed data.";
+    if (status >= 500 && process.env.NODE_ENV === "development") {
+      console.error("PageSpeed API error:", error);
+    }
     return new Response(
       JSON.stringify({
-        error: "Failed to fetch PageSpeed data.",
-        details: process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: message,
+        details: status >= 500 && process.env.NODE_ENV === "development" ? message : undefined,
       }),
       {
-        status: 500,
+        status,
         headers: { "Content-Type": "application/json" },
       }
     );
