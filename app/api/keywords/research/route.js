@@ -3,9 +3,9 @@ import {
   buildDiscoverKeywordResearch,
   isKeywordResearchConfigured,
   GEO_TARGETS,
-} from "../../../lib/keywordResearch.js";
-import { ROLES, hasPermission, PERMISSIONS } from "../../../lib/rbac";
-import { resolveWebsiteAccess } from "../../../lib/resolveWebsiteAccess";
+} from "../../../../lib/keywordResearch.js";
+import { ROLES, hasPermission, PERMISSIONS } from "../../../../lib/rbac";
+import { resolveWebsiteAccess } from "../../../../lib/resolveWebsiteAccess";
 
 export const runtime = "nodejs";
 
