@@ -1,6 +1,7 @@
 import {
   buildRankedKeywordResearch,
   buildDiscoverKeywordResearch,
+  buildSuggestKeywordResearch,
   isKeywordResearchConfigured,
   GEO_TARGETS,
 } from "../../../../lib/keywordResearch.js";
@@ -17,7 +18,7 @@ function json(body, status = 200) {
 }
 
 /**
- * GET /api/keywords/research?url=&view=ranked|discover&range=28d&geo=us&refresh=1
+ * GET /api/keywords/research?url=&view=ranked|discover|suggest&range=28d&geo=us&seed=&refresh=1
  */
 export async function GET(req) {
   try {
@@ -31,13 +32,20 @@ export async function GET(req) {
     const view = String(req.nextUrl.searchParams.get("view") || "ranked").toLowerCase();
     const range = req.nextUrl.searchParams.get("range") || "28d";
     const geo = req.nextUrl.searchParams.get("geo") || "us";
+    const seed = req.nextUrl.searchParams.get("seed") || "";
     const forceRefresh = req.nextUrl.searchParams.get("refresh") === "1";
 
-    if (view !== "ranked" && view !== "discover") {
-      return json({ error: "Invalid view. Use ranked or discover." }, 400);
+    if (view !== "ranked" && view !== "discover" && view !== "suggest") {
+      return json({ error: "Invalid view. Use ranked, discover, or suggest." }, 400);
     }
 
     const configured = isKeywordResearchConfigured();
+
+    if (view === "suggest") {
+      const payload = await buildSuggestKeywordResearch(siteUrl, range, geo, { seed, forceRefresh });
+      return json({ configured, autocompleteAvailable: true, ...payload });
+    }
+
     const payload =
       view === "discover"
         ? await buildDiscoverKeywordResearch(siteUrl, range, geo, { forceRefresh })
@@ -45,12 +53,13 @@ export async function GET(req) {
 
     return json({
       configured,
+      autocompleteAvailable: true,
       ...payload,
       ...(configured
         ? {}
         : {
             message:
-              "Google Ads Keyword Planner is not configured. Showing Search Console data only — add GOOGLE_ADS_DEVELOPER_TOKEN and GOOGLE_ADS_CUSTOMER_ID for volume and trends.",
+              "Google Ads Keyword Planner is not configured. Search Console data and free autocomplete suggestions are still available.",
           }),
     });
   } catch (error) {

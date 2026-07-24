@@ -13,6 +13,7 @@ import CalendarSection from "./components/CalendarSection";
 import MyApprovalsSection from "./components/MyApprovalsSection";
 import MyBlogApprovalsSection from "./components/MyBlogApprovalsSection";
 import AdminBlogSection from "./components/AdminBlogSection";
+import BlogAutomationSection from "./components/BlogAutomationSection";
 import DeviceAppearanceSection from "./components/seo/DeviceAppearanceSection";
 import UrlInspectionSection from "./components/seo/UrlInspectionSection";
 import QueryPageMatrixSection from "./components/seo/QueryPageMatrixSection";
@@ -153,6 +154,12 @@ export default function Home() {
       case "admin-blogs":
         return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
           <AdminBlogSection selectedSite={selectedSite} />
+        ) : (
+          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+        );
+      case "blog-automation":
+        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+          <BlogAutomationSection />
         ) : (
           <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
         );
