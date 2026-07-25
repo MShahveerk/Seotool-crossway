@@ -143,12 +143,15 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
   const [seedInput, setSeedInput] = useState("");
 
   const load = useCallback(
-    async (force = false) => {
+    async (force = false, seedOverride) => {
       if (!selectedSite) {
         setLoading(false);
         setData(null);
         return;
       }
+      const seed = String(seedOverride ?? "").trim();
+      if (tab === "suggest" && !seed) return;
+
       if (force) setRefreshing(true);
       else setLoading(true);
       setError("");
@@ -159,7 +162,7 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
           range,
           geo,
         });
-        if (tab === "suggest" && seedInput.trim()) q.set("seed", seedInput.trim());
+        if (tab === "suggest") q.set("seed", seed);
         if (force) q.set("refresh", "1");
         const res = await fetch(`/api/keywords/research?${q.toString()}`);
         const body = await res.json();
@@ -173,16 +176,16 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
         setRefreshing(false);
       }
     },
-    [selectedSite, tab, range, geo, seedInput]
+    [selectedSite, tab, range, geo]
   );
 
   useEffect(() => {
-    if (tab === "suggest" && !seedInput.trim()) {
+    if (tab === "suggest") {
       setLoading(false);
       return;
     }
     load(false);
-  }, [load, tab, seedInput]);
+  }, [load, tab]);
 
   const filteredRows = useMemo(() => {
     const rows = data?.rows || [];
@@ -245,8 +248,8 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
           </select>
           <button
             type="button"
-            onClick={() => load(true)}
-            disabled={refreshing || loading}
+            onClick={() => load(true, tab === "suggest" ? seedInput : undefined)}
+            disabled={refreshing || loading || (tab === "suggest" && !seedInput.trim())}
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             <FiRefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} aria-hidden />
@@ -336,13 +339,15 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
                 type="text"
                 value={seedInput}
                 onChange={(e) => setSeedInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && load(true)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && seedInput.trim()) load(true, seedInput);
+                }}
                 placeholder="Topic seed — e.g. dental implants, local seo (required)"
                 className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#1d9c35] focus:bg-white focus:outline-none"
               />
               <button
                 type="button"
-                onClick={() => load(true)}
+                onClick={() => load(true, seedInput)}
                 disabled={refreshing || loading || !seedInput.trim()}
                 className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1d9c35] px-4 py-2 text-sm font-semibold text-white hover:bg-[#178a2c] disabled:opacity-50"
               >
