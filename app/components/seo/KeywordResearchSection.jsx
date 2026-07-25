@@ -177,8 +177,12 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
   );
 
   useEffect(() => {
+    if (tab === "suggest" && !seedInput.trim()) {
+      setLoading(false);
+      return;
+    }
     load(false);
-  }, [load]);
+  }, [load, tab, seedInput]);
 
   const filteredRows = useMemo(() => {
     const rows = data?.rows || [];
@@ -285,7 +289,7 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
         </div>
       ) : null}
 
-      {!loading && !error && data ? (
+      {!loading && !error && (data || tab === "suggest") ? (
         <>
           <div className="flex gap-2 mb-4 border-b border-gray-100 pb-1">
             <button
@@ -332,13 +336,14 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
                 type="text"
                 value={seedInput}
                 onChange={(e) => setSeedInput(e.target.value)}
-                placeholder="Seed keyword(s) — comma-separated, or leave empty to use top GSC queries"
+                onKeyDown={(e) => e.key === "Enter" && load(true)}
+                placeholder="Topic seed — e.g. dental implants, local seo (required)"
                 className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#1d9c35] focus:bg-white focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => load(true)}
-                disabled={refreshing || loading}
+                disabled={refreshing || loading || !seedInput.trim()}
                 className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1d9c35] px-4 py-2 text-sm font-semibold text-white hover:bg-[#178a2c] disabled:opacity-50"
               >
                 <FiSearch className="h-4 w-4" aria-hidden />
@@ -347,7 +352,7 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
             </div>
           ) : null}
 
-          {data.planner?.error ? (
+          {data?.planner?.error ? (
             <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               Keyword Planner warning: {data.planner.error}
             </div>
@@ -357,12 +362,12 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
             Market: <span className="font-semibold text-gray-700">{geoLabel}</span>
             {tab === "suggest" || isAutocompleteDiscover
               ? " · Free autocomplete (Google, Bing, YouTube) — no volume data"
-              : data.planner?.fetchedAt
+              : data?.planner?.fetchedAt
                 ? ` · Planner data ${data.planner.fromCache ? "cached" : "refreshed"} ${new Date(data.planner.fetchedAt).toLocaleDateString()}`
-                : !data.configured
+                : !data?.configured
                   ? " · Search Console only until Planner is connected"
                   : ""}
-            {data.configured && tab === "ranked" ? (
+            {data?.configured && tab === "ranked" ? (
               <span className="text-gray-400"> · Volume is a Google Ads estimate, not exact search count</span>
             ) : null}
           </p>
@@ -458,6 +463,16 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
               </div>
             </>
           ) : tab === "suggest" ? (
+            !seedInput.trim() && !loading ? (
+              <div className="rounded-xl border border-gray-100 bg-gray-50 px-6 py-10 text-center">
+                <p className="text-sm font-semibold text-gray-700">Enter a topic seed to get started</p>
+                <p className="mt-2 text-xs text-gray-500 max-w-md mx-auto">
+                  Use a service, product, or niche phrase — not your brand name. Example:{" "}
+                  <span className="font-medium text-gray-700">&quot;teeth whitening&quot;</span> or{" "}
+                  <span className="font-medium text-gray-700">&quot;roof repair&quot;</span>.
+                </p>
+              </div>
+            ) : (
             <>
               <div className="mb-4 rounded-xl border border-violet-100 bg-violet-50/60 px-4 py-3 text-sm text-violet-900">
                 <p className="font-semibold flex items-center gap-1.5">
@@ -465,14 +480,14 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
                   Free autocomplete discovery
                 </p>
                 <p className="mt-1 text-xs text-violet-800">
-                  Pulls related phrases from Google, Bing, and YouTube suggestion APIs. Keywords are scored by
-                  multi-engine presence, intent signals, and whether you already rank for them.
+                  Enter a topic seed above (e.g. your service or niche). Results are filtered to phrases that share
+                  words with your seed — pulled from Google, Bing, and YouTube autocomplete for your selected market.
                 </p>
-                {data.seedKeywords?.length ? (
+                {data?.seedKeywords?.length ? (
                   <p className="mt-2 text-[11px] text-violet-700">Seeds: {data.seedKeywords.join(" · ")}</p>
                 ) : null}
               </div>
-              <SuggestSummaryCards summary={data.summary} />
+              <SuggestSummaryCards summary={data?.summary} />
               <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
                 <table className="w-full text-left text-xs min-w-[720px]">
                   <thead className="bg-gray-50 border-b border-gray-100">
@@ -509,11 +524,12 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
                 </table>
                 {!filteredSuggestions.length ? (
                   <p className="px-4 py-8 text-center text-sm text-gray-400">
-                    No suggestions yet — enter a seed keyword and click Find keywords.
+                    No on-topic suggestions found — try a broader or different seed phrase.
                   </p>
                 ) : null}
               </div>
             </>
+            )
           ) : isAutocompleteDiscover ? (
             <>
               <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50/60 px-4 py-3 text-sm text-sky-900">
@@ -568,7 +584,7 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
                 ) : null}
               </div>
             </>
-          ) : !data.configured ? (
+          ) : !data?.configured ? (
             <p className="text-sm text-gray-500 py-8 text-center">
               No topic ideas found. Try the <strong>Suggest keywords</strong> tab for free autocomplete discovery.
             </p>
