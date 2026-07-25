@@ -31,6 +31,21 @@ const GEO_OPTIONS = [
   { id: "au", label: "Australia" },
 ];
 
+/** Highest priority/score first */
+function sortByPriorityDesc(items, { scoreKey = "priority", tieKey = "relevance", labelKey = "keyword" } = {}) {
+  return [...items].sort((a, b) => {
+    const scoreA = Number(a[scoreKey]) || 0;
+    const scoreB = Number(b[scoreKey]) || 0;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    const tieA = Number(a[tieKey]) || Number(a.impressions) || 0;
+    const tieB = Number(b[tieKey]) || Number(b.impressions) || 0;
+    if (tieB !== tieA) return tieB - tieA;
+    const labelA = String(a[labelKey] || a.query || "");
+    const labelB = String(b[labelKey] || b.query || "");
+    return labelA.localeCompare(labelB);
+  });
+}
+
 function TrendSparkline({ trend }) {
   const data = (trend || [])
     .filter((t) => t.searches != null)
@@ -188,7 +203,7 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
   }, [load, tab]);
 
   const filteredRows = useMemo(() => {
-    const rows = data?.rows || [];
+    const rows = sortByPriorityDesc(data?.rows || [], { labelKey: "query" });
     const q = filter.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter(
@@ -200,14 +215,17 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
   }, [data?.rows, filter]);
 
   const filteredIdeas = useMemo(() => {
-    const ideas = data?.ideas || [];
+    const ideas = sortByPriorityDesc(data?.ideas || [], {
+      scoreKey: "priority",
+      tieKey: "avgMonthlySearches",
+    });
     const q = filter.trim().toLowerCase();
     if (!q) return ideas;
     return ideas.filter((i) => String(i.keyword).toLowerCase().includes(q));
   }, [data?.ideas, filter]);
 
   const filteredSuggestions = useMemo(() => {
-    const keywords = data?.keywords || [];
+    const keywords = sortByPriorityDesc(data?.keywords || []);
     const q = filter.trim().toLowerCase();
     if (!q) return keywords;
     return keywords.filter(
@@ -395,7 +413,8 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
                 <table className="w-full text-left text-xs min-w-[960px]">
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      <th className="px-3 py-2.5 font-semibold text-gray-600">Priority</th>
+                      <th className="px-3 py-2.5 font-semibold text-gray-600">Rank</th>
+                      <th className="px-3 py-2.5 font-semibold text-gray-600">Score</th>
                       <th className="px-3 py-2.5 font-semibold text-gray-600">Query</th>
                       <th className="px-3 py-2.5 font-semibold text-gray-600">Volume/mo</th>
                       <th className="px-3 py-2.5 font-semibold text-gray-600">Trend</th>
@@ -408,9 +427,10 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredRows.map((row) => (
+                    {filteredRows.map((row, index) => (
                       <tr key={row.query} className="border-b border-gray-50 last:border-0 align-top hover:bg-gray-50/50">
-                        <td className="px-3 py-2.5 tabular-nums font-bold text-[#1d9c35]">{row.priority}</td>
+                        <td className="px-3 py-2.5 tabular-nums font-bold text-gray-900">{index + 1}</td>
+                        <td className="px-3 py-2.5 tabular-nums font-semibold text-[#1d9c35]">{row.priority}</td>
                         <td className="px-3 py-2.5 max-w-[220px]">
                           <span className="font-semibold text-gray-900 block">{row.query}</span>
                           <TagChips tags={row.tags} />
@@ -497,16 +517,18 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
                 <table className="w-full text-left text-xs min-w-[720px]">
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      <th className="px-3 py-2.5 font-semibold text-gray-600">Priority</th>
+                      <th className="px-3 py-2.5 font-semibold text-gray-600">Rank</th>
+                      <th className="px-3 py-2.5 font-semibold text-gray-600">Score</th>
                       <th className="px-3 py-2.5 font-semibold text-gray-600">Keyword</th>
                       <th className="px-3 py-2.5 font-semibold text-gray-600">Sources</th>
                       <th className="px-3 py-2.5 font-semibold text-gray-600">GSC status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredSuggestions.map((kw) => (
+                    {filteredSuggestions.map((kw, index) => (
                       <tr key={kw.keyword} className="border-b border-gray-50 last:border-0 align-top hover:bg-gray-50/50">
-                        <td className="px-3 py-2.5 tabular-nums font-bold text-[#1d9c35]">{kw.priority}</td>
+                        <td className="px-3 py-2.5 tabular-nums font-bold text-gray-900">{index + 1}</td>
+                        <td className="px-3 py-2.5 tabular-nums font-semibold text-[#1d9c35]">{kw.priority}</td>
                         <td className="px-3 py-2.5 max-w-[280px]">
                           <span className="font-semibold text-gray-900 block">{kw.keyword}</span>
                           <TagChips tags={kw.tags} />
@@ -554,16 +576,18 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
                 <table className="w-full text-left text-xs min-w-[720px]">
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      <th className="px-3 py-2.5 font-semibold text-gray-600">Priority</th>
+                      <th className="px-3 py-2.5 font-semibold text-gray-600">Rank</th>
+                      <th className="px-3 py-2.5 font-semibold text-gray-600">Score</th>
                       <th className="px-3 py-2.5 font-semibold text-gray-600">Keyword idea</th>
                       <th className="px-3 py-2.5 font-semibold text-gray-600">Sources</th>
                       <th className="px-3 py-2.5 font-semibold text-gray-600">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredIdeas.map((idea) => (
+                    {filteredIdeas.map((idea, index) => (
                       <tr key={idea.keyword} className="border-b border-gray-50 last:border-0 align-top hover:bg-gray-50/50">
-                        <td className="px-3 py-2.5 tabular-nums font-bold text-[#1d9c35]">{idea.priority ?? "—"}</td>
+                        <td className="px-3 py-2.5 tabular-nums font-bold text-gray-900">{index + 1}</td>
+                        <td className="px-3 py-2.5 tabular-nums font-semibold text-[#1d9c35]">{idea.priority ?? "—"}</td>
                         <td className="px-3 py-2.5 max-w-[280px]">
                           <span className="font-semibold text-gray-900 block">{idea.keyword}</span>
                           <TagChips tags={idea.tags} />
