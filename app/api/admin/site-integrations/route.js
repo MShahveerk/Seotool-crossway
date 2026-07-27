@@ -3,7 +3,8 @@ import { assignAccessibleSites, assignSiteLink, getAllUsers, getUserById } from 
 import { getSearchAnalyticsTimeSeries } from "../../../../lib/searchconsole";
 import { normalizeSiteOrigin } from "../../../../lib/validation";
 import { PERMISSIONS, ROLES } from "../../../../lib/rbac";
-import { isMetaPageId, pickClientDisplayName } from "../../../../lib/siteAccess";
+import { isMetaPageId, pickClientDisplayName, canonicalizeSiteKey } from "../../../../lib/siteAccess";
+import { mergeClientAccountEntries } from "../../../../lib/clientAccountList";
 import prisma from "../../../../lib/prisma";
 import axios from "axios";
 
@@ -146,8 +147,8 @@ export async function GET() {
 
     for (const s of globalSites) {
       if (s.siteUrl) {
-        const norm = s.siteUrl.toLowerCase().trim();
-        if (!seenWebsites.has(norm)) {
+        const norm = canonicalizeSiteKey(s.siteUrl);
+        if (norm && !seenWebsites.has(norm)) {
           seenWebsites.add(norm);
           websitesList.push({
             userId: null,
@@ -165,8 +166,8 @@ export async function GET() {
 
     for (const u of users) {
       if (u.siteLink) {
-        const norm = u.siteLink.toLowerCase().trim();
-        if (!seenWebsites.has(norm)) {
+        const norm = canonicalizeSiteKey(u.siteLink);
+        if (norm && !seenWebsites.has(norm)) {
           seenWebsites.add(norm);
           websitesList.push({
             userId: u.id,
@@ -279,9 +280,11 @@ export async function GET() {
         (a.displayName || a.userName || "").localeCompare(b.displayName || b.userName || "")
       );
 
+      const dedupedSmm = mergeClientAccountEntries(smmEntries);
+
       return new Response(
         JSON.stringify({
-          sites: smmEntries,
+          sites: dedupedSmm,
           superAdminSite: null,
         }),
         {
@@ -325,9 +328,11 @@ export async function GET() {
       return nameA.localeCompare(nameB);
     });
 
+    const dedupedEntries = mergeClientAccountEntries(uniqueEntries);
+
     return new Response(
       JSON.stringify({
-        sites: uniqueEntries,
+        sites: dedupedEntries,
         superAdminSite: currentSuperAdmin?.facebookPageId || currentSuperAdmin?.siteLink || null,
       }),
       {

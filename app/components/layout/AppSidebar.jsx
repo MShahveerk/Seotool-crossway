@@ -11,7 +11,6 @@ import {
   ClipboardList,
   Crosshair,
   FileText,
-  Globe,
   HelpCircle,
   LayoutDashboard,
   LogOut,
@@ -27,8 +26,13 @@ import {
   Award,
   Activity,
 } from "lucide-react";
-import { SiFacebook } from "react-icons/si";
 import { isMetaPageId } from "@/lib/siteAccess";
+import {
+  entryMatchesSelectValue,
+  getClientAccountSelectValue,
+  mergeClientAccountEntries,
+} from "@/lib/clientAccountList";
+import ClientAccountLogo from "@/app/components/ui-shared/ClientAccountLogo";
 import {
   Sidebar,
   SidebarContent,
@@ -127,7 +131,7 @@ export default function AppSidebar({
     fetch("/api/admin/site-integrations")
       .then((res) => (res.ok ? res.json() : { sites: [] }))
       .then((data) => {
-        setAvailableSites(data.sites || []);
+        setAvailableSites(mergeClientAccountEntries(data.sites || []));
         setSuperAdminPrimarySite(data.superAdminSite || "");
       })
       .catch(() => {
@@ -143,12 +147,7 @@ export default function AppSidebar({
       return;
     }
     if (availableSites.length > 0) {
-      const first = availableSites[0];
-      const firstVal =
-        first.type === "website"
-          ? first.siteLink || first.facebookPageId
-          : first.facebookPageId || first.siteLink;
-      onSelectedSiteChange?.(firstVal);
+      onSelectedSiteChange?.(getClientAccountSelectValue(availableSites[0]));
     }
   }, [availableSites, hasGlobalSiteAccess, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
 
@@ -194,9 +193,7 @@ export default function AppSidebar({
     };
   }, [isSuperAdmin]);
 
-  const selectedSiteEntry = availableSites.find(
-    (s) => s.siteLink === selectedSite || s.facebookPageId === selectedSite
-  );
+  const selectedSiteEntry = availableSites.find((s) => entryMatchesSelectValue(s, selectedSite));
   const effectiveSiteForSeo = hasGlobalSiteAccess ? selectedSite : userSiteLink || selectedSite;
   const isWebsiteSelected = Boolean(
     effectiveSiteForSeo &&
@@ -211,7 +208,7 @@ export default function AppSidebar({
     if (!siteEntryOrVal) return "No Account Selected";
     const isString = typeof siteEntryOrVal === "string";
     const entry = isString
-      ? availableSites.find((s) => s.siteLink === siteEntryOrVal || s.facebookPageId === siteEntryOrVal)
+      ? availableSites.find((s) => entryMatchesSelectValue(s, siteEntryOrVal))
       : siteEntryOrVal;
 
     if (entry) {
@@ -277,11 +274,7 @@ export default function AppSidebar({
               )}
             >
               <span className="flex min-w-0 items-center gap-2">
-                {selectedSiteEntry?.type === "meta_page" ? (
-                  <SiFacebook className="size-3.5 shrink-0 text-[#1877F2]" />
-                ) : (
-                  <Globe className="size-3.5 shrink-0 text-muted-foreground" />
-                )}
+                <ClientAccountLogo entry={selectedSiteEntry} size="sm" />
                 <span className="truncate font-medium">
                   {selectedSite ? getPageDisplayName(selectedSite) : "Select client"}
                 </span>
@@ -289,22 +282,16 @@ export default function AppSidebar({
               <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64 max-h-72 overflow-y-auto">
-              {availableSites.map((siteEntry) => {
-                const val =
-                  siteEntry.type === "website"
-                    ? siteEntry.siteLink || siteEntry.facebookPageId
-                    : siteEntry.facebookPageId || siteEntry.siteLink;
+              {availableSites.map((siteEntry, index) => {
+                const val = getClientAccountSelectValue(siteEntry);
+                const isSelected = entryMatchesSelectValue(siteEntry, selectedSite);
                 return (
                   <DropdownMenuItem
-                    key={val}
+                    key={`${val}-${index}`}
                     onClick={() => onSelectedSiteChange?.(val)}
-                    className={cn(selectedSite === val && "bg-emerald-50 text-emerald-900")}
+                    className={cn(isSelected && "bg-emerald-50 text-emerald-900")}
                   >
-                    {siteEntry.type === "meta_page" ? (
-                      <SiFacebook className="size-3.5 text-[#1877F2]" />
-                    ) : (
-                      <Globe className="size-3.5 text-muted-foreground" />
-                    )}
+                    <ClientAccountLogo entry={siteEntry} size="sm" />
                     {getPageDisplayName(siteEntry)}
                   </DropdownMenuItem>
                 );
