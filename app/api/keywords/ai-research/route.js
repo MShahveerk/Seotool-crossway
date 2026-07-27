@@ -66,9 +66,12 @@ export async function POST(req) {
     const provider = body.provider ? String(body.provider).toLowerCase() : undefined;
 
     if (mode === "site-brief") {
-      const rankedPayload = await buildRankedKeywordResearch(siteUrl, range, geo, {
-        forceRefresh: body.refresh === true || body.refresh === "1",
-      });
+      const rankedPayload =
+        body.ranked?.rows?.length > 0
+          ? body.ranked
+          : await buildRankedKeywordResearch(siteUrl, range, geo, {
+              forceRefresh: body.refresh === true || body.refresh === "1",
+            });
       const payload = await buildAiSiteKeywordBrief({ siteUrl, rankedPayload, provider });
       return json({ mode: "site-brief", ranked: rankedPayload, ...payload });
     }
@@ -79,6 +82,7 @@ export async function POST(req) {
       geo,
       siteUrl,
       provider,
+      range,
     });
 
     return json({ mode: "seed", ...payload });

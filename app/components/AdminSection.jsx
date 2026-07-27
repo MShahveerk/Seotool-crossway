@@ -19,7 +19,8 @@ import {
   FiCheckCircle,
   FiRefreshCw,
   FiMoreVertical,
-  FiFilter
+  FiFilter,
+  FiAlertCircle,
 } from "react-icons/fi";
 
 const ROLES = {
@@ -729,11 +730,31 @@ export default function AdminSection() {
         return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
       case ROLES.VIEWER:
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case ROLES.SMM:
+        return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200";
       case ROLES.APPROVER:
         return "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
+  };
+
+  const getUserSiteLabels = (user) => {
+    const sites = Array.isArray(user.accessibleSites)
+      ? user.accessibleSites.map((s) => (typeof s === "string" ? s : s.siteLink)).filter(Boolean)
+      : [];
+    const multiSite =
+      user.role === ROLES.VIEWER || user.role === ROLES.SMM || user.role === ROLES.APPROVER;
+    if (multiSite && sites.length) return sites;
+    return user.siteLink ? [user.siteLink] : [];
+  };
+
+  const integrationSiteKeys = (integration) =>
+    [integration.siteLink, integration.facebookPageId].filter(Boolean);
+
+  const integrationIsAssigned = (integration, assignedSites = []) => {
+    const keys = new Set((assignedSites || []).map(String));
+    return integrationSiteKeys(integration).some((key) => keys.has(key));
   };
 
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
@@ -894,14 +915,26 @@ export default function AdminSection() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {user.siteLink ? (
-                        <div className="flex items-center space-x-1 text-sm text-gray-700 dark:text-gray-800">
-                          <FiLink className="w-4 h-4" />
-                          <span className="truncate max-w-xs">{user.siteLink}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">No site assigned</span>
-                      )}
+                      {(() => {
+                        const sites = getUserSiteLabels(user);
+                        if (!sites.length) {
+                          return <span className="text-xs text-gray-400">No site assigned</span>;
+                        }
+                        if (sites.length === 1) {
+                          return (
+                            <div className="flex items-center space-x-1 text-sm text-gray-700 dark:text-gray-800">
+                              <FiLink className="w-4 h-4 shrink-0" />
+                              <span className="truncate max-w-xs">{sites[0]}</span>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold text-gray-700">{sites.length} assigned sites</p>
+                            <p className="text-xs text-gray-500 truncate max-w-xs">{sites.slice(0, 2).join(", ")}</p>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4">
                       {(() => {
@@ -1153,18 +1186,20 @@ export default function AdminSection() {
                     <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-white">
                       {availableIntegrations.map((integration) => {
                         const val = integration.facebookPageId || integration.siteLink;
-                        const metaMatch = metaAccounts.find(a => a.facebookPageId === val);
-                        const label = metaMatch ? metaMatch.name : (integration.userName || val);
-                        const isChecked = (formData.accessibleSites || []).includes(val);
+                        const metaMatch = metaAccounts.find((a) => a.facebookPageId === val);
+                        const label = metaMatch ? metaMatch.name : integration.userName || val;
+                        const isChecked = integrationIsAssigned(integration, formData.accessibleSites);
                         return (
                           <label key={val} className="flex items-center space-x-2.5 py-1 hover:bg-gray-50 rounded px-1.5 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={isChecked}
                               onChange={(e) => {
+                                const toggleKeys = integrationSiteKeys(integration);
+                                const current = formData.accessibleSites || [];
                                 const nextList = e.target.checked
-                                  ? [...(formData.accessibleSites || []), val]
-                                  : (formData.accessibleSites || []).filter((x) => x !== val);
+                                  ? [...new Set([...current, ...toggleKeys])]
+                                  : current.filter((x) => !toggleKeys.includes(x));
                                 setFormData({ ...formData, accessibleSites: nextList });
                               }}
                               className="w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"

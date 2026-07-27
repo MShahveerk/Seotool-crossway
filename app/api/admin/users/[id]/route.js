@@ -7,7 +7,7 @@ import {
   assignAccessibleSites,
   hashPassword,
 } from "../../../../../lib/auth";
-import { ROLES } from "../../../../../lib/rbac";
+import { ROLES, isMultiSiteRole } from "../../../../../lib/rbac";
 import { validatePassword } from "../../../../../lib/validation";
 import prisma from "../../../../../lib/prisma";
 
@@ -140,28 +140,58 @@ export async function PATCH(req, { params }) {
       }
     }
     
-    // Handle site link assignment
+    const nextRole = body.role || existing.role;
     let siteLinkUpdated = false;
+
+    // Reconcile site assignments when role changes
+    if (body.role && body.role !== existing.role) {
+      if (body.role === ROLES.USER) {
+        const keep =
+          body.siteLink !== undefined ? String(body.siteLink || "").trim() : existing.siteLink;
+        if (keep) {
+          await assignSiteLink(id, keep);
+          siteLinkUpdated = true;
+        } else {
+          await assignAccessibleSites(id, []);
+          await prisma.user.update({ where: { id }, data: { siteLink: null } });
+        }
+      } else if (isMultiSiteRole(body.role) && !isMultiSiteRole(existing.role)) {
+        const seed = Array.isArray(body.accessibleSites)
+          ? body.accessibleSites
+          : existing.siteLink
+            ? [existing.siteLink]
+            : [];
+        if (seed.length) {
+          await assignAccessibleSites(id, seed);
+        }
+      }
+    }
+
+    // Handle site link assignment
     if (body.siteLink !== undefined) {
       const trimmed = typeof body.siteLink === "string" ? body.siteLink.trim() : "";
       if (trimmed) {
         await assignSiteLink(id, trimmed);
         siteLinkUpdated = true;
+      } else if (nextRole === ROLES.USER) {
+        await assignAccessibleSites(id, []);
+        await prisma.user.update({ where: { id }, data: { siteLink: null } });
       }
-      delete body.siteLink; // Remove from update body
+      delete body.siteLink;
     }
-    
-    // Handle accessible sites for viewers / SMM / Approver (multi-site roles)
+
+    // Handle accessible sites for multi-site roles
     if (body.accessibleSites !== undefined) {
-      const roleForSites = body.role || existing.role;
-      if (
-        roleForSites === ROLES.VIEWER ||
-        roleForSites === ROLES.SMM ||
-        roleForSites === ROLES.APPROVER
-      ) {
+      if (isMultiSiteRole(nextRole)) {
         await assignAccessibleSites(id, body.accessibleSites);
+      } else if (nextRole === ROLES.USER) {
+        const keep = existing.siteLink || (Array.isArray(body.accessibleSites) ? body.accessibleSites[0] : null);
+        if (keep) {
+          await assignSiteLink(id, keep);
+          siteLinkUpdated = true;
+        }
       }
-      delete body.accessibleSites; // Remove from update body
+      delete body.accessibleSites;
     }
     
     const updated = await updateUser(id, body);

@@ -1,5 +1,5 @@
 import { requireSuperAdmin, requirePermission } from "../../../../lib/middleware/auth";
-import { assignAccessibleSites, assignSiteLink, getAllUsers, getUserById } from "../../../../lib/auth";
+import { getAllUsers, getUserById, syncSiteAssignmentForIntegration } from "../../../../lib/auth";
 import { getSearchAnalyticsTimeSeries } from "../../../../lib/searchconsole";
 import { normalizeSiteOrigin } from "../../../../lib/validation";
 import { PERMISSIONS, ROLES } from "../../../../lib/rbac";
@@ -420,8 +420,7 @@ export async function POST(req) {
     const { startDate, endDate } = getLast28Days();
     const report = await getSearchAnalyticsTimeSeries(resolvedProperty, startDate, endDate);
 
-    await assignSiteLink(userId, resolvedProperty);
-    await assignAccessibleSites(userId, [resolvedProperty]);
+    await syncSiteAssignmentForIntegration(userId, resolvedProperty, targetUser.role);
 
     return new Response(
       JSON.stringify({
@@ -518,8 +517,7 @@ export async function PATCH(req) {
     const { startDate, endDate } = getLast28Days();
     const report = await getSearchAnalyticsTimeSeries(resolvedProperty, startDate, endDate);
 
-    await assignSiteLink(userId, resolvedProperty);
-    await assignAccessibleSites(userId, [resolvedProperty]);
+    await syncSiteAssignmentForIntegration(userId, resolvedProperty, targetUser.role);
 
     return new Response(
       JSON.stringify({

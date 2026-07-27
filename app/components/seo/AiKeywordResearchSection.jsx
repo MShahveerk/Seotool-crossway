@@ -226,7 +226,10 @@ function AiSiteBriefPanel({ brief, loading, error, onGenerate, hasData }) {
                 <li key={`${p.query}-${p.action}`} className="rounded-lg border border-gray-100 px-3 py-2 text-xs">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-gray-900">{p.query}</span>
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${impactStyle[p.impact] || impactStyle.medium}`}>{p.impact || "medium"}</span>
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${impactStyle[p.impact] || impactStyle.medium}`}>{p.impact || "medium"} impact</span>
+                    {p.effort ? (
+                      <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-600">{p.effort} effort</span>
+                    ) : null}
                   </div>
                   <p className="mt-1 text-gray-600"><span className="font-medium text-indigo-700">{p.action}</span>{p.reason ? ` — ${p.reason}` : ""}</p>
                 </li>
@@ -284,6 +287,7 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
   const [seedInput, setSeedInput] = useState("");
   const [exploreData, setExploreData] = useState(null);
   const [exploreLoading, setExploreLoading] = useState(false);
+  const [exploreStage, setExploreStage] = useState("");
   const [exploreError, setExploreError] = useState("");
   const [filter, setFilter] = useState("all");
   const [sortKey, setSortKey] = useState("opportunityScore");
@@ -340,7 +344,19 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
       const res = await fetch(`/api/keywords/ai-research${qs}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "site-brief", geo, range }),
+        body: JSON.stringify({
+          mode: "site-brief",
+          geo,
+          range,
+          ranked: rankedData?.rows?.length
+            ? {
+                rows: rankedData.rows.slice(0, 200),
+                summary: rankedData.summary,
+                geo: rankedData.geo,
+                strikingDistance: rankedData.strikingDistance,
+              }
+            : undefined,
+        }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "AI brief failed");
@@ -351,7 +367,7 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
     } finally {
       setAiBriefLoading(false);
     }
-  }, [selectedSite, geo, range]);
+  }, [selectedSite, geo, range, rankedData]);
 
   const runExplore = useCallback(async () => {
     const seed = seedInput.trim();
@@ -361,6 +377,10 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
     }
     setExploreLoading(true);
     setExploreError("");
+    setExploreStage("Fetching live autocomplete suggestions…");
+    const stageTimer = setTimeout(() => {
+      setExploreStage("Enriching with AI + Google Ads metrics…");
+    }, 2500);
     try {
       const qs = selectedSite ? `?url=${encodeURIComponent(selectedSite)}` : "";
       const res = await fetch(`/api/keywords/ai-research${qs}`, {
@@ -375,6 +395,8 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
       setExploreError(e.message || "Research failed");
       setExploreData(null);
     } finally {
+      clearTimeout(stageTimer);
+      setExploreStage("");
       setExploreLoading(false);
     }
   }, [seedInput, geo, selectedSite]);
@@ -605,20 +627,43 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{exploreError}</div>
           ) : null}
 
+          {exploreLoading ? (
+            <div className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/50 px-4 py-3 text-sm text-indigo-900 flex items-center gap-2">
+              <FiRefreshCw className="animate-spin shrink-0" size={16} />
+              {exploreStage || "Researching keywords…"}
+            </div>
+          ) : null}
+
           {exploreData?.seed ? (
             <>
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-                <MetricTile label="Keywords found" value={formatNum(exploreData.summary?.total)} sub="AI-generated ideas" icon={FiTarget} />
-                <MetricTile label="With volume" value={formatNum(exploreData.summary?.withVolume)} sub={exploreData.planner?.configured ? "Google Ads" : "AI estimates"} icon={FiBarChart2} accent="text-indigo-700" />
+                <MetricTile label="Keywords found" value={formatNum(exploreData.summary?.total)} sub="Autocomplete + AI curated" icon={FiTarget} />
+                <MetricTile label="With volume" value={formatNum(exploreData.summary?.withVolume)} sub={exploreData.planner?.configured ? "Google Ads" : "Connect Planner"} icon={FiBarChart2} accent="text-indigo-700" />
                 <MetricTile label="Easy wins" value={formatNum(exploreData.summary?.easyWins)} sub="KD ≤ 35 · vol 50+" icon={FiZap} accent="text-emerald-700" />
-                <MetricTile label="Questions" value={formatNum(exploreData.summary?.questions)} sub="PAA-style" icon={FiSearch} accent="text-sky-700" />
-                <MetricTile label="Avg. difficulty" value={exploreData.summary?.avgDifficulty ?? "—"} sub="0 = easy · 100 = hard" icon={FiTrendingUp} />
+                <MetricTile label="Already ranking" value={formatNum(exploreData.summary?.alreadyRanking)} sub="Pos ≤ 20 in GSC" icon={FiTrendingUp} accent="text-sky-700" />
+                <MetricTile
+                  label="Avg. difficulty"
+                  value={exploreData.summary?.avgDifficulty ?? "—"}
+                  sub={
+                    exploreData.timings?.totalMs
+                      ? `${(exploreData.timings.totalMs / 1000).toFixed(1)}s · ${exploreData.ai?.method || "research"}`
+                      : "0 = easy · 100 = hard"
+                  }
+                  icon={FiTrendingUp}
+                />
               </div>
               <div className="mb-6 rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
                 <div className="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white px-5 py-4">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Seed keyword</p>
                   <h3 className="mt-1 text-2xl font-bold text-gray-900">{exploreData.seed.keyword}</h3>
                   <p className="mt-2 text-sm text-gray-700">{exploreData.seed.summary}</p>
+                  {exploreData.seed.contentAngles?.length ? (
+                    <ul className="mt-3 flex flex-wrap gap-2">
+                      {exploreData.seed.contentAngles.slice(0, 4).map((a) => (
+                        <li key={a} className="rounded-lg bg-indigo-50 border border-indigo-100 px-2.5 py-1 text-xs text-indigo-900">{a}</li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
                 <div className="p-5 grid sm:grid-cols-4 gap-4">
                   <div>
@@ -643,6 +688,20 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                   </div>
                 </div>
               </div>
+              {exploreData.clusters?.length ? (
+                <div className="mb-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {exploreData.clusters.slice(0, 6).map((c) => (
+                    <div key={c.name || c.theme} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{c.contentType || "Cluster"} · {c.priority || "medium"}</p>
+                      <p className="mt-1 font-semibold text-gray-900">{c.name || c.theme}</p>
+                      <p className="mt-2 text-xs text-gray-600 leading-relaxed">{c.recommendation}</p>
+                      {c.keywords?.length ? (
+                        <p className="mt-2 text-[11px] text-gray-400 truncate">{c.keywords.slice(0, 4).join(" · ")}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
                 <div className="flex flex-wrap gap-1 border-b border-gray-100 px-4 py-3 bg-gray-50/80">
                   {FILTER_TABS.map((t) => (
@@ -657,7 +716,7 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                   ))}
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[960px] text-sm">
+                  <table className="w-full min-w-[1100px] text-sm">
                     <thead className="bg-gray-50 border-b border-gray-100">
                       <tr>
                         <SortTh label="#" field="opportunityScore" />
@@ -666,18 +725,27 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                         <SortTh label="KD" field="keywordDifficulty" />
                         <SortTh label="Opportunity" field="opportunityScore" />
                         <th className="px-3 py-3 text-left text-[11px] font-bold uppercase text-gray-500">Intent</th>
+                        <th className="px-3 py-3 text-left text-[11px] font-bold uppercase text-gray-500 min-w-[200px]">SEO action</th>
                         <th className="px-3 py-3 text-left text-[11px] font-bold uppercase text-gray-500">Source</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {exploreRows.map((row, i) => (
-                        <tr key={row.keyword} className="hover:bg-indigo-50/30">
+                        <tr key={row.keyword} className="hover:bg-indigo-50/30 align-top">
                           <td className="px-3 py-3 text-gray-400 text-xs">{i + 1}</td>
-                          <td className="px-3 py-3 font-medium text-gray-900">{row.keyword}</td>
+                          <td className="px-3 py-3 font-medium text-gray-900 max-w-[200px]">
+                            {row.keyword}
+                            {row.existingPosition != null ? (
+                              <span className="mt-1 block text-[10px] font-semibold text-sky-700">GSC ~#{Math.round(row.existingPosition)}</span>
+                            ) : row.isNewTopic ? (
+                              <span className="mt-1 block text-[10px] font-semibold text-emerald-700">New topic</span>
+                            ) : null}
+                          </td>
                           <td className="px-3 py-3 tabular-nums font-semibold">{row.avgMonthlySearches != null ? formatNum(row.avgMonthlySearches) : "—"}</td>
                           <td className="px-3 py-3"><DifficultyBar value={row.keywordDifficulty} /></td>
                           <td className="px-3 py-3"><span className="rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-700">{row.opportunityScore}</span></td>
                           <td className="px-3 py-3"><span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold capitalize ${INTENT_STYLES[row.intent] || "bg-gray-100"}`}>{row.intent}</span></td>
+                          <td className="px-3 py-3 text-xs text-gray-600 leading-relaxed max-w-xs">{row.recommendation || row.contentAngle || "—"}</td>
                           <td className="px-3 py-3"><SourceBadge source={row.metricsSource} /></td>
                         </tr>
                       ))}
@@ -690,7 +758,7 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
             <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-12 text-center">
               <FiDollarSign size={32} className="mx-auto text-indigo-400 mb-3" />
               <h3 className="text-lg font-semibold text-gray-900">Research any keyword</h3>
-              <p className="mt-2 max-w-md mx-auto text-sm text-gray-500">Enter a seed above. AI expands it into 30+ related terms; Google Ads fills real volume when connected.</p>
+              <p className="mt-2 max-w-md mx-auto text-sm text-gray-500">Enter a seed above. We pull live Google/Bing/YouTube suggestions first, then AI classifies intent and recommends SEO actions — Google Ads adds real volume.</p>
             </div>
           ) : null}
         </>
