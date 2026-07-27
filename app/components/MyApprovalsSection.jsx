@@ -9,8 +9,8 @@ export default function MyApprovalsSection({ selectedSite = "" }) {
       <CardContent className="space-y-6 p-5 sm:p-6">
         <PageHeader
           eyebrow="Workflow"
-          title="My Approvals"
-          description="Review, edit, and approve content assigned to you by administrators."
+          title="SMM Post Approvals"
+          description="Review, edit, and approve social posts assigned to you by administrators."
         />
         <ApprovalsUserPanel selectedSite={selectedSite} />
       </CardContent>

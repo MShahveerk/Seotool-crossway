@@ -237,7 +237,7 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
             <div>
               <h2 id="dash-gsc-heading" className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-                Search Console
+                General Website Statistics
               </h2>
               <p className="text-sm text-gray-500 mt-1">How people find you on Google — last 28 days.</p>
             </div>
@@ -304,7 +304,7 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
             <div>
               <h2 id="dash-smm-heading" className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-                Social (SMM)
+                Social Media Marketing Stats
               </h2>
               <p className="text-sm text-gray-600 mt-1 max-w-xl leading-relaxed">
                 Follower counts from your <span className="font-semibold text-gray-800">SMM baseline</span> — the same

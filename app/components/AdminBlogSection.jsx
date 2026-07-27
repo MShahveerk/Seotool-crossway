@@ -6,6 +6,7 @@ import { FiFileText, FiRefreshCw, FiSave, FiSettings, FiTrash2, FiZap } from "re
 import { datetimeLocalToUtcIso, formatScheduleShort, timezoneShortLabel } from "../../lib/timezone";
 import BlogRichTextEditor, { isRichTextEmpty } from "./BlogRichTextEditor";
 import HumanizeTextButton from "./HumanizeTextButton";
+import FileChooseField from "./ui-shared/FileChooseField";
 
 const DEFAULT_CONFIG = {
   enabled: true,
@@ -944,10 +945,18 @@ export default function AdminBlogSection({ selectedSite = "" }) {
           </div>
         </label>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="block">
+          <div>
             <span className="text-xs font-semibold uppercase text-gray-500">Featured image</span>
-            <input type="file" accept="image/*" className="mt-1 w-full text-sm" onChange={(e) => setFeaturedFile(e.target.files?.[0] || null)} />
-          </label>
+            <FileChooseField
+              id="admin-blog-featured-image"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              file={featuredFile}
+              onFileChange={setFeaturedFile}
+              label="Choose image"
+              hint="Optional featured image for the blog post."
+              className="mt-1"
+            />
+          </div>
           <label className="block">
             <span className="text-xs font-semibold uppercase text-gray-500">Featured image alt text</span>
             <input className="mt-1 w-full border rounded-lg px-3 py-2" value={form.featuredImageAlt} onChange={(e) => setForm((f) => ({ ...f, featuredImageAlt: e.target.value }))} />

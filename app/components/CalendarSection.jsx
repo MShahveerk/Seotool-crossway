@@ -18,6 +18,7 @@ import {
   timezoneShortLabel,
 } from "../../lib/timezone";
 import CalendarView from "./CalendarView";
+import FileChooseField from "./ui-shared/FileChooseField";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
 
 function formatDayLabel(date) {
@@ -557,14 +558,14 @@ export default function CalendarSection({ selectedSite = "" }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Media</label>
-                  <input
-                    type="file"
+                  <span className="block text-sm font-semibold text-gray-700 mb-1.5">Media</span>
+                  <FileChooseField
+                    id="calendar-create-media"
                     accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, imageFile: e.target.files?.[0] || null }))
-                    }
-                    className="w-full text-sm"
+                    file={form.imageFile}
+                    onFileChange={(file) => setForm((f) => ({ ...f, imageFile: file }))}
+                    label="Choose media file"
+                    hint="Image or video for the scheduled post."
                     required
                   />
                 </div>

@@ -339,7 +339,7 @@ export default function SmmApprovalCardsGrid({ isSuperAdmin = false, activeSite 
     if (isSuperAdmin && !String(activeSite || "").trim()) {
       return emptyHint;
     }
-    return "Only approved items are shown here. Approve an item under Dashboard → Approvals, then refresh.";
+    return "Only approved items are shown here. Approve an item under SMM Post Approvals, then refresh.";
   }, [isSuperAdmin, activeSite, emptyHint]);
 
   const approvedItems = useMemo(

@@ -36,24 +36,30 @@ function siteHost(url) {
   }
 }
 
-function scoreTone(score) {
+function toScore100(score10) {
+  if (score10 == null || !Number.isFinite(Number(score10))) return null;
+  return Math.round(Number(score10) * 1000) / 10;
+}
+
+function scoreTone(score10) {
+  const score = toScore100(score10);
   if (score == null) return { text: "text-gray-400", bg: "bg-gray-50", bar: "#d1d5db", label: "No data" };
-  if (score >= 6) return { text: "text-emerald-700", bg: "bg-emerald-50", bar: "#1d9c35", label: "Strong" };
-  if (score >= 4) return { text: "text-lime-700", bg: "bg-lime-50", bar: "#84cc16", label: "Established" };
-  if (score >= 2.5) return { text: "text-amber-700", bg: "bg-amber-50", bar: "#f59e0b", label: "Growing" };
+  if (score >= 60) return { text: "text-emerald-700", bg: "bg-emerald-50", bar: "#1d9c35", label: "Strong" };
+  if (score >= 40) return { text: "text-lime-700", bg: "bg-lime-50", bar: "#84cc16", label: "Established" };
+  if (score >= 25) return { text: "text-amber-700", bg: "bg-amber-50", bar: "#f59e0b", label: "Growing" };
   return { text: "text-red-700", bg: "bg-red-50", bar: "#ef4444", label: "Early stage" };
 }
 
 /* ------------------------------- score dial -------------------------------- */
 
 function ScoreDial({ score }) {
-  const value = typeof score === "number" ? Math.max(0, Math.min(10, score)) : null;
+  const value = toScore100(score);
   const radius = 62;
   const stroke = 11;
   const r = radius - stroke / 2;
   const circumference = 2 * Math.PI * r;
-  const offset = value == null ? circumference : circumference - (value / 10) * circumference;
-  const tone = scoreTone(value);
+  const offset = value == null ? circumference : circumference - (value / 100) * circumference;
+  const tone = scoreTone(score);
 
   return (
     <div className="flex flex-col items-center">
@@ -75,9 +81,9 @@ function ScoreDial({ score }) {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className={`text-4xl font-bold tabular-nums ${tone.text}`}>
-            {value == null ? "—" : value.toFixed(1)}
+            {value == null ? "—" : Math.round(value)}
           </span>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">/ 10</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">/ 100</span>
         </div>
       </div>
       <p className="mt-2 text-sm font-bold text-gray-900">Authority Score</p>
@@ -170,13 +176,15 @@ export default function DomainAuthoritySection({ selectedSite = "" }) {
     .filter((t) => t.score != null)
     .map((t) => ({
       date: new Date(t.date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
-      score: t.score,
+      score: toScore100(t.score),
     }));
 
   const comparisonData = useMemo(() => {
     if (!data) return [];
-    const rows = [{ domain: data.domain, score: data.score ?? 0, self: true }];
-    for (const c of data.competitors || []) rows.push({ domain: c.domain, score: c.score ?? 0, self: false });
+    const rows = [{ domain: data.domain, score: toScore100(data.score) ?? 0, self: true }];
+    for (const c of data.competitors || []) {
+      rows.push({ domain: c.domain, score: toScore100(c.score) ?? 0, self: false });
+    }
     return rows.sort((a, b) => b.score - a.score);
   }, [data]);
 
@@ -199,7 +207,7 @@ export default function DomainAuthoritySection({ selectedSite = "" }) {
         <div className="min-w-0">
           <h2 className="text-[26px] font-semibold text-gray-900">Domain Authority</h2>
           <p className="text-sm text-gray-600 mt-1.5 max-w-2xl">
-            How strong this domain's link profile is on a 0–10 scale (Open PageRank, built from Common Crawl backlink
+            How strong this domain's link profile is on a 0–100 scale (Open PageRank, built from Common Crawl backlink
             data — comparable to Ahrefs DR / Moz DA). Scores refresh daily for every website in the system.
           </p>
         </div>
@@ -337,10 +345,10 @@ export default function DomainAuthoritySection({ selectedSite = "" }) {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                     <Tooltip
                       contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }}
-                      formatter={(v) => [`${v} / 10`, "Authority"]}
+                      formatter={(v) => [`${Math.round(Number(v))} / 100`, "Authority"]}
                     />
                     <Area type="monotone" dataKey="score" stroke="#1d9c35" strokeWidth={2.5} fill="url(#authorityGrad)" dot={{ r: 3 }} />
                   </AreaChart>
@@ -412,7 +420,7 @@ export default function DomainAuthoritySection({ selectedSite = "" }) {
               <div className="mt-6 h-[60px]" style={{ height: comparisonData.length * 52 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={comparisonData} layout="vertical" margin={{ top: 0, right: 40, bottom: 0, left: 10 }}>
-                    <XAxis type="number" domain={[0, 10]} hide />
+                    <XAxis type="number" domain={[0, 100]} hide />
                     <YAxis
                       type="category"
                       dataKey="domain"
@@ -423,10 +431,10 @@ export default function DomainAuthoritySection({ selectedSite = "" }) {
                     />
                     <Tooltip
                       contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }}
-                      formatter={(v) => [`${Number(v).toFixed(1)} / 10`, "Authority"]}
+                      formatter={(v) => [`${Math.round(Number(v))} / 100`, "Authority"]}
                       cursor={{ fill: "rgba(0,0,0,0.03)" }}
                     />
-                    <Bar dataKey="score" radius={[0, 8, 8, 0]} barSize={22} label={{ position: "right", fontSize: 12, fill: "#6b7280", formatter: (v) => Number(v).toFixed(1) }}>
+                    <Bar dataKey="score" radius={[0, 8, 8, 0]} barSize={22} label={{ position: "right", fontSize: 12, fill: "#6b7280", formatter: (v) => Math.round(Number(v)) }}>
                       {comparisonData.map((row) => (
                         <Cell key={row.domain} fill={row.self ? "#1d9c35" : "#cbd5e1"} />
                       ))}
@@ -443,10 +451,10 @@ export default function DomainAuthoritySection({ selectedSite = "" }) {
           <section className="rounded-2xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-5">
             <p className="flex items-start gap-1.5 text-xs text-gray-500 leading-relaxed">
               <FiInfo className="w-3.5 h-3.5 shrink-0 mt-0.5 text-gray-400" aria-hidden />
-              Open PageRank scores (0–10, logarithmic) are computed from Common Crawl's web-wide link graph — the same
-              concept behind Ahrefs DR and Moz DA, so use it for relative comparisons rather than exact equivalence.
-              Going from 2 → 3 is much easier than 6 → 7. Scores refresh daily at 4:30 AM for every website in the
-              system, building the trend history automatically.
+              Open PageRank scores are shown on a 0–100 scale (converted from the API's 0–10 logarithmic score) and
+              computed from Common Crawl's web-wide link graph — the same concept behind Ahrefs DR and Moz DA, so use it
+              for relative comparisons rather than exact equivalence. Going from 20 → 30 is much easier than 60 → 70.
+              Scores refresh daily at 4:30 AM for every website in the system, building the trend history automatically.
             </p>
           </section>
         </div>

@@ -43,6 +43,7 @@ export default function SeoPanelShell({
   children,
   action,
   eyebrow = "SEO Tools",
+  siteUrl,
 }) {
   if (!selectedSite || (!String(selectedSite).startsWith("http") && !/^\d+$/.test(String(selectedSite)))) {
     return (
@@ -62,7 +63,7 @@ export default function SeoPanelShell({
     <HoverLift as={Card} className="min-h-[calc(100vh-5.5rem)] border-border/80 shadow-sm">
       <CardContent className="space-y-6 p-5 sm:p-6">
         <PageHeader
-          eyebrow={eyebrow}
+          eyebrow={eyebrow || undefined}
           title={title}
           description={description}
           actions={
@@ -89,6 +90,12 @@ export default function SeoPanelShell({
             </div>
           }
         />
+
+        {siteUrl ? (
+          <p className="-mt-2 text-sm font-medium text-muted-foreground">
+            <span className="text-foreground">{String(siteUrl).trim()}</span>
+          </p>
+        ) : null}
 
         {error ? (
           <Alert variant="destructive">

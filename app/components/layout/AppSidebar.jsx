@@ -69,7 +69,7 @@ const mainMenuItems = [
   { id: "pagespeed-insights", label: "PageSpeed Insights", icon: Activity },
   { id: "smm-statistics", label: "SMM Statistics", icon: TrendingUp },
   { id: "calendar", label: "Content Calendar", icon: Calendar },
-  { id: "my-approvals", label: "Approvals", icon: CheckSquare },
+  { id: "my-approvals", label: "SMM Post Approvals", icon: CheckSquare },
   { id: "my-blog-approvals", label: "Blog Approvals", icon: FileText },
 ];
 

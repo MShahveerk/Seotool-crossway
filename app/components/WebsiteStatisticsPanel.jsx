@@ -504,7 +504,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
             }`}
           >
             <FiClipboard className="w-4 h-4" />
-            Approvals
+            SMM Post Approvals
             {approvalOpenCount > 0 && (
               <span className="ml-1 min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-500 text-white text-xs font-bold flex items-center justify-center">
                 {approvalOpenCount > 9 ? "9+" : approvalOpenCount}

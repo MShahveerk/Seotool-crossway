@@ -174,6 +174,12 @@ export default function SeoOpportunitiesSection({ selectedSite = "" }) {
   return (
     <SeoPanelShell
       title="SEO Opportunities"
+      eyebrow=""
+      siteUrl={
+        selectedSite && (String(selectedSite).startsWith("http") || String(selectedSite).startsWith("sc-domain:"))
+          ? selectedSite
+          : undefined
+      }
       description="Actionable queue for this week with complete step-by-step guidance: striking distance, cannibalization, traffic decay, device gaps, and sitemap health."
       selectedSite={selectedSite}
       range={range}
