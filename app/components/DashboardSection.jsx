@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { FiRefreshCw } from "react-icons/fi";
 import { SiFacebook, SiInstagram, SiYoutube, SiTiktok } from "react-icons/si";
+import { FadeIn, StaggerItem } from "./ui-shared/Motion";
 
 function siteHost(url) {
   if (!url) return "";
@@ -55,18 +56,20 @@ function platformLabel(platform) {
   return key ? key.charAt(0).toUpperCase() + key.slice(1) : "Platform";
 }
 
-function BigStatCard({ label, value, sub, accentClass = "border-gray-100", barClass = "bg-emerald-400" }) {
+function BigStatCard({ label, value, sub, accentClass = "border-gray-100", barClass = "bg-emerald-400", index = 0 }) {
   return (
-    <div
-      className={`group relative overflow-hidden rounded-2xl border bg-white p-5 sm:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-all duration-300 hover:shadow-[0_12px_28px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 ${accentClass} flex flex-col justify-between min-h-[140px]`}
-    >
+    <StaggerItem index={index}>
+      <div
+        className={`group relative overflow-hidden rounded-2xl border bg-white p-5 sm:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover-lift ${accentClass} flex flex-col justify-between min-h-[140px]`}
+      >
       <div className={`absolute left-0 top-0 h-full w-1 ${barClass} opacity-90`} aria-hidden />
       <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 pl-2">{label}</p>
       <p className="text-4xl sm:text-5xl font-bold text-gray-900 tabular-nums leading-none mt-3 pl-2 tracking-tight">
         {value}
       </p>
       {sub ? <p className="text-xs text-gray-500 mt-3 pl-2 leading-relaxed">{sub}</p> : null}
-    </div>
+      </div>
+    </StaggerItem>
   );
 }
 
@@ -185,7 +188,8 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
       />
       <div className="relative max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8 sm:space-y-10">
         {/* Welcome */}
-        <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 sm:p-8 shadow-[0_8px_40px_rgba(0,0,0,0.06)] ring-1 ring-gray-100/80">
+        <FadeIn>
+        <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 sm:p-8 shadow-[0_8px_40px_rgba(0,0,0,0.06)] ring-1 ring-gray-100/80 transition-smooth hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)]">
           <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-200/30 blur-2xl" aria-hidden />
           <div className="absolute -left-10 bottom-0 h-32 w-32 rounded-full bg-sky-100/40 blur-2xl" aria-hidden />
           <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
@@ -222,8 +226,10 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
             </button>
           </div>
         </div>
+        </FadeIn>
 
         {/* Search Console */}
+        <FadeIn delay={80}>
         <section
           aria-labelledby="dash-gsc-heading"
           className="rounded-3xl border border-gray-100 bg-white p-5 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.04)] ring-1 ring-gray-50"
@@ -256,24 +262,28 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <BigStatCard
+                index={0}
                 label="Clicks"
                 value={formatNum(totals?.clicks)}
                 accentClass="border-sky-100/90 bg-sky-50/40"
                 barClass="bg-sky-500"
               />
               <BigStatCard
+                index={1}
                 label="Impressions"
                 value={formatCompact(totals?.impressions)}
                 accentClass="border-violet-100/90 bg-violet-50/40"
                 barClass="bg-violet-500"
               />
               <BigStatCard
+                index={2}
                 label="Avg. CTR"
                 value={formatPct(totals?.averageCtr)}
                 accentClass="border-amber-100/90 bg-amber-50/35"
                 barClass="bg-amber-500"
               />
               <BigStatCard
+                index={3}
                 label="Avg. position"
                 value={formatPos(totals?.averagePosition)}
                 sub="Lower is better in Search"
@@ -283,8 +293,10 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
             </div>
           )}
         </section>
+        </FadeIn>
 
         {/* SMM baseline */}
+        <FadeIn delay={120}>
         <section
           aria-labelledby="dash-smm-heading"
           className="rounded-3xl border border-emerald-100/80 bg-white p-5 sm:p-8 shadow-[0_4px_28px_rgba(16,185,129,0.08)] ring-1 ring-emerald-50"
@@ -338,14 +350,14 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
                 )}
               </div>
               <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {["facebook", "instagram", "youtube", "tiktok"].map((key) => {
+                {["facebook", "instagram", "youtube", "tiktok"].map((key, i) => {
                   const row = orderedBaseline.find((c) => String(c.platform || "").toLowerCase() === key);
                   const followers = row ? Number(row.followers || 0) : 0;
                   const label = platformLabel(key);
                   return (
+                    <StaggerItem key={key} index={i + 1}>
                     <div
-                      key={key}
-                      className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex flex-col items-center text-center justify-center min-h-[128px] transition-all duration-300 hover:border-emerald-200/80 hover:shadow-lg hover:-translate-y-0.5"
+                      className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex flex-col items-center text-center justify-center min-h-[128px] hover-lift"
                     >
                       <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-50 text-gray-800 ring-1 ring-gray-100 mb-3">
                         <PlatformIcon platform={key} className="w-6 h-6" />
@@ -353,12 +365,14 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
                       <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{label}</p>
                       <p className="text-2xl sm:text-3xl font-bold text-gray-900 tabular-nums mt-1.5">{formatNum(followers)}</p>
                     </div>
+                    </StaggerItem>
                   );
                 })}
               </div>
             </div>
           )}
         </section>
+        </FadeIn>
       </div>
     </div>
   );

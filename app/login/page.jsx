@@ -106,7 +106,7 @@ export default function LoginPage() {
           </Alert>
         ) : null}
 
-        <Button type="submit" className="w-full bg-emerald-600 text-white hover:bg-emerald-700" disabled={loading}>
+        <Button type="submit" className="w-full bg-emerald-600 text-white transition-smooth hover:bg-emerald-700 hover:shadow-lg active:scale-[0.98]" disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="size-4 animate-spin" />

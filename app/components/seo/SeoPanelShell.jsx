@@ -4,6 +4,7 @@ import { Globe } from "lucide-react";
 import PageHeader from "../ui-shared/PageHeader";
 import EmptyState from "../ui-shared/EmptyState";
 import { LoadingSpinner, StatCardSkeleton } from "../ui-shared/LoadingBlock";
+import { HoverLift } from "../ui-shared/Motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -58,7 +59,7 @@ export default function SeoPanelShell({
   }
 
   return (
-    <Card className="min-h-[calc(100vh-5.5rem)] border-border/80 shadow-sm">
+    <HoverLift as={Card} className="min-h-[calc(100vh-5.5rem)] border-border/80 shadow-sm">
       <CardContent className="space-y-6 p-5 sm:p-6">
         <PageHeader
           eyebrow={eyebrow}
@@ -104,6 +105,6 @@ export default function SeoPanelShell({
           children
         )}
       </CardContent>
-    </Card>
+    </HoverLift>
   );
 }

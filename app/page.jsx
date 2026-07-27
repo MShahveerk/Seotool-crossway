@@ -26,6 +26,7 @@ import KeywordResearchSection from "./components/seo/KeywordResearchSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { LoadingSpinner } from "./components/ui-shared/LoadingBlock";
+import { SectionTransition } from "./components/ui-shared/Motion";
 
 const WEBSITE_SEO_SECTIONS = new Set([
   "website-statistics",
@@ -160,7 +161,7 @@ export default function Home() {
       selectedSite={selectedSite}
       onSelectedSiteChange={setSelectedSite}
     >
-      {renderSection()}
+      <SectionTransition sectionKey={activeSection}>{renderSection()}</SectionTransition>
     </DashboardLayout>
   );
 }

@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { getSectionLabel } from "@/lib/sectionMeta";
 import { cn } from "@/lib/utils";
+import { FadeIn } from "../ui-shared/Motion";
 
 export default function DashboardLayout({
   children,
@@ -25,21 +26,28 @@ export default function DashboardLayout({
         selectedSite={selectedSite}
         onSelectedSiteChange={onSelectedSiteChange}
       />
-      <SidebarInset>
-        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border/80 bg-background/90 px-4 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
-          <SidebarTrigger className="-ml-1" />
+      <SidebarInset className="mesh-bg">
+        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border/60 surface-glass px-4">
+          <SidebarTrigger className="-ml-1 transition-smooth hover:bg-emerald-50" />
           <Separator orientation="vertical" className="hidden h-5 sm:block" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">{sectionLabel}</p>
+          <div className="min-w-0 flex-1" key={activeSection}>
+            <FadeIn delay={0}>
+              <p className="truncate text-sm font-semibold text-foreground">{sectionLabel}</p>
+            </FadeIn>
             {selectedSite ? (
-              <p className="truncate text-xs text-muted-foreground">
-                {String(selectedSite).startsWith("http")
-                  ? selectedSite.replace(/^https?:\/\//, "").split("/")[0]
-                  : "Client account selected"}
-              </p>
+              <FadeIn delay={40}>
+                <p className="truncate text-xs text-muted-foreground">
+                  {String(selectedSite).startsWith("http")
+                    ? selectedSite.replace(/^https?:\/\//, "").split("/")[0]
+                    : "Client account selected"}
+                </p>
+              </FadeIn>
             ) : null}
           </div>
-          <Badge variant="outline" className="hidden sm:inline-flex capitalize">
+          <Badge
+            variant="outline"
+            className="hidden capitalize transition-smooth sm:inline-flex hover:border-emerald-300 hover:bg-emerald-50/80"
+          >
             {activeSection.replace(/-/g, " ")}
           </Badge>
         </header>
@@ -48,11 +56,11 @@ export default function DashboardLayout({
           id="main-content"
           className={cn(
             "flex-1 p-3 pt-4 sm:p-4 lg:p-5",
-            isDashboard ? "bg-muted/30" : "bg-muted/20"
+            isDashboard ? "bg-muted/20" : "bg-transparent"
           )}
         >
           {isDashboard ? (
-            <div className="mx-auto max-w-6xl rounded-2xl border border-border/80 bg-card p-4 shadow-sm sm:p-6">
+            <div className="mx-auto max-w-6xl rounded-2xl border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-sm transition-smooth sm:p-6 hover:shadow-md">
               {children}
             </div>
           ) : (
