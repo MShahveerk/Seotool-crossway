@@ -332,6 +332,17 @@ export default function AiKeywordResearchSection({ selectedSite = "" }) {
             <code className="font-mono text-[11px]">OPENAI_API_KEY</code> to <code className="font-mono">.env</code>.
             Set <code className="font-mono">AI_KEYWORD_PROVIDER</code> to pick which one to use.
           </p>
+        ) : status?.ai?.available?.length ? (
+          <p className="mt-3 text-xs text-gray-500">
+            Model:{" "}
+            <code className="font-mono text-[11px] bg-white/80 px-1 rounded">
+              {status.ai.available.find((p) => p.id === status.ai.active)?.model || "—"}
+            </code>
+            {" · "}
+            Uses <code className="font-mono text-[11px]">OPENROUTER_MODEL_KEYWORD</code>, or falls back to{" "}
+            <code className="font-mono text-[11px]">OPENROUTER_MODEL_PROMPT</code> / blog / caption vars, then{" "}
+            <code className="font-mono text-[11px]">openrouter/free</code>.
+          </p>
         ) : null}
       </div>
 
