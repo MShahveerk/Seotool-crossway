@@ -91,7 +91,16 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
         });
         if (forceRefresh) params.set("refresh", "1");
         const res = await fetch(`/api/site-explorer?${params.toString()}`, { cache: "no-store" });
-        const payload = await res.json();
+        let payload;
+        try {
+          payload = await res.json();
+        } catch {
+          throw new Error(
+            res.ok
+              ? "Invalid response from site explorer API"
+              : "Request timed out or the server could not reach Common Crawl. Try Refresh now and wait 1–3 minutes."
+          );
+        }
         if (!res.ok) throw new Error(payload.error || "Failed to load site explorer data");
         setData(payload);
       } catch (err) {
@@ -140,6 +149,18 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
     >
       {data ? (
         <>
+          {data.empty ? (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 leading-relaxed">
+              {data.message}
+              {!data.authority?.configured ? (
+                <p className="mt-2 text-amber-900/90">
+                  Optional: add <code className="rounded bg-white/80 px-1 text-xs">OPENPAGERANK_API_KEY</code> to .env for
+                  authority score and referring-domain counts.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-sky-100 bg-sky-50/70 px-4 py-3 text-sm text-sky-950">
             <FiCompass className="size-4 shrink-0" aria-hidden />
             <span>

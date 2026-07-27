@@ -32,7 +32,16 @@ export default function LinkIndexSection({ selectedSite = "" }) {
         const params = new URLSearchParams({ url: selectedSite, view: "backlinks" });
         if (forceRefresh) params.set("refresh", "1");
         const res = await fetch(`/api/site-explorer?${params.toString()}`, { cache: "no-store" });
-        const payload = await res.json();
+        let payload;
+        try {
+          payload = await res.json();
+        } catch {
+          throw new Error(
+            res.ok
+              ? "Invalid response from link index API"
+              : "Request timed out. Click Refresh now and wait 1–3 minutes for the first Common Crawl fetch."
+          );
+        }
         if (!res.ok) throw new Error(payload.error || "Failed to load link index");
         setData(payload);
       } catch (err) {
@@ -77,6 +86,18 @@ export default function LinkIndexSection({ selectedSite = "" }) {
     >
       {data ? (
         <div className="space-y-6">
+          {data.empty ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 leading-relaxed">
+              {data.message}
+              {!data.authority?.configured ? (
+                <p className="mt-2 text-amber-900/90">
+                  Optional: add <code className="rounded bg-white/80 px-1 text-xs">OPENPAGERANK_API_KEY</code> to .env
+                  for DR-like score and referring-domain counts.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
               <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Authority (DR-like)</p>
