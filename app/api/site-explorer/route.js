@@ -1,6 +1,10 @@
 import { after } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]/route";
 import { isAuthorityConfigured, toDomain } from "../../../lib/authority";
 import {
+  enrichPageUrlRatings,
+  enrichWithLiveAuthority,
   executeSiteExplorerRefresh,
   getLatestSiteExplorer,
   prepareSiteExplorerRefresh,
@@ -12,14 +16,39 @@ import { resolveWebsiteAccess } from "../../../lib/resolveWebsiteAccess";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
+async function requireSession(req) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    const err = new Error("Unauthorized. Please log in.");
+    err.status = 401;
+    throw err;
+  }
+  const userRole = session.user.role || ROLES.USER;
+  if (!hasPermission(userRole, PERMISSIONS.ACCESS_SEARCH_CONSOLE)) {
+    const err = new Error("Access denied. Insufficient permissions.");
+    err.status = 403;
+    throw err;
+  }
+  return session;
+}
+
+function resolveTargetDomain(req) {
+  const exploreDomain = req.nextUrl.searchParams.get("domain")?.trim();
+  if (exploreDomain) {
+    const domain = toDomain(exploreDomain);
+    if (!domain) return { error: "Enter a valid domain (e.g. ahrefs.com)." };
+    return { domain, siteUrl: `https://${domain}`, explore: true };
+  }
+  return null;
+}
+
 function emptySiteExplorerPayload(domain, view) {
   return {
     domain,
     view,
     source: "database",
     empty: true,
-    message:
-      "No snapshot saved yet. Click Refresh now — data loads in the background and this page updates automatically.",
+    message: "Search a domain above or click Analyze to load Open PageRank metrics.",
     authority: {
       configured: isAuthorityConfigured(),
       score: null,
@@ -27,14 +56,15 @@ function emptySiteExplorerPayload(domain, view) {
       globalRank: null,
       referringDomains: null,
       found: false,
+      homepageUr100: null,
     },
+    homepageUr100: null,
     overview: null,
     items: [],
     total: 0,
     notes: [
-      "Common Crawl needs no API key — data is fetched from index.commoncrawl.org.",
-      "Set OPENPAGERANK_API_KEY in .env for authority score and referring-domain counts (optional).",
-      "Run npm run prisma:deploy on the server if you see database errors.",
+      "Open PageRank provides DR-like score, referring domain count, and homepage UR.",
+      "Common Crawl indexed pages refresh overnight (05:00 cron) to avoid rate limits.",
     ],
     openhrefs: {
       status: "planned",
@@ -60,31 +90,46 @@ function json(body, status = 200) {
   });
 }
 
+async function finalizePayload(payload, domain, view) {
+  await enrichWithLiveAuthority(payload, domain);
+  if (view === "pages" && Array.isArray(payload.items)) {
+    payload.items = await enrichPageUrlRatings(payload.items);
+  }
+  return payload;
+}
+
 function runningPayload({ domain, view, page, pageSize, latest, message }) {
-  return {
-    domain,
-    view,
-    source: "database",
-    running: true,
-    message,
-    ...(latest ? snapshotToApiPayload(latest, { view, page, pageSize }) : emptySiteExplorerPayload(domain, view)),
-  };
+  const base = latest
+    ? snapshotToApiPayload(latest, { view, page, pageSize })
+    : emptySiteExplorerPayload(domain, view);
+  return { ...base, domain, view, source: "database", running: true, message };
 }
 
 /**
- * GET /api/site-explorer?url=&view=overview|pages|subdomains|referring|backlinks&refresh=1
- * Serves the latest stored daily snapshot; refresh=1 queues Common Crawl + Open PageRank via after().
+ * GET /api/site-explorer?domain=|url=&view=...&refresh=1
+ * Explore any domain (Ahrefs-style). Manual refresh = Open PageRank only; CDX runs on cron.
  */
 export async function GET(req) {
   try {
-    const { session, siteUrl } = await resolveWebsiteAccess(req);
-    const userRole = session.user.role || ROLES.USER;
-    if (!hasPermission(userRole, PERMISSIONS.ACCESS_SEARCH_CONSOLE)) {
-      return json({ error: "Access denied. Insufficient permissions." }, 403);
+    await requireSession(req);
+
+    const target = resolveTargetDomain(req);
+    let domain;
+    let siteUrl;
+    let explore = false;
+
+    if (target?.error) return json({ error: target.error }, 400);
+    if (target) {
+      domain = target.domain;
+      siteUrl = target.siteUrl;
+      explore = target.explore;
+    } else {
+      const { siteUrl: resolvedUrl } = await resolveWebsiteAccess(req);
+      siteUrl = resolvedUrl;
+      domain = toDomain(siteUrl);
     }
 
-    const domain = toDomain(siteUrl);
-    if (!domain) return json({ error: "Could not extract a domain from the selected website." }, 400);
+    if (!domain) return json({ error: "Could not extract a domain." }, 400);
 
     const view = req.nextUrl.searchParams.get("view") || "overview";
     const page = Math.max(1, Number(req.nextUrl.searchParams.get("page") || 1));
@@ -99,55 +144,67 @@ export async function GET(req) {
         if (prep.started && prep.snapshotId) {
           const snapshotId = prep.snapshotId;
           after(async () => {
-            await executeSiteExplorerRefresh(siteUrl, snapshotId, { includeReferring: false });
+            await executeSiteExplorerRefresh(siteUrl, snapshotId, {
+              includeReferring: false,
+              includeCrawl: false,
+            });
           });
         }
       }
 
-      return json(
-        runningPayload({
-          domain,
-          view,
-          page,
-          pageSize,
-          latest,
-          message:
-            "Fetching indexed pages and authority in the background (about 30–60 seconds). This page updates automatically.",
-        }),
-        202
-      );
+      const body = runningPayload({
+        domain,
+        view,
+        page,
+        pageSize,
+        latest,
+        message:
+          "Loading Open PageRank (DA, referring domains, homepage UR). Indexed pages update overnight via cron.",
+      });
+      await finalizePayload(body, domain, view);
+      return json(body, 202);
     }
 
     const { latest, running, failedToday } = await getLatestSiteExplorer(domain);
 
     if (running) {
-      return json(
-        runningPayload({
-          domain,
-          view,
-          page,
-          pageSize,
-          latest,
-          message: "Refresh in progress — showing the last saved snapshot until the new one is ready.",
-        })
-      );
+      const body = runningPayload({
+        domain,
+        view,
+        page,
+        pageSize,
+        latest,
+        message: "Analysis in progress — showing last saved data until ready.",
+      });
+      await finalizePayload(body, domain, view);
+      return json(body);
     }
 
     if (latest) {
-      return json(snapshotToApiPayload(latest, { view, page, pageSize }));
+      const body = snapshotToApiPayload(latest, { view, page, pageSize });
+      body.explore = explore;
+      await finalizePayload(body, domain, view);
+      return json(body);
     }
 
-    if (failedToday?.errorMessage) {
+    if (failedToday?.errorMessage && !explore) {
       return json(
         {
           error: failedToday.errorMessage,
-          hint: "If this keeps failing, confirm npm run prisma:deploy was run and that index.commoncrawl.org is reachable from your server.",
+          hint: "Try Analyze again. Common Crawl runs on the nightly cron only.",
         },
         502
       );
     }
 
-    return json(emptySiteExplorerPayload(domain, view));
+    const body = emptySiteExplorerPayload(domain, view);
+    body.explore = explore;
+    await finalizePayload(body, domain, view);
+    if (body.authority?.found) {
+      body.empty = false;
+      body.message = "Open PageRank loaded. Click Analyze to save today's snapshot. Indexed pages fill in overnight.";
+    }
+    return json(body);
   } catch (error) {
     const status = error.status || 500;
     if (status >= 500) console.error("Site explorer API error:", error);

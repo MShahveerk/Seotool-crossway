@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import {
-  FiRefreshCw,
   FiGlobe,
   FiExternalLink,
   FiInfo,
   FiCompass,
-  FiLink,
+  FiSearch,
 } from "react-icons/fi";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
 import ReportSectionActions from "../ReportSectionActions";
@@ -19,6 +18,17 @@ const TABS = [
   { id: "subdomains", label: "Subdomains" },
   { id: "referring", label: "Referring domains" },
 ];
+
+function hostFromSite(site) {
+  if (!site) return "";
+  try {
+    const u = site.startsWith("http") || site.startsWith("sc-domain:") ? site : `https://${site}`;
+    if (u.startsWith("sc-domain:")) return u.replace("sc-domain:", "").trim();
+    return new URL(u).hostname.replace(/^www\./, "");
+  } catch {
+    return String(site).replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0] || "";
+  }
+}
 
 function StatCard({ label, value, sub, accent = "border-gray-200" }) {
   return (
@@ -69,54 +79,113 @@ function BreakdownList({ title, data, limit = 6 }) {
 export default function SiteExplorerSection({ selectedSite = "" }) {
   const [tab, setTab] = useState("overview");
   const [page, setPage] = useState(1);
+  const [domainInput, setDomainInput] = useState("");
+  const [activeDomain, setActiveDomain] = useState("");
+  const [pendingAnalyze, setPendingAnalyze] = useState(false);
   const pageSize = 50;
 
+  useEffect(() => {
+    const host = hostFromSite(selectedSite);
+    if (host && !activeDomain) {
+      setDomainInput(host);
+      setActiveDomain(host);
+    }
+  }, [selectedSite, activeDomain]);
+
   const { data, loading, refreshing, error, load } = useSiteExplorerFetch({
-    selectedSite,
+    selectedSite: activeDomain ? "" : selectedSite,
+    exploreDomain: activeDomain,
     view: tab,
     page,
     pageSize,
   });
 
   useEffect(() => {
-    setPage(1);
-  }, [tab, selectedSite]);
+    if (pendingAnalyze && activeDomain) {
+      setPendingAnalyze(false);
+      load(true);
+    }
+  }, [pendingAnalyze, activeDomain, load]);
 
-  const overview = data?.overview;
+  const runAnalyze = () => {
+    const d = domainInput
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .split("/")[0];
+    if (!d) return;
+    setActiveDomain(d);
+    setPendingAnalyze(true);
+  };
+
+  useEffect(() => {
+    setPage(1);
+  }, [tab, activeDomain]);
+
+  const overview = data?.overview || {
+    indexedUrls: 0,
+    subdomains: 0,
+    referringDomains: 0,
+    http200Rate: null,
+    statusBreakdown: {},
+    mimeBreakdown: {},
+    lastCapture: null,
+  };
   const authority = data?.authority;
+  const displayDomain = data?.domain || activeDomain;
 
   return (
     <SeoPanelShell
       title="Site Explorer"
       eyebrow=""
-      siteUrl={
-        selectedSite && (String(selectedSite).startsWith("http") || String(selectedSite).startsWith("sc-domain:"))
-          ? selectedSite
-          : undefined
-      }
-      description="Domain intelligence from daily Common Crawl CDX snapshots — indexed pages, subdomains, authority, and referring domains stored in your database."
+      siteUrl={displayDomain ? `https://${displayDomain}` : undefined}
+      description="Explore any domain — Open PageRank for DA, referring domains, and UR. Common Crawl indexed pages update overnight."
       selectedSite={selectedSite}
       loading={loading}
       error={error}
       action={
         <ReportSectionActions
           section="site-explorer"
-          activeSite={selectedSite}
-          onRefresh={() => load(true)}
+          activeSite={displayDomain ? `https://${displayDomain}` : selectedSite}
+          onRefresh={runAnalyze}
           loading={loading || refreshing}
-          refreshLabel={refreshing ? "Fetching…" : "Refresh now"}
+          refreshLabel={refreshing ? "Analyzing…" : "Analyze"}
         />
       }
     >
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <FiSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" aria-hidden />
+          <input
+            type="text"
+            value={domainInput}
+            onChange={(e) => setDomainInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && runAnalyze(true)}
+            placeholder="Any domain — e.g. ahrefs.com, nike.com"
+            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+          />
+        </div>
+        <button
+          type="button"
+          disabled={loading || refreshing || !domainInput.trim()}
+          onClick={runAnalyze}
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1d9c35] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#178a2e] disabled:opacity-50"
+        >
+          <FiCompass className="size-4" aria-hidden />
+          Analyze
+        </button>
+      </div>
+
       {data ? (
         <>
-          {data.empty ? (
+          {data.empty && !authority?.found ? (
             <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 leading-relaxed">
               {data.message}
-              {!data.authority?.configured ? (
+              {!authority?.configured ? (
                 <p className="mt-2 text-amber-900/90">
-                  Optional: add <code className="rounded bg-white/80 px-1 text-xs">OPENPAGERANK_API_KEY</code> to .env for
-                  authority score and referring-domain counts.
+                  Add <code className="rounded bg-white/80 px-1 text-xs">OPENPAGERANK_API_KEY</code> to .env for DA,
+                  referring domains, and UR.
                 </p>
               ) : null}
             </div>
@@ -145,7 +214,10 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
           {data.blocked ? (
             <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               <FiInfo className="mt-0.5 size-4 shrink-0" aria-hidden />
-              <span>Common Crawl rate-limited the last fetch. Stored data is shown; try Refresh now later.</span>
+              <span>
+                Common Crawl rate-limited the last crawl. DA and referring domains still come from Open PageRank. Indexed
+                pages retry on the 05:00 cron.
+              </span>
             </div>
           ) : null}
 
@@ -164,31 +236,49 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
             ))}
           </div>
 
-          {tab === "overview" && overview ? (
+          {tab === "overview" && (overview || authority?.found) ? (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <StatCard
                   label="Authority (DR-like)"
                   value={authority?.score100 != null ? `${authority.score100}/100` : "—"}
-                  sub="Open PageRank · refreshed daily at 04:30"
+                  sub="Open PageRank domain score"
                   accent="border-emerald-100 bg-emerald-50/40"
                 />
                 <StatCard
-                  label="Referring domains (OPR)"
-                  value={authority?.referringDomains != null ? formatNum(authority.referringDomains) : "—"}
-                  sub="From Open PageRank when API key is set"
+                  label="Homepage UR"
+                  value={data.homepageUr100 != null ? `${data.homepageUr100}/100` : authority?.score100 != null ? `${authority.score100}/100` : "—"}
+                  sub="UR-like · OPR on registrable domain"
+                  accent="border-teal-100 bg-teal-50/40"
+                />
+                <StatCard
+                  label="Referring domains"
+                  value={
+                    authority?.referringDomains != null
+                      ? formatNum(authority.referringDomains)
+                      : authority?.configured
+                        ? "—"
+                        : "—"
+                  }
+                  sub={
+                    authority?.configured
+                      ? authority?.referringDomains == null
+                        ? "Not in OPR index for this domain"
+                        : "Open PageRank (live)"
+                      : "Set OPENPAGERANK_API_KEY"
+                  }
                   accent="border-amber-100 bg-amber-50/40"
                 />
                 <StatCard
                   label="Indexed URLs"
                   value={formatNum(overview.indexedUrls)}
-                  sub="Common Crawl CDX · saved daily at 05:00"
+                  sub="Common Crawl · nightly cron"
                   accent="border-sky-100 bg-sky-50/40"
                 />
                 <StatCard
-                  label="Referring (CC est.)"
+                  label="Link samples (CC)"
                   value={formatNum(overview.referringDomains)}
-                  sub="External URL mentions in CDX (estimate)"
+                  sub="Overnight crawl estimate"
                   accent="border-violet-100 bg-violet-50/40"
                 />
               </div>
@@ -230,6 +320,7 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50 text-left text-[11px] font-bold uppercase tracking-wider text-gray-500">
                   <tr>
+                    <th className="px-4 py-3">UR-like</th>
                     <th className="px-4 py-3">URL</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Type</th>
@@ -239,6 +330,9 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
                 <tbody>
                   {(data.items || []).map((row) => (
                     <tr key={`${row.url}-${row.timestamp}`} className="border-t border-gray-100">
+                      <td className="px-4 py-3 tabular-nums font-semibold text-gray-900">
+                        {row.ur100 != null ? `${row.ur100}/100` : "—"}
+                      </td>
                       <td className="max-w-md truncate px-4 py-3">
                         <a
                           href={row.url}
@@ -310,8 +404,8 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
           {tab === "referring" ? (
             <div className="space-y-4">
               <p className="text-sm text-gray-600 leading-relaxed">
-                For Ahrefs-grade referring domains, see <strong>Link Index</strong> in the sidebar (Open PageRank +
-                stored CDX estimates). CDX rows below are external URL mentions, not a full HTML link graph.
+                Referring domain <strong>count</strong> comes from Open PageRank above. Rows below are Common Crawl URL
+                mentions (filled overnight). For a full link list see <strong>Link Index</strong>.
               </p>
               <div className="overflow-x-auto rounded-xl border border-gray-200">
                 <table className="min-w-full text-sm">
