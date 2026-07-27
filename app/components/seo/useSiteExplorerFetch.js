@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const POLL_MS = 5000;
-const MAX_POLL_ATTEMPTS = 72;
+const POLL_MS = 4000;
+const MAX_POLL_ATTEMPTS = 90;
 
 async function parseSiteExplorerResponse(res) {
   let payload;
@@ -12,12 +12,13 @@ async function parseSiteExplorerResponse(res) {
   } catch {
     throw new Error(
       res.status === 502 || res.status === 504 || res.status === 524
-        ? "Gateway timed out. The refresh may still be running — wait a minute and this page will retry automatically."
+        ? "Gateway timed out talking to the server. Wait a moment — if a refresh was started, polling will retry."
         : "Could not read server response."
     );
   }
   if (!res.ok && res.status !== 202) {
-    throw new Error(payload.error || "Failed to load site explorer data");
+    const hint = payload.hint ? ` ${payload.hint}` : "";
+    throw new Error((payload.error || "Failed to load site explorer data") + hint);
   }
   return payload;
 }
@@ -42,7 +43,11 @@ export function useSiteExplorerFetch({ selectedSite, view = "overview", page = 1
 
   const schedulePoll = useCallback(
     (runLoad) => {
-      if (pollAttempts.current >= MAX_POLL_ATTEMPTS) return;
+      if (pollAttempts.current >= MAX_POLL_ATTEMPTS) {
+        setError("Refresh is taking longer than expected. Try Refresh now again, or check server logs.");
+        setRefreshing(false);
+        return;
+      }
       pollAttempts.current += 1;
       clearPoll();
       pollTimer.current = setTimeout(() => runLoad(false, { silent: true }), POLL_MS);
@@ -63,8 +68,6 @@ export function useSiteExplorerFetch({ selectedSite, view = "overview", page = 1
       if (!silent) {
         if (forceRefresh) setRefreshing(true);
         else setLoading(true);
-      } else if (forceRefresh) {
-        setRefreshing(true);
       }
 
       setError("");
@@ -91,10 +94,10 @@ export function useSiteExplorerFetch({ selectedSite, view = "overview", page = 1
           clearPoll();
         }
       } catch (err) {
-        if (!silent) {
-          setData(null);
+        if (!silent || pollAttempts.current === 0) {
           setError(err.message || "Failed to load site explorer data");
         }
+        if (!silent) setData(null);
         setRefreshing(false);
         clearPoll();
       } finally {

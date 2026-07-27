@@ -1,14 +1,15 @@
+import { after } from "next/server";
 import { isAuthorityConfigured, toDomain } from "../../../lib/authority";
 import {
+  executeSiteExplorerRefresh,
   getLatestSiteExplorer,
-  kickSiteExplorerRefresh,
+  prepareSiteExplorerRefresh,
   snapshotToApiPayload,
 } from "../../../lib/siteExplorerJobs";
 import { ROLES, hasPermission, PERMISSIONS } from "../../../lib/rbac";
 import { resolveWebsiteAccess } from "../../../lib/resolveWebsiteAccess";
 
 export const runtime = "nodejs";
-/** Common Crawl first fetch can take 1–3 minutes (many CDX queries). */
 export const maxDuration = 300;
 
 function emptySiteExplorerPayload(domain, view) {
@@ -18,7 +19,7 @@ function emptySiteExplorerPayload(domain, view) {
     source: "database",
     empty: true,
     message:
-      "No snapshot saved yet. Click Refresh now — Common Crawl runs in the background and this page updates automatically.",
+      "No snapshot saved yet. Click Refresh now — data loads in the background and this page updates automatically.",
     authority: {
       configured: isAuthorityConfigured(),
       score: null,
@@ -33,6 +34,7 @@ function emptySiteExplorerPayload(domain, view) {
     notes: [
       "Common Crawl needs no API key — data is fetched from index.commoncrawl.org.",
       "Set OPENPAGERANK_API_KEY in .env for authority score and referring-domain counts (optional).",
+      "Run npm run prisma:deploy on the server if you see database errors.",
     ],
     openhrefs: {
       status: "planned",
@@ -58,9 +60,20 @@ function json(body, status = 200) {
   });
 }
 
+function runningPayload({ domain, view, page, pageSize, latest, message }) {
+  return {
+    domain,
+    view,
+    source: "database",
+    running: true,
+    message,
+    ...(latest ? snapshotToApiPayload(latest, { view, page, pageSize }) : emptySiteExplorerPayload(domain, view)),
+  };
+}
+
 /**
  * GET /api/site-explorer?url=&view=overview|pages|subdomains|referring|backlinks&refresh=1
- * Serves the latest stored daily snapshot; refresh=1 re-fetches Common Crawl + Open PageRank.
+ * Serves the latest stored daily snapshot; refresh=1 queues Common Crawl + Open PageRank via after().
  */
 export async function GET(req) {
   try {
@@ -78,45 +91,63 @@ export async function GET(req) {
     const pageSize = Math.min(100, Math.max(10, Number(req.nextUrl.searchParams.get("pageSize") || 50)));
     const refresh = req.nextUrl.searchParams.get("refresh") === "1";
 
-    let snapshot = null;
-
     if (refresh) {
       const { latest, running } = await getLatestSiteExplorer(domain);
-      if (!running) kickSiteExplorerRefresh(siteUrl);
+
+      if (!running) {
+        const prep = await prepareSiteExplorerRefresh(siteUrl);
+        if (prep.started && prep.snapshotId) {
+          const snapshotId = prep.snapshotId;
+          after(async () => {
+            await executeSiteExplorerRefresh(siteUrl, snapshotId, { includeReferring: false });
+          });
+        }
+      }
+
       return json(
-        {
+        runningPayload({
           domain,
           view,
-          source: "database",
-          running: true,
+          page,
+          pageSize,
+          latest,
           message:
-            "Fetching from Common Crawl in the background (usually 30–90 seconds). This page updates automatically.",
-          ...(latest ? snapshotToApiPayload(latest, { view, page, pageSize }) : emptySiteExplorerPayload(domain, view)),
-        },
+            "Fetching indexed pages and authority in the background (about 30–60 seconds). This page updates automatically.",
+        }),
         202
       );
-    } else {
-      const { latest, running, failedToday } = await getLatestSiteExplorer(domain);
-      if (running) {
-        return json({
-          domain,
-          view,
-          source: "database",
-          running: true,
-          message: "A site explorer refresh is already in progress. Showing the last saved snapshot when ready.",
-          ...(latest ? snapshotToApiPayload(latest, { view, page, pageSize }) : {}),
-        });
-      }
-      if (latest) {
-        snapshot = latest;
-      } else if (failedToday?.errorMessage) {
-        return json({ error: failedToday.errorMessage || "Site explorer fetch failed." }, 502);
-      } else {
-        return json(emptySiteExplorerPayload(domain, view));
-      }
     }
 
-    return json(snapshotToApiPayload(snapshot, { view, page, pageSize }));
+    const { latest, running, failedToday } = await getLatestSiteExplorer(domain);
+
+    if (running) {
+      return json(
+        runningPayload({
+          domain,
+          view,
+          page,
+          pageSize,
+          latest,
+          message: "Refresh in progress — showing the last saved snapshot until the new one is ready.",
+        })
+      );
+    }
+
+    if (latest) {
+      return json(snapshotToApiPayload(latest, { view, page, pageSize }));
+    }
+
+    if (failedToday?.errorMessage) {
+      return json(
+        {
+          error: failedToday.errorMessage,
+          hint: "If this keeps failing, confirm npm run prisma:deploy was run and that index.commoncrawl.org is reachable from your server.",
+        },
+        502
+      );
+    }
+
+    return json(emptySiteExplorerPayload(domain, view));
   } catch (error) {
     const status = error.status || 500;
     if (status >= 500) console.error("Site explorer API error:", error);
