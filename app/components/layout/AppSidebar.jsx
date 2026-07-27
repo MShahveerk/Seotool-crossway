@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
-  BarChart3,
   Calendar,
   CheckSquare,
   ChevronDown,
@@ -12,18 +11,20 @@ import {
   Compass,
   Crosshair,
   FileText,
+  Globe,
   HelpCircle,
   LayoutDashboard,
   Link2,
   LogOut,
   Map,
+  Megaphone,
   Monitor,
   Search,
   Settings,
   Shield,
   Sparkles,
-  TrendingUp,
   Users,
+  Wand2,
   Zap,
   Award,
   Activity,
@@ -67,9 +68,9 @@ import { cn } from "@/lib/utils";
 
 const mainMenuItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "website-statistics", label: "Website Statistics", icon: BarChart3 },
+  { id: "website-statistics", label: "Website Statistics", icon: Globe },
   { id: "pagespeed-insights", label: "PageSpeed Insights", icon: Activity },
-  { id: "smm-statistics", label: "SMM Statistics", icon: TrendingUp },
+  { id: "smm-statistics", label: "SMM Statistics", icon: Megaphone },
   { id: "calendar", label: "Content Calendar", icon: Calendar },
   { id: "my-approvals", label: "SMM Post Approvals", icon: CheckSquare },
   { id: "my-blog-approvals", label: "Blog Approvals", icon: FileText },
@@ -88,11 +89,20 @@ const websiteSeoMenuItems = [
   { id: "sitemap-health", label: "Sitemap Health", icon: FileText },
 ];
 
-const adminMenuItems = [
+const createMenuItems = [
   { id: "admin-approvals", label: "Create Post", icon: ClipboardList, role: "super_admin" },
   { id: "admin-blogs", label: "Create Blog", icon: FileText, role: "super_admin" },
   { id: "blog-automation", label: "Blog Automation", icon: Sparkles, role: "super_admin" },
 ];
+
+function canAccessCreateItem(item, role) {
+  if (!item.role) return true;
+  if (role === item.role) return true;
+  return (
+    (item.id === "admin-approvals" || item.id === "admin-blogs" || item.id === "blog-automation") &&
+    role === "smm"
+  );
+}
 
 function getSiteHostName(siteUrl) {
   if (!siteUrl) return "No Site Linked";
@@ -354,28 +364,17 @@ export default function AppSidebar({
           </Collapsible>
         ) : null}
 
-        {(hasGlobalSiteAccess || adminMenuItems.some((item) => !item.role)) &&
-        adminMenuItems.some(
-          (item) =>
-            !item.role ||
-            session?.user?.role === item.role ||
-            ((item.id === "admin-approvals" || item.id === "admin-blogs" || item.id === "blog-automation") &&
-              session?.user?.role === "smm")
-        ) ? (
+        {(hasGlobalSiteAccess || createMenuItems.some((item) => !item.role)) &&
+        createMenuItems.some((item) => canAccessCreateItem(item, session?.user?.role)) ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Admin</SidebarGroupLabel>
+            <SidebarGroupLabel className="flex items-center gap-2">
+              <Wand2 className="size-3.5 shrink-0 opacity-80" aria-hidden />
+              Create
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {adminMenuItems
-                  .filter(
-                    (item) =>
-                      !item.role ||
-                      session?.user?.role === item.role ||
-                      ((item.id === "admin-approvals" ||
-                        item.id === "admin-blogs" ||
-                        item.id === "blog-automation") &&
-                        session?.user?.role === "smm")
-                  )
+                {createMenuItems
+                  .filter((item) => canAccessCreateItem(item, session?.user?.role))
                   .map((item) => {
                     const badge =
                       item.id === "admin-approvals" && approvalAdminUnread > 0
@@ -392,6 +391,10 @@ export default function AppSidebar({
 
         {isSuperAdmin ? (
           <SidebarGroup>
+            <SidebarGroupLabel className="flex items-center gap-2">
+              <Shield className="size-3.5 shrink-0 opacity-80" aria-hidden />
+              Admin
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
@@ -404,25 +407,42 @@ export default function AppSidebar({
                     <span>User Management</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => window.open("mailto:support@crossway.com", "_blank")}
+                    tooltip="Help & support"
+                  >
+                    <HelpCircle className="size-4" />
+                    <span>Help & Support</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        ) : null}
+        ) : (
+          <SidebarGroup>
+            <SidebarGroupLabel className="flex items-center gap-2">
+              <Shield className="size-3.5 shrink-0 opacity-80" aria-hidden />
+              Admin
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => window.open("mailto:support@crossway.com", "_blank")}
+                    tooltip="Help & support"
+                  >
+                    <HelpCircle className="size-4" />
+                    <span>Help & Support</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border/80">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => window.open("mailto:support@crossway.com", "_blank")}
-              tooltip="Help & support"
-            >
-              <HelpCircle className="size-4" />
-              <span>Help & Support</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <SidebarSeparator />
         <DropdownMenu>
           <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center">
             <Avatar className="size-8">

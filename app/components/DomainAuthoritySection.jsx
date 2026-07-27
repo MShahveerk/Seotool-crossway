@@ -26,6 +26,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { isMetaPageId } from "../../lib/siteAccess";
+import { toScore100 } from "../../lib/authorityScore";
 
 function siteHost(url) {
   if (!url) return "";
@@ -34,11 +35,6 @@ function siteHost(url) {
   } catch {
     return String(url).replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0] || "";
   }
-}
-
-function toScore100(score10) {
-  if (score10 == null || !Number.isFinite(Number(score10))) return null;
-  return Math.round(Number(score10) * 1000) / 10;
 }
 
 function scoreTone(score10) {
