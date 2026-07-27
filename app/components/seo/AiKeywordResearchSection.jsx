@@ -152,9 +152,16 @@ function SourceBadge({ source }) {
   return <span className="text-gray-400 text-xs">—</span>;
 }
 
-export default function AiKeywordResearchSection({ selectedSite = "" }) {
+export default function AiKeywordResearchSection({
+  selectedSite = "",
+  embedded = false,
+  geo: geoProp,
+  onGeoChange,
+}) {
   const [seedInput, setSeedInput] = useState("");
-  const [geo, setGeo] = useState("us");
+  const [geoInternal, setGeoInternal] = useState("us");
+  const geo = embedded && geoProp != null ? geoProp : geoInternal;
+  const setGeo = embedded && onGeoChange ? onGeoChange : setGeoInternal;
   const [filter, setFilter] = useState("all");
   const [sortKey, setSortKey] = useState("opportunityScore");
   const [sortDir, setSortDir] = useState("desc");
@@ -252,19 +259,8 @@ export default function AiKeywordResearchSection({ selectedSite = "" }) {
       ? PROVIDER_LABELS[status.ai.active] || status.ai.active
       : null;
 
-  return (
-    <SeoPanelShell
-      title="AI Keyword Research"
-      description="Ahrefs-style keyword intelligence — AI expands your seed keyword, then Google Ads fills in real volume, CPC, and competition when configured."
-      selectedSite={selectedSite}
-      loading={loading}
-      error={error}
-      action={
-        data ? (
-          <ReportSectionActions section="ai-keyword-research" activeSite={selectedSite} />
-        ) : null
-      }
-    >
+  const panel = (
+    <>
       {/* Hero search */}
       <div className="mb-6 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 via-white to-violet-50/60 p-5 sm:p-6 shadow-sm">
         <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -558,6 +554,39 @@ export default function AiKeywordResearchSection({ selectedSite = "" }) {
           </p>
         </div>
       ) : null}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div>
+        {error ? (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
+        ) : null}
+        {loading ? (
+          <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
+            <FiRefreshCw className="animate-spin" size={16} /> Analyzing keywords…
+          </div>
+        ) : null}
+        {panel}
+      </div>
+    );
+  }
+
+  return (
+    <SeoPanelShell
+      title="AI Keyword Research"
+      description="Ahrefs-style keyword intelligence — AI expands your seed keyword, then Google Ads fills in real volume, CPC, and competition when configured."
+      selectedSite={selectedSite}
+      loading={loading}
+      error={error}
+      action={
+        data ? (
+          <ReportSectionActions section="ai-keyword-research" activeSite={selectedSite} />
+        ) : null
+      }
+    >
+      {panel}
     </SeoPanelShell>
   );
 }

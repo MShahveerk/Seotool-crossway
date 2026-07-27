@@ -11,6 +11,7 @@ import {
   FiExternalLink,
   FiZap,
 } from "react-icons/fi";
+import { Sparkles } from "lucide-react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -21,6 +22,7 @@ import {
 } from "recharts";
 import SeoPanelShell, { formatNum, formatPct, formatPos } from "./SeoPanelShell";
 import ReportSectionActions from "../ReportSectionActions";
+import AiKeywordResearchSection from "./AiKeywordResearchSection";
 import { TAG_META } from "../../../lib/keywordResearchHelpers";
 
 const GEO_OPTIONS = [
@@ -146,8 +148,150 @@ function SummaryCards({ summary, planner }) {
   );
 }
 
-export default function KeywordResearchSection({ selectedSite = "" }) {
-  const [tab, setTab] = useState("ranked");
+function AiSiteBriefPanel({ brief, loading, error, onGenerate, hasData }) {
+  if (!brief && !loading && !error) {
+    return (
+      <div className="mb-6 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-semibold text-indigo-900">
+              <Sparkles size={16} /> AI keyword strategy
+            </p>
+            <p className="mt-1 text-xs text-indigo-800/80 max-w-xl">
+              Analyze your existing Search Console keywords — AI prioritizes actions, clusters topics, and finds gaps
+              (like an Ahrefs site audit for keywords).
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onGenerate}
+            disabled={loading || !hasData}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {loading ? <FiRefreshCw className="animate-spin" size={14} /> : <Sparkles size={14} />}
+            Generate AI insights
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        AI brief failed: {error}
+        <button type="button" onClick={onGenerate} className="ml-3 underline font-semibold">
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-6 flex items-center gap-3 text-sm text-indigo-800">
+        <FiRefreshCw className="animate-spin shrink-0" size={18} />
+        AI is analyzing your keyword portfolio…
+      </div>
+    );
+  }
+
+  if (!brief) return null;
+
+  const impactStyle = {
+    high: "bg-red-100 text-red-800",
+    medium: "bg-amber-100 text-amber-800",
+    low: "bg-gray-100 text-gray-600",
+  };
+
+  return (
+    <div className="mb-6 rounded-2xl border border-indigo-100 bg-white overflow-hidden shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-50 bg-indigo-50/50 px-5 py-3">
+        <p className="flex items-center gap-2 text-sm font-semibold text-indigo-900">
+          <Sparkles size={16} /> AI keyword strategy
+        </p>
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={loading}
+          className="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+        >
+          Refresh insights
+        </button>
+      </div>
+      <div className="p-5 space-y-5">
+        <p className="text-sm text-gray-700 leading-relaxed">{brief.overview}</p>
+
+        {brief.quickWins?.length ? (
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Quick wins</p>
+            <ul className="grid sm:grid-cols-3 gap-2">
+              {brief.quickWins.slice(0, 3).map((w) => (
+                <li key={w} className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-xs text-emerald-900">
+                  {w}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {brief.topPriorities?.length ? (
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Top priorities</p>
+            <ul className="space-y-2">
+              {brief.topPriorities.slice(0, 6).map((p) => (
+                <li key={`${p.query}-${p.action}`} className="rounded-lg border border-gray-100 px-3 py-2 text-xs">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-gray-900">{p.query}</span>
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${impactStyle[p.impact] || impactStyle.medium}`}>
+                      {p.impact || "medium"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-gray-600">
+                    <span className="font-medium text-indigo-700">{p.action}</span>
+                    {p.reason ? ` — ${p.reason}` : ""}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <div className="grid md:grid-cols-2 gap-4">
+          {brief.contentClusters?.length ? (
+            <div className="rounded-xl border border-gray-100 p-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Content clusters</p>
+              <ul className="space-y-2">
+                {brief.contentClusters.slice(0, 4).map((c) => (
+                  <li key={c.theme} className="text-xs">
+                    <p className="font-semibold text-gray-900">{c.theme}</p>
+                    <p className="text-gray-500 mt-0.5">{c.recommendation}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {brief.gaps?.length ? (
+            <div className="rounded-xl border border-gray-100 p-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">Topic gaps to explore</p>
+              <ul className="space-y-2">
+                {brief.gaps.slice(0, 4).map((g) => (
+                  <li key={g.topic} className="text-xs">
+                    <p className="font-semibold text-gray-900">{g.topic}</p>
+                    <p className="text-gray-500 mt-0.5">{g.reason}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function KeywordResearchSection({ selectedSite = "", initialTab = "ranked" }) {
+  const [tab, setTab] = useState(initialTab === "explore" ? "explore" : initialTab || "ranked");
   const [range, setRange] = useState("28d");
   const [geo, setGeo] = useState("us");
   const [loading, setLoading] = useState(true);
@@ -156,6 +300,13 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
   const [data, setData] = useState(null);
   const [filter, setFilter] = useState("");
   const [seedInput, setSeedInput] = useState("");
+  const [aiBrief, setAiBrief] = useState(null);
+  const [aiBriefLoading, setAiBriefLoading] = useState(false);
+  const [aiBriefError, setAiBriefError] = useState("");
+
+  useEffect(() => {
+    if (initialTab === "explore") setTab("explore");
+  }, [initialTab]);
 
   const load = useCallback(
     async (force = false, seedOverride) => {
@@ -195,12 +346,34 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
   );
 
   useEffect(() => {
-    if (tab === "suggest") {
+    if (tab === "suggest" || tab === "explore") {
       setLoading(false);
       return;
     }
     load(false);
   }, [load, tab]);
+
+  const runAiBrief = useCallback(async () => {
+    if (!selectedSite) return;
+    setAiBriefLoading(true);
+    setAiBriefError("");
+    try {
+      const qs = `?url=${encodeURIComponent(selectedSite)}`;
+      const res = await fetch(`/api/keywords/ai-research${qs}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "site-brief", geo, range }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "AI brief failed");
+      setAiBrief(body.brief);
+    } catch (e) {
+      setAiBriefError(e.message || "AI brief failed");
+      setAiBrief(null);
+    } finally {
+      setAiBriefLoading(false);
+    }
+  }, [selectedSite, geo, range]);
 
   const filteredRows = useMemo(() => {
     const rows = sortByPriorityDesc(data?.rows || [], { labelKey: "query" });
@@ -244,7 +417,7 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
   return (
     <SeoPanelShell
       title="Keyword Research"
-      description="Search Console rankings, free autocomplete suggestions (Google, Bing, YouTube), and optional Google Ads volume data — prioritized by opportunity."
+      description="Your site's keyword performance (Search Console + Google Ads), AI strategy insights, and seed-based market exploration — in one Ahrefs-style hub."
       selectedSite={selectedSite}
       range={range}
       onRangeChange={setRange}
@@ -310,7 +483,7 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
         </div>
       ) : null}
 
-      {!loading && !error && (data || tab === "suggest") ? (
+      {selectedSite && (tab === "explore" || tab === "suggest" || (!loading && !error && data)) ? (
         <>
           <div className="flex gap-2 mb-4 border-b border-gray-100 pb-1">
             <button
@@ -323,7 +496,19 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
               }`}
             >
               <FiTarget className="h-4 w-4" aria-hidden />
-              Your rankings + market
+              Your keywords
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("explore")}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-t-lg border-b-2 transition-colors ${
+                tab === "explore"
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <Sparkles className="h-4 w-4" aria-hidden />
+              Explore seed
             </button>
             <button
               type="button"
@@ -381,33 +566,44 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
             </div>
           ) : null}
 
-          <p className="mb-4 text-xs text-gray-500">
-            Market: <span className="font-semibold text-gray-700">{geoLabel}</span>
-            {tab === "suggest" || isAutocompleteDiscover
-              ? " · Free autocomplete (Google, Bing, YouTube) — no volume data"
-              : data?.planner?.fetchedAt
-                ? ` · Planner data ${data.planner.fromCache ? "cached" : "refreshed"} ${new Date(data.planner.fetchedAt).toLocaleDateString()}`
-                : !data?.configured
-                  ? " · Search Console only until Planner is connected"
-                  : ""}
-            {data?.configured && tab === "ranked" ? (
-              <span className="text-gray-400"> · Volume is a Google Ads estimate, not exact search count</span>
-            ) : null}
-          </p>
+          {tab !== "explore" ? (
+            <>
+              <p className="mb-4 text-xs text-gray-500">
+                Market: <span className="font-semibold text-gray-700">{geoLabel}</span>
+                {tab === "suggest" || isAutocompleteDiscover
+                  ? " · Free autocomplete (Google, Bing, YouTube) — no volume data"
+                  : data?.planner?.fetchedAt
+                    ? ` · Planner data ${data.planner.fromCache ? "cached" : "refreshed"} ${new Date(data.planner.fetchedAt).toLocaleDateString()}`
+                    : !data?.configured
+                      ? " · Search Console only until Planner is connected"
+                      : ""}
+                {data?.configured && tab === "ranked" ? (
+                  <span className="text-gray-400"> · Volume is a Google Ads estimate, not exact search count</span>
+                ) : null}
+              </p>
 
-          <div className="relative mb-4 max-w-md">
-            <FiSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
-            <input
-              type="text"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filter keywords…"
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm focus:border-[#1d9c35] focus:bg-white focus:outline-none"
-            />
-          </div>
+              <div className="relative mb-4 max-w-md">
+                <FiSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
+                <input
+                  type="text"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder="Filter keywords…"
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm focus:border-[#1d9c35] focus:bg-white focus:outline-none"
+                />
+              </div>
+            </>
+          ) : null}
 
           {tab === "ranked" ? (
             <>
+              <AiSiteBriefPanel
+                brief={aiBrief}
+                loading={aiBriefLoading}
+                error={aiBriefError}
+                onGenerate={runAiBrief}
+                hasData={Boolean(data?.rows?.length)}
+              />
               <SummaryCards summary={data.summary} planner={data.planner} />
               <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
                 <table className="w-full text-left text-xs min-w-[960px]">
@@ -487,6 +683,13 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
                 ) : null}
               </div>
             </>
+          ) : tab === "explore" ? (
+            <AiKeywordResearchSection
+              selectedSite={selectedSite}
+              embedded
+              geo={geo}
+              onGeoChange={setGeo}
+            />
           ) : tab === "suggest" ? (
             !seedInput.trim() && !loading ? (
               <div className="rounded-xl border border-gray-100 bg-gray-50 px-6 py-10 text-center">

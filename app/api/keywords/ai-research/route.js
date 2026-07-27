@@ -1,4 +1,9 @@
-import { buildAiKeywordResearch, getAiKeywordProviderStatus } from "../../../../lib/aiKeywordResearch.js";
+import {
+  buildAiKeywordResearch,
+  buildAiSiteKeywordBrief,
+  getAiKeywordProviderStatus,
+} from "../../../../lib/aiKeywordResearch.js";
+import { buildRankedKeywordResearch } from "../../../../lib/keywordResearch.js";
 import { isGoogleAdsConfigured } from "../../../../lib/googleAds.js";
 import { ROLES, hasPermission, PERMISSIONS } from "../../../../lib/rbac.js";
 import { resolveWebsiteAccess } from "../../../../lib/resolveWebsiteAccess.js";
@@ -37,8 +42,8 @@ export async function GET(req) {
 }
 
 /**
- * POST /api/keywords/ai-research — run AI keyword research.
- * Body: { seed, geo?, provider? }
+ * POST /api/keywords/ai-research
+ * Body: { mode?: "seed"|"site-brief", seed?, geo?, range?, provider? }
  */
 export async function POST(req) {
   try {
@@ -55,10 +60,20 @@ export async function POST(req) {
       return json({ error: "Invalid JSON body." }, 400);
     }
 
-    const seed = String(body.seed || "").trim();
+    const mode = String(body.mode || "seed").toLowerCase();
     const geo = String(body.geo || "us").toLowerCase();
+    const range = String(body.range || "28d");
     const provider = body.provider ? String(body.provider).toLowerCase() : undefined;
 
+    if (mode === "site-brief") {
+      const rankedPayload = await buildRankedKeywordResearch(siteUrl, range, geo, {
+        forceRefresh: body.refresh === true || body.refresh === "1",
+      });
+      const payload = await buildAiSiteKeywordBrief({ siteUrl, rankedPayload, provider });
+      return json({ mode: "site-brief", ranked: rankedPayload, ...payload });
+    }
+
+    const seed = String(body.seed || "").trim();
     const payload = await buildAiKeywordResearch({
       seed,
       geo,
@@ -66,7 +81,7 @@ export async function POST(req) {
       provider,
     });
 
-    return json(payload);
+    return json({ mode: "seed", ...payload });
   } catch (error) {
     const status = error.status || 500;
     if (status >= 500) console.error("AI keyword research error:", error);

@@ -80,7 +80,6 @@ const websiteSeoMenuItems = [
   { id: "site-audit", label: "Site Audit", icon: Shield },
   { id: "domain-authority", label: "Domain Authority", icon: Award },
   { id: "keyword-research", label: "Keyword Research", icon: Search },
-  { id: "ai-keyword-research", label: "AI Keyword Research", icon: Sparkles },
   { id: "seo-opportunities", label: "SEO Opportunities", icon: Zap },
   { id: "device-appearance", label: "Device & Appearance", icon: Monitor },
   { id: "url-inspection", label: "URL Inspection", icon: Crosshair },
