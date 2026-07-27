@@ -24,9 +24,16 @@ async function parseSiteExplorerResponse(res) {
 }
 
 /**
- * @param {{ selectedSite?: string, exploreDomain?: string, view?: string, page?: number, pageSize?: number }} opts
+ * @param {{ selectedSite?: string, exploreDomain?: string, gscSiteUrl?: string, view?: string, page?: number, pageSize?: number }} opts
  */
-export function useSiteExplorerFetch({ selectedSite = "", exploreDomain = "", view = "overview", page = 1, pageSize = 50 }) {
+export function useSiteExplorerFetch({
+  selectedSite = "",
+  exploreDomain = "",
+  gscSiteUrl = "",
+  view = "overview",
+  page = 1,
+  pageSize = 50,
+}) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -76,6 +83,7 @@ export function useSiteExplorerFetch({ selectedSite = "", exploreDomain = "", vi
       try {
         const params = new URLSearchParams({ view, page: String(page), pageSize: String(pageSize) });
         if (targetDomain) params.set("domain", targetDomain);
+        if (gscSiteUrl) params.set("url", gscSiteUrl);
         else if (selectedSite) params.set("url", selectedSite);
         if (forceRefresh) params.set("refresh", "1");
 
@@ -103,7 +111,7 @@ export function useSiteExplorerFetch({ selectedSite = "", exploreDomain = "", vi
         if (!silent) setLoading(false);
       }
     },
-    [hasTarget, targetDomain, selectedSite, view, page, pageSize, clearPoll, schedulePoll]
+    [hasTarget, targetDomain, gscSiteUrl, selectedSite, view, page, pageSize, clearPoll, schedulePoll]
   );
 
   useEffect(() => {

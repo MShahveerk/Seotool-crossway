@@ -89,9 +89,14 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
     setActiveDomain(host);
   }, [selectedSite]);
 
+  const selectedHost = hostFromSite(selectedSite);
+  const gscSiteUrl =
+    selectedSite && selectedHost && (!activeDomain || activeDomain === selectedHost) ? selectedSite : "";
+
   const { data, loading, refreshing, error, load } = useSiteExplorerFetch({
     selectedSite: activeDomain ? "" : selectedSite,
     exploreDomain: activeDomain,
+    gscSiteUrl,
     view: tab,
     page,
     pageSize,
@@ -130,6 +135,8 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
     lastCapture: null,
   };
   const authority = data?.authority;
+  const gsc = data?.gsc;
+  const pageSourceGsc = data?.pageSource === "gsc";
   const displayDomain = data?.domain || activeDomain;
 
   return (
@@ -137,7 +144,7 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
       title="Site Explorer"
       eyebrow=""
       siteUrl={displayDomain ? `https://${displayDomain}` : undefined}
-      description="Explore any domain — Open PageRank for DR, homepage UR, and referring domains. Indexed pages from nightly Common Crawl."
+      description="Open PageRank for DR, homepage UR, and referring domains. Indexed pages from Google Search Console when the property is connected."
       selectedSite={selectedSite}
       loading={loading}
       error={error}
@@ -273,27 +280,101 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
                 <StatCard
                   label="Indexed URLs"
                   value={formatNum(overview.indexedUrls)}
-                  sub="Common Crawl · nightly cron"
+                  sub={
+                    overview.source === "gsc"
+                      ? gsc?.sitemapUrlCount
+                        ? `GSC sitemaps · ${formatNum(gsc.sitemapUrlCount)} discovered`
+                        : "Google Search Console"
+                      : "Common Crawl · nightly cron"
+                  }
                   accent="border-sky-100 bg-sky-50/40"
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <StatCard
-                  label="HTTP 200 rate (sample)"
-                  value={overview.http200Rate != null ? `${Math.round(overview.http200Rate * 100)}%` : "—"}
-                  sub={`Indexed pages sample · last capture ${overview.lastCapture || "unknown"}`}
-                />
-                <StatCard
-                  label="Global rank"
-                  value={authority?.globalRank ? formatNum(authority.globalRank) : "—"}
-                  sub="Open PageRank"
-                />
-              </div>
+              {gsc?.available ? (
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <StatCard
+                    label="Pages in search"
+                    value={formatNum(gsc.pagesInSearch ?? overview.pagesInSearch ?? 0)}
+                    sub="GSC performance · last 28 days"
+                  />
+                  <StatCard
+                    label="Indexed (inspection)"
+                    value={
+                      gsc.inspectionIndexed != null
+                        ? formatNum(gsc.inspectionIndexed)
+                        : overview.inspectionIndexed != null
+                          ? formatNum(overview.inspectionIndexed)
+                          : "—"
+                    }
+                    sub={
+                      gsc.inspectionTotal
+                        ? `Daily batch · ${formatNum(gsc.inspectionTotal)} URLs checked`
+                        : "Enable SEO_URL_INSPECT_DAILY for samples"
+                    }
+                  />
+                  <StatCard
+                    label="Fetch success (sample)"
+                    value={overview.http200Rate != null ? `${Math.round(overview.http200Rate * 100)}%` : "—"}
+                    sub={`URL inspection · last run ${overview.lastCapture || "unknown"}`}
+                  />
+                  <StatCard
+                    label="Sitemaps"
+                    value={formatNum(gsc.sitemapCount ?? 0)}
+                    sub={
+                      gsc.sitemapCount
+                        ? `${formatNum(gsc.sitemapUrlCount ?? 0)} URLs in feeds`
+                        : "Submit sitemap in GSC"
+                    }
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <StatCard
+                    label="HTTP 200 rate (sample)"
+                    value={overview.http200Rate != null ? `${Math.round(overview.http200Rate * 100)}%` : "—"}
+                    sub={`Indexed pages sample · last capture ${overview.lastCapture || "unknown"}`}
+                  />
+                  <StatCard
+                    label="Global rank"
+                    value={authority?.globalRank ? formatNum(authority.globalRank) : "—"}
+                    sub="Open PageRank"
+                  />
+                </div>
+              )}
+
+              {gsc?.available && authority?.globalRank ? (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <StatCard
+                    label="Global rank"
+                    value={formatNum(authority.globalRank)}
+                    sub="Open PageRank"
+                  />
+                </div>
+              ) : null}
+
+              {!gsc?.available && selectedSite && activeDomain && activeDomain !== selectedHost ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 leading-relaxed">
+                  Indexed pages from Search Console are only available for sites connected in this dashboard. Open
+                  PageRank metrics still load for any domain.
+                </div>
+              ) : null}
+
+              {!gsc?.available && selectedSite && (!activeDomain || activeDomain === selectedHost) ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 leading-relaxed">
+                  Connect this site in Google Search Console (service account as Owner) to populate indexed URLs,
+                  sitemaps, and URL inspection data.
+                </div>
+              ) : null}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <BreakdownList title="HTTP status (sample)" data={overview.statusBreakdown} />
-                <BreakdownList title="Content types (sample)" data={overview.mimeBreakdown} />
+                <BreakdownList
+                  title={overview.source === "gsc" ? "Coverage (inspection sample)" : "HTTP status (sample)"}
+                  data={overview.statusBreakdown}
+                />
+                {overview.source !== "gsc" ? (
+                  <BreakdownList title="Content types (sample)" data={overview.mimeBreakdown} />
+                ) : null}
               </div>
 
               {data.notes?.length ? (
@@ -316,14 +397,18 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
                   <tr>
                     <th className="px-4 py-3">UR (est.)</th>
                     <th className="px-4 py-3">URL</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Captured</th>
+                    <th className="px-4 py-3">{pageSourceGsc ? "Index status" : "Status"}</th>
+                    {pageSourceGsc ? (
+                      <th className="px-4 py-3">Impressions</th>
+                    ) : (
+                      <th className="px-4 py-3">Type</th>
+                    )}
+                    <th className="px-4 py-3">{pageSourceGsc ? "Last crawl" : "Captured"}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(data.items || []).map((row) => (
-                    <tr key={`${row.url}-${row.timestamp}`} className="border-t border-gray-100">
+                    <tr key={`${row.url}-${row.timestamp || row.captured}`} className="border-t border-gray-100">
                       <td className="px-4 py-3 tabular-nums font-semibold text-gray-900">
                         {row.ur100 != null ? (
                           <span title={row.dr100 != null ? `DR (host): ${row.dr100}` : undefined}>
@@ -344,8 +429,12 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
                           <FiExternalLink className="size-3.5 shrink-0" aria-hidden />
                         </a>
                       </td>
-                      <td className="px-4 py-3 tabular-nums">{row.status ?? "—"}</td>
-                      <td className="px-4 py-3 text-gray-600">{row.mime || "—"}</td>
+                      <td className="px-4 py-3 text-gray-700">{row.status ?? row.coverageState ?? "—"}</td>
+                      {pageSourceGsc ? (
+                        <td className="px-4 py-3 tabular-nums">{row.impressions != null ? formatNum(row.impressions) : "—"}</td>
+                      ) : (
+                        <td className="px-4 py-3 text-gray-600">{row.mime || "—"}</td>
+                      )}
                       <td className="px-4 py-3 text-gray-600">{row.captured || "—"}</td>
                     </tr>
                   ))}
@@ -353,7 +442,8 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
               </table>
               <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50 px-4 py-3 text-sm">
                 <span className="text-gray-600">
-                  Total indexed URLs: <strong>{formatNum(data.totalPages || 0)}</strong>
+                  Total URLs: <strong>{formatNum(data.totalPages || 0)}</strong>
+                  {pageSourceGsc ? " · Google Search Console" : ""}
                 </span>
                 <div className="flex items-center gap-2">
                   <button
@@ -381,7 +471,9 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
           {!loading && tab !== "overview" && !(data.items || []).length ? (
             <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center text-sm text-gray-500">
               <FiGlobe className="mx-auto mb-3 size-8 text-gray-300" aria-hidden />
-              No stored data for this tab yet. The daily cron runs at 05:00 server time, or click Refresh now.
+              {gsc?.available
+                ? "No pages returned from Search Console yet. Submit a sitemap and wait for the daily URL inspection batch."
+                : "No indexed pages yet. Connect this domain in Search Console, or wait for the nightly Common Crawl cron."}
             </div>
           ) : null}
         </>

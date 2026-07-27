@@ -12,6 +12,8 @@ import {
 } from "../../../lib/siteExplorerJobs";
 import { ROLES, hasPermission, PERMISSIONS } from "../../../lib/rbac";
 import { resolveWebsiteAccess } from "../../../lib/resolveWebsiteAccess";
+import { normalizeSiteOrigin } from "../../../lib/validation";
+import { enrichSiteExplorerWithGsc } from "../../../lib/siteExplorerGsc";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -64,7 +66,7 @@ function emptySiteExplorerPayload(domain, view) {
     total: 0,
     notes: [
       "Open PageRank provides DR-like score, referring domain count, and homepage UR.",
-      "Common Crawl indexed pages refresh overnight (05:00 cron) to avoid rate limits.",
+      "Indexed pages load from Google Search Console when this property is connected.",
     ],
     openhrefs: {
       status: "planned",
@@ -90,8 +92,25 @@ function json(body, status = 200) {
   });
 }
 
-async function finalizePayload(payload, domain, view) {
+async function resolveGscSiteUrl(req, fallbackSiteUrl, explore) {
+  const urlParam = req.nextUrl.searchParams.get("url")?.trim();
+  if (urlParam) {
+    try {
+      const { siteUrl } = await resolveWebsiteAccess(req);
+      return siteUrl;
+    } catch {
+      return normalizeSiteOrigin(urlParam) || urlParam;
+    }
+  }
+  if (!explore && fallbackSiteUrl) return fallbackSiteUrl;
+  return fallbackSiteUrl || null;
+}
+
+async function finalizePayload(payload, domain, view, gscSiteUrl, page, pageSize) {
   await enrichWithLiveAuthority(payload, domain);
+  if (gscSiteUrl) {
+    await enrichSiteExplorerWithGsc(payload, gscSiteUrl, { view, page, pageSize });
+  }
   if (view === "pages" && Array.isArray(payload.items)) {
     payload.items = await enrichPageUrlRatings(payload.items, domain);
   }
@@ -131,6 +150,8 @@ export async function GET(req) {
 
     if (!domain) return json({ error: "Could not extract a domain." }, 400);
 
+    const gscSiteUrl = await resolveGscSiteUrl(req, siteUrl, explore);
+
     const view = req.nextUrl.searchParams.get("view") || "overview";
     const page = Math.max(1, Number(req.nextUrl.searchParams.get("page") || 1));
     const pageSize = Math.min(100, Math.max(10, Number(req.nextUrl.searchParams.get("pageSize") || 50)));
@@ -161,7 +182,7 @@ export async function GET(req) {
         message:
           "Loading Open PageRank (DA, referring domains, homepage UR). Indexed pages update overnight via cron.",
       });
-      await finalizePayload(body, domain, view);
+      await finalizePayload(body, domain, view, gscSiteUrl, page, pageSize);
       return json(body, 202);
     }
 
@@ -176,14 +197,14 @@ export async function GET(req) {
         latest,
         message: "Analysis in progress — showing last saved data until ready.",
       });
-      await finalizePayload(body, domain, view);
+      await finalizePayload(body, domain, view, gscSiteUrl, page, pageSize);
       return json(body);
     }
 
     if (latest) {
       const body = snapshotToApiPayload(latest, { view, page, pageSize });
       body.explore = explore;
-      await finalizePayload(body, domain, view);
+      await finalizePayload(body, domain, view, gscSiteUrl, page, pageSize);
       return json(body);
     }
 
@@ -199,7 +220,7 @@ export async function GET(req) {
 
     const body = emptySiteExplorerPayload(domain, view);
     body.explore = explore;
-    await finalizePayload(body, domain, view);
+    await finalizePayload(body, domain, view, gscSiteUrl, page, pageSize);
     if (body.authority?.found) {
       body.empty = false;
       body.message = "Open PageRank loaded. Click Analyze to save today's snapshot. Indexed pages fill in overnight.";
