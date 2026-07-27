@@ -93,7 +93,7 @@ function json(body, status = 200) {
 async function finalizePayload(payload, domain, view) {
   await enrichWithLiveAuthority(payload, domain);
   if (view === "pages" && Array.isArray(payload.items)) {
-    payload.items = await enrichPageUrlRatings(payload.items);
+    payload.items = await enrichPageUrlRatings(payload.items, domain);
   }
   return payload;
 }

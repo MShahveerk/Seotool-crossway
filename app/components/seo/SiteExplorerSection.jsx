@@ -15,8 +15,6 @@ import { useSiteExplorerFetch } from "./useSiteExplorerFetch";
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "pages", label: "Indexed pages" },
-  { id: "subdomains", label: "Subdomains" },
-  { id: "referring", label: "Referring domains" },
 ];
 
 function hostFromSite(site) {
@@ -139,7 +137,7 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
       title="Site Explorer"
       eyebrow=""
       siteUrl={displayDomain ? `https://${displayDomain}` : undefined}
-      description="Explore any domain — Open PageRank for DA, referring domains, and UR. Common Crawl indexed pages update overnight."
+      description="Explore any domain — Open PageRank for DR, homepage UR, and referring domains. Indexed pages from nightly Common Crawl."
       selectedSite={selectedSite}
       loading={loading}
       error={error}
@@ -237,7 +235,7 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
 
           {tab === "overview" && (overview || authority?.found) ? (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <StatCard
                   label="Authority (DR-like)"
                   value={authority?.score100 != null ? `${authority.score100}/100` : "—"}
@@ -246,8 +244,14 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
                 />
                 <StatCard
                   label="Homepage UR"
-                  value={data.homepageUr100 != null ? `${data.homepageUr100}/100` : authority?.score100 != null ? `${authority.score100}/100` : "—"}
-                  sub="UR-like · OPR on registrable domain"
+                  value={
+                    data.homepageUr100 != null
+                      ? `${data.homepageUr100}/100`
+                      : authority?.homepageUr100 != null
+                        ? `${authority.homepageUr100}/100`
+                        : "—"
+                  }
+                  sub="Estimated from DR + path (not identical to DR)"
                   accent="border-teal-100 bg-teal-50/40"
                 />
                 <StatCard
@@ -255,9 +259,7 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
                   value={
                     authority?.referringDomains != null
                       ? formatNum(authority.referringDomains)
-                      : authority?.configured
-                        ? "—"
-                        : "—"
+                      : "—"
                   }
                   sub={
                     authority?.configured
@@ -274,20 +276,13 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
                   sub="Common Crawl · nightly cron"
                   accent="border-sky-100 bg-sky-50/40"
                 />
-                <StatCard
-                  label="Link samples (CC)"
-                  value={formatNum(overview.referringDomains)}
-                  sub="Overnight crawl estimate"
-                  accent="border-violet-100 bg-violet-50/40"
-                />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                <StatCard label="Subdomains" value={formatNum(overview.subdomains)} sub="Hosts under this domain" />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <StatCard
                   label="HTTP 200 rate (sample)"
                   value={overview.http200Rate != null ? `${Math.round(overview.http200Rate * 100)}%` : "—"}
-                  sub={`Last capture ${overview.lastCapture || "unknown"}`}
+                  sub={`Indexed pages sample · last capture ${overview.lastCapture || "unknown"}`}
                 />
                 <StatCard
                   label="Global rank"
@@ -319,7 +314,7 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50 text-left text-[11px] font-bold uppercase tracking-wider text-gray-500">
                   <tr>
-                    <th className="px-4 py-3">UR-like</th>
+                    <th className="px-4 py-3">UR (est.)</th>
                     <th className="px-4 py-3">URL</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Type</th>
@@ -330,7 +325,13 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
                   {(data.items || []).map((row) => (
                     <tr key={`${row.url}-${row.timestamp}`} className="border-t border-gray-100">
                       <td className="px-4 py-3 tabular-nums font-semibold text-gray-900">
-                        {row.ur100 != null ? `${row.ur100}/100` : "—"}
+                        {row.ur100 != null ? (
+                          <span title={row.dr100 != null ? `DR (host): ${row.dr100}` : undefined}>
+                            {row.ur100}/100
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="max-w-md truncate px-4 py-3">
                         <a
@@ -373,73 +374,6 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
                     Next
                   </button>
                 </div>
-              </div>
-            </div>
-          ) : null}
-
-          {tab === "subdomains" ? (
-            <div className="overflow-x-auto rounded-xl border border-gray-200">
-              <table className="min-w-full text-sm">
-                <thead className="bg-gray-50 text-left text-[11px] font-bold uppercase tracking-wider text-gray-500">
-                  <tr>
-                    <th className="px-4 py-3">Subdomain</th>
-                    <th className="px-4 py-3">Pages seen</th>
-                    <th className="px-4 py-3">Last capture</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data.items || []).map((row) => (
-                    <tr key={row.host} className="border-t border-gray-100">
-                      <td className="px-4 py-3 font-medium text-gray-900">{row.host}</td>
-                      <td className="px-4 py-3 tabular-nums">{formatNum(row.pages)}</td>
-                      <td className="px-4 py-3 text-gray-600">{row.captured || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-
-          {tab === "referring" ? (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Referring domain <strong>count</strong> comes from Open PageRank above. Rows below are Common Crawl URL
-                mentions (filled overnight). For a full link list see <strong>Link Index</strong>.
-              </p>
-              <div className="overflow-x-auto rounded-xl border border-gray-200">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50 text-left text-[11px] font-bold uppercase tracking-wider text-gray-500">
-                    <tr>
-                      <th className="px-4 py-3">Referring domain</th>
-                      <th className="px-4 py-3">Mentions</th>
-                      <th className="px-4 py-3">Sample URL</th>
-                      <th className="px-4 py-3">Last seen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(data.items || []).map((row) => (
-                      <tr key={row.host} className="border-t border-gray-100">
-                        <td className="px-4 py-3 font-medium text-gray-900">{row.host}</td>
-                        <td className="px-4 py-3 tabular-nums">{formatNum(row.mentions)}</td>
-                        <td className="max-w-xs truncate px-4 py-3">
-                          {row.sampleUrl ? (
-                            <a
-                              href={row.sampleUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[#1d9c35] hover:underline"
-                            >
-                              {row.sampleUrl}
-                            </a>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">{row.captured || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             </div>
           ) : null}

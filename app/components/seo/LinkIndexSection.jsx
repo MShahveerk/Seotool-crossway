@@ -71,7 +71,7 @@ export default function LinkIndexSection({ selectedSite = "" }) {
       title="Link Index"
       eyebrow=""
       siteUrl={displayDomain ? `https://${displayDomain}` : undefined}
-      description="Explore any domain — Open PageRank for DA, referring domains, and homepage UR. Link samples from nightly Common Crawl."
+      description="Domain authority metrics from Open PageRank — DR, estimated homepage UR, and referring domain count."
       selectedSite={selectedSite}
       loading={loading}
       error={error}
@@ -115,7 +115,7 @@ export default function LinkIndexSection({ selectedSite = "" }) {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
               <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Authority (DR-like)</p>
               <p className="mt-2 text-3xl font-bold tabular-nums text-gray-900">
@@ -128,11 +128,11 @@ export default function LinkIndexSection({ selectedSite = "" }) {
               <p className="mt-2 text-3xl font-bold tabular-nums text-gray-900">
                 {data.homepageUr100 != null
                   ? `${data.homepageUr100}/100`
-                  : authority?.score100 != null
-                    ? `${authority.score100}/100`
+                  : authority?.homepageUr100 != null
+                    ? `${authority.homepageUr100}/100`
                     : "—"}
               </p>
-              <p className="mt-1 text-xs text-gray-600">UR-like · same OPR score on root domain</p>
+              <p className="mt-1 text-xs text-gray-600">Estimated from DR (depth-adjusted, not a copy)</p>
             </div>
             <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-4">
               <p className="text-[11px] font-bold uppercase tracking-wider text-amber-900">Referring domains</p>
@@ -146,11 +146,6 @@ export default function LinkIndexSection({ selectedSite = "" }) {
                     : "Open PageRank · live"
                   : "Set OPENPAGERANK_API_KEY"}
               </p>
-            </div>
-            <div className="rounded-xl border border-violet-100 bg-violet-50/50 p-4">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-violet-900">Link samples (CC)</p>
-              <p className="mt-2 text-3xl font-bold tabular-nums text-gray-900">{formatNum(data.total || 0)}</p>
-              <p className="mt-1 text-xs text-gray-600">Nightly Common Crawl crawl</p>
             </div>
           </div>
 
@@ -166,67 +161,29 @@ export default function LinkIndexSection({ selectedSite = "" }) {
             </p>
             <ul className="mt-3 list-disc space-y-2 pl-5">
               <li>
-                <strong>DR-like</strong> — Open PageRank on the registrable domain (0–100).
+                <strong>DR</strong> — Open PageRank on the registrable domain (0–100).
               </li>
               <li>
-                <strong>UR (homepage)</strong> — best free proxy: same OPR score applied to the root domain. Per-URL UR
-                on indexed pages uses OPR on each URL&apos;s host (see Site Explorer → Indexed pages).
+                <strong>Homepage UR</strong> — estimated from DR with a small lift; inner pages score lower by URL depth
+                (see Site Explorer → Indexed pages).
               </li>
               <li>
                 <strong>Referring domains</strong> — live from Open PageRank when the domain is in their index.
               </li>
               <li>
-                True Ahrefs UR needs a page-level link graph — planned via openhrefs dataset import later.
+                Per-page backlink rows from Common Crawl are hidden for now — they are not real backlinks. Full link data
+                is planned via openhrefs import.
               </li>
             </ul>
           </div>
 
-          <div>
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900">
-              <FiLink className="size-4" aria-hidden />
-              Sample linking URLs (Common Crawl · nightly)
-            </h3>
-            <div className="overflow-x-auto rounded-xl border border-gray-200">
-              <table className="min-w-full text-sm">
-                <thead className="bg-gray-50 text-left text-[11px] font-bold uppercase tracking-wider text-gray-500">
-                  <tr>
-                    <th className="px-4 py-3">Source domain</th>
-                    <th className="px-4 py-3">Sample URL</th>
-                    <th className="px-4 py-3">Mentions</th>
-                    <th className="px-4 py-3">Seen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data.items || []).map((row) => (
-                    <tr key={`${row.sourceDomain}-${row.sourceUrl}`} className="border-t border-gray-100">
-                      <td className="px-4 py-3 font-medium">{row.sourceDomain}</td>
-                      <td className="max-w-md truncate px-4 py-3">
-                        {row.sourceUrl ? (
-                          <a
-                            href={row.sourceUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[#1d9c35] hover:underline"
-                          >
-                            {row.sourceUrl}
-                          </a>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-4 py-3 tabular-nums">{formatNum(row.mentions)}</td>
-                      <td className="px-4 py-3 text-gray-600">{row.captured || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {!loading && !(data.items || []).length ? (
-              <p className="mt-4 text-sm text-gray-500">
-                No link samples yet — Common Crawl runs on the 05:00 cron to avoid rate limits. DA and referring domains
-                above are live from Open PageRank.
-              </p>
-            ) : null}
+          <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center text-sm text-gray-600">
+            <FiLink className="mx-auto mb-3 size-8 text-gray-300" aria-hidden />
+            <p className="font-semibold text-gray-800">Backlink table paused</p>
+            <p className="mt-2 max-w-lg mx-auto leading-relaxed">
+              Common Crawl URL mentions are not reliable backlinks. Use <strong>Referring domains</strong> above (OPR)
+              for now, or Site Explorer → Indexed pages for per-URL UR estimates.
+            </p>
           </div>
         </div>
       ) : null}
