@@ -1,7 +1,7 @@
 import { isAuthorityConfigured, toDomain } from "../../../lib/authority";
 import {
   getLatestSiteExplorer,
-  runSiteExplorer,
+  kickSiteExplorerRefresh,
   snapshotToApiPayload,
 } from "../../../lib/siteExplorerJobs";
 import { ROLES, hasPermission, PERMISSIONS } from "../../../lib/rbac";
@@ -18,7 +18,7 @@ function emptySiteExplorerPayload(domain, view) {
     source: "database",
     empty: true,
     message:
-      "No snapshot saved yet. Click Refresh now (first fetch hits Common Crawl and can take 1–3 minutes), or wait for the daily 05:00 cron.",
+      "No snapshot saved yet. Click Refresh now — Common Crawl runs in the background and this page updates automatically.",
     authority: {
       configured: isAuthorityConfigured(),
       score: null,
@@ -81,12 +81,22 @@ export async function GET(req) {
     let snapshot = null;
 
     if (refresh) {
-      snapshot = await runSiteExplorer(siteUrl);
-      if (snapshot.status === "error") {
-        return json({ error: snapshot.errorMessage || "Site explorer refresh failed." }, 502);
-      }
-    } else {
       const { latest, running } = await getLatestSiteExplorer(domain);
+      if (!running) kickSiteExplorerRefresh(siteUrl);
+      return json(
+        {
+          domain,
+          view,
+          source: "database",
+          running: true,
+          message:
+            "Fetching from Common Crawl in the background (usually 30–90 seconds). This page updates automatically.",
+          ...(latest ? snapshotToApiPayload(latest, { view, page, pageSize }) : emptySiteExplorerPayload(domain, view)),
+        },
+        202
+      );
+    } else {
+      const { latest, running, failedToday } = await getLatestSiteExplorer(domain);
       if (running) {
         return json({
           domain,
@@ -99,6 +109,8 @@ export async function GET(req) {
       }
       if (latest) {
         snapshot = latest;
+      } else if (failedToday?.errorMessage) {
+        return json({ error: failedToday.errorMessage || "Site explorer fetch failed." }, 502);
       } else {
         return json(emptySiteExplorerPayload(domain, view));
       }

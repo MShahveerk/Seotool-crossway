@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { FiExternalLink, FiInfo, FiLink } from "react-icons/fi";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
 import ReportSectionActions from "../ReportSectionActions";
+import { useSiteExplorerFetch } from "./useSiteExplorerFetch";
 
 function formatFetchedAt(value) {
   if (!value) return "Never";
@@ -15,48 +15,10 @@ function formatFetchedAt(value) {
 }
 
 export default function LinkIndexSection({ selectedSite = "" }) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [data, setData] = useState(null);
-
-  const load = useCallback(
-    async (forceRefresh = false) => {
-      if (!selectedSite) {
-        setData(null);
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      setError("");
-      try {
-        const params = new URLSearchParams({ url: selectedSite, view: "backlinks" });
-        if (forceRefresh) params.set("refresh", "1");
-        const res = await fetch(`/api/site-explorer?${params.toString()}`, { cache: "no-store" });
-        let payload;
-        try {
-          payload = await res.json();
-        } catch {
-          throw new Error(
-            res.ok
-              ? "Invalid response from link index API"
-              : "Request timed out. Click Refresh now and wait 1–3 minutes for the first Common Crawl fetch."
-          );
-        }
-        if (!res.ok) throw new Error(payload.error || "Failed to load link index");
-        setData(payload);
-      } catch (err) {
-        setData(null);
-        setError(err.message || "Failed to load link index");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [selectedSite]
-  );
-
-  useEffect(() => {
-    load(false);
-  }, [load]);
+  const { data, loading, refreshing, error, load } = useSiteExplorerFetch({
+    selectedSite,
+    view: "backlinks",
+  });
 
   const authority = data?.authority;
   const openhrefs = data?.openhrefs;
@@ -79,8 +41,8 @@ export default function LinkIndexSection({ selectedSite = "" }) {
           section="link-index"
           activeSite={selectedSite}
           onRefresh={() => load(true)}
-          loading={loading}
-          refreshLabel="Refresh now"
+          loading={loading || refreshing}
+          refreshLabel={refreshing ? "Fetching…" : "Refresh now"}
         />
       }
     >
@@ -97,6 +59,13 @@ export default function LinkIndexSection({ selectedSite = "" }) {
               ) : null}
             </div>
           ) : null}
+
+          {(data.running || refreshing) && (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+              {data.message ||
+                "Fetching from Common Crawl in the background — this page updates every few seconds."}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">

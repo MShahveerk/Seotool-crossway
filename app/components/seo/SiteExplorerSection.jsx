@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FiRefreshCw,
   FiGlobe,
@@ -11,6 +11,7 @@ import {
 } from "react-icons/fi";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
 import ReportSectionActions from "../ReportSectionActions";
+import { useSiteExplorerFetch } from "./useSiteExplorerFetch";
 
 const TABS = [
   { id: "overview", label: "Overview" },
@@ -67,55 +68,15 @@ function BreakdownList({ title, data, limit = 6 }) {
 
 export default function SiteExplorerSection({ selectedSite = "" }) {
   const [tab, setTab] = useState("overview");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [data, setData] = useState(null);
   const [page, setPage] = useState(1);
   const pageSize = 50;
 
-  const load = useCallback(
-    async (forceRefresh = false) => {
-      if (!selectedSite) {
-        setData(null);
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      setError("");
-      try {
-        const params = new URLSearchParams({
-          url: selectedSite,
-          view: tab,
-          page: String(page),
-          pageSize: String(pageSize),
-        });
-        if (forceRefresh) params.set("refresh", "1");
-        const res = await fetch(`/api/site-explorer?${params.toString()}`, { cache: "no-store" });
-        let payload;
-        try {
-          payload = await res.json();
-        } catch {
-          throw new Error(
-            res.ok
-              ? "Invalid response from site explorer API"
-              : "Request timed out or the server could not reach Common Crawl. Try Refresh now and wait 1–3 minutes."
-          );
-        }
-        if (!res.ok) throw new Error(payload.error || "Failed to load site explorer data");
-        setData(payload);
-      } catch (err) {
-        setData(null);
-        setError(err.message || "Failed to load site explorer data");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [selectedSite, tab, page]
-  );
-
-  useEffect(() => {
-    load(false);
-  }, [load]);
+  const { data, loading, refreshing, error, load } = useSiteExplorerFetch({
+    selectedSite,
+    view: tab,
+    page,
+    pageSize,
+  });
 
   useEffect(() => {
     setPage(1);
@@ -142,8 +103,8 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
           section="site-explorer"
           activeSite={selectedSite}
           onRefresh={() => load(true)}
-          loading={loading}
-          refreshLabel="Refresh now"
+          loading={loading || refreshing}
+          refreshLabel={refreshing ? "Fetching…" : "Refresh now"}
         />
       }
     >
@@ -174,11 +135,12 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
             </span>
           </div>
 
-          {data.running ? (
+          {(data.running || refreshing) && (
             <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-              A refresh is in progress — showing the last saved snapshot below.
+              {data.message ||
+                "Fetching from Common Crawl in the background — this page updates every few seconds."}
             </div>
-          ) : null}
+          )}
 
           {data.blocked ? (
             <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
