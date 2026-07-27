@@ -24,6 +24,8 @@ import SiteAuditSection from "./components/SiteAuditSection";
 import DomainAuthoritySection from "./components/DomainAuthoritySection";
 import KeywordResearchSection from "./components/seo/KeywordResearchSection";
 import { isMetaPageId } from "../lib/siteAccess";
+import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
+import { LoadingSpinner } from "./components/ui-shared/LoadingBlock";
 
 const WEBSITE_SEO_SECTIONS = new Set([
   "website-statistics",
@@ -41,8 +43,12 @@ const WEBSITE_SEO_SECTIONS = new Set([
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState("dashboard");
-  const [selectedSite, setSelectedSite] = useState("");
+  const [activeSection, setActiveSection] = useState(() => readSectionFromUrl() || "dashboard");
+  const [selectedSite, setSelectedSite] = useState(() => readSiteFromUrl() || "");
+
+  useEffect(() => {
+    writeDashboardUrl(activeSection, selectedSite);
+  }, [activeSection, selectedSite]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -64,39 +70,14 @@ export default function Home() {
     }
   }, [selectedSite, activeSection]);
 
-  if (status === "loading") {
+  if (status === "loading" || status === "unauthenticated" || !session?.user) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-50 flex items-center justify-center transition-colors">
-        <div className="text-center">
-          <div
-            className="inline-block h-8 w-8 border-2 border-gray-400 dark:border-gray-600 border-t-transparent rounded-full animate-spin"
-            aria-label="Loading"
-            role="status"
-          />
-          <p className="sr-only">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === "unauthenticated") {
-    return (
-      <div className="min-h-screen bg-white dark:bg-gray-50 flex items-center justify-center">
-        <p className="text-sm text-gray-600">Redirecting to sign in…</p>
-      </div>
-    );
-  }
-
-  if (!session?.user) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-gray-50 flex items-center justify-center transition-colors">
-        <div className="text-center">
-          <div
-            className="inline-block h-8 w-8 border-2 border-gray-400 dark:border-gray-600 border-t-transparent rounded-full animate-spin"
-            aria-label="Loading"
-            role="status"
-          />
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        {status === "unauthenticated" ? (
+          <p className="text-sm text-muted-foreground">Redirecting to sign in…</p>
+        ) : (
+          <LoadingSpinner label="Loading dashboard" />
+        )}
       </div>
     );
   }

@@ -1,15 +1,18 @@
 import ApprovalsUserPanel from "./ApprovalsUserPanel";
+import { Card, CardContent } from "@/components/ui/card";
+import PageHeader from "./ui-shared/PageHeader";
 
 export default function MyApprovalsSection({ selectedSite = "" }) {
   return (
-    <div className="mx-auto max-w-7xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Approvals</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Review, edit, and approve content assigned to you by administrators.
-        </p>
-      </div>
-      <ApprovalsUserPanel selectedSite={selectedSite} />
-    </div>
+    <Card className="border-border/80 shadow-sm">
+      <CardContent className="space-y-6 p-5 sm:p-6">
+        <PageHeader
+          eyebrow="Workflow"
+          title="My Approvals"
+          description="Review, edit, and approve content assigned to you by administrators."
+        />
+        <ApprovalsUserPanel selectedSite={selectedSite} />
+      </CardContent>
+    </Card>
   );
 }

@@ -1,5 +1,12 @@
 "use client";
 
+import { Globe } from "lucide-react";
+import PageHeader from "../ui-shared/PageHeader";
+import EmptyState from "../ui-shared/EmptyState";
+import { LoadingSpinner, StatCardSkeleton } from "../ui-shared/LoadingBlock";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
 export function formatNum(n) {
   return new Intl.NumberFormat("en-US").format(Math.round(Number(n) || 0));
 }
@@ -34,56 +41,69 @@ export default function SeoPanelShell({
   error,
   children,
   action,
+  eyebrow = "SEO Tools",
 }) {
   if (!selectedSite || (!String(selectedSite).startsWith("http") && !/^\d+$/.test(String(selectedSite)))) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-        <p className="text-sm text-gray-600">Select a website from the Client Account dropdown to use this tool.</p>
-      </div>
+      <Card className="border-border/80 shadow-sm">
+        <CardContent className="p-6 sm:p-8">
+          <EmptyState
+            icon={Globe}
+            title="Select a client website"
+            description="Choose a website from the Client Account menu in the sidebar to use this tool. Meta-only pages do not support website SEO features."
+          />
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 min-h-[calc(100vh-2rem)]">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          {description ? <p className="mt-1 text-sm text-gray-500 max-w-2xl">{description}</p> : null}
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {onRangeChange ? (
-            <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
-              {RANGES.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => onRangeChange(r.id)}
-                  className={`px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-                    range === r.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
-                  }`}
-                >
-                  {r.label}
-                </button>
-              ))}
+    <Card className="min-h-[calc(100vh-5.5rem)] border-border/80 shadow-sm">
+      <CardContent className="space-y-6 p-5 sm:p-6">
+        <PageHeader
+          eyebrow={eyebrow}
+          title={title}
+          description={description}
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              {onRangeChange ? (
+                <div className="inline-flex rounded-lg border border-border bg-muted/50 p-0.5">
+                  {RANGES.map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => onRangeChange(r.id)}
+                      className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                        range === r.id
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {action}
             </div>
-          ) : null}
-          {action}
-        </div>
-      </div>
+          }
+        />
 
-      {error ? (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      ) : null}
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
 
-      {loading ? (
-        <div className="flex h-48 items-center justify-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
-        </div>
-      ) : (
-        children
-      )}
-    </div>
+        {loading ? (
+          <>
+            <LoadingSpinner label={`Loading ${title}`} />
+            <StatCardSkeleton count={4} />
+          </>
+        ) : (
+          children
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -1,15 +1,18 @@
 import BlogApprovalsPanel from "./BlogApprovalsPanel";
+import { Card, CardContent } from "@/components/ui/card";
+import PageHeader from "./ui-shared/PageHeader";
 
 export default function MyBlogApprovalsSection({ selectedSite = "" }) {
   return (
-    <div className="mx-auto max-w-7xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Blog Approvals</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Review blog posts before they are published to your website.
-        </p>
-      </div>
-      <BlogApprovalsPanel selectedSite={selectedSite} />
-    </div>
+    <Card className="border-border/80 shadow-sm">
+      <CardContent className="space-y-6 p-5 sm:p-6">
+        <PageHeader
+          eyebrow="Workflow"
+          title="Blog Approvals"
+          description="Review blog posts before they are published to your website."
+        />
+        <BlogApprovalsPanel selectedSite={selectedSite} />
+      </CardContent>
+    </Card>
   );
 }

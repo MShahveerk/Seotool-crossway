@@ -5,6 +5,7 @@ import { FiCheck, FiEdit2, FiX, FiRefreshCw, FiChevronDown, FiChevronUp, FiClock
 import { formatScheduleShort } from "../../lib/timezone";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
 import HumanizeTextButton from "./HumanizeTextButton";
+import { toastSuccess, toastError } from "@/lib/toast";
 
 function displayBody(a) {
   if (a.userEditedText && String(a.userEditedText).trim()) return a.userEditedText;
@@ -153,8 +154,12 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("approvals:user-updated"));
       }
+      if (payload.action === "approve") toastSuccess("Approval submitted");
+      else if (payload.action === "decline") toastSuccess("Post declined");
+      else if (payload.action === "edit") toastSuccess("Changes saved");
     } catch (e) {
       setError(e.message);
+      toastError("Action failed", e.message);
     } finally {
       setActing(false);
     }

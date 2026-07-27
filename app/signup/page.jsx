@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import AuthLayout from "../components/auth/AuthLayout";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
+import { Loader2, CheckCircle2 } from "lucide-react";
 
 export default function SignUpPage() {
   const [name, setName] = useState("");
@@ -31,14 +38,8 @@ export default function SignUpPage() {
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          name: name || null,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name: name || null }),
       });
 
       const data = await res.json();
@@ -58,154 +59,101 @@ export default function SignUpPage() {
 
   if (success) {
     return (
-      <main className="min-h-screen bg-white dark:bg-gray-50 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md bg-white dark:bg-gray-100 shadow-xl rounded-xl border border-gray-200 dark:border-gray-300 p-8 text-center">
-          <div className="mb-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full" style={{ backgroundColor: 'oklch(37.3% 0.034 259.733 / 0.2)' }}>
-              <svg
-                className="w-8 h-8"
-                style={{ color: 'oklch(37.3% 0.034 259.733)' }}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
+      <AuthLayout title="Account created" description="One more step before you can sign in">
+        <div className="space-y-5 text-center">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+            <CheckCircle2 className="size-7" aria-hidden />
           </div>
-          <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-black">Account Created!</h2>
-          <p className="text-gray-600 dark:text-gray-800 mb-6">
-            A verification email has been sent to your inbox. Please verify your email address to activate your account, then you can log in.
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            A verification email has been sent to your inbox. Please verify your email address to activate your
+            account, then you can sign in.
           </p>
           <Link
             href="/login"
-            className="inline-flex items-center justify-center rounded-lg bg-[#0EFF2A] px-6 py-2.5 text-sm font-semibold text-black shadow-md hover:shadow-lg hover:bg-primary-600 transition-all duration-200"
+            className={cn(buttonVariants(), "w-full bg-emerald-600 text-white hover:bg-emerald-700")}
           >
-            Go to Login
+            Go to sign in
           </Link>
         </div>
-      </main>
+      </AuthLayout>
     );
   }
 
   return (
-    <main className="min-h-screen bg-white dark:bg-gray-50 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md bg-white dark:bg-gray-100 shadow-xl rounded-xl border border-gray-200 dark:border-gray-300 p-8">
-        <h1 className="text-3xl font-bold mb-2 text-center text-gray-900 dark:text-black">Sign Up</h1>
-        <p className="text-gray-600 dark:text-gray-800 mb-8 text-center text-sm">
-          Create a new account to get started
-        </p>
+    <AuthLayout
+      title="Create your account"
+      description="Get started with Crossway Suite"
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link href="/login" className="font-semibold text-foreground hover:underline">
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Name (optional)</Label>
+          <Input id="name" type="text" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-semibold text-gray-900 dark:text-black mb-2"
-            >
-              Name (optional)
-            </label>
-            <input
-              id="name"
-              type="text"
-              placeholder="Your name"
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-400 bg-white dark:bg-gray-50 px-3 py-2.5 text-sm md:text-base text-black dark:text-black placeholder-gray-500 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 focus:border-gray-400 dark:focus:border-gray-500 transition-all duration-150"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            required
+            placeholder="you@company.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+        </div>
 
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-semibold text-gray-900 dark:text-black mb-2"
-            >
-              Email <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              placeholder="your@email.com"
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-400 bg-white dark:bg-gray-50 px-3 py-2.5 text-sm md:text-base text-black dark:text-black placeholder-gray-500 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 focus:border-gray-400 dark:focus:border-gray-500 transition-all duration-150"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            required
+            placeholder="At least 6 characters"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+        </div>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-semibold text-gray-900 dark:text-black mb-2"
-            >
-              Password <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              placeholder="At least 6 characters"
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-400 bg-white dark:bg-gray-50 px-3 py-2.5 text-sm md:text-base text-black dark:text-black placeholder-gray-500 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 focus:border-gray-400 dark:focus:border-gray-500 transition-all duration-150"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">Confirm password</Label>
+          <Input
+            id="confirmPassword"
+            type="password"
+            required
+            placeholder="Confirm your password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+        </div>
 
-          <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-sm font-semibold text-gray-900 dark:text-black mb-2"
-            >
-              Confirm Password <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              required
-              placeholder="Confirm your password"
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-400 bg-white dark:bg-gray-50 px-3 py-2.5 text-sm md:text-base text-black dark:text-black placeholder-gray-500 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 focus:border-gray-400 dark:focus:border-gray-500 transition-all duration-150"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-          </div>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
 
-          {error && (
-            <div className="rounded-lg border border-red-200 dark:border-red-300 bg-red-50 dark:bg-red-100 px-4 py-3 text-sm text-red-800 dark:text-red-900">
-              {error}
-            </div>
+        <Button type="submit" className="w-full bg-emerald-600 text-white hover:bg-emerald-700" disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Creating account…
+            </>
+          ) : (
+            "Create account"
           )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full inline-flex items-center justify-center rounded-lg bg-[#0EFF2A] px-4 py-2.5 text-sm md:text-base font-semibold text-black shadow-md hover:shadow-lg hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200"
-          >
-            {loading ? (
-              <>
-                <span className="mr-2 h-4 w-4 border-2 border-white/40 border-t-transparent rounded-full animate-spin" />
-                Creating account...
-              </>
-            ) : (
-              "Sign Up"
-            )}
-          </button>
-
-          <div className="text-center text-sm text-gray-600 dark:text-gray-800">
-            Already have an account?{" "}
-            <Link
-              href="/login"
-              className="text-gray-900 dark:text-black hover:text-gray-700 dark:hover:text-gray-700 font-semibold"
-            >
-              Sign in
-            </Link>
-          </div>
-        </form>
-      </div>
-    </main>
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }
-
