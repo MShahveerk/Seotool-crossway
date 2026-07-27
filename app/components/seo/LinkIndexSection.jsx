@@ -33,11 +33,10 @@ export default function LinkIndexSection({ selectedSite = "" }) {
 
   useEffect(() => {
     const host = hostFromSite(selectedSite);
-    if (host && !activeDomain) {
-      setDomainInput(host);
-      setActiveDomain(host);
-    }
-  }, [selectedSite, activeDomain]);
+    if (!host) return;
+    setDomainInput(host);
+    setActiveDomain(host);
+  }, [selectedSite]);
 
   const { data, loading, refreshing, error, load } = useSiteExplorerFetch({
     selectedSite: activeDomain ? "" : selectedSite,
