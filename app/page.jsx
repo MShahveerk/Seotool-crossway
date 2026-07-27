@@ -23,6 +23,7 @@ import PageSpeedSection from "./components/PageSpeedSection";
 import SiteAuditSection from "./components/SiteAuditSection";
 import DomainAuthoritySection from "./components/DomainAuthoritySection";
 import KeywordResearchSection from "./components/seo/KeywordResearchSection";
+import AiKeywordResearchSection from "./components/seo/AiKeywordResearchSection";
 import SiteExplorerSection from "./components/seo/SiteExplorerSection";
 import LinkIndexSection from "./components/seo/LinkIndexSection";
 import { isMetaPageId } from "../lib/siteAccess";
@@ -109,7 +110,7 @@ export default function Home() {
       case "keyword-research":
         return <KeywordResearchSection selectedSite={seoSite} />;
       case "ai-keyword-research":
-        return <KeywordResearchSection selectedSite={seoSite} initialTab="explore" />;
+        return <AiKeywordResearchSection selectedSite={seoSite} />;
       case "seo-opportunities":
         return <SeoOpportunitiesSection selectedSite={seoSite} />;
       case "device-appearance":
