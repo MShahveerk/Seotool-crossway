@@ -68,6 +68,7 @@ export async function GET(req) {
       domain,
       score: own.score,
       globalRank: own.globalRank,
+      referringDomains: own.referringDomains ?? null,
       found: own.found,
       trend: trend.map((t) => ({ date: t.fetchedDate, score: t.score, globalRank: t.globalRank })),
       competitors: competitorDomains.map((d) => {

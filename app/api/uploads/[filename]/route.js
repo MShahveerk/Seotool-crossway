@@ -41,6 +41,7 @@ export async function GET(req, { params }) {
       status: 200,
       headers: {
         "Content-Type": contentType,
+        "Content-Disposition": `inline; filename="${filename}"`,
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });

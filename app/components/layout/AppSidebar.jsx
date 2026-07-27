@@ -9,10 +9,12 @@ import {
   CheckSquare,
   ChevronDown,
   ClipboardList,
+  Compass,
   Crosshair,
   FileText,
   HelpCircle,
   LayoutDashboard,
+  Link2,
   LogOut,
   Map,
   Monitor,
@@ -81,6 +83,8 @@ const websiteSeoMenuItems = [
   { id: "device-appearance", label: "Device & Appearance", icon: Monitor },
   { id: "url-inspection", label: "URL Inspection", icon: Crosshair },
   { id: "query-page-matrix", label: "Query × Page", icon: Map },
+  { id: "site-explorer", label: "Site Explorer", icon: Compass },
+  { id: "link-index", label: "Link Index", icon: Link2 },
   { id: "sitemap-health", label: "Sitemap Health", icon: FileText },
 ];
 

@@ -1,19 +1,14 @@
 import prisma from "../../../../lib/prisma";
-import crypto from "crypto";
+import { verifyApprovalQuickActionToken } from "../../../../lib/approvalQuickAction.js";
 import { declineFormPage, resultPage, QUICK_ACTION_REASON_MAX } from "../../../../lib/quickActionPages.js";
 
 export const runtime = "nodejs";
-
-function generateHmacToken(approvalId) {
-  const secret = process.env.NEXTAUTH_SECRET || "default-secret";
-  return crypto.createHmac("sha256", secret).update(String(approvalId)).digest("hex");
-}
 
 async function validateQuickAction(id, token) {
   if (!id || !token) {
     return { error: resultPage({ title: "Missing details", message: "This approval link is incomplete.", tone: "warn", kindLabel: "Attention" }) };
   }
-  if (token !== generateHmacToken(id)) {
+  if (!verifyApprovalQuickActionToken(id, token)) {
     return {
       error: resultPage({
         title: "Link not valid",

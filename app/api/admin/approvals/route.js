@@ -282,9 +282,8 @@ export async function POST(req) {
     // --- Send Email Notification ---
     let token = null;
     try {
-      const crypto = await import("crypto");
-      const secret = process.env.NEXTAUTH_SECRET || "default-secret";
-      token = crypto.createHmac('sha256', secret).update(String(approval.id)).digest('hex');
+      const { createApprovalQuickActionToken } = await import("../../../../lib/approvalQuickAction.js");
+      token = createApprovalQuickActionToken(approval.id);
     } catch(err) {
       console.error("Failed to generate HMAC token", err);
     }

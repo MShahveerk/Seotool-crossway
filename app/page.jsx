@@ -23,6 +23,8 @@ import PageSpeedSection from "./components/PageSpeedSection";
 import SiteAuditSection from "./components/SiteAuditSection";
 import DomainAuthoritySection from "./components/DomainAuthoritySection";
 import KeywordResearchSection from "./components/seo/KeywordResearchSection";
+import SiteExplorerSection from "./components/seo/SiteExplorerSection";
+import LinkIndexSection from "./components/seo/LinkIndexSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { LoadingSpinner } from "./components/ui-shared/LoadingBlock";
@@ -39,6 +41,8 @@ const WEBSITE_SEO_SECTIONS = new Set([
   "url-inspection",
   "query-page-matrix",
   "sitemap-health",
+  "site-explorer",
+  "link-index",
 ]);
 
 export default function Home() {
@@ -113,6 +117,10 @@ export default function Home() {
         return <QueryPageMatrixSection selectedSite={seoSite} />;
       case "sitemap-health":
         return <SitemapHealthSection selectedSite={seoSite} />;
+      case "site-explorer":
+        return <SiteExplorerSection selectedSite={seoSite} />;
+      case "link-index":
+        return <LinkIndexSection selectedSite={seoSite} />;
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
       case "calendar":

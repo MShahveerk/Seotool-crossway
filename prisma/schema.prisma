@@ -443,16 +443,42 @@ model KeywordPlannerCache {
 
 /// Daily Open PageRank authority score per domain (own sites + checked competitors).
 model AuthoritySnapshot {
-  id          String   @id @default(cuid()) @db.VarChar(191)
-  domain      String   @db.VarChar(255)
-  score       Float?
-  globalRank  Int?     @map("global_rank")
-  fetchedDate DateTime @map("fetched_date") @db.Date
-  createdAt   DateTime @default(now()) @map("created_at")
+  id               String   @id @default(cuid()) @db.VarChar(191)
+  domain           String   @db.VarChar(255)
+  score            Float?
+  globalRank       Int?     @map("global_rank")
+  referringDomains Int?     @map("referring_domains")
+  fetchedDate      DateTime @map("fetched_date") @db.Date
+  createdAt        DateTime @default(now()) @map("created_at")
 
   @@unique([domain, fetchedDate], map: "authority_domain_date_unique")
   @@index([domain, fetchedDate], map: "authority_domain_date_idx")
   @@map("authority_snapshots")
+}
+
+/// Daily Common Crawl site explorer snapshot per domain (indexed pages, subdomains, referring hosts).
+model SiteExplorerSnapshot {
+  id                    String    @id @default(cuid()) @db.VarChar(191)
+  domain                String    @db.VarChar(255)
+  siteUrl               String    @map("site_url") @db.VarChar(512)
+  status                String    @default("running") @db.VarChar(32)
+  crawlId               String?   @map("crawl_id") @db.VarChar(64)
+  crawlName             String?   @map("crawl_name") @db.VarChar(128)
+  indexedUrls           Int       @default(0) @map("indexed_urls")
+  subdomainCount        Int       @default(0) @map("subdomain_count")
+  referringDomainsCount Int       @default(0) @map("referring_domains_count")
+  referringDomainsOpr   Int?      @map("referring_domains_opr")
+  authorityScore        Float?    @map("authority_score")
+  globalRank            Int?      @map("global_rank")
+  payload               Json?
+  errorMessage          String?   @map("error_message") @db.Text
+  fetchedDate           DateTime  @map("fetched_date") @db.Date
+  startedAt             DateTime  @default(now()) @map("started_at")
+  finishedAt            DateTime? @map("finished_at")
+
+  @@unique([domain, fetchedDate], map: "site_explorer_domain_date_unique")
+  @@index([domain, fetchedDate], map: "site_explorer_domain_date_idx")
+  @@map("site_explorer_snapshots")
 }
 
 /// Snapshot history for blog edits while pending or in review.
