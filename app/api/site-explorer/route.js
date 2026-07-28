@@ -126,7 +126,7 @@ function runningPayload({ domain, view, page, pageSize, latest, message }) {
 
 /**
  * GET /api/site-explorer?domain=|url=&view=...&refresh=1
- * Explore any domain (Ahrefs-style). Manual refresh = Open PageRank only; CDX runs on cron.
+ * Explore any domain (Ahrefs-style). Manual refresh = Open PageRank; first crawl or weekly cron = Common Crawl CDX.
  */
 export async function GET(req) {
   try {
@@ -159,6 +159,7 @@ export async function GET(req) {
 
     if (refresh) {
       const { latest, running } = await getLatestSiteExplorer(domain);
+      const neverCrawled = !latest?.indexedUrls;
 
       if (!running) {
         const prep = await prepareSiteExplorerRefresh(siteUrl);
@@ -166,8 +167,8 @@ export async function GET(req) {
           const snapshotId = prep.snapshotId;
           after(async () => {
             await executeSiteExplorerRefresh(siteUrl, snapshotId, {
-              includeReferring: false,
-              includeCrawl: false,
+              includeReferring: neverCrawled,
+              includeCrawl: neverCrawled,
             });
           });
         }
@@ -179,8 +180,9 @@ export async function GET(req) {
         page,
         pageSize,
         latest,
-        message:
-          "Loading Open PageRank (DA, referring domains, homepage UR). Indexed pages update overnight via cron.",
+        message: neverCrawled
+          ? "Running first Common Crawl index + Open PageRank for this domain. Results are cached for 7 days."
+          : "Refreshing Open PageRank (DA, referring domains, homepage UR). Common Crawl index reruns weekly when stale.",
       });
       await finalizePayload(body, domain, view, gscSiteUrl, page, pageSize);
       return json(body, 202);
@@ -212,7 +214,7 @@ export async function GET(req) {
       return json(
         {
           error: failedToday.errorMessage,
-          hint: "Try Analyze again. Common Crawl runs on the nightly cron only.",
+          hint: "Try Analyze again. Common Crawl reruns on the weekly Site Explorer cron when cache is stale.",
         },
         502
       );
@@ -223,7 +225,7 @@ export async function GET(req) {
     await finalizePayload(body, domain, view, gscSiteUrl, page, pageSize);
     if (body.authority?.found) {
       body.empty = false;
-      body.message = "Open PageRank loaded. Click Analyze to save today's snapshot. Indexed pages fill in overnight.";
+      body.message = "Open PageRank loaded. Click Analyze to save a snapshot. Full index data caches for 7 days and reruns weekly.";
     }
     return json(body);
   } catch (error) {

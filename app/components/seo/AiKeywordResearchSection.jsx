@@ -134,9 +134,6 @@ function SourceBadge({ source }) {
   if (source === "google_ads") {
     return <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700">Google Ads</span>;
   }
-  if (source === "se_ranking") {
-    return <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-sky-50 text-sky-700">SE Ranking</span>;
-  }
   if (source === "ai_estimate") {
     return <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-violet-50 text-violet-700">AI est.</span>;
   }
@@ -145,22 +142,22 @@ function SourceBadge({ source }) {
 
 function metricsSourceLabel(source) {
   if (source === "google_ads") return "Google Ads";
-  if (source === "se_ranking") return "SE Ranking";
   if (source === "ai_estimate") return "AI estimate";
   return "No data";
 }
 
-function SeedMetricsPanel({ seed, geoLabel, planner, seranking, metrics }) {
+function SeedMetricsPanel({ seed, geoLabel, planner }) {
   const hasMetrics =
     seed.avgMonthlySearches != null ||
     seed.monthlyTrend?.length > 1 ||
     (seed.lowTopOfPageBid && seed.highTopOfPageBid) ||
+    seed.trafficPotential != null ||
     seed.estimatedMonthlyClicks != null;
 
-  const source = seed.metricsSource || metrics?.seedSource || "unknown";
+  const source = seed.metricsSource || "unknown";
 
   return (
-    <div className="p-5 grid sm:grid-cols-2 lg:grid-cols-5 gap-4 border-t border-gray-100 bg-gray-50/40">
+    <div className="p-5 grid sm:grid-cols-2 lg:grid-cols-6 gap-4 border-t border-gray-100 bg-gray-50/40">
       <div>
         <p className="text-[11px] font-bold uppercase text-gray-500">Volume / mo</p>
         <p className="mt-1 text-2xl font-bold tabular-nums">
@@ -183,30 +180,36 @@ function SeedMetricsPanel({ seed, geoLabel, planner, seranking, metrics }) {
         </p>
       </div>
       <div>
-        <p className="text-[11px] font-bold uppercase text-gray-500">Est. clicks/mo</p>
+        <p className="text-[11px] font-bold uppercase text-gray-500">Traffic potential</p>
         <p className="mt-1 text-xl font-bold tabular-nums text-emerald-700">
+          {seed.trafficPotential != null ? formatNum(seed.trafficPotential) : "—"}
+        </p>
+        <p className="mt-0.5 text-[10px] text-gray-400">Top #1 page / mo</p>
+      </div>
+      <div>
+        <p className="text-[11px] font-bold uppercase text-gray-500">Est. clicks/mo</p>
+        <p className="mt-1 text-xl font-bold tabular-nums">
           {seed.estimatedMonthlyClicks != null ? formatNum(seed.estimatedMonthlyClicks) : "—"}
         </p>
-        <p className="mt-0.5 text-[10px] text-gray-400">At realistic target rank</p>
+        <p className="mt-0.5 text-[10px] text-gray-400">At target rank</p>
       </div>
       <div>
         <p className="text-[11px] font-bold uppercase text-gray-500">Trend</p>
         <TrendSparkline trend={seed.monthlyTrend} large id="seedTrend" />
       </div>
       {!hasMetrics && planner?.error ? (
-        <p className="sm:col-span-5 text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-          Google Ads fetch failed: {planner.error}. AI estimates and SE Ranking fallback were attempted.
+        <p className="sm:col-span-6 text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+          Google Ads fetch failed: {planner.error}. AI metric estimates were used where available.
         </p>
       ) : null}
-      {!hasMetrics && !planner?.error && !planner?.configured && !seranking?.configured ? (
-        <p className="sm:col-span-5 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-          Connect Google Ads or SE Ranking for live volume/CPC, or ensure an AI provider is configured for estimates.
+      {!hasMetrics && !planner?.error && !planner?.configured ? (
+        <p className="sm:col-span-6 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+          Connect Google Ads for official volume/CPC, or ensure an AI provider is configured for estimates.
         </p>
       ) : null}
       {source === "ai_estimate" && hasMetrics ? (
-        <p className="sm:col-span-5 text-xs text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-3 py-2">
-          Metrics are AI estimates — connect Google Ads for official Keyword Planner data.
-          {seranking?.configured ? " SE Ranking was also checked as fallback." : ""}
+        <p className="sm:col-span-6 text-xs text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-3 py-2">
+          Volume, traffic potential, and CPC are AI estimates — connect Google Ads for Keyword Planner data.
         </p>
       ) : null}
     </div>
@@ -452,7 +455,7 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
     setExploreError("");
     setExploreStage("Fetching live autocomplete suggestions…");
     const stageTimer = setTimeout(() => {
-      setExploreStage("Enriching with AI metrics + Google Ads / SE Ranking…");
+      setExploreStage("Enriching with AI metrics + Google Ads…");
     }, 2500);
     try {
       const qs = selectedSite ? `?url=${encodeURIComponent(selectedSite)}` : "";
@@ -732,13 +735,7 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                     </ul>
                   ) : null}
                 </div>
-                <SeedMetricsPanel
-                  seed={exploreData.seed}
-                  geoLabel={exploreData.geo?.label}
-                  planner={exploreData.planner}
-                  seranking={exploreData.seranking}
-                  metrics={exploreData.metrics}
-                />
+                <SeedMetricsPanel seed={exploreData.seed} geoLabel={exploreData.geo?.label} planner={exploreData.planner} />
               </div>
               {exploreData.clusters?.length ? (
                 <div className="mb-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -775,6 +772,8 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                         <SortTh label="Keyword" field="keyword" />
                         <SortTh label="Volume/mo" field="avgMonthlySearches" />
                         <SortTh label="KD" field="keywordDifficulty" />
+                        <SortTh label="Traffic pot." field="trafficPotential" />
+                        <SortTh label="Est. clicks" field="estimatedMonthlyClicks" />
                         <SortTh label="Opportunity" field="opportunityScore" />
                         <th className="px-3 py-3 text-left text-[11px] font-bold uppercase text-gray-500">Intent</th>
                         <th className="px-3 py-3 text-left text-[11px] font-bold uppercase text-gray-500 min-w-[200px]">SEO action</th>
@@ -795,6 +794,12 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                           </td>
                           <td className="px-3 py-3 tabular-nums font-semibold">{row.avgMonthlySearches != null ? formatNum(row.avgMonthlySearches) : "—"}</td>
                           <td className="px-3 py-3"><DifficultyBar value={row.keywordDifficulty} /></td>
+                          <td className="px-3 py-3 tabular-nums font-semibold text-emerald-700">
+                            {row.trafficPotential != null ? formatNum(row.trafficPotential) : "—"}
+                          </td>
+                          <td className="px-3 py-3 tabular-nums font-semibold">
+                            {row.estimatedMonthlyClicks != null ? formatNum(row.estimatedMonthlyClicks) : "—"}
+                          </td>
                           <td className="px-3 py-3"><span className="rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-700">{row.opportunityScore}</span></td>
                           <td className="px-3 py-3"><span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold capitalize ${INTENT_STYLES[row.intent] || "bg-gray-100"}`}>{row.intent}</span></td>
                           <td className="px-3 py-3 text-xs text-gray-600 leading-relaxed max-w-xs">{row.recommendation || row.contentAngle || "—"}</td>
@@ -810,7 +815,7 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
             <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-12 text-center">
               <FiDollarSign size={32} className="mx-auto text-indigo-400 mb-3" />
               <h3 className="text-lg font-semibold text-gray-900">Research any keyword</h3>
-              <p className="mt-2 max-w-md mx-auto text-sm text-gray-500">Enter a seed above. Autocomplete finds related terms, AI estimates volume/KD/CPC/trend, and Google Ads or SE Ranking fills in live data when configured.</p>
+              <p className="mt-2 max-w-md mx-auto text-sm text-gray-500">Enter a seed above. Autocomplete finds related terms, AI estimates volume/KD/CPC/traffic potential/trend, and Google Ads fills in live Planner data when configured.</p>
             </div>
           ) : null}
         </>

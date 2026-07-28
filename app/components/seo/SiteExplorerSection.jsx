@@ -204,7 +204,11 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
             <span className="text-sky-800/80">·</span>
             <span>
               Last saved: <strong>{formatFetchedAt(data.fetchedAt)}</strong>
-              {data.stale ? " (today’s cron run pending)" : " (daily cron)"}
+              {data.stale
+                ? " · weekly refresh due"
+                : data.cacheExpiresAt
+                  ? ` · cached until ${formatFetchedAt(data.cacheExpiresAt)}`
+                  : " · weekly cache"}
             </span>
           </div>
 

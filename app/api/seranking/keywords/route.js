@@ -99,7 +99,7 @@ export async function POST(req) {
     const relatedRows = (result.data || []).map((row) => finalizeKeywordRow(row, source)).filter(Boolean);
     const seedRow = seedResult.metrics ? finalizeKeywordRow(seedResult.metrics, source) : null;
     const needsEnrich = [...(seedRow ? [seedRow] : []), ...relatedRows].some(
-      (row) => row.cpc == null || row.trafficPotential == null || row.cpcFormatted == null
+      (row) => row.cpc == null || row.cpcFormatted == null
     );
 
     let enrichedRelated = relatedRows;

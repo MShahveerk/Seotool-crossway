@@ -124,7 +124,7 @@ function SeedKeywordCard({ row, fromCache, fetchedAt, expiresAt }) {
         ) : null}
       </div>
       <CardContent className="p-4 sm:p-5">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4 text-sm">
           <div>
             <p className="text-[10px] font-bold uppercase text-muted-foreground">Search volume</p>
             <p className="mt-1 text-xl font-bold tabular-nums">
@@ -155,6 +155,14 @@ function SeedKeywordCard({ row, fromCache, fetchedAt, expiresAt }) {
             <p className="mt-1 text-xl font-bold tabular-nums text-emerald-700">
               {row.trafficPotential != null ? formatSerankingCompact(row.trafficPotential) : "—"}
             </p>
+            <p className="text-[10px] text-muted-foreground">Top #1 page / mo</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-muted-foreground">Est. clicks</p>
+            <p className="mt-1 text-xl font-bold tabular-nums">
+              {row.estimatedClicks != null ? formatSerankingCompact(row.estimatedClicks) : "—"}
+            </p>
+            <p className="text-[10px] text-muted-foreground">At target rank / mo</p>
           </div>
           <div>
             <p className="text-[10px] font-bold uppercase text-muted-foreground">Intent</p>
@@ -201,11 +209,18 @@ function SeedKeywordCard({ row, fromCache, fetchedAt, expiresAt }) {
 function KeywordDetailPanel({ row }) {
   if (!row) return null;
   return (
-    <div className="border-t border-violet-100 bg-violet-50/30 px-4 py-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+    <div className="border-t border-violet-100 bg-violet-50/30 px-4 py-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5 text-sm">
       <div>
         <p className="text-[10px] font-bold uppercase text-muted-foreground">Traffic potential</p>
         <p className="mt-1 text-lg font-bold tabular-nums text-emerald-700">
           {row.trafficPotential != null ? formatSerankingCompact(row.trafficPotential) : "—"}
+        </p>
+        <p className="text-[10px] text-muted-foreground">Top #1 page organic traffic / mo</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold uppercase text-muted-foreground">Est. clicks</p>
+        <p className="mt-1 text-lg font-bold tabular-nums">
+          {row.estimatedClicks != null ? formatSerankingCompact(row.estimatedClicks) : "—"}
         </p>
         <p className="text-[10px] text-muted-foreground">Est. clicks/mo at target rank</p>
       </div>
@@ -271,7 +286,7 @@ function KeywordTable({ rows, sortField, sortDir, onSort, expandedKey, onToggleE
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[960px] text-sm">
+      <table className="w-full min-w-[1060px] text-sm">
         <thead className="bg-muted/40 border-b border-border/60">
           <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
             <th className="px-3 py-3 w-8" />
@@ -296,7 +311,10 @@ function KeywordTable({ rows, sortField, sortDir, onSort, expandedKey, onToggleE
               <SortBtn field="competition" label="Comp" />
             </th>
             <th className="px-3 py-3">
-              <SortBtn field="trafficPotential" label="Traffic pot." />
+              <SortBtn field="trafficPotential" label="Traffic potential" />
+            </th>
+            <th className="px-3 py-3">
+              <SortBtn field="estimatedClicks" label="Est. clicks" />
             </th>
             <th className="px-3 py-3">Intent</th>
             <th className="px-3 py-3">Trend</th>
@@ -339,6 +357,9 @@ function KeywordTable({ rows, sortField, sortDir, onSort, expandedKey, onToggleE
                   <td className="px-3 py-2.5 tabular-nums font-medium text-emerald-700">
                     {row.trafficPotential != null ? formatSerankingCompact(row.trafficPotential) : "—"}
                   </td>
+                  <td className="px-3 py-2.5 tabular-nums font-medium">
+                    {row.estimatedClicks != null ? formatSerankingCompact(row.estimatedClicks) : "—"}
+                  </td>
                   <td className="px-3 py-2.5">
                     <IntentBadges intents={row.intents} />
                   </td>
@@ -351,7 +372,7 @@ function KeywordTable({ rows, sortField, sortDir, onSort, expandedKey, onToggleE
                 </tr>
                 {open ? (
                   <tr key={`${key}-detail`}>
-                    <td colSpan={showPosition ? 10 : 9} className="p-0">
+                    <td colSpan={showPosition ? 11 : 10} className="p-0">
                       <KeywordDetailPanel row={row} />
                     </td>
                   </tr>

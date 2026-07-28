@@ -151,7 +151,7 @@ export default function LinkIndexSection({ selectedSite = "" }) {
 
           <p className="text-sm text-gray-600">
             Last saved: <strong>{formatFetchedAt(data.fetchedAt)}</strong>
-            {data.stale ? " · indexed pages pending nightly cron" : ""}
+            {data.stale ? " · indexed pages pending weekly refresh" : ""}
           </p>
 
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 leading-relaxed">
