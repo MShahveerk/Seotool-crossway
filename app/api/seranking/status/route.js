@@ -4,6 +4,7 @@ import { getCreditStatus } from "../../../../lib/seranking/credits.js";
 import { getBundleForSite } from "../../../../lib/seranking/api.js";
 import { SERANKING_SCHEDULES } from "../../../../lib/seranking/loadBundle.js";
 import { getLatestAuditJob, getCachedSnapshot } from "../../../../lib/seranking/cache.js";
+import { SEO_DATA_NOT_CONFIGURED, SEO_DATA_STATUS_FAILED } from "../../../../lib/seoDataMessages.js";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,7 @@ export async function GET(req) {
         configured: false,
         siteUrl,
         credits,
-        message: "Add SERANKING_API_KEY to enable SE Ranking data.",
+        message: "Contact your administrator to enable live SEO data.",
       });
     }
 
@@ -66,6 +67,6 @@ export async function GET(req) {
         : null,
     });
   } catch (err) {
-    return Response.json({ error: err.message || "Failed to load SE Ranking status." }, { status: err.status || 500 });
+    return Response.json({ error: err.message || SEO_DATA_STATUS_FAILED }, { status: err.status || 500 });
   }
 }

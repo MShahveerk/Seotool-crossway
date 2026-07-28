@@ -151,7 +151,7 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
   return (
     <SerankingShell
       title="Site Explorer"
-      description="Research any domain with SE Ranking — organic overview, backlinks, and top pages cached for 7 days with a weekly refresh. Site audits run on demand."
+      description="Research any domain — organic overview, backlinks, and top pages cached for 7 days with a weekly refresh. Site audits run on demand."
       selectedSite={selectedSite}
       requireWebsite={false}
       siteBadge={activeTarget || "Any domain"}
@@ -369,7 +369,7 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
           </Tabs>
         ) : !loading ? (
           <p className="text-sm text-muted-foreground">
-            Enter any domain above to load SE Ranking overview, backlinks, and top pages. Results cache for 7 days and refresh automatically every Monday.
+            Enter any domain above to load overview, backlinks, and top pages. Results cache for 7 days and refresh automatically every Monday.
           </p>
         ) : null}
       </div>

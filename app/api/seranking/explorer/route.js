@@ -3,13 +3,14 @@ import { loadExplorer, startExplorerAudit } from "../../../../lib/seranking/load
 import { isSerankingConfigured } from "../../../../lib/seranking/config.js";
 import { SerankingApiError } from "../../../../lib/seranking/client.js";
 import { resolveSerankingTarget } from "../../../../lib/seranking/resolveTarget.js";
+import { SEO_DATA_NOT_CONFIGURED } from "../../../../lib/seoDataMessages.js";
 
 export const runtime = "nodejs";
 
 export async function GET(req) {
   try {
     if (!isSerankingConfigured()) {
-      return Response.json({ error: "SE Ranking is not configured." }, { status: 503 });
+      return Response.json({ error: SEO_DATA_NOT_CONFIGURED }, { status: 503 });
     }
     await requireSession();
     const target = req.nextUrl.searchParams.get("target");
@@ -31,7 +32,7 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     if (!isSerankingConfigured()) {
-      return Response.json({ error: "SE Ranking is not configured." }, { status: 503 });
+      return Response.json({ error: SEO_DATA_NOT_CONFIGURED }, { status: 503 });
     }
     await requireSession();
     const body = await req.json().catch(() => ({}));

@@ -19,7 +19,6 @@ import {
   Search,
   Settings,
   Shield,
-  Sparkles,
   Users,
   Activity,
   Link2,
@@ -73,9 +72,8 @@ const seoMenuItems = [
   { id: "site-audit", label: "Site Audit", icon: Shield },
   { id: "keyword-research", label: "Keyword Research", icon: Search },
   { id: "site-explorer", label: "Site Explorer", icon: Compass },
+  { id: "backlink-profile", label: "Backlink Profile", icon: Link2 },
 ];
-
-const serankingMenuItems = [{ id: "seranking-backlinks", label: "Backlink Profile", icon: Link2 }];
 
 const smmMenuItems = [
   { id: "smm-statistics", label: "SMM Statistics", icon: Megaphone },
@@ -140,7 +138,6 @@ export default function AppSidebar({
   const [approvalUserUnread, setApprovalUserUnread] = useState(0);
   const [gscOpen, setGscOpen] = useState(true);
   const [seoOpen, setSeoOpen] = useState(true);
-  const [serankingOpen, setSerankingOpen] = useState(true);
   const [smmOpen, setSmmOpen] = useState(true);
   const [blogsOpen, setBlogsOpen] = useState(true);
 
@@ -269,7 +266,6 @@ export default function AppSidebar({
   useEffect(() => {
     if (groupContainsSection(gscMenuItems, activeSection)) setGscOpen(true);
     if (groupContainsSection(seoMenuItems, activeSection)) setSeoOpen(true);
-    if (groupContainsSection(serankingMenuItems, activeSection)) setSerankingOpen(true);
     if (groupContainsSection(smmMenuItems, activeSection)) setSmmOpen(true);
     if (groupContainsSection(blogsMenuItems, activeSection)) setBlogsOpen(true);
   }, [activeSection]);
@@ -278,7 +274,6 @@ export default function AppSidebar({
 
   const visibleGscItems = gscMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleSeoItems = seoMenuItems.filter((item) => filterMenuItem(item, menuContext));
-  const visibleSerankingItems = serankingMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleSmmItems = smmMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleBlogItems = blogsMenuItems.filter((item) => filterMenuItem(item, menuContext));
 
@@ -286,11 +281,8 @@ export default function AppSidebar({
     ? visibleSeoItems
     : visibleSeoItems.filter((item) => item.id === "site-explorer");
 
-  const serankingItemsForMenu = visibleSerankingItems;
-
   const showGscGroup = userRole !== "approver" && isWebsiteSelected && visibleGscItems.length > 0;
   const showSeoGroup = userRole !== "approver" && seoItemsForMenu.length > 0;
-  const showSerankingGroup = userRole !== "approver" && isWebsiteSelected && serankingItemsForMenu.length > 0;
   const showSmmGroup = visibleSmmItems.length > 0;
   const showBlogsGroup = userRole !== "approver" && visibleBlogItems.length > 0;
 
@@ -415,10 +407,6 @@ export default function AppSidebar({
 
         {showSeoGroup
           ? renderMenuGroup("SEO Tools", Search, seoItemsForMenu, seoOpen, setSeoOpen, "seo")
-          : null}
-
-        {showSerankingGroup
-          ? renderMenuGroup("SE Ranking", Sparkles, serankingItemsForMenu, serankingOpen, setSerankingOpen, "seranking")
           : null}
 
         {showSmmGroup ? renderMenuGroup("Social Media", Megaphone, visibleSmmItems, smmOpen, setSmmOpen, "smm") : null}

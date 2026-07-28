@@ -30,6 +30,7 @@ const SECTION_ALIASES = {
   "seranking-keywords": "keyword-research",
   "seranking-explorer": "site-explorer",
   "seranking-domain": "site-health",
+  "seranking-backlinks": "backlink-profile",
   "ai-keyword-research": "keyword-research",
   "pagespeed-insights": "site-health",
   "domain-authority": "site-health",
@@ -55,6 +56,7 @@ const WEBSITE_SEO_SECTIONS = new Set([
   "query-page-matrix",
   "sitemap-health",
   "site-explorer",
+  "backlink-profile",
   "link-index",
   "seranking-domain",
   "seranking-backlinks",
@@ -141,6 +143,7 @@ export default function Home() {
         return <UnifiedSiteExplorerSection selectedSite={seoSite} />;
       case "seranking-domain":
         return <SiteHealthSection selectedSite={seoSite} />;
+      case "backlink-profile":
       case "seranking-backlinks":
         return <SerankingBacklinksSection selectedSite={seoSite} />;
       case "smm-statistics":

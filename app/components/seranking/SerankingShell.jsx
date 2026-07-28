@@ -88,7 +88,7 @@ export default function SerankingShell({
           <EmptyState
             icon={Globe}
             title="Select a client website"
-            description="SE Ranking analyzes website URLs only. Choose a website (not a Meta-only page) from the sidebar."
+            description="These tools analyze website URLs only. Choose a website (not a Meta-only page) from the sidebar."
           />
         </CardContent>
       </Card>
@@ -101,8 +101,8 @@ export default function SerankingShell({
         <CardContent className="p-6 sm:p-8">
           <EmptyState
             icon={AlertCircle}
-            title="SE Ranking not configured"
-            description="Add SERANKING_API_KEY to your environment. Missing data is fetched when you open a page; nightly cron at 04:45 refreshes stale snapshots."
+            title="Live SEO data not configured"
+            description="Contact your administrator to enable live SEO metrics. Missing data is fetched when you open a page; nightly refresh runs at 04:45."
           />
         </CardContent>
       </Card>
@@ -112,7 +112,7 @@ export default function SerankingShell({
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="SE Ranking"
+        eyebrow="SEO Tools"
         title={title}
         description={description}
         action={

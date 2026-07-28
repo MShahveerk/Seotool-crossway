@@ -199,7 +199,7 @@ function SeedKeywordCard({ row, fromCache, fetchedAt, expiresAt }) {
           ) : null}
         </div>
         {!row.isDataFound ? (
-          <p className="mt-3 text-sm text-amber-700">No SE Ranking data for this keyword in the selected market.</p>
+          <p className="mt-3 text-sm text-amber-700">No keyword data for this term in the selected market.</p>
         ) : null}
       </CardContent>
     </Card>
@@ -517,7 +517,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
   return (
     <SerankingShell
       title="Keyword Explorer"
-      description="Full SE Ranking keyword metrics — volume, KD, CPC, competition, traffic potential, intent, and 12-month trends. Separate from AI Keyword Research."
+      description="Full keyword metrics — volume, KD, CPC, competition, traffic potential, intent, and 12-month trends. Separate from AI Keyword Research."
       selectedSite={selectedSite}
       loading={loading}
       error={error}
@@ -692,7 +692,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
             <div className="border-b border-border/60 px-4 py-3 bg-muted/20">
               <p className="text-sm font-medium">Organic keywords your domain ranks for</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Cached from SE Ranking domain analysis · expand rows for full metrics
+                Cached from domain analysis · expand rows for full metrics
               </p>
             </div>
             <KeywordTable

@@ -30,7 +30,7 @@ export default function UnifiedKeywordResearchSection({ selectedSite = "" }) {
             <div>
               <p className="font-semibold text-gray-900">AI &amp; GSC keyword tools</p>
               <p className="mt-0.5 text-sm text-gray-500">
-                Fallback when you need Search Console rankings, AI topic analysis, or autocomplete discovery without SE Ranking credits.
+                Fallback when you need Search Console rankings, AI topic analysis, or autocomplete discovery without using API credits.
               </p>
             </div>
           </div>

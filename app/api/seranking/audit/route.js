@@ -11,6 +11,7 @@ import { getAuditStatus } from "../../../../lib/seranking/api.js";
 import { SerankingApiError } from "../../../../lib/seranking/client.js";
 import { pollPendingAudits } from "../../../../lib/seranking/jobs.js";
 import { normalizeAuditReport, normalizeAuditPagesList } from "../../../../lib/seranking/normalize.js";
+import { SEO_DATA_NOT_CONFIGURED } from "../../../../lib/seoDataMessages.js";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,7 @@ async function loadAuditPages(auditId) {
 export async function GET(req) {
   try {
     if (!isSerankingConfigured()) {
-      return Response.json({ error: "SE Ranking is not configured." }, { status: 503 });
+      return Response.json({ error: SEO_DATA_NOT_CONFIGURED }, { status: 503 });
     }
     const { siteUrl } = await resolveWebsiteAccess(req);
     const domain = resolveDomainFromSite(siteUrl);
@@ -145,7 +146,7 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     if (!isSerankingConfigured()) {
-      return Response.json({ error: "SE Ranking is not configured." }, { status: 503 });
+      return Response.json({ error: SEO_DATA_NOT_CONFIGURED }, { status: 503 });
     }
     const { siteUrl } = await resolveWebsiteAccess(req);
     const domain = resolveDomainFromSite(siteUrl);

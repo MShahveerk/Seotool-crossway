@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function SerankingAuditSection({
   selectedSite = "",
-  title = "SE Ranking Site Audit",
+  title = "Site Audit",
   description,
 }) {
   const { data: session } = useSession();
@@ -29,7 +29,7 @@ export default function SerankingAuditSection({
   const auditCost = auditMaxPages * 2;
   const shellDescription =
     description ||
-    `Technical crawl via SE Ranking (max ${auditMaxPages} pages ≈ ${auditCost} credits). Each issue includes full details and step-by-step fix guidance.`;
+    `Technical site crawl (max ${auditMaxPages} pages ≈ ${auditCost} credits). Each issue includes full details and step-by-step fix guidance.`;
 
   const load = useCallback(async () => {
     const site = hasGlobalAccess ? selectedSite : session?.user?.siteLink;

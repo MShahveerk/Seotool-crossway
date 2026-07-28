@@ -96,7 +96,7 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
   return (
     <SerankingShell
       title="SEO Performance Overview"
-      description="SE Ranking domain, backlink, and AI visibility metrics — similar to a SEMrush overview. Refresh loads domain + backlinks + competitors (~400 cr). AI engines add ~2,400 cr."
+      description="Domain, backlink, and AI visibility metrics — similar to a SEMrush overview. Refresh loads domain + backlinks + competitors (~400 cr). AI engines add ~2,400 cr."
       selectedSite={selectedSite}
       loading={loading}
       error={error}
@@ -115,7 +115,7 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
             icon={Award}
             label="Authority (InLink)"
             value={backlinks?.domainInlinkRank ?? "—"}
-            sub="SE Ranking 0–100"
+            sub="Authority 0–100"
             accent="violet"
           />
           <Kpi
@@ -232,7 +232,7 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground py-4">No competitor data — click Refresh to fetch from SE Ranking.</p>
+                <p className="text-sm text-muted-foreground py-4">No competitor data — click Refresh to fetch live data.</p>
               )}
             </CardContent>
           </Card>
@@ -256,7 +256,7 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground py-4">No keyword rankings — click Refresh to fetch from SE Ranking.</p>
+                <p className="text-sm text-muted-foreground py-4">No keyword rankings — click Refresh to fetch live data.</p>
               )}
             </CardContent>
           </Card>

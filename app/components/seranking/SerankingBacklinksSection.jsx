@@ -88,7 +88,7 @@ export default function SerankingBacklinksSection({ selectedSite = "" }) {
   return (
     <SerankingShell
       title="Backlink Profile"
-      description="Referring domains, anchor distribution, and authority from SE Ranking — refreshed monthly per site to conserve API credits."
+      description="Referring domains, anchor distribution, and authority — refreshed monthly per site to conserve API credits."
       selectedSite={selectedSite}
       loading={loading}
       error={error}
@@ -174,11 +174,11 @@ export default function SerankingBacklinksSection({ selectedSite = "" }) {
         </div>
       ) : summary && !loading ? (
         <p className="text-sm text-muted-foreground">
-          No backlink metrics returned yet. Click <strong>Refresh</strong> to fetch live data from SE Ranking (100
+          No backlink metrics returned yet. Click <strong>Refresh</strong> to fetch live data (100
           credits).
         </p>
       ) : (
-        <p className="text-sm text-muted-foreground">No backlink data yet — fetching live from SE Ranking…</p>
+        <p className="text-sm text-muted-foreground">No backlink data yet — fetching live data…</p>
       )}
     </SerankingShell>
   );

@@ -197,7 +197,7 @@ export default function SiteHealthSection({ selectedSite = "" }) {
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300/90">SEO Tools</p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Authority &amp; Performance</h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-300">
-              Domain authority, backlinks, organic reach, and page performance — SE Ranking metrics when available,
+              Domain authority, backlinks, organic reach, and page performance — live SEO metrics when available,
               Open PageRank and PageSpeed as fallback.
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
@@ -244,7 +244,7 @@ export default function SiteHealthSection({ selectedSite = "" }) {
               icon={Award}
               label="Authority"
               value={authorityScore != null ? `${Math.round(authorityScore)}/100` : "—"}
-              sub={hasSeAuthority ? "SE Ranking InLink rank" : openPageRankScore != null ? "Open PageRank" : authTone.label}
+              sub={hasSeAuthority ? "InLink rank" : openPageRankScore != null ? "Open PageRank" : authTone.label}
               toneClass={authTone.text}
               accent="emerald"
             />
@@ -252,21 +252,21 @@ export default function SiteHealthSection({ selectedSite = "" }) {
               icon={TrendingUp}
               label="Organic traffic"
               value={organicTraffic != null ? formatNum(organicTraffic) : "—"}
-              sub={seOverview ? "SE Ranking est." : "Refresh SE Ranking"}
+              sub={seOverview ? "Live estimate" : "Refresh metrics"}
               accent="teal"
             />
             <KpiCard
               icon={Link2}
               label="Ref. domains"
               value={referringDomains != null ? formatNum(referringDomains) : "—"}
-              sub={seBacklinks?.refdomains != null ? "SE Ranking" : "Open PageRank fallback"}
+              sub={seBacklinks?.refdomains != null ? "Live data" : "Open PageRank fallback"}
               accent="amber"
             />
             <KpiCard
               icon={Link2}
               label="Backlinks"
               value={backlinkCount != null ? formatNum(backlinkCount) : "—"}
-              sub={seBacklinks?.backlinks != null ? "SE Ranking live" : "—"}
+              sub={seBacklinks?.backlinks != null ? "Live data" : "—"}
               accent="sky"
             />
             <KpiCard
@@ -284,7 +284,7 @@ export default function SiteHealthSection({ selectedSite = "" }) {
               icon={Globe}
               label="Organic keywords"
               value={organicKeywords != null ? formatNum(organicKeywords) : "—"}
-              sub={seOverview ? "SE Ranking" : "—"}
+              sub={seOverview ? "Live data" : "—"}
               accent="violet"
             />
             <KpiCard
@@ -338,7 +338,7 @@ export default function SiteHealthSection({ selectedSite = "" }) {
             <h2 className="text-lg font-bold text-gray-900">Authority &amp; Link Profile</h2>
             <p className="mt-1 text-sm text-gray-500">
               {hasSeAuthority
-                ? "Authority score from SE Ranking above. Open PageRank trend history below when available."
+                ? "Authority score above. Open PageRank trend history below when available."
                 : "Trend history and competitor benchmarks from Open PageRank."}
             </p>
           </div>
@@ -359,9 +359,9 @@ export default function SiteHealthSection({ selectedSite = "" }) {
         <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-4 text-sm text-gray-600">
           <p className="font-semibold text-gray-800">About link data</p>
           <p className="mt-1 leading-relaxed">
-            Referring domains and backlink counts use <strong>SE Ranking</strong> when cached.
-            {!hasSeAuthority ? " Open PageRank fills authority when SE Ranking is unavailable." : null}
-            {" "}See <strong>Backlink Profile</strong> under SE Ranking for anchors, top linked pages, and full detail.
+            Referring domains and backlink counts use <strong>live SEO data</strong> when cached.
+            {!hasSeAuthority ? " Open PageRank fills authority when live data is unavailable." : null}
+            {" "}See <strong>Backlink Profile</strong> under SEO Tools for anchors, top linked pages, and full detail.
           </p>
         </div>
       </section>

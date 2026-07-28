@@ -10,6 +10,7 @@ import { isSerankingConfigured, geoToSerankingSource } from "../../../../lib/ser
 import { SerankingApiError } from "../../../../lib/seranking/client.js";
 import { normalizeKeywordResearchList } from "../../../../lib/seranking/normalize.js";
 import { normKeyword, finalizeKeywordRow } from "../../../../lib/seranking/keywordMetrics.js";
+import { SEO_DATA_NOT_CONFIGURED } from "../../../../lib/seoDataMessages.js";
 
 export const runtime = "nodejs";
 
@@ -22,7 +23,7 @@ function sameKeyword(a, b) {
 export async function GET(req) {
   try {
     if (!isSerankingConfigured()) {
-      return Response.json({ error: "SE Ranking is not configured." }, { status: 503 });
+      return Response.json({ error: SEO_DATA_NOT_CONFIGURED }, { status: 503 });
     }
     const { siteUrl } = await resolveWebsiteAccess(req);
     const force = req.nextUrl.searchParams.get("refresh") === "1";
@@ -45,7 +46,7 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     if (!isSerankingConfigured()) {
-      return Response.json({ error: "SE Ranking is not configured." }, { status: 503 });
+      return Response.json({ error: SEO_DATA_NOT_CONFIGURED }, { status: 503 });
     }
     const { siteUrl } = await resolveWebsiteAccess(req);
     const body = await req.json().catch(() => ({}));

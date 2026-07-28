@@ -26,7 +26,7 @@ export default function UnifiedSiteAuditSection({ selectedSite = "", onNavigateS
             }`}
           >
             <Shield className="size-4" aria-hidden />
-            SE Ranking audit
+            SE audit
           </button>
           <button
             type="button"
@@ -37,7 +37,7 @@ export default function UnifiedSiteAuditSection({ selectedSite = "", onNavigateS
           >
             Internal crawl
           </button>
-          <span className="self-center text-xs text-gray-500">SE Ranking is primary when configured; internal crawl is the fallback.</span>
+          <span className="self-center text-xs text-gray-500">Live site audit is primary when available; internal crawl is the fallback.</span>
         </div>
       ) : null}
 
@@ -45,7 +45,7 @@ export default function UnifiedSiteAuditSection({ selectedSite = "", onNavigateS
         <SerankingAuditSection
           selectedSite={selectedSite}
           title="Site Audit"
-          description="Technical SEO crawl via SE Ranking — each issue includes full details and step-by-step fix guidance. Switch to Internal crawl for our built-in crawler."
+          description="Technical SEO crawl — each issue includes full details and step-by-step fix guidance. Switch to Internal crawl for our built-in crawler."
         />
       ) : null}
       {showInternal ? <SiteAuditSection selectedSite={selectedSite} onNavigateSection={onNavigateSection} /> : null}

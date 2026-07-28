@@ -3,13 +3,14 @@ import { getAuditIssuePages, getAuditPageIssues } from "../../../../../lib/seran
 import { enrichAuditCheck } from "../../../../../lib/seranking/auditIssueGuide.js";
 import { isSerankingConfigured } from "../../../../../lib/seranking/config.js";
 import { SerankingApiError } from "../../../../../lib/seranking/client.js";
+import { SEO_DATA_NOT_CONFIGURED } from "../../../../../lib/seoDataMessages.js";
 
 export const runtime = "nodejs";
 
 export async function GET(req) {
   try {
     if (!isSerankingConfigured()) {
-      return Response.json({ error: "SE Ranking is not configured." }, { status: 503 });
+      return Response.json({ error: SEO_DATA_NOT_CONFIGURED }, { status: 503 });
     }
     await requireSession();
 
