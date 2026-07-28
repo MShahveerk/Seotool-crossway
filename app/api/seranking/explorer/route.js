@@ -1,4 +1,4 @@
-import { resolveWebsiteAccess } from "../../../../lib/resolveWebsiteAccess.js";
+import { resolveWebsiteAccess, requireSession } from "../../../../lib/resolveWebsiteAccess.js";
 import { loadExplorer, startExplorerAudit } from "../../../../lib/seranking/loadBundle.js";
 import { isSerankingConfigured } from "../../../../lib/seranking/config.js";
 import { SerankingApiError } from "../../../../lib/seranking/client.js";
@@ -11,7 +11,7 @@ export async function GET(req) {
     if (!isSerankingConfigured()) {
       return Response.json({ error: "SE Ranking is not configured." }, { status: 503 });
     }
-    await resolveWebsiteAccess(req);
+    await requireSession();
     const target = req.nextUrl.searchParams.get("target");
     if (!target?.trim()) {
       return Response.json({ error: "Enter a domain to explore (e.g. example.com)." }, { status: 400 });
@@ -33,7 +33,7 @@ export async function POST(req) {
     if (!isSerankingConfigured()) {
       return Response.json({ error: "SE Ranking is not configured." }, { status: 503 });
     }
-    await resolveWebsiteAccess(req);
+    await requireSession();
     const body = await req.json().catch(() => ({}));
     const target = body.target || req.nextUrl.searchParams.get("target");
     if (!target?.trim()) {

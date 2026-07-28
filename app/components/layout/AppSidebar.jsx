@@ -288,10 +288,13 @@ export default function AppSidebar({
   const visibleSmmItems = smmMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleBlogItems = blogsMenuItems.filter((item) => filterMenuItem(item, menuContext));
 
+  const serankingItemsForMenu = isWebsiteSelected
+    ? visibleSerankingItems
+    : visibleSerankingItems.filter((item) => item.id === "seranking-explorer");
+
   const showGscGroup = userRole !== "approver" && isWebsiteSelected && visibleGscItems.length > 0;
   const showSeoGroup = userRole !== "approver" && isWebsiteSelected && visibleSeoItems.length > 0;
-  const showSerankingGroup =
-    userRole !== "approver" && isWebsiteSelected && visibleSerankingItems.length > 0;
+  const showSerankingGroup = userRole !== "approver" && serankingItemsForMenu.length > 0;
   const showSmmGroup = visibleSmmItems.length > 0;
   const showBlogsGroup = userRole !== "approver" && visibleBlogItems.length > 0;
 
@@ -419,7 +422,7 @@ export default function AppSidebar({
           : null}
 
         {showSerankingGroup
-          ? renderMenuGroup("SE Ranking", Sparkles, visibleSerankingItems, serankingOpen, setSerankingOpen, "seranking")
+          ? renderMenuGroup("SE Ranking", Sparkles, serankingItemsForMenu, serankingOpen, setSerankingOpen, "seranking")
           : null}
 
         {showSmmGroup ? renderMenuGroup("Social Media", Megaphone, visibleSmmItems, smmOpen, setSmmOpen, "smm") : null}

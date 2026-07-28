@@ -3,15 +3,21 @@ import {
   fetchKeywordExport,
   fetchKeywordResearch,
   loadSeedKeywordMetrics,
+  enrichKeywordRowsFromExport,
 } from "../../../../lib/seranking/api.js";
 import { loadKeywordSeeds } from "../../../../lib/seranking/loadBundle.js";
 import { isSerankingConfigured, geoToSerankingSource } from "../../../../lib/seranking/config.js";
 import { SerankingApiError } from "../../../../lib/seranking/client.js";
 import { normalizeKeywordResearchList } from "../../../../lib/seranking/normalize.js";
+import { normKeyword } from "../../../../lib/seranking/keywordMetrics.js";
 
 export const runtime = "nodejs";
 
 const RESEARCH_TYPES = new Set(["similar", "related", "questions", "longtail", "export"]);
+
+function sameKeyword(a, b) {
+  return normKeyword(a) === normKeyword(b);
+}
 
 export async function GET(req) {
   try {
@@ -90,8 +96,16 @@ export async function POST(req) {
       loadSeedKeywordMetrics(keyword, { source, siteUrl, allowManual: true, force }),
     ]);
 
-    const creditsSpent = (result.creditsSpent || 0) + (seedResult.creditsSpent || 0);
-    const fromCache = Boolean(result.fromCache && seedResult.fromCache);
+    const enriched = await enrichKeywordRowsFromExport(
+      [seedResult.metrics, ...(result.data || [])].filter(Boolean),
+      { source, siteUrl, allowManual: true, force }
+    );
+    const enrichedSeed =
+      enriched.data.find((row) => sameKeyword(row.keyword, keyword)) || seedResult.metrics;
+    const enrichedRelated = enriched.data.filter((row) => !sameKeyword(row.keyword, keyword));
+
+    const creditsSpent = (result.creditsSpent || 0) + (seedResult.creditsSpent || 0) + (enriched.creditsSpent || 0);
+    const fromCache = Boolean(result.fromCache && seedResult.fromCache && enriched.fromCache);
     const fetchedAt = result.fetchedAt || seedResult.fetchedAt || null;
     const expiresAt = result.expiresAt || seedResult.expiresAt || null;
 
@@ -100,8 +114,8 @@ export async function POST(req) {
       keyword: result.keyword,
       type: result.type,
       source: result.source,
-      data: result.data,
-      seedMetrics: seedResult.metrics,
+      data: enrichedRelated,
+      seedMetrics: enrichedSeed,
       creditsSpent,
       fromCache,
       fetchedAt,

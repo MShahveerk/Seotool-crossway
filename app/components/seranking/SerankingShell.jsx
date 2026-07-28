@@ -67,6 +67,8 @@ export default function SerankingShell({
   fetchedAt,
   expiresAt,
   configured = true,
+  requireWebsite = true,
+  siteBadge,
 }) {
   const { data: session } = useSession();
   const hasGlobalAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
@@ -79,7 +81,7 @@ export default function SerankingShell({
       !String(effectiveSite).startsWith("sc-domain:") &&
       !String(effectiveSite).includes("."));
 
-  if (needsWebsite) {
+  if (requireWebsite && needsWebsite) {
     return (
       <Card className="border-border/80 shadow-sm">
         <CardContent className="p-6 sm:p-8">
@@ -133,7 +135,7 @@ export default function SerankingShell({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="font-mono text-xs">
-            {siteHost(effectiveSite)}
+            {siteBadge || siteHost(effectiveSite)}
           </Badge>
           {fetchedAt ? (
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
@@ -169,7 +171,7 @@ export default function SerankingShell({
   );
 }
 
-export function useSerankingStatus(selectedSite) {
+export function useSerankingStatus(selectedSite, { siteOptional = false } = {}) {
   const { data: session } = useSession();
   const hasGlobalAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
   const userSite = session?.user?.siteLink || "";
@@ -179,14 +181,19 @@ export function useSerankingStatus(selectedSite) {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!effectiveSite || !String(effectiveSite).startsWith("http")) {
+    const hasSite = effectiveSite && String(effectiveSite).startsWith("http");
+    if (!siteOptional && !hasSite) {
       setStatus(null);
       setLoading(false);
       return;
     }
     setLoading(true);
     const q = new URLSearchParams();
-    if (hasGlobalAccess) q.set("url", effectiveSite);
+    if (siteOptional && !hasSite) {
+      q.set("global", "1");
+    } else if (hasGlobalAccess) {
+      q.set("url", effectiveSite);
+    }
     try {
       const res = await fetch(`/api/seranking/status?${q}`, { cache: "no-store" });
       const data = await res.json();
@@ -196,7 +203,7 @@ export function useSerankingStatus(selectedSite) {
     } finally {
       setLoading(false);
     }
-  }, [effectiveSite, hasGlobalAccess]);
+  }, [effectiveSite, hasGlobalAccess, siteOptional]);
 
   useEffect(() => {
     load();

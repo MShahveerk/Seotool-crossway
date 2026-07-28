@@ -47,7 +47,7 @@ function defaultTarget(selectedSite, userSite) {
 export default function SerankingExplorerSection({ selectedSite = "" }) {
   const { data: session } = useSession();
   const hasGlobalAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
-  const { credits, reload: reloadMeta } = useSerankingStatus(selectedSite);
+  const { credits, reload: reloadMeta } = useSerankingStatus(selectedSite, { siteOptional: true });
 
   const [targetInput, setTargetInput] = useState("");
   const [activeTarget, setActiveTarget] = useState("");
@@ -144,8 +144,10 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
   return (
     <SerankingShell
       title="Site Explorer"
-      description="Research any domain with SE Ranking — organic overview, backlinks, top pages, and on-demand site audit."
+      description="Research any domain with SE Ranking — organic overview, backlinks, top pages, and on-demand site audit. No client website selection required."
       selectedSite={selectedSite}
+      requireWebsite={false}
+      siteBadge={activeTarget || "Any domain"}
       loading={loading && !payload}
       error={error}
       credits={credits}

@@ -1,4 +1,4 @@
-import { resolveWebsiteAccess } from "../../../../lib/resolveWebsiteAccess.js";
+import { resolveWebsiteAccess, requireSession } from "../../../../lib/resolveWebsiteAccess.js";
 import { isSerankingConfigured, DATA_TYPES, DEFAULT_SOURCE } from "../../../../lib/seranking/config.js";
 import { getCreditStatus } from "../../../../lib/seranking/credits.js";
 import { getBundleForSite } from "../../../../lib/seranking/api.js";
@@ -9,8 +9,19 @@ export const runtime = "nodejs";
 
 export async function GET(req) {
   try {
-    const { siteUrl } = await resolveWebsiteAccess(req);
+    const globalOnly = req.nextUrl.searchParams.get("global") === "1";
     const credits = await getCreditStatus();
+
+    if (globalOnly) {
+      await requireSession();
+      return Response.json({
+        configured: isSerankingConfigured(),
+        credits,
+        schedules: SERANKING_SCHEDULES,
+      });
+    }
+
+    const { siteUrl } = await resolveWebsiteAccess(req);
 
     if (!isSerankingConfigured()) {
       return Response.json({

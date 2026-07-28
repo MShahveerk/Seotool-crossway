@@ -48,7 +48,6 @@ const WEBSITE_SEO_SECTIONS = new Set([
   "seranking-backlinks",
   "seranking-keywords",
   "seranking-audit",
-  "seranking-explorer",
 ]);
 
 export default function Home() {
@@ -132,7 +131,7 @@ export default function Home() {
       case "seranking-audit":
         return <SerankingAuditSection selectedSite={seoSite} />;
       case "seranking-explorer":
-        return <SerankingExplorerSection selectedSite={seoSite} />;
+        return <SerankingExplorerSection selectedSite={selectedSite} />;
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
       case "calendar":
