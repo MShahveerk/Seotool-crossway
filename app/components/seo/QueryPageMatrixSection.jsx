@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import SeoPanelShell, { formatNum, formatPct, formatPos } from "./SeoPanelShell";
 import ReportSectionActions from "../ReportSectionActions";
 
-export default function QueryPageMatrixSection({ selectedSite = "" }) {
+export default function QueryPageMatrixSection({ selectedSite = "", embedded = false }) {
   const [range, setRange] = useState("28d");
   const [tab, setTab] = useState("matrix");
   const [loading, setLoading] = useState(true);
@@ -22,16 +22,18 @@ export default function QueryPageMatrixSection({ selectedSite = "" }) {
     setError("");
     try {
       const base = `url=${encodeURIComponent(selectedSite)}&range=${range}`;
-      const [mRes, sRes] = await Promise.all([
-        fetch(`/api/searchconsole/insights?${base}&view=matrix`),
-        fetch(`/api/searchconsole/insights?${base}&view=striking`),
-      ]);
+      const mRes = await fetch(`/api/searchconsole/insights?${base}&view=matrix`);
       const mData = await mRes.json();
-      const sData = await sRes.json();
       if (!mRes.ok) throw new Error(mData.error || "Failed to load query/page matrix");
-      if (!sRes.ok) throw new Error(sData.error || "Failed to load striking-distance list");
       setPairs(mData.pairs || []);
-      setOpportunities(sData.opportunities || []);
+      if (!embedded) {
+        const sRes = await fetch(`/api/searchconsole/insights?${base}&view=striking`);
+        const sData = await sRes.json();
+        if (!sRes.ok) throw new Error(sData.error || "Failed to load striking-distance list");
+        setOpportunities(sData.opportunities || []);
+      } else {
+        setOpportunities([]);
+      }
     } catch (e) {
       setError(e.message || "Failed to load SEO opportunities");
       setPairs([]);
@@ -39,7 +41,7 @@ export default function QueryPageMatrixSection({ selectedSite = "" }) {
     } finally {
       setLoading(false);
     }
-  }, [selectedSite, range]);
+  }, [selectedSite, range, embedded]);
 
   useEffect(() => {
     load();
@@ -65,9 +67,12 @@ export default function QueryPageMatrixSection({ selectedSite = "" }) {
       onRangeChange={setRange}
       loading={loading}
       error={error}
+      embedded={embedded}
+      eyebrow={embedded ? "" : undefined}
       action={
         <div className="flex flex-wrap items-center gap-2">
           <ReportSectionActions section="query-page-matrix" activeSite={selectedSite} onRefresh={load} loading={loading} />
+          {!embedded ? (
           <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
             <button
               type="button"
@@ -88,10 +93,11 @@ export default function QueryPageMatrixSection({ selectedSite = "" }) {
               Striking distance
             </button>
           </div>
+          ) : null}
         </div>
       }
     >
-      {tab === "matrix" ? (
+      {(embedded || tab === "matrix") ? (
         <>
           <div className="mb-3">
             <input

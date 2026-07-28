@@ -46,7 +46,19 @@ function authorityTone(score10) {
   return { text: "text-red-700", bg: "bg-red-50", label: "Early stage" };
 }
 
-function KpiCard({ icon: Icon, label, value, sub, toneClass = "text-gray-900", accent = "emerald" }) {
+function formatCompactRank(rank) {
+  if (rank == null) return { display: "—", full: null };
+  const n = Number(rank);
+  if (!Number.isFinite(n)) return { display: "—", full: null };
+  let display;
+  if (n >= 1_000_000) display = `#${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  else if (n >= 10_000) display = `#${Math.round(n / 1000)}K`;
+  else if (n >= 1000) display = `#${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`;
+  else display = `#${n.toLocaleString()}`;
+  return { display, full: `#${n.toLocaleString()}` };
+}
+
+function KpiCard({ icon: Icon, label, value, sub, toneClass = "text-gray-900", accent = "emerald", title }) {
   const accentMap = {
     emerald: "from-emerald-500/10 to-emerald-500/5 border-emerald-100",
     teal: "from-teal-500/10 to-teal-500/5 border-teal-100",
@@ -56,14 +68,19 @@ function KpiCard({ icon: Icon, label, value, sub, toneClass = "text-gray-900", a
   };
   return (
     <div
-      className={`rounded-2xl border bg-gradient-to-br p-4 shadow-[0_2px_12px_rgba(0,0,0,0.04)] ${accentMap[accent] || accentMap.emerald}`}
+      className={`min-w-0 overflow-hidden rounded-xl border bg-gradient-to-br p-3.5 shadow-[0_2px_12px_rgba(0,0,0,0.04)] sm:p-4 ${accentMap[accent] || accentMap.emerald}`}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         {Icon ? <Icon className="size-4 shrink-0 opacity-70" aria-hidden /> : null}
-        <p className="text-[11px] font-bold uppercase tracking-wider text-gray-600">{label}</p>
+        <p className="truncate text-[11px] font-bold uppercase tracking-wider text-gray-600">{label}</p>
       </div>
-      <p className={`mt-2 text-2xl font-bold tabular-nums sm:text-3xl ${toneClass}`}>{value}</p>
-      {sub ? <p className="mt-1 text-xs text-gray-500">{sub}</p> : null}
+      <p
+        className={`mt-2 truncate text-xl font-bold tabular-nums sm:text-2xl ${toneClass}`}
+        title={title || (typeof value === "string" ? value : undefined)}
+      >
+        {value}
+      </p>
+      {sub ? <p className="mt-1 truncate text-xs text-gray-500">{sub}</p> : null}
     </div>
   );
 }
@@ -141,6 +158,7 @@ export default function SiteHealthSection({ selectedSite = "" }) {
   const seoScore = ps?.scores?.seo ?? ps?.categories?.seo?.score ?? null;
   const a11yScore = ps?.scores?.accessibility ?? ps?.categories?.accessibility?.score ?? null;
   const bpScore = ps?.scores?.bestPractices ?? ps?.categories?.["best-practices"]?.score ?? null;
+  const globalRank = formatCompactRank(auth?.globalRank);
 
   if (needsWebsite) {
     return (
@@ -200,13 +218,13 @@ export default function SiteHealthSection({ selectedSite = "" }) {
       <section>
         <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-gray-500">At a glance</h2>
         {summaryLoading && !summary ? (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-8">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-2xl bg-gray-100" />
+              <div key={i} className="h-24 animate-pulse rounded-xl bg-gray-100" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-8">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <KpiCard
               icon={Award}
               label="Authority"
@@ -232,7 +250,8 @@ export default function SiteHealthSection({ selectedSite = "" }) {
             <KpiCard
               icon={Globe}
               label="Global rank"
-              value={auth?.globalRank ? `#${auth.globalRank.toLocaleString()}` : "—"}
+              value={globalRank.display}
+              title={globalRank.full || undefined}
               sub="Worldwide position"
               accent="violet"
             />
@@ -278,7 +297,7 @@ export default function SiteHealthSection({ selectedSite = "" }) {
           <div>
             <h2 className="text-lg font-bold text-gray-900">Authority &amp; Link Profile</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Domain authority, trend history, competitor benchmarks, and link metrics from Open PageRank.
+              Trend history, competitor benchmarks, and link profile context from Open PageRank.
             </p>
           </div>
           {(linkLoading || linkRefreshing) && (
@@ -289,34 +308,6 @@ export default function SiteHealthSection({ selectedSite = "" }) {
           )}
         </div>
 
-        {linkData && (
-          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Authority (DR-like)</p>
-              <p className="mt-2 text-3xl font-bold tabular-nums text-gray-900">
-                {linkAuth?.score100 != null ? `${linkAuth.score100}/100` : authorityScore != null ? `${Math.round(authorityScore)}/100` : "—"}
-              </p>
-              <p className="mt-1 text-xs text-gray-600">Open PageRank · live</p>
-            </div>
-            <div className="rounded-xl border border-teal-100 bg-teal-50/50 p-4">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-teal-900">Homepage UR</p>
-              <p className="mt-2 text-3xl font-bold tabular-nums text-gray-900">
-                {homepageUr != null ? `${homepageUr}/100` : "—"}
-              </p>
-              <p className="mt-1 text-xs text-gray-600">Estimated from DR (depth-adjusted)</p>
-            </div>
-            <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-4">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-amber-900">Referring domains</p>
-              <p className="mt-2 text-3xl font-bold tabular-nums text-gray-900">
-                {referringDomains != null ? formatNum(referringDomains) : "—"}
-              </p>
-              <p className="mt-1 text-xs text-gray-600">
-                {linkAuth?.configured === false ? "Set OPENPAGERANK_API_KEY" : "Open PageRank · live"}
-              </p>
-            </div>
-          </div>
-        )}
-
         <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4 sm:p-5">
           <DomainAuthoritySection selectedSite={effectiveSite} embedded />
         </div>
@@ -324,9 +315,8 @@ export default function SiteHealthSection({ selectedSite = "" }) {
         <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-4 text-sm text-gray-600">
           <p className="font-semibold text-gray-800">About link data</p>
           <p className="mt-1 leading-relaxed">
-            Per-page backlink rows from Common Crawl are hidden — they are not reliable backlinks. Use referring
-            domains above for link profile strength, or open <strong>Site Explorer</strong> for indexed pages and per-URL UR
-            estimates.
+            Per-page backlink rows from Common Crawl are hidden — they are not reliable backlinks. Use{" "}
+            <strong>Site Explorer</strong> for indexed pages and per-URL UR estimates.
           </p>
         </div>
       </section>

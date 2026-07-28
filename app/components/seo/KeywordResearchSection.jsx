@@ -146,8 +146,14 @@ function SummaryCards({ summary, planner }) {
   );
 }
 
-export default function KeywordResearchSection({ selectedSite = "" }) {
-  const [tab, setTab] = useState("ranked");
+export default function KeywordResearchSection({ selectedSite = "", embedded = false, excludeTabs = [] }) {
+  const hiddenTabs = useMemo(() => new Set(excludeTabs), [excludeTabs]);
+  const visibleTabs = useMemo(
+    () => ["ranked", "discover", "suggest"].filter((t) => !hiddenTabs.has(t)),
+    [hiddenTabs]
+  );
+  const defaultTab = visibleTabs.includes("ranked") ? "ranked" : visibleTabs[0] || "discover";
+  const [tab, setTab] = useState(defaultTab);
   const [range, setRange] = useState("28d");
   const [geo, setGeo] = useState("us");
   const [loading, setLoading] = useState(true);
@@ -156,6 +162,10 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
   const [data, setData] = useState(null);
   const [filter, setFilter] = useState("");
   const [seedInput, setSeedInput] = useState("");
+
+  useEffect(() => {
+    if (!visibleTabs.includes(tab)) setTab(defaultTab);
+  }, [tab, visibleTabs, defaultTab]);
 
   const load = useCallback(
     async (force = false, seedOverride) => {
@@ -250,6 +260,8 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
       onRangeChange={setRange}
       loading={loading}
       error={error}
+      embedded={embedded}
+      eyebrow={embedded ? "" : undefined}
       action={
         <div className="flex items-center gap-2 flex-wrap">
           <select
@@ -313,6 +325,7 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
       {!loading && !error && (data || tab === "suggest") ? (
         <>
           <div className="flex gap-2 mb-4 border-b border-gray-100 pb-1">
+            {visibleTabs.includes("ranked") ? (
             <button
               type="button"
               onClick={() => setTab("ranked")}
@@ -325,6 +338,8 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
               <FiTarget className="h-4 w-4" aria-hidden />
               Your rankings + market
             </button>
+            ) : null}
+            {visibleTabs.includes("discover") ? (
             <button
               type="button"
               onClick={() => setTab("discover")}
@@ -337,6 +352,8 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
               <FiCompass className="h-4 w-4" aria-hidden />
               Discover topics
             </button>
+            ) : null}
+            {visibleTabs.includes("suggest") ? (
             <button
               type="button"
               onClick={() => setTab("suggest")}
@@ -349,6 +366,7 @@ export default function KeywordResearchSection({ selectedSite = "" }) {
               <FiZap className="h-4 w-4" aria-hidden />
               Suggest keywords
             </button>
+            ) : null}
           </div>
 
           {tab === "suggest" ? (

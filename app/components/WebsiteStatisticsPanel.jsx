@@ -176,7 +176,7 @@ function getTimeAgo(value) {
   return `${diffHrs} hours ago`;
 }
 
-export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Website Statistics" }) {
+export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Website Statistics", embedded = false }) {
   const { data: session } = useSession();
   const isSuperAdmin = session?.user?.role === "super_admin";
   const userSiteLink = session?.user?.siteLink || "";
@@ -476,9 +476,13 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-[#ffffff] p-5">
+    <div className={embedded ? "" : "rounded-xl border border-gray-200 bg-[#ffffff] p-5"}>
+      {!embedded ? (
+        <>
       <h2 className="text-[28px] font-semibold text-gray-900 mb-3">{title}</h2>
       <div className="border-t border-gray-200 mb-4" />
+        </>
+      ) : null}
 
       {showApprovalsTab && (
         <div className="flex gap-2 mb-5">

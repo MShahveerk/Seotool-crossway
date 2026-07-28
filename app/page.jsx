@@ -14,15 +14,10 @@ import MyApprovalsSection from "./components/MyApprovalsSection";
 import MyBlogApprovalsSection from "./components/MyBlogApprovalsSection";
 import AdminBlogSection from "./components/AdminBlogSection";
 import BlogAutomationSection from "./components/BlogAutomationSection";
-import DeviceAppearanceSection from "./components/seo/DeviceAppearanceSection";
 import UrlInspectionSection from "./components/seo/UrlInspectionSection";
-import QueryPageMatrixSection from "./components/seo/QueryPageMatrixSection";
-import SitemapHealthSection from "./components/seo/SitemapHealthSection";
-import SeoOpportunitiesSection from "./components/seo/SeoOpportunitiesSection";
 import SiteHealthSection from "./components/seo/SiteHealthSection";
 import SiteAuditSection from "./components/SiteAuditSection";
-import KeywordResearchSection from "./components/seo/KeywordResearchSection";
-import AiKeywordResearchSection from "./components/seo/AiKeywordResearchSection";
+import KeywordResearchHubSection from "./components/seo/KeywordResearchHubSection";
 import SiteExplorerSection from "./components/seo/SiteExplorerSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
@@ -99,6 +94,10 @@ export default function Home() {
       case "dashboard":
         return <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />;
       case "website-statistics":
+      case "device-appearance":
+      case "query-page-matrix":
+      case "sitemap-health":
+      case "seo-opportunities":
         return <SearchConsoleSection selectedSite={seoSite} />;
       case "site-health":
       case "pagespeed-insights":
@@ -108,19 +107,10 @@ export default function Home() {
       case "site-audit":
         return <SiteAuditSection selectedSite={seoSite} onNavigateSection={setActiveSection} />;
       case "keyword-research":
-        return <KeywordResearchSection selectedSite={seoSite} />;
       case "ai-keyword-research":
-        return <AiKeywordResearchSection selectedSite={seoSite} />;
-      case "seo-opportunities":
-        return <SeoOpportunitiesSection selectedSite={seoSite} />;
-      case "device-appearance":
-        return <DeviceAppearanceSection selectedSite={seoSite} />;
+        return <KeywordResearchHubSection selectedSite={seoSite} />;
       case "url-inspection":
         return <UrlInspectionSection selectedSite={seoSite} />;
-      case "query-page-matrix":
-        return <QueryPageMatrixSection selectedSite={seoSite} />;
-      case "sitemap-health":
-        return <SitemapHealthSection selectedSite={seoSite} />;
       case "site-explorer":
         return <SiteExplorerSection selectedSite={seoSite} />;
       case "smm-statistics":

@@ -138,7 +138,7 @@ function ExpandableItem({ title, subtitle, guide }) {
   );
 }
 
-export default function SeoOpportunitiesSection({ selectedSite = "" }) {
+export default function SeoOpportunitiesSection({ selectedSite = "", embedded = false }) {
   const [range, setRange] = useState("28d");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -174,7 +174,7 @@ export default function SeoOpportunitiesSection({ selectedSite = "" }) {
   return (
     <SeoPanelShell
       title="SEO Opportunities"
-      eyebrow=""
+      eyebrow={embedded ? "" : ""}
       siteUrl={
         selectedSite && (String(selectedSite).startsWith("http") || String(selectedSite).startsWith("sc-domain:"))
           ? selectedSite
@@ -186,6 +186,7 @@ export default function SeoOpportunitiesSection({ selectedSite = "" }) {
       onRangeChange={setRange}
       loading={loading}
       error={error}
+      embedded={embedded}
       action={
         <ReportSectionActions
           section="seo-opportunities"

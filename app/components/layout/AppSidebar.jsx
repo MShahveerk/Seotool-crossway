@@ -15,15 +15,12 @@ import {
   HelpCircle,
   LayoutDashboard,
   LogOut,
-  Map,
   Megaphone,
-  Monitor,
   Search,
   Settings,
   Shield,
   Sparkles,
   Users,
-  Zap,
   Activity,
 } from "lucide-react";
 import { isMetaPageId } from "@/lib/siteAccess";
@@ -67,18 +64,13 @@ const dashboardItem = { id: "dashboard", label: "Dashboard", icon: LayoutDashboa
 
 const gscMenuItems = [
   { id: "website-statistics", label: "Website Statistics", icon: Globe },
-  { id: "device-appearance", label: "Device & Appearance", icon: Monitor },
   { id: "url-inspection", label: "URL Inspection", icon: Crosshair },
-  { id: "query-page-matrix", label: "Query × Page", icon: Map },
-  { id: "sitemap-health", label: "Sitemap Health", icon: FileText },
-  { id: "seo-opportunities", label: "SEO Opportunities", icon: Zap },
 ];
 
 const seoMenuItems = [
   { id: "site-health", label: "Site Health", icon: Activity },
   { id: "site-audit", label: "Site Audit", icon: Shield },
   { id: "keyword-research", label: "Keyword Research", icon: Search },
-  { id: "ai-keyword-research", label: "AI Keyword Research", icon: Sparkles },
   { id: "site-explorer", label: "Site Explorer", icon: Compass },
 ];
 

@@ -44,8 +44,9 @@ export default function SeoPanelShell({
   action,
   eyebrow = "SEO Tools",
   siteUrl,
+  embedded = false,
 }) {
-  if (!selectedSite || (!String(selectedSite).startsWith("http") && !/^\d+$/.test(String(selectedSite)))) {
+  if (!embedded && (!selectedSite || (!String(selectedSite).startsWith("http") && !/^\d+$/.test(String(selectedSite))))) {
     return (
       <Card className="border-border/80 shadow-sm">
         <CardContent className="p-6 sm:p-8">
@@ -56,6 +57,51 @@ export default function SeoPanelShell({
           />
         </CardContent>
       </Card>
+    );
+  }
+
+  if (embedded) {
+    return (
+      <div className="space-y-4">
+        {(onRangeChange || action) && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {onRangeChange ? (
+              <div className="inline-flex rounded-lg border border-border bg-muted/50 p-0.5">
+                {RANGES.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => onRangeChange(r.id)}
+                    className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                      range === r.id
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {action}
+          </div>
+        )}
+
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {loading ? (
+          <>
+            <LoadingSpinner label={`Loading ${title}`} />
+            <StatCardSkeleton count={4} />
+          </>
+        ) : (
+          children
+        )}
+      </div>
     );
   }
 

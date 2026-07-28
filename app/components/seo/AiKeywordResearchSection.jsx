@@ -270,7 +270,7 @@ function AiSiteBriefPanel({ brief, loading, error, onGenerate, hasData }) {
   );
 }
 
-export default function AiKeywordResearchSection({ selectedSite = "", initialTab = "yours" }) {
+export default function AiKeywordResearchSection({ selectedSite = "", initialTab = "yours", embedded = false }) {
   const [tab, setTab] = useState(initialTab === "explore" ? "explore" : "yours");
   const [geo, setGeo] = useState("us");
   const [range, setRange] = useState("28d");
@@ -467,6 +467,8 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
       onRangeChange={tab === "yours" ? setRange : undefined}
       loading={shellLoading}
       error={shellError}
+      embedded={embedded}
+      eyebrow={embedded ? "" : undefined}
       action={
         <div className="flex items-center gap-2 flex-wrap">
           <select

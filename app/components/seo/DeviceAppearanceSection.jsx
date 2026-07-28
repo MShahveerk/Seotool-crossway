@@ -17,7 +17,7 @@ import { buildDeviceGaps } from "../../../lib/seoOpportunityHelpers";
 
 const DEVICE_COLORS = { DESKTOP: "#111827", MOBILE: "#1d9c35", TABLET: "#64748b" };
 
-export default function DeviceAppearanceSection({ selectedSite = "" }) {
+export default function DeviceAppearanceSection({ selectedSite = "", embedded = false }) {
   const [range, setRange] = useState("28d");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -81,6 +81,8 @@ export default function DeviceAppearanceSection({ selectedSite = "" }) {
       onRangeChange={setRange}
       loading={loading}
       error={error}
+      embedded={embedded}
+      eyebrow={embedded ? "" : undefined}
       action={
         <ReportSectionActions
           section="device-appearance"

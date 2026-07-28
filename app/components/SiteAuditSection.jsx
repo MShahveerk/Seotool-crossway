@@ -805,7 +805,7 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
                     </p>
                     <button
                       type="button"
-                      onClick={() => onNavigateSection?.("sitemap-health")}
+                      onClick={() => onNavigateSection?.("website-statistics")}
                       className="text-[11px] text-[#1d9c35] hover:underline mt-0.5"
                     >
                       Sitemap Health →

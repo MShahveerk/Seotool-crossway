@@ -5,7 +5,7 @@ import { FiRefreshCw, FiCheckCircle, FiClock, FiUpload, FiAlertTriangle } from "
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
 import ReportSectionActions from "../ReportSectionActions";
 
-export default function SitemapHealthSection({ selectedSite = "" }) {
+export default function SitemapHealthSection({ selectedSite = "", embedded = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sitemaps, setSitemaps] = useState([]);
@@ -93,6 +93,8 @@ export default function SitemapHealthSection({ selectedSite = "" }) {
       selectedSite={selectedSite}
       loading={loading}
       error={error}
+      embedded={embedded}
+      eyebrow={embedded ? "" : undefined}
       action={
         <div className="flex flex-wrap items-center gap-2">
           <ReportSectionActions

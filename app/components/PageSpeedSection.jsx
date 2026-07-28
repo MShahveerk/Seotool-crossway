@@ -855,6 +855,7 @@ export default function PageSpeedSection({ selectedSite = "", embedded = false }
           ) : null}
 
           {/* Category scores */}
+          {!embedded ? (
           <section>
             <div className="flex items-center justify-between gap-3 mb-4">
               <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500">Lab scores</h3>
@@ -871,6 +872,7 @@ export default function PageSpeedSection({ selectedSite = "", embedded = false }
               ))}
             </div>
           </section>
+          ) : null}
 
           {/* Lab metrics strip */}
           {payload.labMetrics?.length ? (

@@ -300,6 +300,8 @@ export default function DomainAuthoritySection({ selectedSite = "", embedded = f
         </div>
       ) : data ? (
         <div className="space-y-8">
+          {!embedded ? (
+          <>
           {/* Overview */}
           <section className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-5 items-stretch">
             <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex items-center justify-center lg:min-w-[220px]">
@@ -339,6 +341,8 @@ export default function DomainAuthoritySection({ selectedSite = "", embedded = f
               </div>
             </div>
           </section>
+          </>
+          ) : null}
 
           {/* Trend */}
           {trendData.length >= 2 ? (
