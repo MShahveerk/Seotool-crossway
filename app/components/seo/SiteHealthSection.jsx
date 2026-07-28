@@ -92,6 +92,7 @@ export default function SiteHealthSection({ selectedSite = "" }) {
   const effectiveSite = hasGlobalAccess ? selectedSite || userSiteLink : userSiteLink;
 
   const [summary, setSummary] = useState(null);
+  const [serankingMetrics, setSerankingMetrics] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [refreshingAll, setRefreshingAll] = useState(false);
 
@@ -120,11 +121,17 @@ export default function SiteHealthSection({ selectedSite = "" }) {
       try {
         const q = new URLSearchParams({ url: effectiveSite, strategy: "mobile" });
         if (refresh) q.set("refresh", "1");
-        const [psRes, authRes] = await Promise.all([
+        const sq = new URLSearchParams({ url: effectiveSite });
+        if (refresh) sq.set("refresh", "1");
+        const [psRes, authRes, seRes] = await Promise.all([
           fetch(`/api/pagespeed?${q.toString()}`),
           fetch(`/api/authority?${new URLSearchParams({ url: effectiveSite }).toString()}`),
+          fetch(`/api/seranking/metrics?${sq}`).catch(() => null),
         ]);
         const [psBody, authBody] = await Promise.all([psRes.json(), authRes.json()]);
+        let seBody = null;
+        if (seRes?.ok) seBody = await seRes.json();
+        setSerankingMetrics(seBody?.configured ? seBody : null);
         setSummary({
           pagespeed: psRes.ok ? psBody.pagespeed : null,
           pagespeedMeta: psRes.ok ? { fetchedAt: psBody.fetchedAt, stale: psBody.stale } : null,
@@ -148,11 +155,18 @@ export default function SiteHealthSection({ selectedSite = "" }) {
   const ps = summary?.pagespeed;
   const auth = summary?.authority;
   const linkAuth = linkData?.authority;
-  const homepageUr =
-    linkData?.homepageUr100 ?? linkAuth?.homepageUr100 ?? null;
-  const authorityScore = auth?.score != null ? toScore100(auth.score) : linkAuth?.score100 ?? null;
-  const referringDomains = auth?.referringDomains ?? linkAuth?.referringDomains ?? null;
-  const authTone = authorityTone(auth?.score ?? linkAuth?.score);
+  const se = serankingMetrics;
+  const seBacklinks = se?.backlinks;
+  const seOverview = se?.overview;
+  const openPageRankScore = auth?.score != null ? toScore100(auth.score) : linkAuth?.score100 ?? null;
+  const seInlinkRank = seBacklinks?.domainInlinkRank ?? null;
+  const authorityScore = seInlinkRank ?? openPageRankScore;
+  const openPageRankRefDomains = auth?.referringDomains ?? linkAuth?.referringDomains ?? null;
+  const referringDomains = seBacklinks?.refdomains ?? openPageRankRefDomains;
+  const backlinkCount = seBacklinks?.backlinks ?? null;
+  const organicTraffic = seOverview?.traffic ?? null;
+  const organicKeywords = seOverview?.keywords ?? null;
+  const authTone = authorityTone(seInlinkRank != null ? seInlinkRank / 10 : auth?.score ?? linkAuth?.score);
 
   const perfScore = ps?.scores?.performance ?? ps?.categories?.performance?.score ?? null;
   const seoScore = ps?.scores?.seo ?? ps?.categories?.seo?.score ?? null;
@@ -180,10 +194,10 @@ export default function SiteHealthSection({ selectedSite = "" }) {
         <div className="relative flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300/90">SEO Tools</p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Site Health</h1>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Authority &amp; Performance</h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-300">
-              Complete picture of your domain authority, link profile, and page performance — PageSpeed Insights,
-              Open PageRank, and link metrics in one place.
+              Domain authority, backlinks, organic reach, and page performance — SE Ranking metrics when available,
+              Open PageRank and PageSpeed as fallback.
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
               <a
@@ -228,31 +242,62 @@ export default function SiteHealthSection({ selectedSite = "" }) {
             <KpiCard
               icon={Award}
               label="Authority"
-              value={authorityScore != null ? `${Math.round(authorityScore)}/100` : "—"}
-              sub={authTone.label}
+              value={
+                seInlinkRank != null && openPageRankScore != null
+                  ? `${Math.round(seInlinkRank)} SE · ${Math.round(openPageRankScore)} OPR`
+                  : authorityScore != null
+                    ? `${Math.round(authorityScore)}/100`
+                    : "—"
+              }
+              sub={seInlinkRank != null ? "SE InLink + Open PageRank" : authTone.label}
               toneClass={authTone.text}
               accent="emerald"
             />
             <KpiCard
               icon={TrendingUp}
-              label="Homepage UR"
-              value={homepageUr != null ? `${homepageUr}/100` : "—"}
-              sub="Depth-adjusted estimate"
+              label="Organic traffic"
+              value={organicTraffic != null ? formatNum(organicTraffic) : "—"}
+              sub={seOverview ? "SE Ranking est." : "Refresh SE Ranking"}
               accent="teal"
             />
             <KpiCard
               icon={Link2}
               label="Ref. domains"
               value={referringDomains != null ? formatNum(referringDomains) : "—"}
-              sub="Open PageRank"
+              sub={seBacklinks?.refdomains != null ? "SE Ranking" : "Open PageRank fallback"}
               accent="amber"
+            />
+            <KpiCard
+              icon={Link2}
+              label="Backlinks"
+              value={backlinkCount != null ? formatNum(backlinkCount) : "—"}
+              sub={seBacklinks?.backlinks != null ? "SE Ranking live" : "—"}
+              accent="sky"
+            />
+            <KpiCard
+              icon={Award}
+              label="Homepage UR"
+              value={
+                (linkData?.homepageUr100 ?? linkAuth?.homepageUr100) != null
+                  ? `${linkData?.homepageUr100 ?? linkAuth?.homepageUr100}/100`
+                  : "—"
+              }
+              sub="Open PageRank estimate"
+              accent="teal"
+            />
+            <KpiCard
+              icon={Globe}
+              label="Organic keywords"
+              value={organicKeywords != null ? formatNum(organicKeywords) : "—"}
+              sub={seOverview ? "SE Ranking" : "—"}
+              accent="violet"
             />
             <KpiCard
               icon={Globe}
               label="Global rank"
               value={globalRank.display}
               title={globalRank.full || undefined}
-              sub="Worldwide position"
+              sub="Open PageRank"
               accent="violet"
             />
             <KpiCard
@@ -313,10 +358,10 @@ export default function SiteHealthSection({ selectedSite = "" }) {
         </div>
 
         <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-4 text-sm text-gray-600">
-          <p className="font-semibold text-gray-800">About link data</p>
+            <p className="font-semibold text-gray-800">About link data</p>
           <p className="mt-1 leading-relaxed">
-            Per-page backlink rows from Common Crawl are hidden — they are not reliable backlinks. Use{" "}
-            <strong>Site Explorer</strong> for indexed pages and per-URL UR estimates.
+            Referring domains and backlink counts prefer <strong>SE Ranking</strong> when cached. Open PageRank
+            fills gaps for global rank and homepage UR. Per-page Common Crawl rows stay in Site Explorer only.
           </p>
         </div>
       </section>

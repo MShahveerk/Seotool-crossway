@@ -9,6 +9,7 @@ import { DATA_TYPES, isSerankingConfigured } from "../../../../lib/seranking/con
 import { getAuditStatus } from "../../../../lib/seranking/api.js";
 import { SerankingApiError } from "../../../../lib/seranking/client.js";
 import { pollPendingAudits } from "../../../../lib/seranking/jobs.js";
+import { normalizeAuditReport } from "../../../../lib/seranking/normalize.js";
 
 export const runtime = "nodejs";
 
@@ -30,12 +31,17 @@ export async function GET(req) {
         const status = await getAuditStatus(job.auditId);
         const state = String(status?.status || status?.state || "").toLowerCase();
         if (state === "finished" || state === "completed" || state === "success" || status?.progress === 100) {
-          const report = await finalizeAuditReport(siteUrl, job.auditId, job.creditsSpent);
-          await updateAuditJob(job.id, { status: "success", finishedAt: new Date(), payload: report });
+          const { report, normalized } = await finalizeAuditReport(siteUrl, job.auditId, job.creditsSpent);
+          await updateAuditJob(job.id, { status: "success", finishedAt: new Date(), payload: { report, normalized } });
           return Response.json({
             siteUrl,
             domain,
-            data: { auditId: job.auditId, report, completedAt: new Date().toISOString() },
+            data: {
+              auditId: job.auditId,
+              report,
+              normalized,
+              completedAt: new Date().toISOString(),
+            },
             status: "success",
             fromCache: false,
           });
@@ -54,10 +60,13 @@ export async function GET(req) {
     }
 
     if (cached?.payload && !cached.expired) {
+      const normalized =
+        cached.payload.normalized || normalizeAuditReport(cached.payload.report || cached.payload);
       return Response.json({
         siteUrl,
         domain,
         data: cached.payload,
+        normalized,
         status: "success",
         fromCache: true,
         fetchedAt: cached.fetchedAt,

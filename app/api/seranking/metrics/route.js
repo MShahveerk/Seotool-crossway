@@ -1,23 +1,23 @@
 import { resolveWebsiteAccess } from "../../../../lib/resolveWebsiteAccess.js";
-import { loadSeoOverview } from "../../../../lib/seranking/loadBundle.js";
+import { loadSerankingMetrics } from "../../../../lib/seranking/loadBundle.js";
 import { isSerankingConfigured } from "../../../../lib/seranking/config.js";
 import { SerankingApiError } from "../../../../lib/seranking/client.js";
 
 export const runtime = "nodejs";
 
+/** Lightweight cached metrics for Site Health hub (backlinks + domain overview). */
 export async function GET(req) {
   try {
     if (!isSerankingConfigured()) {
-      return Response.json({ error: "SE Ranking is not configured." }, { status: 503 });
+      return Response.json({ configured: false, overview: null, backlinks: null });
     }
     const { siteUrl } = await resolveWebsiteAccess(req);
     const force = req.nextUrl.searchParams.get("refresh") === "1";
 
-    const includeAi = req.nextUrl.searchParams.get("ai") === "1";
-    const result = await loadSeoOverview(siteUrl, { allowManual: true, force, includeAi });
-    return Response.json(result);
+    const result = await loadSerankingMetrics(siteUrl, { allowManual: true, force });
+    return Response.json({ configured: true, ...result });
   } catch (err) {
     const status = err instanceof SerankingApiError ? err.status : err.status || 500;
-    return Response.json({ error: err.message || "Domain analysis failed." }, { status });
+    return Response.json({ error: err.message || "SE Ranking metrics failed." }, { status });
   }
 }

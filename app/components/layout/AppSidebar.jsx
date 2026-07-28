@@ -69,16 +69,16 @@ const gscMenuItems = [
 ];
 
 const seoMenuItems = [
-  { id: "site-health", label: "Site Health", icon: Activity },
+  { id: "site-health", label: "Authority & Performance", icon: Activity },
   { id: "site-audit", label: "Site Audit", icon: Shield },
   { id: "keyword-research", label: "Keyword Research", icon: Search },
   { id: "site-explorer", label: "Site Explorer", icon: Compass },
 ];
 
 const serankingMenuItems = [
-  { id: "seranking-domain", label: "Domain Intelligence", icon: Globe },
+  { id: "seranking-domain", label: "SEO Overview", icon: Globe },
   { id: "seranking-backlinks", label: "Backlink Profile", icon: Link2 },
-  { id: "seranking-keywords", label: "Keyword Data", icon: Search },
+  { id: "seranking-keywords", label: "Keyword Explorer", icon: Search },
   { id: "seranking-audit", label: "SE Ranking Audit", icon: Shield },
 ];
 

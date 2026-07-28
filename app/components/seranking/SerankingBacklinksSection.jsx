@@ -58,7 +58,7 @@ export default function SerankingBacklinksSection({ selectedSite = "" }) {
           setError(data.error || "Failed to load backlinks.");
           setPayload(null);
         } else {
-          setPayload(data.data);
+          setPayload(data.summary ? { summary: [data.summary], ...data.data } : data.data);
           setFetchedAt(data.fetchedAt || null);
           setExpiresAt(data.expiresAt || null);
         }
@@ -77,6 +77,7 @@ export default function SerankingBacklinksSection({ selectedSite = "" }) {
   }, [load]);
 
   const summary = useMemo(() => {
+    if (payload?.summary) return payload.summary;
     const row = payload?.summary?.[0] || payload?.summary || payload;
     return row && typeof row === "object" ? row : null;
   }, [payload]);

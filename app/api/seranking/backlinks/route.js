@@ -18,6 +18,7 @@ export async function GET(req) {
       siteUrl: result.siteUrl,
       domain: result.domain,
       data: result.data,
+      summary: result.summary,
       fromCache: result.fromCache,
       fetchedAt: result.fetchedAt,
       expiresAt: result.expiresAt,

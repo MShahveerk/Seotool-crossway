@@ -23,6 +23,7 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [payload, setPayload] = useState(null);
+  const [normalized, setNormalized] = useState(null);
   const [runStatus, setRunStatus] = useState("");
   const [progress, setProgress] = useState(null);
 
@@ -43,6 +44,7 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
         setError(data.error || "Failed to load audit.");
       } else {
         setPayload(data.data);
+        setNormalized(data.normalized || data.data?.normalized || null);
         setRunStatus(data.status || "");
         setProgress(data.progress ?? null);
       }
@@ -86,27 +88,14 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
     }
   };
 
-  const report = payload?.report || payload;
-  const sections = useMemo(() => {
-    const secs = report?.sections || report?.data?.sections;
-    return Array.isArray(secs) ? secs : [];
-  }, [report]);
+  const report = useMemo(() => {
+    if (normalized) return normalized;
+    const raw = payload?.normalized || payload?.report || payload;
+    if (raw?.score != null || raw?.sections) return raw;
+    return null;
+  }, [normalized, payload]);
 
-  const healthScore = report?.score ?? report?.health_score ?? report?.healthScore;
-  const issueCounts = useMemo(() => {
-    let errors = 0;
-    let warnings = 0;
-    let notices = 0;
-    for (const sec of sections) {
-      for (const chk of sec.checks || sec.issues || []) {
-        const t = String(chk.type || chk.severity || "").toLowerCase();
-        if (t === "error") errors += 1;
-        else if (t === "warning") warnings += 1;
-        else notices += 1;
-      }
-    }
-    return { errors, warnings, notices };
-  }, [sections]);
+  const sections = report?.sections || [];
 
   return (
     <SerankingShell
@@ -140,16 +129,19 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
         </Card>
       ) : null}
 
-      {report ? (
+      {report?.hasData !== false && report?.score != null ? (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             <Card className="shadow-sm border-emerald-100 bg-emerald-50/40">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
                   <Shield className="size-4" />
                   Health score
                 </div>
-                <p className="mt-2 text-4xl font-bold tabular-nums">{healthScore ?? "—"}</p>
+                <p className="mt-2 text-4xl font-bold tabular-nums">{report.score ?? "—"}</p>
+                {report.totalPages != null ? (
+                  <p className="text-xs text-muted-foreground mt-1">{formatSerankingNum(report.totalPages)} pages crawled</p>
+                ) : null}
               </CardContent>
             </Card>
             <Card className="shadow-sm">
@@ -158,13 +150,13 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
                   <AlertTriangle className="size-4" />
                   Errors
                 </div>
-                <p className="mt-2 text-3xl font-bold tabular-nums">{formatSerankingNum(issueCounts.errors)}</p>
+                <p className="mt-2 text-3xl font-bold tabular-nums">{formatSerankingNum(report.totalErrors)}</p>
               </CardContent>
             </Card>
             <Card className="shadow-sm">
               <CardContent className="p-4">
                 <p className="text-xs font-bold uppercase text-muted-foreground">Warnings</p>
-                <p className="mt-2 text-3xl font-bold tabular-nums">{formatSerankingNum(issueCounts.warnings)}</p>
+                <p className="mt-2 text-3xl font-bold tabular-nums">{formatSerankingNum(report.totalWarnings)}</p>
               </CardContent>
             </Card>
             <Card className="shadow-sm">
@@ -173,33 +165,43 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
                   <CheckCircle2 className="size-4" />
                   Notices
                 </div>
-                <p className="mt-2 text-3xl font-bold tabular-nums">{formatSerankingNum(issueCounts.notices)}</p>
+                <p className="mt-2 text-3xl font-bold tabular-nums">{formatSerankingNum(report.totalNotices)}</p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-sm">
+              <CardContent className="p-4">
+                <p className="text-xs font-bold uppercase text-muted-foreground">Passed checks</p>
+                <p className="mt-2 text-3xl font-bold tabular-nums text-emerald-700">{formatSerankingNum(report.totalPassed)}</p>
               </CardContent>
             </Card>
           </div>
 
           <div className="space-y-4">
-            {sections.map((sec, si) => (
-              <Card key={si} className="shadow-sm">
+            {sections.map((sec) => (
+              <Card key={sec.uid || sec.name} className="shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">{sec.name || sec.title || sec.uid || `Section ${si + 1}`}</CardTitle>
+                  <CardTitle className="text-base">{sec.name || sec.uid}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <ul className="divide-y divide-border/60">
-                    {(sec.checks || sec.issues || []).slice(0, 12).map((chk, ci) => (
-                      <li key={ci} className="py-2.5 flex items-start justify-between gap-3 text-sm">
-                        <div className="min-w-0">
-                          <p className="font-medium">{chk.name || chk.message || chk.code}</p>
-                          {chk.count != null ? (
-                            <p className="text-xs text-muted-foreground mt-0.5">{formatSerankingNum(chk.count)} URLs affected</p>
-                          ) : null}
-                        </div>
-                        <Badge variant={severityVariant(chk.type || chk.severity)} className="shrink-0 capitalize">
-                          {chk.type || chk.severity || "notice"}
-                        </Badge>
-                      </li>
-                    ))}
-                  </ul>
+                  {sec.checks?.length ? (
+                    <ul className="divide-y divide-border/60">
+                      {sec.checks.slice(0, 15).map((chk) => (
+                        <li key={chk.code} className="py-2.5 flex items-start justify-between gap-3 text-sm">
+                          <div className="min-w-0">
+                            <p className="font-medium">{chk.name || chk.code}</p>
+                            {chk.count != null ? (
+                              <p className="text-xs text-muted-foreground mt-0.5">{formatSerankingNum(chk.count)} URLs affected</p>
+                            ) : null}
+                          </div>
+                          <Badge variant={severityVariant(chk.type)} className="shrink-0 capitalize">
+                            {chk.type || "notice"}
+                          </Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground py-2">No issues in this category.</p>
+                  )}
                 </CardContent>
               </Card>
             ))}
