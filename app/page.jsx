@@ -23,6 +23,7 @@ import SerankingBacklinksSection from "./components/seranking/SerankingBacklinks
 import SerankingDomainSection from "./components/seranking/SerankingDomainSection";
 import SerankingKeywordsSection from "./components/seranking/SerankingKeywordsSection";
 import SerankingAuditSection from "./components/seranking/SerankingAuditSection";
+import SerankingExplorerSection from "./components/seranking/SerankingExplorerSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { LoadingSpinner } from "./components/ui-shared/LoadingBlock";
@@ -47,6 +48,7 @@ const WEBSITE_SEO_SECTIONS = new Set([
   "seranking-backlinks",
   "seranking-keywords",
   "seranking-audit",
+  "seranking-explorer",
 ]);
 
 export default function Home() {
@@ -129,6 +131,8 @@ export default function Home() {
         return <SerankingKeywordsSection selectedSite={seoSite} />;
       case "seranking-audit":
         return <SerankingAuditSection selectedSite={seoSite} />;
+      case "seranking-explorer":
+        return <SerankingExplorerSection selectedSite={seoSite} />;
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
       case "calendar":

@@ -12,8 +12,9 @@ export async function GET(req) {
     }
     const { siteUrl } = await resolveWebsiteAccess(req);
     const force = req.nextUrl.searchParams.get("refresh") === "1";
+    const target = req.nextUrl.searchParams.get("target") || undefined;
 
-    const result = await loadBacklinks(siteUrl, { allowManual: true, force });
+    const result = await loadBacklinks(siteUrl, { allowManual: true, force, target });
     return Response.json({
       siteUrl: result.siteUrl,
       domain: result.domain,

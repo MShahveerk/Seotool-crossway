@@ -2,6 +2,7 @@ import { resolveWebsiteAccess } from "../../../../lib/resolveWebsiteAccess.js";
 import {
   fetchKeywordExport,
   fetchKeywordResearch,
+  loadSeedKeywordMetrics,
 } from "../../../../lib/seranking/api.js";
 import { loadKeywordSeeds } from "../../../../lib/seranking/loadBundle.js";
 import { isSerankingConfigured, geoToSerankingSource } from "../../../../lib/seranking/config.js";
@@ -48,6 +49,7 @@ export async function POST(req) {
     const limit = Math.min(50, Math.max(5, Number(body.limit) || 25));
     const sort = String(body.sort || "volume");
     const sortOrder = String(body.sortOrder || body.sort_order || "desc");
+    const force = body.refresh === true || body.refresh === 1 || body.refresh === "1";
 
     if (!keyword && type !== "export") {
       return Response.json({ error: "keyword is required." }, { status: 400 });
@@ -75,14 +77,23 @@ export async function POST(req) {
       });
     }
 
-    const result = await fetchKeywordResearch(type, keyword, {
-      limit,
-      source,
-      sort,
-      sortOrder,
-      allowManual: true,
-      siteUrl,
-    });
+    const [result, seedResult] = await Promise.all([
+      fetchKeywordResearch(type, keyword, {
+        limit,
+        source,
+        sort,
+        sortOrder,
+        allowManual: true,
+        siteUrl,
+        force,
+      }),
+      loadSeedKeywordMetrics(keyword, { source, siteUrl, allowManual: true, force }),
+    ]);
+
+    const creditsSpent = (result.creditsSpent || 0) + (seedResult.creditsSpent || 0);
+    const fromCache = Boolean(result.fromCache && seedResult.fromCache);
+    const fetchedAt = result.fetchedAt || seedResult.fetchedAt || null;
+    const expiresAt = result.expiresAt || seedResult.expiresAt || null;
 
     return Response.json({
       siteUrl,
@@ -90,7 +101,12 @@ export async function POST(req) {
       type: result.type,
       source: result.source,
       data: result.data,
-      creditsSpent: result.creditsSpent,
+      seedMetrics: seedResult.metrics,
+      creditsSpent,
+      fromCache,
+      fetchedAt,
+      expiresAt,
+      cacheNote: fromCache ? "Served from cache — refreshes weekly." : null,
     });
   } catch (err) {
     const status = err instanceof SerankingApiError ? err.status : err.status || 500;

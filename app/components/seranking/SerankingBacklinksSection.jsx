@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Link2, Shield, TrendingUp } from "lucide-react";
 import SerankingShell, { formatSerankingCompact, formatSerankingNum, useSerankingStatus } from "./SerankingShell";
@@ -37,7 +37,7 @@ export default function SerankingBacklinksSection({ selectedSite = "" }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const [payload, setPayload] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [fetchedAt, setFetchedAt] = useState(null);
   const [expiresAt, setExpiresAt] = useState(null);
 
@@ -56,9 +56,9 @@ export default function SerankingBacklinksSection({ selectedSite = "" }) {
         const data = await res.json();
         if (!res.ok) {
           setError(data.error || "Failed to load backlinks.");
-          setPayload(null);
+          setSummary(null);
         } else {
-          setPayload(data.summary ? { summary: [data.summary], ...data.data } : data.data);
+          setSummary(data.summary || null);
           setFetchedAt(data.fetchedAt || null);
           setExpiresAt(data.expiresAt || null);
         }
@@ -76,14 +76,14 @@ export default function SerankingBacklinksSection({ selectedSite = "" }) {
     load(false);
   }, [load]);
 
-  const summary = useMemo(() => {
-    if (payload?.summary) return payload.summary;
-    const row = payload?.summary?.[0] || payload?.summary || payload;
-    return row && typeof row === "object" ? row : null;
-  }, [payload]);
-
-  const topAnchors = summary?.top_anchors_by_backlinks || summary?.topAnchorsByBacklinks || [];
-  const topPages = summary?.top_pages_by_backlinks || summary?.topPagesByBacklinks || [];
+  const topAnchors = summary?.topAnchors || [];
+  const topPages = summary?.topPages || [];
+  const hasMetrics =
+    summary &&
+    ((summary.backlinks != null && summary.backlinks > 0) ||
+      (summary.refdomains != null && summary.refdomains > 0) ||
+      topAnchors.length > 0 ||
+      topPages.length > 0);
 
   return (
     <SerankingShell
@@ -101,7 +101,7 @@ export default function SerankingBacklinksSection({ selectedSite = "" }) {
       refreshDisabled={(credits?.remaining ?? 0) < 100}
       refreshLabel="Refresh (100 cr)"
     >
-      {summary ? (
+      {hasMetrics ? (
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Kpi icon={Link2} label="Backlinks" value={formatSerankingCompact(summary.backlinks)} accent="violet" />
@@ -114,14 +114,14 @@ export default function SerankingBacklinksSection({ selectedSite = "" }) {
             <Kpi
               icon={Shield}
               label="Domain authority"
-              value={summary.domain_inlink_rank ?? summary.domainInlinkRank ?? "—"}
+              value={summary.domainInlinkRank ?? "—"}
               sub="Inlink rank"
               accent="emerald"
             />
             <Kpi
               label="Dofollow"
-              value={formatSerankingCompact(summary.dofollow_backlinks ?? summary.dofollowBacklinks)}
-              sub={`${formatSerankingNum(summary.nofollow_backlinks ?? summary.nofollowBacklinks)} nofollow`}
+              value={formatSerankingCompact(summary.dofollowBacklinks)}
+              sub={`${formatSerankingNum(summary.nofollowBacklinks)} nofollow`}
             />
           </div>
 
@@ -172,6 +172,11 @@ export default function SerankingBacklinksSection({ selectedSite = "" }) {
             </Card>
           </div>
         </div>
+      ) : summary && !loading ? (
+        <p className="text-sm text-muted-foreground">
+          No backlink metrics returned yet. Click <strong>Refresh</strong> to fetch live data from SE Ranking (100
+          credits).
+        </p>
       ) : (
         <p className="text-sm text-muted-foreground">No backlink data yet — fetching live from SE Ranking…</p>
       )}

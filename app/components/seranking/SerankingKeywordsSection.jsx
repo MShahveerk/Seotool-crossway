@@ -110,6 +110,94 @@ function IntentBadges({ intents }) {
   );
 }
 
+function SeedKeywordCard({ row, fromCache, fetchedAt, expiresAt }) {
+  if (!row) return null;
+  return (
+    <Card className="shadow-sm border-violet-200 overflow-hidden">
+      <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-3 text-white">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-violet-100">Your keyword</p>
+        <p className="text-lg sm:text-xl font-bold truncate">{row.keyword}</p>
+        {fromCache ? (
+          <p className="text-[11px] text-violet-100/90 mt-1">
+            Cached · renews weekly{fetchedAt ? ` · saved ${new Date(fetchedAt).toLocaleDateString()}` : ""}
+          </p>
+        ) : null}
+      </div>
+      <CardContent className="p-4 sm:p-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
+          <div>
+            <p className="text-[10px] font-bold uppercase text-muted-foreground">Search volume</p>
+            <p className="mt-1 text-xl font-bold tabular-nums">
+              {row.volume != null ? formatSerankingCompact(row.volume) : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-muted-foreground">Keyword difficulty</p>
+            <div className="mt-1">
+              <DifficultyCell value={row.difficulty} />
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-muted-foreground">CPC</p>
+            <p className="mt-1 text-xl font-bold tabular-nums">{row.cpcFormatted || "—"}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-muted-foreground">Competition</p>
+            <p className="mt-1 font-semibold tabular-nums">
+              {row.competition != null ? Number(row.competition).toFixed(2) : "—"}
+              {row.competitionLevel ? (
+                <span className="block text-xs font-normal text-muted-foreground">{row.competitionLevel}</span>
+              ) : null}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-muted-foreground">Traffic potential</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-emerald-700">
+              {row.trafficPotential != null ? formatSerankingCompact(row.trafficPotential) : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-muted-foreground">Intent</p>
+            <div className="mt-1">
+              <IntentBadges intents={row.intents} />
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-border/60 grid gap-4 sm:grid-cols-2">
+          <div>
+            <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">12-month trend</p>
+            <div className="flex items-center gap-3">
+              <TrendSparkline trend={row.monthlyTrend} id={`seed-${row.keyword}`} />
+              <TrendBadge direction={row.trendDirection} />
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Words / length</p>
+            <p className="font-semibold tabular-nums">
+              {row.wordCount ?? "—"} words · {row.keyword?.length ?? "—"} chars
+            </p>
+          </div>
+          {row.serpFeatures?.length ? (
+            <div className="sm:col-span-2">
+              <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">SERP features</p>
+              <div className="flex flex-wrap gap-1">
+                {row.serpFeatures.map((f) => (
+                  <Badge key={f} variant="outline" className="text-[10px]">
+                    {f.replace(/_/g, " ")}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+        {!row.isDataFound ? (
+          <p className="mt-3 text-sm text-amber-700">No SE Ranking data for this keyword in the selected market.</p>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 function KeywordDetailPanel({ row }) {
   if (!row) return null;
   return (
@@ -307,6 +395,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [results, setResults] = useState([]);
+  const [seedMetrics, setSeedMetrics] = useState(null);
   const [lastSearch, setLastSearch] = useState(null);
   const [sortField, setSortField] = useState("volume");
   const [sortDir, setSortDir] = useState("desc");
@@ -338,13 +427,16 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
     loadSiteData();
   }, [loadSiteData]);
 
-  const runSearch = async () => {
+  const runSearch = async (refresh = false) => {
     const site = hasGlobalAccess ? selectedSite : session?.user?.siteLink;
     const kw = query.trim();
     if (!kw || !site?.startsWith("http")) return;
     setSearchLoading(true);
     setSearchError("");
-    setResults([]);
+    if (!refresh) {
+      setResults([]);
+      setSeedMetrics(null);
+    }
     setExpandedKey(null);
     try {
       const q = new URLSearchParams();
@@ -352,13 +444,22 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
       const res = await fetch(`/api/seranking/keywords?${q}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: kw, type: mode, source: market, limit }),
+        body: JSON.stringify({ keyword: kw, type: mode, source: market, limit, refresh: refresh ? 1 : 0 }),
       });
       const data = await res.json();
       if (!res.ok) setSearchError(data.error || "Search failed.");
       else {
         setResults(Array.isArray(data.data) ? data.data : []);
-        setLastSearch({ keyword: kw, type: mode, source: market, creditsSpent: data.creditsSpent });
+        setSeedMetrics(data.seedMetrics || null);
+        setLastSearch({
+          keyword: kw,
+          type: mode,
+          source: market,
+          creditsSpent: data.creditsSpent,
+          fromCache: data.fromCache,
+          fetchedAt: data.fetchedAt,
+          expiresAt: data.expiresAt,
+        });
       }
     } catch {
       setSearchError("Network error.");
@@ -367,7 +468,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
     }
   };
 
-  const creditCost = limit * 10;
+  const creditCost = limit * 10 + 100;
   const sortedResults = useMemo(() => sortRows(results, sortField, sortDir), [results, sortField, sortDir]);
   const sortedDomain = useMemo(
     () => sortRows(domainKeywords, domainSortField, domainSortDir),
@@ -462,7 +563,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
                       <Input
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && runSearch()}
+                        onKeyDown={(e) => e.key === "Enter" && runSearch(false)}
                         placeholder="Enter seed keyword…"
                         className="pl-9 h-11 text-base"
                       />
@@ -494,15 +595,27 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
                     <Button
                       type="button"
                       className="h-11 px-6"
-                      onClick={runSearch}
+                      onClick={() => runSearch(false)}
                       disabled={searchLoading || !query.trim() || (credits?.remaining ?? 0) < creditCost}
                     >
                       {searchLoading ? "Searching…" : `Search (~${creditCost} cr)`}
                     </Button>
+                    {lastSearch ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11"
+                        onClick={() => runSearch(true)}
+                        disabled={searchLoading || !query.trim() || (credits?.remaining ?? 0) < creditCost}
+                      >
+                        Refresh
+                      </Button>
+                    ) : null}
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    {activeMode?.desc} · {MARKETS.find((m) => m.id === market)?.label} · click any row for full metrics
+                    {activeMode?.desc} · {MARKETS.find((m) => m.id === market)?.label} · results cached 7 days ·
+                    click any row for full metrics
                   </p>
                 </div>
               </CardContent>
@@ -515,14 +628,27 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
                 <Sparkles className="size-3.5 text-violet-600" />
                 <span>
                   <strong className="text-foreground">{lastSearch.keyword}</strong> · {lastSearch.type} ·{" "}
-                  {lastSearch.source.toUpperCase()} · {formatSerankingNum(results.length)} keywords ·{" "}
+                  {lastSearch.source.toUpperCase()} · {formatSerankingNum(results.length)} related ·{" "}
                   {lastSearch.creditsSpent} credits
+                  {lastSearch.fromCache ? " · from cache" : ""}
                 </span>
               </div>
             ) : null}
 
+            {seedMetrics ? (
+              <SeedKeywordCard
+                row={seedMetrics}
+                fromCache={lastSearch?.fromCache}
+                fetchedAt={lastSearch?.fetchedAt}
+                expiresAt={lastSearch?.expiresAt}
+              />
+            ) : null}
+
             {results.length ? (
               <Card className="shadow-sm overflow-hidden">
+                <div className="border-b border-border/60 px-4 py-2 bg-muted/20">
+                  <p className="text-sm font-medium">Related keywords</p>
+                </div>
                 <KeywordTable
                   rows={sortedResults}
                   sortField={sortField}

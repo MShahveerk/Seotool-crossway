@@ -79,6 +79,7 @@ const serankingMenuItems = [
   { id: "seranking-domain", label: "SEO Overview", icon: Globe },
   { id: "seranking-backlinks", label: "Backlink Profile", icon: Link2 },
   { id: "seranking-keywords", label: "Keyword Explorer", icon: Search },
+  { id: "seranking-explorer", label: "Site Explorer", icon: Crosshair },
   { id: "seranking-audit", label: "SE Ranking Audit", icon: Shield },
 ];
 
