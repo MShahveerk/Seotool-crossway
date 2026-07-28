@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
   Crosshair,
@@ -9,9 +9,9 @@ import {
   Search,
   Shield,
   TrendingUp,
-  AlertTriangle,
 } from "lucide-react";
 import SerankingShell, { formatSerankingCompact, formatSerankingNum, useSerankingStatus } from "./SerankingShell";
+import SerankingAuditReport from "./SerankingAuditReport";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,7 +98,7 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
 
   useEffect(() => {
     if (activeTarget && payload?.audit?.status === "running") {
-      const t = setInterval(() => load(activeTarget, { refresh: false }), 15000);
+      const t = setInterval(() => load(activeTarget, { refresh: false }), 30000);
       return () => clearInterval(t);
     }
     return undefined;
@@ -138,8 +138,6 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
 
   const topAnchors = backlinks?.topAnchors || [];
   const topLinked = backlinks?.topPages || [];
-
-  const auditSections = useMemo(() => auditReport?.sections || [], [auditReport]);
 
   return (
     <SerankingShell
@@ -329,64 +327,11 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
               </div>
 
               {auditReport ? (
-                <div className="space-y-4">
-                  {auditSections.map((sec) => (
-                    <Card key={sec.uid || sec.name} className="shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <AlertTriangle className="size-4 text-amber-600" />
-                          {sec.name}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        {sec.checks?.length ? (
-                          <ul className="divide-y divide-border/60 text-sm">
-                            {sec.checks.slice(0, 12).map((chk) => (
-                              <li key={chk.code} className="py-2 flex justify-between gap-3">
-                                <span>{chk.name}</span>
-                                <Badge variant={chk.type === "error" ? "destructive" : "secondary"}>
-                                  {chk.count ?? chk.type}
-                                </Badge>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No open issues in this section.</p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-
-                  {audit?.pages?.length ? (
-                    <Card className="shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Crawled pages</CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b text-left text-muted-foreground">
-                              <th className="py-2 pr-3">URL</th>
-                              <th className="py-2 px-2 text-right">Status</th>
-                              <th className="py-2 px-2 text-right">Issues</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {audit.pages.slice(0, 30).map((p, i) => (
-                              <tr key={i} className="border-b border-border/40">
-                                <td className="py-2 pr-3 max-w-md truncate" title={p.url}>
-                                  {p.url}
-                                </td>
-                                <td className="py-2 px-2 text-right tabular-nums">{p.status ?? "—"}</td>
-                                <td className="py-2 px-2 text-right tabular-nums">{p.issues ?? p.errors ?? "—"}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </CardContent>
-                    </Card>
-                  ) : null}
-                </div>
+                <SerankingAuditReport
+                  report={auditReport}
+                  auditId={audit?.auditId || null}
+                  pages={audit?.pages || []}
+                />
               ) : audit?.status !== "running" ? (
                 <p className="text-sm text-muted-foreground">
                   Run a site audit to crawl up to 20 pages and get technical SEO checks for this domain.

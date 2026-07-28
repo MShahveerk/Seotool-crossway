@@ -3,15 +3,25 @@ import {
   loadOrRefreshAudit,
   finalizeAuditReport,
   resolveDomainFromSite,
+  getAuditPages,
 } from "../../../../lib/seranking/api.js";
 import { getCachedSnapshot, getLatestAuditJob, createAuditJob, updateAuditJob } from "../../../../lib/seranking/cache.js";
 import { DATA_TYPES, isSerankingConfigured } from "../../../../lib/seranking/config.js";
 import { getAuditStatus } from "../../../../lib/seranking/api.js";
 import { SerankingApiError } from "../../../../lib/seranking/client.js";
 import { pollPendingAudits } from "../../../../lib/seranking/jobs.js";
-import { normalizeAuditReport } from "../../../../lib/seranking/normalize.js";
+import { normalizeAuditReport, normalizeAuditPagesList } from "../../../../lib/seranking/normalize.js";
 
 export const runtime = "nodejs";
+
+async function loadAuditPages(auditId) {
+  if (!auditId) return [];
+  try {
+    return normalizeAuditPagesList(await getAuditPages(auditId, { limit: 50 }));
+  } catch {
+    return [];
+  }
+}
 
 export async function GET(req) {
   try {
@@ -33,15 +43,19 @@ export async function GET(req) {
         if (state === "finished" || state === "completed" || state === "success" || status?.progress === 100) {
           const { report, normalized } = await finalizeAuditReport(siteUrl, job.auditId, job.creditsSpent);
           await updateAuditJob(job.id, { status: "success", finishedAt: new Date(), payload: { report, normalized } });
+          const pages = await loadAuditPages(job.auditId);
           return Response.json({
             siteUrl,
             domain,
+            auditId: job.auditId,
+            pages,
             data: {
               auditId: job.auditId,
               report,
               normalized,
               completedAt: new Date().toISOString(),
             },
+            normalized,
             status: "success",
             fromCache: false,
           });
@@ -62,9 +76,13 @@ export async function GET(req) {
     if (cached?.payload && !cached.expired) {
       const normalized =
         cached.payload.normalized || normalizeAuditReport(cached.payload.report || cached.payload);
+      const auditId = cached.payload.auditId || null;
+      const pages = auditId ? await loadAuditPages(auditId) : [];
       return Response.json({
         siteUrl,
         domain,
+        auditId,
+        pages,
         data: cached.payload,
         normalized,
         status: "success",

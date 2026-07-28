@@ -9,7 +9,7 @@ import { loadKeywordSeeds } from "../../../../lib/seranking/loadBundle.js";
 import { isSerankingConfigured, geoToSerankingSource } from "../../../../lib/seranking/config.js";
 import { SerankingApiError } from "../../../../lib/seranking/client.js";
 import { normalizeKeywordResearchList } from "../../../../lib/seranking/normalize.js";
-import { normKeyword } from "../../../../lib/seranking/keywordMetrics.js";
+import { normKeyword, finalizeKeywordRow } from "../../../../lib/seranking/keywordMetrics.js";
 
 export const runtime = "nodejs";
 
@@ -96,16 +96,30 @@ export async function POST(req) {
       loadSeedKeywordMetrics(keyword, { source, siteUrl, allowManual: true, force }),
     ]);
 
-    const enriched = await enrichKeywordRowsFromExport(
-      [seedResult.metrics, ...(result.data || [])].filter(Boolean),
-      { source, siteUrl, allowManual: true, force }
+    const relatedRows = (result.data || []).map((row) => finalizeKeywordRow(row, source)).filter(Boolean);
+    const seedRow = seedResult.metrics ? finalizeKeywordRow(seedResult.metrics, source) : null;
+    const needsEnrich = [...(seedRow ? [seedRow] : []), ...relatedRows].some(
+      (row) => row.cpc == null || row.trafficPotential == null || row.cpcFormatted == null
     );
-    const enrichedSeed =
-      enriched.data.find((row) => sameKeyword(row.keyword, keyword)) || seedResult.metrics;
-    const enrichedRelated = enriched.data.filter((row) => !sameKeyword(row.keyword, keyword));
 
-    const creditsSpent = (result.creditsSpent || 0) + (seedResult.creditsSpent || 0) + (enriched.creditsSpent || 0);
-    const fromCache = Boolean(result.fromCache && seedResult.fromCache && enriched.fromCache);
+    let enrichedRelated = relatedRows;
+    let enrichedSeed = seedRow;
+    let enrichCredits = 0;
+    let enrichFromCache = true;
+
+    if (needsEnrich) {
+      const enriched = await enrichKeywordRowsFromExport(
+        [seedRow, ...relatedRows].filter(Boolean),
+        { source, siteUrl, allowManual: true, force }
+      );
+      enrichCredits = enriched.creditsSpent || 0;
+      enrichFromCache = enriched.fromCache;
+      enrichedSeed = enriched.data.find((row) => sameKeyword(row.keyword, keyword)) || seedRow;
+      enrichedRelated = enriched.data.filter((row) => !sameKeyword(row.keyword, keyword));
+    }
+
+    const creditsSpent = (result.creditsSpent || 0) + (seedResult.creditsSpent || 0) + enrichCredits;
+    const fromCache = Boolean(result.fromCache && seedResult.fromCache && enrichFromCache);
     const fetchedAt = result.fetchedAt || seedResult.fetchedAt || null;
     const expiresAt = result.expiresAt || seedResult.expiresAt || null;
 

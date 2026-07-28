@@ -2,17 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { AlertTriangle, CheckCircle2, Shield } from "lucide-react";
-import SerankingShell, { formatSerankingNum, useSerankingStatus } from "./SerankingShell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-
-function severityVariant(type) {
-  const t = String(type || "").toLowerCase();
-  if (t === "error" || t === "critical") return "destructive";
-  if (t === "warning") return "secondary";
-  return "outline";
-}
+import SerankingShell, { useSerankingStatus } from "./SerankingShell";
+import SerankingAuditReport from "./SerankingAuditReport";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function SerankingAuditSection({ selectedSite = "" }) {
   const { data: session } = useSession();
@@ -24,6 +16,8 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
   const [error, setError] = useState("");
   const [payload, setPayload] = useState(null);
   const [normalized, setNormalized] = useState(null);
+  const [auditId, setAuditId] = useState(null);
+  const [pages, setPages] = useState([]);
   const [runStatus, setRunStatus] = useState("");
   const [progress, setProgress] = useState(null);
 
@@ -45,6 +39,8 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
       } else {
         setPayload(data.data);
         setNormalized(data.normalized || data.data?.normalized || null);
+        setAuditId(data.auditId || data.data?.auditId || null);
+        setPages(Array.isArray(data.pages) ? data.pages : []);
         setRunStatus(data.status || "");
         setProgress(data.progress ?? null);
       }
@@ -61,7 +57,7 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
 
   useEffect(() => {
     if (runStatus !== "running") return undefined;
-    const t = setInterval(load, 15000);
+    const t = setInterval(load, 30000);
     return () => clearInterval(t);
   }, [runStatus, load]);
 
@@ -95,12 +91,10 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
     return null;
   }, [normalized, payload]);
 
-  const sections = report?.sections || [];
-
   return (
     <SerankingShell
       title="SE Ranking Site Audit"
-      description={`Technical crawl via SE Ranking (max ${auditMaxPages} pages ≈ ${auditCost} credits). Cached 30 days; nightly rotation refreshes stale sites.`}
+      description={`Technical crawl via SE Ranking (max ${auditMaxPages} pages ≈ ${auditCost} credits). Each issue includes full details and step-by-step fix guidance.`}
       selectedSite={selectedSite}
       loading={loading}
       error={error}
@@ -116,7 +110,7 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
       {runStatus === "running" ? (
         <Card className="border-amber-200 bg-amber-50/50 shadow-sm mb-4">
           <CardContent className="p-4 space-y-2">
-            <p className="text-sm font-medium text-amber-950">Crawl in progress — this page auto-refreshes every 15s.</p>
+            <p className="text-sm font-medium text-amber-950">Crawl in progress — this page auto-refreshes every 30s.</p>
             {progress != null ? (
               <div className="h-2 w-full rounded-full bg-amber-200/80 overflow-hidden">
                 <div
@@ -130,83 +124,7 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
       ) : null}
 
       {report?.hasData !== false && report?.score != null ? (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            <Card className="shadow-sm border-emerald-100 bg-emerald-50/40">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
-                  <Shield className="size-4" />
-                  Health score
-                </div>
-                <p className="mt-2 text-4xl font-bold tabular-nums">{report.score ?? "—"}</p>
-                {report.totalPages != null ? (
-                  <p className="text-xs text-muted-foreground mt-1">{formatSerankingNum(report.totalPages)} pages crawled</p>
-                ) : null}
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase text-destructive">
-                  <AlertTriangle className="size-4" />
-                  Errors
-                </div>
-                <p className="mt-2 text-3xl font-bold tabular-nums">{formatSerankingNum(report.totalErrors)}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm">
-              <CardContent className="p-4">
-                <p className="text-xs font-bold uppercase text-muted-foreground">Warnings</p>
-                <p className="mt-2 text-3xl font-bold tabular-nums">{formatSerankingNum(report.totalWarnings)}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
-                  <CheckCircle2 className="size-4" />
-                  Notices
-                </div>
-                <p className="mt-2 text-3xl font-bold tabular-nums">{formatSerankingNum(report.totalNotices)}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm">
-              <CardContent className="p-4">
-                <p className="text-xs font-bold uppercase text-muted-foreground">Passed checks</p>
-                <p className="mt-2 text-3xl font-bold tabular-nums text-emerald-700">{formatSerankingNum(report.totalPassed)}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-4">
-            {sections.map((sec) => (
-              <Card key={sec.uid || sec.name} className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">{sec.name || sec.uid}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {sec.checks?.length ? (
-                    <ul className="divide-y divide-border/60">
-                      {sec.checks.slice(0, 15).map((chk) => (
-                        <li key={chk.code} className="py-2.5 flex items-start justify-between gap-3 text-sm">
-                          <div className="min-w-0">
-                            <p className="font-medium">{chk.name || chk.code}</p>
-                            {chk.count != null ? (
-                              <p className="text-xs text-muted-foreground mt-0.5">{formatSerankingNum(chk.count)} URLs affected</p>
-                            ) : null}
-                          </div>
-                          <Badge variant={severityVariant(chk.type)} className="shrink-0 capitalize">
-                            {chk.type || "notice"}
-                          </Badge>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground py-2">No issues in this category.</p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+        <SerankingAuditReport report={report} auditId={auditId} pages={pages} />
       ) : (
         <p className="text-sm text-muted-foreground">
           {runStatus === "running"
