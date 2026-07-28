@@ -7,6 +7,8 @@ import { datetimeLocalToUtcIso, formatScheduleShort, timezoneShortLabel } from "
 import BlogRichTextEditor, { isRichTextEmpty } from "./BlogRichTextEditor";
 import HumanizeTextButton from "./HumanizeTextButton";
 import FileChooseField from "./ui-shared/FileChooseField";
+import InboundApiDocsPanel from "./InboundApiDocsPanel";
+import EmailInboundConfigFields from "./EmailInboundConfigFields";
 
 const DEFAULT_CONFIG = {
   enabled: true,
@@ -23,6 +25,13 @@ const DEFAULT_CONFIG = {
   wordpressPullEnabled: false,
   wordpressPullStatuses: ["draft", "future", "pending"],
   lastWordpressPullAt: null,
+  emailInboundEnabled: false,
+  imapHost: "",
+  imapPort: 993,
+  imapUser: "",
+  imapPassword: "",
+  imapFolder: "INBOX",
+  lastEmailPullAt: null,
 };
 
 function FocusKeywordPlannerHint({ keyword }) {
@@ -140,7 +149,8 @@ function WordpressDiagnosticsPanel({ diagnostics, title = "WordPress diagnostics
 
 export default function AdminBlogSection({ selectedSite = "" }) {
   const { data: session } = useSession();
-  const isSuperAdmin = session?.user?.role === "super_admin";
+  const canManageContent =
+    session?.user?.role === "super_admin" || session?.user?.role === "smm";
   const [form, setForm] = useState({
     title: "",
     slug: "",
@@ -177,11 +187,13 @@ export default function AdminBlogSection({ selectedSite = "" }) {
   const [revisions, setRevisions] = useState([]);
   const [deleteBusyId, setDeleteBusyId] = useState("");
   const [purgeBusy, setPurgeBusy] = useState(false);
+  const [emailTesting, setEmailTesting] = useState(false);
+  const [emailPulling, setEmailPulling] = useState(false);
 
   const softDeletedCount = blogs.filter((b) => b.status === "deleted").length;
 
   const loadConfig = useCallback(async () => {
-    if (!selectedSite || !isSuperAdmin) return;
+    if (!selectedSite || !canManageContent) return;
     setConfigLoading(true);
     try {
       const q = new URLSearchParams({ siteLink: selectedSite });
@@ -193,14 +205,14 @@ export default function AdminBlogSection({ selectedSite = "" }) {
     } finally {
       setConfigLoading(false);
     }
-  }, [selectedSite, isSuperAdmin]);
+  }, [selectedSite, canManageContent]);
 
   useEffect(() => {
     loadConfig();
   }, [loadConfig]);
 
   const loadBlogs = useCallback(async () => {
-    if (!selectedSite || !isSuperAdmin) return;
+    if (!selectedSite || !canManageContent) return;
     setBlogsLoading(true);
     try {
       const q = new URLSearchParams({ site: selectedSite });
@@ -212,7 +224,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
     } finally {
       setBlogsLoading(false);
     }
-  }, [selectedSite, isSuperAdmin]);
+  }, [selectedSite, canManageContent]);
 
   useEffect(() => {
     loadBlogs();
@@ -251,6 +263,47 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       setError(err.message);
     } finally {
       setConfigLoading(false);
+    }
+  };
+
+  const testEmailInbound = async () => {
+    if (!selectedSite) return;
+    setEmailTesting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/email-inbound", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteKey: selectedSite, contentType: "blog", action: "test" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "IMAP test failed");
+      setMessage(`IMAP OK — ${data.result?.messages ?? 0} messages, ${data.result?.unseen ?? 0} unseen.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEmailTesting(false);
+    }
+  };
+
+  const pullEmailInbound = async () => {
+    if (!selectedSite) return;
+    setEmailPulling(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/email-inbound", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteKey: selectedSite, contentType: "blog", action: "pull" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Email pull failed");
+      setMessage(data.message || "Email pull complete.");
+      await loadConfig();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEmailPulling(false);
     }
   };
 
@@ -571,7 +624,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
         </p>
       </div>
 
-      {isSuperAdmin ? (
+      {canManageContent ? (
         <div className="rounded-xl border border-gray-200 bg-white p-4">
           <button
             type="button"
@@ -733,9 +786,57 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                 <input className="mt-1 w-full border rounded-lg px-3 py-2" value={config.emailRecipients || ""} onChange={(e) => setConfig((c) => ({ ...c, emailRecipients: e.target.value }))} />
               </label>
               <label className="block md:col-span-2">
-                <span className="text-xs font-semibold uppercase text-gray-500">Inbound webhook secret</span>
-                <input className="mt-1 w-full border rounded-lg px-3 py-2" value={config.inboundSecret || ""} onChange={(e) => setConfig((c) => ({ ...c, inboundSecret: e.target.value }))} />
+                <span className="text-xs font-semibold uppercase text-gray-500">Inbound API secret</span>
+                <div className="mt-1 flex gap-2">
+                  <input
+                    className="flex-1 border rounded-lg px-3 py-2 font-mono text-sm"
+                    value={config.inboundSecret || ""}
+                    onChange={(e) => setConfig((c) => ({ ...c, inboundSecret: e.target.value }))}
+                    placeholder="Generate or paste a secret"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const bytes = new Uint8Array(24);
+                      crypto.getRandomValues(bytes);
+                      const secret = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+                      setConfig((c) => ({ ...c, inboundSecret: secret }));
+                    }}
+                    className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold hover:bg-gray-50"
+                  >
+                    Generate
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Send as header <code className="font-mono">x-blog-secret</code>. Global fallback:{" "}
+                  <code className="font-mono">BLOG_INBOUND_SECRET</code>.
+                </p>
               </label>
+              <InboundApiDocsPanel
+                contentType="blog"
+                siteKey={selectedSite}
+                inboundSecret={config.inboundSecret}
+                className="md:col-span-2"
+              />
+              <EmailInboundConfigFields config={config} setConfig={setConfig} contentType="blog" />
+              <div className="md:col-span-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={testEmailInbound}
+                  disabled={emailTesting || configLoading}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold disabled:opacity-50"
+                >
+                  {emailTesting ? "Testing…" : "Test IMAP connection"}
+                </button>
+                <button
+                  type="button"
+                  onClick={pullEmailInbound}
+                  disabled={emailPulling || configLoading}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold disabled:opacity-50"
+                >
+                  <FiRefreshCw /> {emailPulling ? "Pulling…" : "Pull blog emails now"}
+                </button>
+              </div>
               <button type="button" onClick={saveConfig} disabled={configLoading} className="md:col-span-2 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold disabled:opacity-50">
                 <FiSave /> {configLoading ? "Saving…" : "Save publish settings"}
               </button>
@@ -744,7 +845,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
         </div>
       ) : null}
 
-      {isSuperAdmin && selectedSite ? (
+      {canManageContent && selectedSite ? (
         <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-gray-900">Blog queue for {selectedSite}</h2>

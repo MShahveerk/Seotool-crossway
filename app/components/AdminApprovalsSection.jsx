@@ -22,6 +22,14 @@ import {
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
 import MediaCropModal from "./MediaCropModal";
 import HumanizeTextButton from "./HumanizeTextButton";
+import PostPublishConfigPanel from "./PostPublishConfigPanel";
+
+const POST_SOURCE_LABELS = {
+  manual: "Manual",
+  inbound: "Inbound API",
+  meta_pull: "Meta pull",
+  email_inbound: "Email",
+};
 
 function formatDateTime(iso) {
   if (!iso) return "—";
@@ -286,6 +294,20 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
     }
   };
 
+  const publishNow = async (id) => {
+    setError("");
+    setSuccess("");
+    try {
+      const res = await fetch(`/api/admin/approvals/${id}/publish-now`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.errors?.join(" ") || "Publish failed");
+      setSuccess(data.success ? `Published via ${data.method || "delivery chain"}.` : "Publish attempted.");
+      await load();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -376,7 +398,8 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
 
   return (
     <>
-    <div className="rounded-xl border border-gray-200 bg-[#ffffff] overflow-hidden">
+    <PostPublishConfigPanel selectedSite={selectedSite} />
+    <div className="rounded-xl border border-gray-200 bg-[#ffffff] overflow-hidden mt-6">
       <div className="px-4 sm:px-6 py-5 border-b border-gray-200">
         <h2 className="text-2xl font-bold text-gray-900">Approvals</h2>
       </div>
@@ -641,9 +664,17 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                         <div className="text-xs text-gray-400 sm:hidden mt-1">
                           {a.status}
                           {a.awaitingAdminReview ? " · needs review" : ""}
+                          {a.source && a.source !== "manual" ? ` · ${POST_SOURCE_LABELS[a.source] || a.source}` : ""}
                         </div>
                       </div>
-                      <div className="hidden sm:block capitalize text-gray-700">{a.status}</div>
+                      <div className="hidden sm:block capitalize text-gray-700">
+                        {a.status}
+                        {a.source && a.source !== "manual" ? (
+                          <span className="block text-[10px] normal-case text-gray-400">
+                            {POST_SOURCE_LABELS[a.source] || a.source}
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="hidden sm:flex items-center gap-1">
                         {a.awaitingAdminReview ? (
                           <span className="inline-flex items-center gap-1 text-amber-700 text-xs font-semibold">
@@ -681,6 +712,15 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                           >
                             <FiCheck className="w-3.5 h-3.5" />
                             Mark seen
+                          </button>
+                        ) : null}
+                        {a.status === "approved" && a.publishStatus !== "published" ? (
+                          <button
+                            type="button"
+                            onClick={() => publishNow(a.id)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#1d9c35] text-[#1d9c35] bg-white hover:bg-green-50"
+                          >
+                            Publish now
                           </button>
                         ) : null}
                         <div className="relative">

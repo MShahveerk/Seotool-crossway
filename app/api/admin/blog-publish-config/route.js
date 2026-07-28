@@ -35,11 +35,13 @@ export async function POST(req) {
     if (merge.apiKey === "••••••••") delete merge.apiKey;
     if (merge.wordpressAppPassword === "••••••••") delete merge.wordpressAppPassword;
     if (merge.inboundSecret === "••••••••") delete merge.inboundSecret;
+    if (merge.imapPassword === "••••••••") delete merge.imapPassword;
 
     if (!merge.webhookSecret && existing?.webhookSecret) merge.webhookSecret = existing.webhookSecret;
     if (!merge.apiKey && existing?.apiKey) merge.apiKey = existing.apiKey;
     if (!merge.wordpressAppPassword && existing?.wordpressAppPassword) merge.wordpressAppPassword = existing.wordpressAppPassword;
     if (!merge.inboundSecret && existing?.inboundSecret) merge.inboundSecret = existing.inboundSecret;
+    if (!merge.imapPassword && existing?.imapPassword) merge.imapPassword = existing.imapPassword;
 
     const existingPassword = existing?.wordpressAppPassword || "";
     const config = await upsertSitePublishConfig(siteLink, merge);

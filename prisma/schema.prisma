@@ -79,6 +79,9 @@ model Approval {
   facebookPageId        String?   @map("facebook_page_id") @db.VarChar(191)
   instagramUserId       String?   @map("instagram_user_id") @db.VarChar(191)
   siteLink              String?   @map("site_link") @db.VarChar(512)
+  /// manual | inbound | meta_pull
+  source                String    @default("manual") @db.VarChar(32)
+  externalId            String?   @map("external_id") @db.VarChar(191)
 
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
@@ -87,6 +90,8 @@ model Approval {
   createdBy User @relation("ApprovalCreatedBy", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([assigneeId], map: "approvals_assignee_id_idx")
+  @@index([facebookPageId, externalId], map: "approvals_fb_external_idx")
+  @@index([siteLink, externalId], map: "approvals_site_external_idx")
   @@index([createdById], map: "approvals_created_by_id_idx")
   @@index([status], map: "approvals_status_idx")
   @@index([awaitingAdminReview], map: "approvals_awaiting_admin_idx")
@@ -368,10 +373,53 @@ model SitePublishConfig {
   wordpressPullEnabled Boolean  @default(false) @map("wordpress_pull_enabled")
   wordpressPullStatuses Json?   @default("[\"draft\",\"future\"]") @map("wordpress_pull_statuses")
   lastWordpressPullAt  DateTime? @map("last_wordpress_pull_at")
+  emailInboundEnabled  Boolean  @default(false) @map("email_inbound_enabled")
+  imapHost             String?  @map("imap_host") @db.VarChar(255)
+  imapPort             Int      @default(993) @map("imap_port")
+  imapUser             String?  @map("imap_user") @db.VarChar(255)
+  imapPassword         String?  @map("imap_password") @db.Text
+  imapFolder           String   @default("INBOX") @map("imap_folder") @db.VarChar(128)
+  lastEmailPullAt      DateTime? @map("last_email_pull_at")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   @@map("site_publish_configs")
+}
+
+/// Per Meta page / client account: SMM post ingestion and publish settings.
+model SitePostConfig {
+  id                  String   @id @default(cuid()) @db.VarChar(191)
+  /// Meta page ID or website URL (matches dashboard client selector).
+  siteKey             String   @unique @map("site_key") @db.VarChar(512)
+  enabled             Boolean  @default(true)
+  inboundSecret       String?  @map("inbound_secret") @db.VarChar(191)
+  /// Optional per-page Meta token for publish (and future draft pull). Falls back to env.
+  metaPageAccessToken String?  @map("meta_page_access_token") @db.Text
+  metaPullEnabled     Boolean  @default(false) @map("meta_pull_enabled")
+  facebookPageId      String?  @map("facebook_page_id") @db.VarChar(191)
+  instagramUserId     String?  @map("instagram_user_id") @db.VarChar(191)
+  lastMetaPullAt      DateTime? @map("last_meta_pull_at")
+  emailInboundEnabled Boolean  @default(false) @map("email_inbound_enabled")
+  imapHost            String?  @map("imap_host") @db.VarChar(255)
+  imapPort            Int      @default(993) @map("imap_port")
+  imapUser            String?  @map("imap_user") @db.VarChar(255)
+  imapPassword        String?  @map("imap_password") @db.Text
+  imapFolder          String   @default("INBOX") @map("imap_folder") @db.VarChar(128)
+  lastEmailPullAt     DateTime? @map("last_email_pull_at")
+  deliveryChain       Json     @default("[\"meta\",\"webhook\",\"api\",\"email\"]") @map("delivery_chain")
+  webhookUrl          String?  @map("webhook_url") @db.VarChar(2048)
+  webhookSecret       String?  @map("webhook_secret") @db.VarChar(512)
+  apiUrl              String?  @map("api_url") @db.VarChar(2048)
+  apiKey              String?  @map("api_key") @db.VarChar(512)
+  apiHeaders          Json?    @map("api_headers")
+  emailRecipients     String?  @map("email_recipients") @db.Text
+  publishToFacebook   Boolean  @default(true) @map("publish_to_facebook")
+  publishToInstagram  Boolean  @default(true) @map("publish_to_instagram")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([facebookPageId], map: "site_post_configs_fb_idx")
+  @@map("site_post_configs")
 }
 
 /// Audit trail for blog publish attempts.

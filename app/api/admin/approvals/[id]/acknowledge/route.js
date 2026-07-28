@@ -1,4 +1,5 @@
-import { requireSuperAdmin } from "../../../../../../lib/middleware/auth";
+import { requirePermission } from "../../../../../../lib/middleware/auth";
+import { PERMISSIONS } from "../../../../../../lib/rbac";
 import prisma from "../../../../../../lib/prisma";
 
 export const runtime = "nodejs";
@@ -6,7 +7,7 @@ export const runtime = "nodejs";
 /** POST — mark user response as seen (clears awaitingAdminReview) */
 export async function POST(req, { params }) {
   try {
-    await requireSuperAdmin();
+    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
     const { id } = await params;
 
     const existing = await prisma.approval.findUnique({ where: { id } });
@@ -27,7 +28,7 @@ export async function POST(req, { params }) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    if (error.message === "Unauthorized" || error.message.includes("Super admin")) {
+    if (error.message === "Unauthorized" || error.message.includes("Forbidden")) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { "Content-Type": "application/json" },
