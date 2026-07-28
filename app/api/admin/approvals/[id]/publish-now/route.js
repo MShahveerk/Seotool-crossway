@@ -1,6 +1,6 @@
-import { requirePermission } from "../../../../../lib/middleware/auth";
-import { PERMISSIONS } from "../../../../../lib/rbac";
-import { publishApprovalNow } from "../../../../../lib/postPublishJobs.js";
+import { requirePermission } from "@/lib/middleware/auth";
+import { PERMISSIONS } from "@/lib/rbac";
+import { publishApprovalNow } from "@/lib/postPublishJobs.js";
 
 export const runtime = "nodejs";
 

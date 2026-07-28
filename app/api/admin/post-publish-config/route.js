@@ -1,10 +1,10 @@
-import { requirePermission } from "../../../../lib/middleware/auth";
-import { PERMISSIONS } from "../../../../lib/rbac";
+import { requirePermission } from "@/lib/middleware/auth";
+import { PERMISSIONS } from "@/lib/rbac";
 import {
   getSitePostConfig,
   sanitizePostConfigForClient,
   upsertSitePostConfig,
-} from "../../../../lib/postPublishConfig.js";
+} from "@/lib/postPublishConfig.js";
 
 export const runtime = "nodejs";
 

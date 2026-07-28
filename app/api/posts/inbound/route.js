@@ -1,14 +1,14 @@
 import { Prisma } from "@prisma/client";
-import prisma from "../../../../lib/prisma";
-import { findAssigneesForSite } from "../../../../lib/blogAssignee.js";
-import { getSitePostConfig } from "../../../../lib/postPublishConfig.js";
-import { saveApprovalMediaFromUrl } from "../../../../lib/approvalMedia.js";
+import prisma from "@/lib/prisma";
+import { findAssigneesForSite } from "@/lib/blogAssignee.js";
+import { getSitePostConfig } from "@/lib/postPublishConfig.js";
+import { saveApprovalMediaFromUrl } from "@/lib/approvalMedia.js";
 import {
   normalizeInboundPostPayload,
   resolveInboundSiteKey,
   resolvePostTargetIds,
-} from "../../../../lib/postPayload.js";
-import { createApprovalQuickActionToken } from "../../../../lib/approvalQuickAction.js";
+} from "@/lib/postPayload.js";
+import { createApprovalQuickActionToken } from "@/lib/approvalQuickAction.js";
 
 export const runtime = "nodejs";
 
@@ -158,8 +158,8 @@ export async function POST(req) {
 
     if (!approveOnAssignment) {
       try {
-        const { sendPostApprovalNotification } = await import("../../../../lib/email.js");
-        const { collectApprovalEmailRecipients } = await import("../../../../lib/approvalRecipients.js");
+        const { sendPostApprovalNotification } = await import("@/lib/email.js");
+        const { collectApprovalEmailRecipients } = await import("@/lib/approvalRecipients.js");
         const token = createApprovalQuickActionToken(approval.id);
         const { recipients } = await collectApprovalEmailRecipients({
           siteLink: siteUrlLink || siteKey,

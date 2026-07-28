@@ -1,8 +1,8 @@
-import { requirePermission } from "../../../../lib/middleware/auth";
-import { PERMISSIONS } from "../../../../lib/rbac";
-import { getSitePostConfig } from "../../../../lib/postPublishConfig.js";
-import { getSitePublishConfig } from "../../../../lib/blogPublishConfig.js";
-import { testImapConnection, pullEmailPostsForSite, pullEmailBlogsForSite } from "../../../../lib/emailInboundPull.js";
+import { requirePermission } from "@/lib/middleware/auth";
+import { PERMISSIONS } from "@/lib/rbac";
+import { getSitePostConfig } from "@/lib/postPublishConfig.js";
+import { getSitePublishConfig } from "@/lib/blogPublishConfig.js";
+import { testImapConnection, pullEmailPostsForSite, pullEmailBlogsForSite } from "@/lib/emailInboundPull.js";
 
 export const runtime = "nodejs";
 
