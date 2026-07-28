@@ -44,6 +44,15 @@ function defaultTarget(selectedSite, userSite) {
   }
 }
 
+function formatFetchedAt(iso) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  } catch {
+    return String(iso);
+  }
+}
+
 export default function SerankingExplorerSection({ selectedSite = "" }) {
   const { data: session } = useSession();
   const hasGlobalAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
@@ -142,7 +151,7 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
   return (
     <SerankingShell
       title="Site Explorer"
-      description="Research any domain with SE Ranking — organic overview, backlinks, top pages, and on-demand site audit. No client website selection required."
+      description="Research any domain with SE Ranking — organic overview, backlinks, and top pages cached for 7 days with a weekly refresh. Site audits run on demand."
       selectedSite={selectedSite}
       requireWebsite={false}
       siteBadge={activeTarget || "Any domain"}
@@ -153,7 +162,7 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
       onRefresh={activeTarget ? () => load(activeTarget, { refresh: true }) : undefined}
       refreshing={refreshing}
       refreshDisabled={!activeTarget || (credits?.remaining ?? 0) < exploreCost}
-      refreshLabel={`Refresh (~${exploreCost} cr)`}
+      refreshLabel={payload?.fromCache && !payload?.stale ? "Force refresh (~300 cr)" : `Refresh (~${exploreCost} cr)`}
     >
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-3">
@@ -174,12 +183,29 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
         </div>
 
         {activeTarget ? (
-          <p className="text-sm text-muted-foreground">
-            Showing data for <span className="font-semibold text-foreground">{activeTarget}</span>
-            {payload?.creditsSpent ? (
-              <span className="ml-2">· {payload.creditsSpent} credits spent this load</span>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Showing data for <span className="font-semibold text-foreground">{activeTarget}</span>
+              {payload?.fromCache && !payload?.creditsSpent ? (
+                <span className="ml-2 text-emerald-700 font-medium">· loaded from cache (0 credits)</span>
+              ) : payload?.creditsSpent ? (
+                <span className="ml-2">· {payload.creditsSpent} credits spent this load</span>
+              ) : null}
+            </p>
+            {payload?.fetchedAt ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-sky-100 bg-sky-50/70 px-4 py-3 text-sm text-sky-950">
+                <Globe2 className="size-4 shrink-0 opacity-70" aria-hidden />
+                <span>
+                  Last saved: <strong>{formatFetchedAt(payload.fetchedAt)}</strong>
+                  {payload.stale
+                    ? " · weekly refresh due"
+                    : payload.cacheExpiresAt
+                      ? ` · cached until ${formatFetchedAt(payload.cacheExpiresAt)}`
+                      : " · weekly cache"}
+                </span>
+              </div>
             ) : null}
-          </p>
+          </div>
         ) : null}
 
         {payload ? (
@@ -343,7 +369,7 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
           </Tabs>
         ) : !loading ? (
           <p className="text-sm text-muted-foreground">
-            Enter any domain above to load SE Ranking overview, backlinks, and top pages.
+            Enter any domain above to load SE Ranking overview, backlinks, and top pages. Results cache for 7 days and refresh automatically every Monday.
           </p>
         ) : null}
       </div>
