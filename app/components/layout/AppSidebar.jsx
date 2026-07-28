@@ -19,6 +19,7 @@ import {
   Search,
   Settings,
   Shield,
+  Sparkles,
   Users,
   Activity,
   Link2,
