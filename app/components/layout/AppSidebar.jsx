@@ -24,7 +24,6 @@ import {
   Shield,
   Sparkles,
   Users,
-  Wand2,
   Zap,
   Award,
   Activity,
@@ -66,17 +65,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const mainMenuItems = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+const dashboardItem = { id: "dashboard", label: "Dashboard", icon: LayoutDashboard };
+
+const websiteGscMenuItems = [
   { id: "website-statistics", label: "Website Statistics", icon: Globe },
   { id: "pagespeed-insights", label: "PageSpeed Insights", icon: Activity },
-  { id: "smm-statistics", label: "SMM Statistics", icon: Megaphone },
-  { id: "calendar", label: "Content Calendar", icon: Calendar },
-  { id: "my-approvals", label: "SMM Post Approvals", icon: CheckSquare },
-  { id: "my-blog-approvals", label: "Blog Approvals", icon: FileText },
-];
-
-const websiteSeoMenuItems = [
   { id: "site-audit", label: "Site Audit", icon: Shield },
   { id: "domain-authority", label: "Domain Authority", icon: Award },
   { id: "keyword-research", label: "Keyword Research", icon: Search },
@@ -90,8 +83,15 @@ const websiteSeoMenuItems = [
   { id: "sitemap-health", label: "Sitemap Health", icon: FileText },
 ];
 
-const createMenuItems = [
+const smmMenuItems = [
+  { id: "smm-statistics", label: "SMM Statistics", icon: Megaphone },
+  { id: "calendar", label: "Content Calendar", icon: Calendar },
+  { id: "my-approvals", label: "SMM Post Approvals", icon: CheckSquare },
   { id: "admin-approvals", label: "Create Post", icon: ClipboardList, role: "super_admin" },
+];
+
+const blogsMenuItems = [
+  { id: "my-blog-approvals", label: "Blog Approvals", icon: FileText },
   { id: "admin-blogs", label: "Create Blog", icon: FileText, role: "super_admin" },
   { id: "blog-automation", label: "Blog Automation", icon: Sparkles, role: "super_admin" },
 ];
@@ -103,6 +103,23 @@ function canAccessCreateItem(item, role) {
     (item.id === "admin-approvals" || item.id === "admin-blogs" || item.id === "blog-automation") &&
     role === "smm"
   );
+}
+
+function groupContainsSection(items, sectionId) {
+  return items.some((item) => item.id === sectionId);
+}
+
+function filterMenuItem(item, { role, hasGlobalSiteAccess, isWebsiteSelected }) {
+  if (role === "approver") {
+    return item.id === "calendar" || item.id === "my-approvals";
+  }
+  if (item.id === "website-statistics" && hasGlobalSiteAccess && !isWebsiteSelected) {
+    return false;
+  }
+  if (item.role && !canAccessCreateItem(item, role)) {
+    return false;
+  }
+  return true;
 }
 
 function getSiteHostName(siteUrl) {
@@ -127,7 +144,11 @@ export default function AppSidebar({
   const [metaAccounts, setMetaAccounts] = useState([]);
   const [approvalAdminUnread, setApprovalAdminUnread] = useState(0);
   const [approvalUserUnread, setApprovalUserUnread] = useState(0);
-  const [seoOpen, setSeoOpen] = useState(true);
+  const [websiteOpen, setWebsiteOpen] = useState(true);
+  const [smmOpen, setSmmOpen] = useState(true);
+  const [blogsOpen, setBlogsOpen] = useState(true);
+
+  const userRole = session?.user?.role;
 
   const isSuperAdmin = session?.user?.role === "super_admin";
   const hasGlobalSiteAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
@@ -249,6 +270,32 @@ export default function AppSidebar({
     return isString ? getSiteHostName(siteEntryOrVal) : "No Account Selected";
   };
 
+  useEffect(() => {
+    if (groupContainsSection(websiteGscMenuItems, activeSection)) setWebsiteOpen(true);
+    if (groupContainsSection(smmMenuItems, activeSection)) setSmmOpen(true);
+    if (groupContainsSection(blogsMenuItems, activeSection)) setBlogsOpen(true);
+  }, [activeSection]);
+
+  const menuContext = { role: userRole, hasGlobalSiteAccess, isWebsiteSelected };
+
+  const visibleWebsiteItems = websiteGscMenuItems.filter((item) => filterMenuItem(item, menuContext));
+  const visibleSmmItems = smmMenuItems.filter((item) => filterMenuItem(item, menuContext));
+  const visibleBlogItems = blogsMenuItems.filter((item) => filterMenuItem(item, menuContext));
+
+  const showWebsiteGroup = userRole !== "approver" && isWebsiteSelected && visibleWebsiteItems.length > 0;
+  const showSmmGroup = visibleSmmItems.length > 0;
+  const showBlogsGroup = userRole !== "approver" && visibleBlogItems.length > 0;
+
+  const getItemBadge = (item) => {
+    if (item.id === "my-approvals" && approvalUserUnread > 0) {
+      return approvalUserUnread > 9 ? "9+" : String(approvalUserUnread);
+    }
+    if (item.id === "admin-approvals" && approvalAdminUnread > 0) {
+      return approvalAdminUnread > 9 ? "9+" : String(approvalAdminUnread);
+    }
+    return null;
+  };
+
   const navigate = (id) => onSectionChange?.(id);
 
   const renderNavItem = (item, badge) => {
@@ -262,6 +309,30 @@ export default function AppSidebar({
         </SidebarMenuButton>
         {badge ? <SidebarMenuBadge>{badge}</SidebarMenuBadge> : null}
       </SidebarMenuItem>
+    );
+  };
+
+  const renderMenuGroup = (label, GroupIcon, items, open, setOpen, groupKey) => {
+    if (!items.length) return null;
+    return (
+      <Collapsible key={groupKey} open={open} onOpenChange={setOpen} className="group/collapsible">
+        <SidebarGroup>
+          <SidebarGroupLabel asChild>
+            <CollapsibleTrigger className="flex w-full items-center justify-between">
+              <span className="flex items-center gap-2">
+                {GroupIcon ? <GroupIcon className="size-3.5 shrink-0 opacity-80" aria-hidden /> : null}
+                {label}
+              </span>
+              <ChevronDown className="size-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+            </CollapsibleTrigger>
+          </SidebarGroupLabel>
+          <CollapsibleContent>
+            <SidebarGroupContent>
+              <SidebarMenu>{items.map((item) => renderNavItem(item, getItemBadge(item)))}</SidebarMenu>
+            </SidebarGroupContent>
+          </CollapsibleContent>
+        </SidebarGroup>
+      </Collapsible>
     );
   };
 
@@ -322,73 +393,21 @@ export default function AppSidebar({
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainMenuItems.map((item) => {
-                if (session?.user?.role === "approver" && item.id !== "calendar" && item.id !== "my-approvals") {
-                  return null;
-                }
-                if (item.id === "website-statistics" && hasGlobalSiteAccess && !isWebsiteSelected) {
-                  return null;
-                }
-                const badge =
-                  item.id === "my-approvals" && approvalUserUnread > 0
-                    ? approvalUserUnread > 9
-                      ? "9+"
-                      : String(approvalUserUnread)
-                    : null;
-                return renderNavItem(item, badge);
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {isWebsiteSelected && session?.user?.role !== "approver" ? (
-          <Collapsible open={seoOpen} onOpenChange={setSeoOpen} className="group/collapsible">
-            <SidebarGroup>
-              <SidebarGroupLabel asChild>
-                <CollapsibleTrigger className="flex w-full items-center justify-between">
-                  Website SEO
-                  <ChevronDown className="size-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                </CollapsibleTrigger>
-              </SidebarGroupLabel>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {websiteSeoMenuItems.map((item) => renderNavItem(item))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </SidebarGroup>
-          </Collapsible>
-        ) : null}
-
-        {(hasGlobalSiteAccess || createMenuItems.some((item) => !item.role)) &&
-        createMenuItems.some((item) => canAccessCreateItem(item, session?.user?.role)) ? (
+        {userRole !== "approver" ? (
           <SidebarGroup>
-            <SidebarGroupLabel className="flex items-center gap-2">
-              <Wand2 className="size-3.5 shrink-0 opacity-80" aria-hidden />
-              Create
-            </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {createMenuItems
-                  .filter((item) => canAccessCreateItem(item, session?.user?.role))
-                  .map((item) => {
-                    const badge =
-                      item.id === "admin-approvals" && approvalAdminUnread > 0
-                        ? approvalAdminUnread > 9
-                          ? "9+"
-                          : String(approvalAdminUnread)
-                        : null;
-                    return renderNavItem(item, badge);
-                  })}
-              </SidebarMenu>
+              <SidebarMenu>{renderNavItem(dashboardItem, null)}</SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}
+
+        {showWebsiteGroup
+          ? renderMenuGroup("Website & GSC", Globe, visibleWebsiteItems, websiteOpen, setWebsiteOpen, "website-gsc")
+          : null}
+
+        {showSmmGroup ? renderMenuGroup("Social Media", Megaphone, visibleSmmItems, smmOpen, setSmmOpen, "smm") : null}
+
+        {showBlogsGroup ? renderMenuGroup("Blogs", FileText, visibleBlogItems, blogsOpen, setBlogsOpen, "blogs") : null}
 
         {isSuperAdmin ? (
           <SidebarGroup>
