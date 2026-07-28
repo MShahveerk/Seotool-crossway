@@ -67,20 +67,23 @@ import { cn } from "@/lib/utils";
 
 const dashboardItem = { id: "dashboard", label: "Dashboard", icon: LayoutDashboard };
 
-const websiteGscMenuItems = [
+const gscMenuItems = [
   { id: "website-statistics", label: "Website Statistics", icon: Globe },
+  { id: "device-appearance", label: "Device & Appearance", icon: Monitor },
+  { id: "url-inspection", label: "URL Inspection", icon: Crosshair },
+  { id: "query-page-matrix", label: "Query × Page", icon: Map },
+  { id: "sitemap-health", label: "Sitemap Health", icon: FileText },
+  { id: "seo-opportunities", label: "SEO Opportunities", icon: Zap },
+];
+
+const seoMenuItems = [
   { id: "pagespeed-insights", label: "PageSpeed Insights", icon: Activity },
   { id: "site-audit", label: "Site Audit", icon: Shield },
   { id: "domain-authority", label: "Domain Authority", icon: Award },
   { id: "keyword-research", label: "Keyword Research", icon: Search },
   { id: "ai-keyword-research", label: "AI Keyword Research", icon: Sparkles },
-  { id: "seo-opportunities", label: "SEO Opportunities", icon: Zap },
-  { id: "device-appearance", label: "Device & Appearance", icon: Monitor },
-  { id: "url-inspection", label: "URL Inspection", icon: Crosshair },
-  { id: "query-page-matrix", label: "Query × Page", icon: Map },
   { id: "site-explorer", label: "Site Explorer", icon: Compass },
   { id: "link-index", label: "Link Index", icon: Link2 },
-  { id: "sitemap-health", label: "Sitemap Health", icon: FileText },
 ];
 
 const smmMenuItems = [
@@ -144,7 +147,8 @@ export default function AppSidebar({
   const [metaAccounts, setMetaAccounts] = useState([]);
   const [approvalAdminUnread, setApprovalAdminUnread] = useState(0);
   const [approvalUserUnread, setApprovalUserUnread] = useState(0);
-  const [websiteOpen, setWebsiteOpen] = useState(true);
+  const [gscOpen, setGscOpen] = useState(true);
+  const [seoOpen, setSeoOpen] = useState(true);
   const [smmOpen, setSmmOpen] = useState(true);
   const [blogsOpen, setBlogsOpen] = useState(true);
 
@@ -271,18 +275,21 @@ export default function AppSidebar({
   };
 
   useEffect(() => {
-    if (groupContainsSection(websiteGscMenuItems, activeSection)) setWebsiteOpen(true);
+    if (groupContainsSection(gscMenuItems, activeSection)) setGscOpen(true);
+    if (groupContainsSection(seoMenuItems, activeSection)) setSeoOpen(true);
     if (groupContainsSection(smmMenuItems, activeSection)) setSmmOpen(true);
     if (groupContainsSection(blogsMenuItems, activeSection)) setBlogsOpen(true);
   }, [activeSection]);
 
   const menuContext = { role: userRole, hasGlobalSiteAccess, isWebsiteSelected };
 
-  const visibleWebsiteItems = websiteGscMenuItems.filter((item) => filterMenuItem(item, menuContext));
+  const visibleGscItems = gscMenuItems.filter((item) => filterMenuItem(item, menuContext));
+  const visibleSeoItems = seoMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleSmmItems = smmMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleBlogItems = blogsMenuItems.filter((item) => filterMenuItem(item, menuContext));
 
-  const showWebsiteGroup = userRole !== "approver" && isWebsiteSelected && visibleWebsiteItems.length > 0;
+  const showGscGroup = userRole !== "approver" && isWebsiteSelected && visibleGscItems.length > 0;
+  const showSeoGroup = userRole !== "approver" && isWebsiteSelected && visibleSeoItems.length > 0;
   const showSmmGroup = visibleSmmItems.length > 0;
   const showBlogsGroup = userRole !== "approver" && visibleBlogItems.length > 0;
 
@@ -401,8 +408,12 @@ export default function AppSidebar({
           </SidebarGroup>
         ) : null}
 
-        {showWebsiteGroup
-          ? renderMenuGroup("Website & GSC", Globe, visibleWebsiteItems, websiteOpen, setWebsiteOpen, "website-gsc")
+        {showGscGroup
+          ? renderMenuGroup("Search Console", Globe, visibleGscItems, gscOpen, setGscOpen, "gsc")
+          : null}
+
+        {showSeoGroup
+          ? renderMenuGroup("SEO Tools", Search, visibleSeoItems, seoOpen, setSeoOpen, "seo")
           : null}
 
         {showSmmGroup ? renderMenuGroup("Social Media", Megaphone, visibleSmmItems, smmOpen, setSmmOpen, "smm") : null}
