@@ -16,18 +16,30 @@ import AdminBlogSection from "./components/AdminBlogSection";
 import BlogAutomationSection from "./components/BlogAutomationSection";
 import UrlInspectionSection from "./components/seo/UrlInspectionSection";
 import SiteHealthSection from "./components/seo/SiteHealthSection";
-import SiteAuditSection from "./components/SiteAuditSection";
-import KeywordResearchHubSection from "./components/seo/KeywordResearchHubSection";
-import SiteExplorerSection from "./components/seo/SiteExplorerSection";
+import UnifiedSiteAuditSection from "./components/seo/UnifiedSiteAuditSection";
+import UnifiedKeywordResearchSection from "./components/seo/UnifiedKeywordResearchSection";
+import UnifiedSiteExplorerSection from "./components/seo/UnifiedSiteExplorerSection";
 import SerankingBacklinksSection from "./components/seranking/SerankingBacklinksSection";
-import SerankingDomainSection from "./components/seranking/SerankingDomainSection";
-import SerankingKeywordsSection from "./components/seranking/SerankingKeywordsSection";
-import SerankingAuditSection from "./components/seranking/SerankingAuditSection";
-import SerankingExplorerSection from "./components/seranking/SerankingExplorerSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { LoadingSpinner } from "./components/ui-shared/LoadingBlock";
 import { SectionTransition } from "./components/ui-shared/Motion";
+
+const SECTION_ALIASES = {
+  "seranking-audit": "site-audit",
+  "seranking-keywords": "keyword-research",
+  "seranking-explorer": "site-explorer",
+  "seranking-domain": "site-health",
+  "ai-keyword-research": "keyword-research",
+  "pagespeed-insights": "site-health",
+  "domain-authority": "site-health",
+  "link-index": "site-health",
+};
+
+function resolveSection(section) {
+  if (!section) return "dashboard";
+  return SECTION_ALIASES[section] || section;
+}
 
 const WEBSITE_SEO_SECTIONS = new Set([
   "website-statistics",
@@ -48,12 +60,13 @@ const WEBSITE_SEO_SECTIONS = new Set([
   "seranking-backlinks",
   "seranking-keywords",
   "seranking-audit",
+  "seranking-explorer",
 ]);
 
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState(() => readSectionFromUrl() || "dashboard");
+  const [activeSection, setActiveSection] = useState(() => resolveSection(readSectionFromUrl() || "dashboard"));
   const [selectedSite, setSelectedSite] = useState(() => readSiteFromUrl() || "");
 
   useEffect(() => {
@@ -68,9 +81,10 @@ export default function Home() {
     }
   }, [status, router, session, activeSection]);
 
-  // Leave website SEO tools when a Meta-only page is selected
+  // Leave website SEO tools when a Meta-only page is selected (site-explorer works without a linked site)
   useEffect(() => {
     if (!selectedSite || !WEBSITE_SEO_SECTIONS.has(activeSection)) return;
+    if (activeSection === "site-explorer") return;
     const isWebsite =
       String(selectedSite).startsWith("http") ||
       String(selectedSite).startsWith("sc-domain:") ||
@@ -114,24 +128,21 @@ export default function Home() {
       case "link-index":
         return <SiteHealthSection selectedSite={seoSite} />;
       case "site-audit":
-        return <SiteAuditSection selectedSite={seoSite} onNavigateSection={setActiveSection} />;
+      case "seranking-audit":
+        return <UnifiedSiteAuditSection selectedSite={seoSite} onNavigateSection={setActiveSection} />;
       case "keyword-research":
       case "ai-keyword-research":
-        return <KeywordResearchHubSection selectedSite={seoSite} />;
+      case "seranking-keywords":
+        return <UnifiedKeywordResearchSection selectedSite={seoSite} />;
       case "url-inspection":
         return <UrlInspectionSection selectedSite={seoSite} />;
       case "site-explorer":
-        return <SiteExplorerSection selectedSite={seoSite} />;
+      case "seranking-explorer":
+        return <UnifiedSiteExplorerSection selectedSite={seoSite} />;
       case "seranking-domain":
-        return <SerankingDomainSection selectedSite={seoSite} />;
+        return <SiteHealthSection selectedSite={seoSite} />;
       case "seranking-backlinks":
         return <SerankingBacklinksSection selectedSite={seoSite} />;
-      case "seranking-keywords":
-        return <SerankingKeywordsSection selectedSite={seoSite} />;
-      case "seranking-audit":
-        return <SerankingAuditSection selectedSite={seoSite} />;
-      case "seranking-explorer":
-        return <SerankingExplorerSection selectedSite={selectedSite} />;
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
       case "calendar":

@@ -75,13 +75,7 @@ const seoMenuItems = [
   { id: "site-explorer", label: "Site Explorer", icon: Compass },
 ];
 
-const serankingMenuItems = [
-  { id: "seranking-domain", label: "SEO Overview", icon: Globe },
-  { id: "seranking-backlinks", label: "Backlink Profile", icon: Link2 },
-  { id: "seranking-keywords", label: "Keyword Explorer", icon: Search },
-  { id: "seranking-explorer", label: "Site Explorer", icon: Crosshair },
-  { id: "seranking-audit", label: "SE Ranking Audit", icon: Shield },
-];
+const serankingMenuItems = [{ id: "seranking-backlinks", label: "Backlink Profile", icon: Link2 }];
 
 const smmMenuItems = [
   { id: "smm-statistics", label: "SMM Statistics", icon: Megaphone },
@@ -288,13 +282,15 @@ export default function AppSidebar({
   const visibleSmmItems = smmMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleBlogItems = blogsMenuItems.filter((item) => filterMenuItem(item, menuContext));
 
-  const serankingItemsForMenu = isWebsiteSelected
-    ? visibleSerankingItems
-    : visibleSerankingItems.filter((item) => item.id === "seranking-explorer");
+  const seoItemsForMenu = isWebsiteSelected
+    ? visibleSeoItems
+    : visibleSeoItems.filter((item) => item.id === "site-explorer");
+
+  const serankingItemsForMenu = visibleSerankingItems;
 
   const showGscGroup = userRole !== "approver" && isWebsiteSelected && visibleGscItems.length > 0;
-  const showSeoGroup = userRole !== "approver" && isWebsiteSelected && visibleSeoItems.length > 0;
-  const showSerankingGroup = userRole !== "approver" && serankingItemsForMenu.length > 0;
+  const showSeoGroup = userRole !== "approver" && seoItemsForMenu.length > 0;
+  const showSerankingGroup = userRole !== "approver" && isWebsiteSelected && serankingItemsForMenu.length > 0;
   const showSmmGroup = visibleSmmItems.length > 0;
   const showBlogsGroup = userRole !== "approver" && visibleBlogItems.length > 0;
 
@@ -418,7 +414,7 @@ export default function AppSidebar({
           : null}
 
         {showSeoGroup
-          ? renderMenuGroup("SEO Tools", Search, visibleSeoItems, seoOpen, setSeoOpen, "seo")
+          ? renderMenuGroup("SEO Tools", Search, seoItemsForMenu, seoOpen, setSeoOpen, "seo")
           : null}
 
         {showSerankingGroup

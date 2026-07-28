@@ -6,7 +6,11 @@ import SerankingShell, { useSerankingStatus } from "./SerankingShell";
 import SerankingAuditReport from "./SerankingAuditReport";
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function SerankingAuditSection({ selectedSite = "" }) {
+export default function SerankingAuditSection({
+  selectedSite = "",
+  title = "SE Ranking Site Audit",
+  description,
+}) {
   const { data: session } = useSession();
   const hasGlobalAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
   const { credits, status: metaStatus, reload: reloadMeta } = useSerankingStatus(selectedSite);
@@ -23,6 +27,9 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
 
   const auditMaxPages = 20;
   const auditCost = auditMaxPages * 2;
+  const shellDescription =
+    description ||
+    `Technical crawl via SE Ranking (max ${auditMaxPages} pages ≈ ${auditCost} credits). Each issue includes full details and step-by-step fix guidance.`;
 
   const load = useCallback(async () => {
     const site = hasGlobalAccess ? selectedSite : session?.user?.siteLink;
@@ -93,8 +100,8 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
 
   return (
     <SerankingShell
-      title="SE Ranking Site Audit"
-      description={`Technical crawl via SE Ranking (max ${auditMaxPages} pages ≈ ${auditCost} credits). Each issue includes full details and step-by-step fix guidance.`}
+      title={title}
+      description={shellDescription}
       selectedSite={selectedSite}
       loading={loading}
       error={error}

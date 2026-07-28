@@ -158,15 +158,16 @@ export default function SiteHealthSection({ selectedSite = "" }) {
   const se = serankingMetrics;
   const seBacklinks = se?.backlinks;
   const seOverview = se?.overview;
-  const openPageRankScore = auth?.score != null ? toScore100(auth.score) : linkAuth?.score100 ?? null;
   const seInlinkRank = seBacklinks?.domainInlinkRank ?? null;
-  const authorityScore = seInlinkRank ?? openPageRankScore;
+  const hasSeAuthority = seInlinkRank != null;
+  const openPageRankScore = auth?.score != null ? toScore100(auth.score) : linkAuth?.score100 ?? null;
+  const authorityScore = hasSeAuthority ? seInlinkRank : openPageRankScore;
   const openPageRankRefDomains = auth?.referringDomains ?? linkAuth?.referringDomains ?? null;
   const referringDomains = seBacklinks?.refdomains ?? openPageRankRefDomains;
   const backlinkCount = seBacklinks?.backlinks ?? null;
   const organicTraffic = seOverview?.traffic ?? null;
   const organicKeywords = seOverview?.keywords ?? null;
-  const authTone = authorityTone(seInlinkRank != null ? seInlinkRank / 10 : auth?.score ?? linkAuth?.score);
+  const authTone = authorityTone(hasSeAuthority ? seInlinkRank / 10 : auth?.score ?? linkAuth?.score);
 
   const perfScore = ps?.scores?.performance ?? ps?.categories?.performance?.score ?? null;
   const seoScore = ps?.scores?.seo ?? ps?.categories?.seo?.score ?? null;
@@ -242,14 +243,8 @@ export default function SiteHealthSection({ selectedSite = "" }) {
             <KpiCard
               icon={Award}
               label="Authority"
-              value={
-                seInlinkRank != null && openPageRankScore != null
-                  ? `${Math.round(seInlinkRank)} SE · ${Math.round(openPageRankScore)} OPR`
-                  : authorityScore != null
-                    ? `${Math.round(authorityScore)}/100`
-                    : "—"
-              }
-              sub={seInlinkRank != null ? "SE InLink + Open PageRank" : authTone.label}
+              value={authorityScore != null ? `${Math.round(authorityScore)}/100` : "—"}
+              sub={hasSeAuthority ? "SE Ranking InLink rank" : openPageRankScore != null ? "Open PageRank" : authTone.label}
               toneClass={authTone.text}
               accent="emerald"
             />
@@ -342,7 +337,9 @@ export default function SiteHealthSection({ selectedSite = "" }) {
           <div>
             <h2 className="text-lg font-bold text-gray-900">Authority &amp; Link Profile</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Trend history, competitor benchmarks, and link profile context from Open PageRank.
+              {hasSeAuthority
+                ? "Authority score from SE Ranking above. Open PageRank trend history below when available."
+                : "Trend history and competitor benchmarks from Open PageRank."}
             </p>
           </div>
           {(linkLoading || linkRefreshing) && (
@@ -353,15 +350,18 @@ export default function SiteHealthSection({ selectedSite = "" }) {
           )}
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4 sm:p-5">
-          <DomainAuthoritySection selectedSite={effectiveSite} embedded />
-        </div>
+        {!hasSeAuthority ? (
+          <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4 sm:p-5">
+            <DomainAuthoritySection selectedSite={effectiveSite} embedded />
+          </div>
+        ) : null}
 
         <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-5 py-4 text-sm text-gray-600">
-            <p className="font-semibold text-gray-800">About link data</p>
+          <p className="font-semibold text-gray-800">About link data</p>
           <p className="mt-1 leading-relaxed">
-            Referring domains and backlink counts prefer <strong>SE Ranking</strong> when cached. Open PageRank
-            fills gaps for global rank and homepage UR. Per-page Common Crawl rows stay in Site Explorer only.
+            Referring domains and backlink counts use <strong>SE Ranking</strong> when cached.
+            {!hasSeAuthority ? " Open PageRank fills authority when SE Ranking is unavailable." : null}
+            {" "}See <strong>Backlink Profile</strong> under SE Ranking for anchors, top linked pages, and full detail.
           </p>
         </div>
       </section>
