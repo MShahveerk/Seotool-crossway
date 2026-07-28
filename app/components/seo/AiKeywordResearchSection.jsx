@@ -140,6 +140,131 @@ function SourceBadge({ source }) {
   return <span className="text-gray-400 text-xs">—</span>;
 }
 
+function SerankingVolumeByCountry({ entries }) {
+  if (!entries?.length) {
+    return <p className="text-xs text-gray-400">No cached country breakdown</p>;
+  }
+  return (
+    <div className="grid gap-1 sm:grid-cols-2">
+      {entries.map(({ source, label, volume }) => (
+        <div key={source} className="flex items-center justify-between gap-2 text-xs">
+          <span className="text-gray-500 truncate">{label}</span>
+          <span className="font-semibold tabular-nums text-gray-900">{formatNum(volume)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SerankingMetricsDropdown({ seranking, configured, geoLabel, compact = false, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  if (!configured) return null;
+
+  const hasData = Boolean(seranking?.available);
+
+  if (compact) {
+    if (!hasData) return <span className="text-gray-400 text-xs">—</span>;
+    return (
+      <details className="group min-w-[120px]">
+        <summary className="cursor-pointer list-none rounded-lg border border-violet-200 bg-violet-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-800 hover:bg-violet-100 [&::-webkit-details-marker]:hidden">
+          <span className="inline-flex items-center gap-1">
+            <Sparkles size={10} />
+            SE · {seranking.volume != null ? formatNum(seranking.volume) : "—"}
+          </span>
+        </summary>
+        <div className="mt-2 rounded-lg border border-violet-100 bg-white p-3 shadow-sm space-y-3 min-w-[220px]">
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <p className="text-[10px] font-bold uppercase text-gray-500">Traffic pot.</p>
+              <p className="font-semibold text-emerald-700 tabular-nums">
+                {seranking.trafficPotential != null ? formatNum(seranking.trafficPotential) : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase text-gray-500">Difficulty</p>
+              <p className="font-semibold tabular-nums">{seranking.difficulty ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase text-gray-500">CPC</p>
+              <p className="font-semibold">{seranking.cpcFormatted || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase text-gray-500">Market</p>
+              <p className="font-semibold">{geoLabel || seranking.source?.toUpperCase()}</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Volume by country</p>
+            <SerankingVolumeByCountry entries={seranking.volumeByCountry} />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Trend</p>
+            <TrendSparkline trend={seranking.monthlyTrend} id={`seTrend-${seranking.keyword || "row"}`} />
+          </div>
+        </div>
+      </details>
+    );
+  }
+
+  return (
+    <div className="border-t border-violet-100">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 bg-violet-50/60 px-5 py-3 text-left text-sm font-semibold text-violet-900 transition-colors hover:bg-violet-50"
+      >
+        <span className="inline-flex items-center gap-2">
+          <Sparkles size={14} className="text-violet-600" />
+          SE Ranking
+          {hasData && seranking?.volume != null ? (
+            <span className="font-normal normal-case text-violet-700/80">· vol {formatNum(seranking.volume)}</span>
+          ) : null}
+        </span>
+        <FiChevronDown className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`} size={16} />
+      </button>
+      {open ? (
+        <div className="px-5 pb-5 pt-4">
+          {!hasData ? (
+            <p className="text-xs text-gray-500">No SE Ranking data for this keyword yet.</p>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase text-gray-500">Volume / mo</p>
+                <p className="mt-1 text-lg font-bold tabular-nums">{seranking.volume != null ? formatNum(seranking.volume) : "—"}</p>
+                <p className="text-[10px] text-gray-400">{geoLabel || seranking.source?.toUpperCase()}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase text-gray-500">Traffic potential</p>
+                <p className="mt-1 text-lg font-bold tabular-nums text-emerald-700">
+                  {seranking.trafficPotential != null ? formatNum(seranking.trafficPotential) : "—"}
+                </p>
+                <p className="text-[10px] text-gray-400">Est. clicks/mo</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase text-gray-500">Difficulty</p>
+                <DifficultyBar value={seranking.difficulty} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase text-gray-500">CPC</p>
+                <p className="mt-1 font-semibold text-sm">{seranking.cpcFormatted || "—"}</p>
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Volume by country</p>
+                <SerankingVolumeByCountry entries={seranking.volumeByCountry} />
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-[10px] font-bold uppercase text-gray-500 mb-1">Trend (12 mo)</p>
+                <TrendSparkline trend={seranking.monthlyTrend} large id="seTrend-seed" />
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function TagChips({ tags }) {
   if (!tags?.length) return null;
   return (
@@ -671,6 +796,7 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                   <div>
                     <p className="text-[11px] font-bold uppercase text-gray-500">Volume / mo</p>
                     <p className="mt-1 text-2xl font-bold tabular-nums">{exploreData.seed.avgMonthlySearches != null ? formatNum(exploreData.seed.avgMonthlySearches) : "—"}</p>
+                    <p className="mt-0.5 text-[10px] text-gray-400">Google Ads · {exploreData.geo?.label || "market"}</p>
                   </div>
                   <div>
                     <p className="text-[11px] font-bold uppercase text-gray-500">Difficulty</p>
@@ -689,6 +815,12 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                     <TrendSparkline trend={exploreData.seed.monthlyTrend} large id="seedTrend" />
                   </div>
                 </div>
+                <SerankingMetricsDropdown
+                  seranking={exploreData.seed.seranking}
+                  configured={exploreData.seranking?.configured || status?.seranking?.configured}
+                  geoLabel={exploreData.geo?.label}
+                  defaultOpen
+                />
               </div>
               {exploreData.clusters?.length ? (
                 <div className="mb-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -729,6 +861,9 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                         <th className="px-3 py-3 text-left text-[11px] font-bold uppercase text-gray-500">Intent</th>
                         <th className="px-3 py-3 text-left text-[11px] font-bold uppercase text-gray-500 min-w-[200px]">SEO action</th>
                         <th className="px-3 py-3 text-left text-[11px] font-bold uppercase text-gray-500">Source</th>
+                        {(exploreData.seranking?.configured || status?.seranking?.configured) ? (
+                          <th className="px-3 py-3 text-left text-[11px] font-bold uppercase text-gray-500">SE Ranking</th>
+                        ) : null}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -749,6 +884,16 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                           <td className="px-3 py-3"><span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold capitalize ${INTENT_STYLES[row.intent] || "bg-gray-100"}`}>{row.intent}</span></td>
                           <td className="px-3 py-3 text-xs text-gray-600 leading-relaxed max-w-xs">{row.recommendation || row.contentAngle || "—"}</td>
                           <td className="px-3 py-3"><SourceBadge source={row.metricsSource} /></td>
+                          {(exploreData.seranking?.configured || status?.seranking?.configured) ? (
+                            <td className="px-3 py-3">
+                              <SerankingMetricsDropdown
+                                seranking={row.seranking}
+                                configured
+                                geoLabel={exploreData.geo?.label}
+                                compact
+                              />
+                            </td>
+                          ) : null}
                         </tr>
                       ))}
                     </tbody>

@@ -481,6 +481,67 @@ model SiteExplorerSnapshot {
   @@map("site_explorer_snapshots")
 }
 
+/// Monthly SE Ranking API credit budget tracker.
+model SerankingCreditLedger {
+  id            String   @id @default(cuid()) @db.VarChar(191)
+  monthKey      String   @unique @map("month_key") @db.VarChar(7)
+  creditsUsed   Int      @default(0) @map("credits_used")
+  creditsBudget Int      @default(20000) @map("credits_budget")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("seranking_credit_ledger")
+}
+
+/// Per-call SE Ranking credit audit log.
+model SerankingCreditLog {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  monthKey  String   @map("month_key") @db.VarChar(7)
+  siteUrl   String?  @map("site_url") @db.VarChar(512)
+  endpoint  String   @db.VarChar(128)
+  credits   Int      @default(0)
+  status    String   @default("success") @db.VarChar(32)
+  detail    String?  @db.VarChar(512)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([monthKey, createdAt], map: "seranking_credit_log_month_idx")
+  @@index([siteUrl], map: "seranking_credit_log_site_idx")
+  @@map("seranking_credit_logs")
+}
+
+/// Cached SE Ranking API payloads (read from cache; cron refreshes on TTL).
+model SerankingSnapshot {
+  id           String   @id @default(cuid()) @db.VarChar(191)
+  siteUrl      String   @map("site_url") @db.VarChar(512)
+  dataType     String   @map("data_type") @db.VarChar(64)
+  sourceKey    String   @default("") @map("source_key") @db.VarChar(64)
+  payload      Json?
+  creditsSpent Int      @default(0) @map("credits_spent")
+  fetchedAt    DateTime @default(now()) @map("fetched_at")
+  expiresAt    DateTime @map("expires_at")
+  errorMessage String?  @map("error_message") @db.Text
+
+  @@unique([siteUrl, dataType, sourceKey], map: "seranking_snapshot_unique")
+  @@index([expiresAt], map: "seranking_snapshot_expires_idx")
+  @@map("seranking_snapshots")
+}
+
+/// In-flight SE Ranking on-demand site audits.
+model SerankingAuditJob {
+  id           String    @id @default(cuid()) @db.VarChar(191)
+  siteUrl      String    @map("site_url") @db.VarChar(512)
+  domain       String    @db.VarChar(255)
+  auditId      String?   @map("audit_id") @db.VarChar(64)
+  status       String    @default("pending") @db.VarChar(32)
+  creditsSpent Int       @default(0) @map("credits_spent")
+  payload      Json?
+  startedAt    DateTime  @default(now()) @map("started_at")
+  finishedAt   DateTime? @map("finished_at")
+  errorMessage String?   @map("error_message") @db.Text
+
+  @@index([siteUrl, status], map: "seranking_audit_site_status_idx")
+  @@map("seranking_audit_jobs")
+}
+
 /// Snapshot history for blog edits while pending or in review.
 model BlogPostRevision {
   id         String   @id @default(cuid()) @db.VarChar(191)

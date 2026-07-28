@@ -19,6 +19,10 @@ import SiteHealthSection from "./components/seo/SiteHealthSection";
 import SiteAuditSection from "./components/SiteAuditSection";
 import KeywordResearchHubSection from "./components/seo/KeywordResearchHubSection";
 import SiteExplorerSection from "./components/seo/SiteExplorerSection";
+import SerankingBacklinksSection from "./components/seranking/SerankingBacklinksSection";
+import SerankingDomainSection from "./components/seranking/SerankingDomainSection";
+import SerankingKeywordsSection from "./components/seranking/SerankingKeywordsSection";
+import SerankingAuditSection from "./components/seranking/SerankingAuditSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { LoadingSpinner } from "./components/ui-shared/LoadingBlock";
@@ -39,6 +43,10 @@ const WEBSITE_SEO_SECTIONS = new Set([
   "sitemap-health",
   "site-explorer",
   "link-index",
+  "seranking-domain",
+  "seranking-backlinks",
+  "seranking-keywords",
+  "seranking-audit",
 ]);
 
 export default function Home() {
@@ -113,6 +121,14 @@ export default function Home() {
         return <UrlInspectionSection selectedSite={seoSite} />;
       case "site-explorer":
         return <SiteExplorerSection selectedSite={seoSite} />;
+      case "seranking-domain":
+        return <SerankingDomainSection selectedSite={seoSite} />;
+      case "seranking-backlinks":
+        return <SerankingBacklinksSection selectedSite={seoSite} />;
+      case "seranking-keywords":
+        return <SerankingKeywordsSection selectedSite={seoSite} />;
+      case "seranking-audit":
+        return <SerankingAuditSection selectedSite={seoSite} />;
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
       case "calendar":

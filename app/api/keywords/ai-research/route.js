@@ -5,6 +5,7 @@ import {
 } from "../../../../lib/aiKeywordResearch.js";
 import { buildRankedKeywordResearch } from "../../../../lib/keywordResearch.js";
 import { isGoogleAdsConfigured } from "../../../../lib/googleAds.js";
+import { isSerankingConfigured } from "../../../../lib/seranking/config.js";
 import { ROLES, hasPermission, PERMISSIONS } from "../../../../lib/rbac.js";
 import { resolveWebsiteAccess } from "../../../../lib/resolveWebsiteAccess.js";
 
@@ -33,6 +34,7 @@ export async function GET(req) {
     return json({
       ai,
       planner: { configured: isGoogleAdsConfigured() },
+      seranking: { configured: isSerankingConfigured() },
     });
   } catch (error) {
     const status = error.status || 500;
