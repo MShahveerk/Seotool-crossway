@@ -14,7 +14,6 @@ import {
   Globe,
   HelpCircle,
   LayoutDashboard,
-  Link2,
   LogOut,
   Map,
   Megaphone,
@@ -25,7 +24,6 @@ import {
   Sparkles,
   Users,
   Zap,
-  Award,
   Activity,
 } from "lucide-react";
 import { isMetaPageId } from "@/lib/siteAccess";
@@ -77,13 +75,11 @@ const gscMenuItems = [
 ];
 
 const seoMenuItems = [
-  { id: "pagespeed-insights", label: "PageSpeed Insights", icon: Activity },
+  { id: "site-health", label: "Site Health", icon: Activity },
   { id: "site-audit", label: "Site Audit", icon: Shield },
-  { id: "domain-authority", label: "Domain Authority", icon: Award },
   { id: "keyword-research", label: "Keyword Research", icon: Search },
   { id: "ai-keyword-research", label: "AI Keyword Research", icon: Sparkles },
   { id: "site-explorer", label: "Site Explorer", icon: Compass },
-  { id: "link-index", label: "Link Index", icon: Link2 },
 ];
 
 const smmMenuItems = [

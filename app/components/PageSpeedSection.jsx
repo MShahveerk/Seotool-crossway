@@ -569,7 +569,7 @@ const SCORE_LABELS = {
   seo: "SEO",
 };
 
-export default function PageSpeedSection({ selectedSite = "" }) {
+export default function PageSpeedSection({ selectedSite = "", embedded = false }) {
   const { data: session } = useSession();
   const hasGlobalAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
   const userSiteLink = session?.user?.siteLink || "";
@@ -665,7 +665,9 @@ export default function PageSpeedSection({ selectedSite = "" }) {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-[#ffffff] p-5 min-h-[calc(100vh-2rem)]">
+    <div className={embedded ? "" : "rounded-xl border border-gray-200 bg-[#ffffff] p-5 min-h-[calc(100vh-2rem)]"}>
+      {!embedded ? (
+      <>
       {/* Header */}
       <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 mb-6">
         <div className="min-w-0">
@@ -728,6 +730,57 @@ export default function PageSpeedSection({ selectedSite = "" }) {
           </button>
         </div>
       </div>
+      </>
+      ) : (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-gray-600">
+            <a
+              href={analyzedUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[#1d9c35] hover:underline font-medium"
+            >
+              {host || analyzedUrl}
+              <FiExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden />
+            </a>
+            {meta?.fetchedAt ? (
+              <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                <FiClock className="w-3.5 h-3.5" aria-hidden />
+                Analyzed {formatAgo(meta.fetchedAt)}
+              </span>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-0.5">
+              {[
+                { id: "mobile", label: "Mobile", icon: FiSmartphone },
+                { id: "desktop", label: "Desktop", icon: FiMonitor },
+              ].map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setStrategy(s.id)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                    strategy === s.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800"
+                  }`}
+                >
+                  <s.icon className="w-3.5 h-3.5" aria-hidden />
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => load({ refresh: true })}
+              disabled={loading || refreshing}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+            >
+              <FiRefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} aria-hidden />
+              {refreshing ? "Analyzing…" : "Analyze now"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Refresh-in-progress banner (old data stays visible below) */}
       {refreshing && payload ? (

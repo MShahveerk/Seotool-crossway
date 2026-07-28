@@ -821,10 +821,10 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
                     </p>
                     <button
                       type="button"
-                      onClick={() => onNavigateSection?.("pagespeed-insights")}
+                      onClick={() => onNavigateSection?.("site-health")}
                       className="text-[11px] text-[#1d9c35] hover:underline mt-0.5"
                     >
-                      Full PageSpeed report →
+                      Full Site Health report →
                     </button>
                   </div>
                 </>
@@ -832,7 +832,7 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
 
               <button
                 type="button"
-                onClick={() => onNavigateSection?.("domain-authority")}
+                onClick={() => onNavigateSection?.("site-health")}
                 className="rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.07)] hover:-translate-y-0.5 transition-all"
               >
                 <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-500">

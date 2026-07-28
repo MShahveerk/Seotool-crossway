@@ -19,13 +19,11 @@ import UrlInspectionSection from "./components/seo/UrlInspectionSection";
 import QueryPageMatrixSection from "./components/seo/QueryPageMatrixSection";
 import SitemapHealthSection from "./components/seo/SitemapHealthSection";
 import SeoOpportunitiesSection from "./components/seo/SeoOpportunitiesSection";
-import PageSpeedSection from "./components/PageSpeedSection";
+import SiteHealthSection from "./components/seo/SiteHealthSection";
 import SiteAuditSection from "./components/SiteAuditSection";
-import DomainAuthoritySection from "./components/DomainAuthoritySection";
 import KeywordResearchSection from "./components/seo/KeywordResearchSection";
 import AiKeywordResearchSection from "./components/seo/AiKeywordResearchSection";
 import SiteExplorerSection from "./components/seo/SiteExplorerSection";
-import LinkIndexSection from "./components/seo/LinkIndexSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { LoadingSpinner } from "./components/ui-shared/LoadingBlock";
@@ -33,6 +31,7 @@ import { SectionTransition } from "./components/ui-shared/Motion";
 
 const WEBSITE_SEO_SECTIONS = new Set([
   "website-statistics",
+  "site-health",
   "pagespeed-insights",
   "site-audit",
   "domain-authority",
@@ -101,12 +100,13 @@ export default function Home() {
         return <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />;
       case "website-statistics":
         return <SearchConsoleSection selectedSite={seoSite} />;
+      case "site-health":
       case "pagespeed-insights":
-        return <PageSpeedSection selectedSite={seoSite} />;
+      case "domain-authority":
+      case "link-index":
+        return <SiteHealthSection selectedSite={seoSite} />;
       case "site-audit":
         return <SiteAuditSection selectedSite={seoSite} onNavigateSection={setActiveSection} />;
-      case "domain-authority":
-        return <DomainAuthoritySection selectedSite={seoSite} />;
       case "keyword-research":
         return <KeywordResearchSection selectedSite={seoSite} />;
       case "ai-keyword-research":
@@ -123,8 +123,6 @@ export default function Home() {
         return <SitemapHealthSection selectedSite={seoSite} />;
       case "site-explorer":
         return <SiteExplorerSection selectedSite={seoSite} />;
-      case "link-index":
-        return <LinkIndexSection selectedSite={seoSite} />;
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
       case "calendar":

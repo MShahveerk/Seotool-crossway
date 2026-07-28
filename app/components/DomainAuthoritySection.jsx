@@ -92,7 +92,7 @@ function ScoreDial({ score }) {
 
 /* ----------------------------------- main ----------------------------------- */
 
-export default function DomainAuthoritySection({ selectedSite = "" }) {
+export default function DomainAuthoritySection({ selectedSite = "", embedded = false }) {
   const { data: session } = useSession();
   const hasGlobalAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
   const userSiteLink = session?.user?.siteLink || "";
@@ -197,7 +197,9 @@ export default function DomainAuthoritySection({ selectedSite = "" }) {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 min-h-[calc(100vh-2rem)]">
+    <div className={embedded ? "" : "rounded-xl border border-gray-200 bg-white p-5 min-h-[calc(100vh-2rem)]"}>
+      {!embedded ? (
+      <>
       {/* Header */}
       <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 mb-6">
         <div className="min-w-0">
@@ -217,6 +219,20 @@ export default function DomainAuthoritySection({ selectedSite = "" }) {
           Refresh
         </button>
       </div>
+      </>
+      ) : (
+        <div className="mb-6 flex justify-end">
+          <button
+            type="button"
+            onClick={() => load(competitors)}
+            disabled={loading || comparing}
+            className="inline-flex shrink-0 items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            <FiRefreshCw className={`w-4 h-4 ${loading || comparing ? "animate-spin" : ""}`} aria-hidden />
+            Refresh authority
+          </button>
+        </div>
+      )}
 
       {error ? (
         <div className="mb-6 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
