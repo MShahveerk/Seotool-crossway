@@ -172,7 +172,7 @@ export default function SerankingBacklinksSection({ selectedSite = "" }) {
           </div>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">No backlink data cached yet. Scheduled refresh runs nightly.</p>
+        <p className="text-sm text-muted-foreground">No backlink data yet — fetching live from SE Ranking…</p>
       )}
     </SerankingShell>
   );

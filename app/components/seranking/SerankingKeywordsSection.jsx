@@ -124,7 +124,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground py-2">
-                Seed metrics appear after the nightly job pulls your top 3 GSC queries (~30 credits/site).
+                Seed metrics load from your top GSC queries on first visit (~100 credits/batch).
               </p>
             )}
           </CardContent>

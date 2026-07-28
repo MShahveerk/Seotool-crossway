@@ -100,7 +100,7 @@ export default function SerankingShell({
           <EmptyState
             icon={AlertCircle}
             title="SE Ranking not configured"
-            description="Add SERANKING_API_KEY to your environment. Data is cached and refreshed on a conservative schedule to protect your 20,000 monthly credit budget."
+            description="Add SERANKING_API_KEY to your environment. Missing data is fetched when you open a page; nightly cron at 04:45 refreshes stale snapshots."
           />
         </CardContent>
       </Card>
@@ -147,6 +147,10 @@ export default function SerankingShell({
         </div>
         <SerankingCreditBar credits={credits} compact />
       </div>
+
+      <p className="text-xs text-muted-foreground -mt-2">
+        Nightly refresh 04:45 · empty cache fetches live on page load (uses manual credit reserve)
+      </p>
 
       {error ? (
         <Alert variant="destructive">

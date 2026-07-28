@@ -145,7 +145,7 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground py-4">Competitor data pending scheduled refresh.</p>
+                <p className="text-sm text-muted-foreground py-4">Loading competitor data from SE Ranking…</p>
               )}
             </CardContent>
           </Card>
@@ -168,7 +168,7 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground py-4">Keyword rankings pending scheduled refresh.</p>
+                <p className="text-sm text-muted-foreground py-4">Loading keyword rankings from SE Ranking…</p>
               )}
             </CardContent>
           </Card>

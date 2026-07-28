@@ -2,6 +2,7 @@ import { resolveWebsiteAccess } from "../../../../lib/resolveWebsiteAccess.js";
 import { isSerankingConfigured, DATA_TYPES, DEFAULT_SOURCE } from "../../../../lib/seranking/config.js";
 import { getCreditStatus } from "../../../../lib/seranking/credits.js";
 import { getBundleForSite } from "../../../../lib/seranking/api.js";
+import { SERANKING_SCHEDULES } from "../../../../lib/seranking/loadBundle.js";
 import { getLatestAuditJob, getCachedSnapshot } from "../../../../lib/seranking/cache.js";
 
 export const runtime = "nodejs";
@@ -42,6 +43,7 @@ export async function GET(req) {
       domain: bundle.domain,
       credits,
       snapshots: snapMeta,
+      schedules: SERANKING_SCHEDULES,
       auditJob: auditJob
         ? {
             status: auditJob.status,

@@ -140,6 +140,127 @@ function SourceBadge({ source }) {
   return <span className="text-gray-400 text-xs">—</span>;
 }
 
+function SeedMetricsPanel({ seed, geoLabel, planner, serankingMeta, status }) {
+  const hasAdsData =
+    seed.avgMonthlySearches != null ||
+    seed.monthlyTrend?.length > 1 ||
+    (seed.lowTopOfPageBid && seed.highTopOfPageBid);
+  const hasSeData = seed.seranking?.available && seed.seranking?.volume != null;
+  const serankingConfigured = serankingMeta?.configured || status?.seranking?.configured;
+
+  const defaultSource = hasAdsData ? "google_ads" : hasSeData ? "seranking" : "google_ads";
+  const [source, setSource] = useState(defaultSource);
+
+  useEffect(() => {
+    setSource(hasAdsData ? "google_ads" : hasSeData ? "seranking" : "google_ads");
+  }, [seed.keyword, hasAdsData, hasSeData]);
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-5 py-3 bg-gray-50/60">
+        <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+          Metrics source
+          <select
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-800 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+          >
+            <option value="google_ads">Google Ads</option>
+            {serankingConfigured ? <option value="seranking">SE Ranking</option> : null}
+          </select>
+        </label>
+        {source === "google_ads" && !planner?.configured ? (
+          <span className="text-[11px] text-amber-700">Set GOOGLE_ADS_DEVELOPER_TOKEN + GOOGLE_ADS_CUSTOMER_ID</span>
+        ) : null}
+        {source === "seranking" && !serankingConfigured ? (
+          <span className="text-[11px] text-amber-700">Set SERANKING_API_KEY</span>
+        ) : null}
+      </div>
+
+      {source === "google_ads" ? (
+        <div className="p-5 grid sm:grid-cols-4 gap-4">
+          <div>
+            <p className="text-[11px] font-bold uppercase text-gray-500">Volume / mo</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums">
+              {seed.avgMonthlySearches != null ? formatNum(seed.avgMonthlySearches) : "—"}
+            </p>
+            <p className="mt-0.5 text-[10px] text-gray-400">Google Ads · {geoLabel || "market"}</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase text-gray-500">Difficulty</p>
+            <DifficultyBar value={seed.keywordDifficulty} />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase text-gray-500">CPC</p>
+            <p className="mt-1 font-semibold">
+              {seed.lowTopOfPageBid && seed.highTopOfPageBid
+                ? `${seed.lowTopOfPageBid} – ${seed.highTopOfPageBid}`
+                : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase text-gray-500">Trend</p>
+            <TrendSparkline trend={seed.monthlyTrend} large id="seedTrend" />
+          </div>
+          {!hasAdsData && planner?.error ? (
+            <p className="sm:col-span-4 text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              Google Ads fetch failed: {planner.error}
+            </p>
+          ) : null}
+          {!hasAdsData && !planner?.error && !planner?.configured ? (
+            <p className="sm:col-span-4 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+              Connect Google Ads for volume, CPC, and trend — or switch to SE Ranking above.
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="p-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <p className="text-[11px] font-bold uppercase text-gray-500">Volume / mo</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums">
+              {seed.seranking?.volume != null ? formatNum(seed.seranking.volume) : "—"}
+            </p>
+            <p className="mt-0.5 text-[10px] text-gray-400">SE Ranking · {geoLabel || seed.seranking?.source?.toUpperCase()}</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase text-gray-500">Traffic potential</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-700">
+              {seed.seranking?.trafficPotential != null ? formatNum(seed.seranking.trafficPotential) : "—"}
+            </p>
+            <p className="mt-0.5 text-[10px] text-gray-400">Est. clicks/mo at target rank</p>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase text-gray-500">Difficulty</p>
+            <DifficultyBar value={seed.seranking?.difficulty} />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase text-gray-500">CPC</p>
+            <p className="mt-1 font-semibold">{seed.seranking?.cpcFormatted || "—"}</p>
+          </div>
+          <div className="sm:col-span-2">
+            <p className="text-[11px] font-bold uppercase text-gray-500 mb-1">Volume by country</p>
+            <SerankingVolumeByCountry entries={seed.seranking?.volumeByCountry} />
+          </div>
+          <div className="sm:col-span-2">
+            <p className="text-[11px] font-bold uppercase text-gray-500 mb-1">Trend (12 mo)</p>
+            <TrendSparkline trend={seed.seranking?.monthlyTrend} large id="seedSeTrend" />
+          </div>
+          {!hasSeData && serankingMeta?.error ? (
+            <p className="sm:col-span-4 text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              SE Ranking fetch failed: {serankingMeta.error}
+            </p>
+          ) : null}
+          {!hasSeData && !serankingMeta?.error ? (
+            <p className="sm:col-span-4 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+              No SE Ranking data for this keyword. Check API key and credit budget, then re-run Analyze.
+            </p>
+          ) : null}
+        </div>
+      )}
+    </>
+  );
+}
+
 function SerankingVolumeByCountry({ entries }) {
   if (!entries?.length) {
     return <p className="text-xs text-gray-400">No cached country breakdown</p>;
@@ -719,6 +840,9 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs text-amber-700">Connect Google Ads for real volume</span>
               )}
+              {status?.seranking?.configured ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 border border-violet-200 px-2.5 py-1 text-xs text-violet-700 font-medium">SE Ranking available</span>
+              ) : null}
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
@@ -769,14 +893,11 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                 <MetricTile label="Easy wins" value={formatNum(exploreData.summary?.easyWins)} sub="KD ≤ 35 · vol 50+" icon={FiZap} accent="text-emerald-700" />
                 <MetricTile label="Already ranking" value={formatNum(exploreData.summary?.alreadyRanking)} sub="Pos ≤ 20 in GSC" icon={FiTrendingUp} accent="text-sky-700" />
                 <MetricTile
-                  label="Avg. difficulty"
-                  value={exploreData.summary?.avgDifficulty ?? "—"}
-                  sub={
-                    exploreData.timings?.totalMs
-                      ? `${(exploreData.timings.totalMs / 1000).toFixed(1)}s · ${exploreData.ai?.method || "research"}`
-                      : "0 = easy · 100 = hard"
-                  }
-                  icon={FiTrendingUp}
+                  label="SE Ranking vol."
+                  value={formatNum(exploreData.seranking?.enrichedCount)}
+                  sub={exploreData.seranking?.configured ? "Separate from Google Ads" : "Set SERANKING_API_KEY"}
+                  icon={Sparkles}
+                  accent="text-violet-700"
                 />
               </div>
               <div className="mb-6 rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
@@ -792,34 +913,12 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                     </ul>
                   ) : null}
                 </div>
-                <div className="p-5 grid sm:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-[11px] font-bold uppercase text-gray-500">Volume / mo</p>
-                    <p className="mt-1 text-2xl font-bold tabular-nums">{exploreData.seed.avgMonthlySearches != null ? formatNum(exploreData.seed.avgMonthlySearches) : "—"}</p>
-                    <p className="mt-0.5 text-[10px] text-gray-400">Google Ads · {exploreData.geo?.label || "market"}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold uppercase text-gray-500">Difficulty</p>
-                    <DifficultyBar value={exploreData.seed.keywordDifficulty} />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold uppercase text-gray-500">CPC</p>
-                    <p className="mt-1 font-semibold">
-                      {exploreData.seed.lowTopOfPageBid && exploreData.seed.highTopOfPageBid
-                        ? `${exploreData.seed.lowTopOfPageBid} – ${exploreData.seed.highTopOfPageBid}`
-                        : "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold uppercase text-gray-500">Trend</p>
-                    <TrendSparkline trend={exploreData.seed.monthlyTrend} large id="seedTrend" />
-                  </div>
-                </div>
-                <SerankingMetricsDropdown
-                  seranking={exploreData.seed.seranking}
-                  configured={exploreData.seranking?.configured || status?.seranking?.configured}
+                <SeedMetricsPanel
+                  seed={exploreData.seed}
                   geoLabel={exploreData.geo?.label}
-                  defaultOpen
+                  planner={exploreData.planner}
+                  serankingMeta={exploreData.seranking}
+                  status={status}
                 />
               </div>
               {exploreData.clusters?.length ? (

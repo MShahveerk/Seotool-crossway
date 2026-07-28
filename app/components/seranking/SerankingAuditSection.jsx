@@ -209,7 +209,7 @@ export default function SerankingAuditSection({ selectedSite = "" }) {
         <p className="text-sm text-muted-foreground">
           {runStatus === "running"
             ? "Waiting for crawl to finish…"
-            : "No audit report yet. Nightly scheduled refresh will queue a crawl, or run one manually above."}
+            : "No audit report yet — one starts automatically when you open this page, or run manually above."}
         </p>
       )}
     </SerankingShell>

@@ -65,12 +65,49 @@ export async function GET(req) {
       });
     }
 
+    const autoStart = req.nextUrl.searchParams.get("autostart") !== "0";
+    const canStart = autoStart && (!job || !["pending", "running"].includes(job.status));
+
+    if (canStart) {
+      try {
+        const jobRow = await createAuditJob({ siteUrl, domain });
+        const result = await loadOrRefreshAudit(siteUrl, domain, { allowManual: true, force: true });
+        if (result.pending && result.auditId) {
+          await updateAuditJob(jobRow.id, {
+            auditId: String(result.auditId),
+            status: "running",
+            creditsSpent: result.creditsSpent || 0,
+          });
+          return Response.json({
+            siteUrl,
+            domain,
+            status: "running",
+            auditId: result.auditId,
+            progress: 0,
+            data: cached?.payload || null,
+            creditsSpent: result.creditsSpent || 0,
+            message: "Audit started — results usually ready in a few minutes.",
+          });
+        }
+      } catch (startErr) {
+        return Response.json({
+          siteUrl,
+          domain,
+          data: cached?.payload || null,
+          status: "error",
+          error: startErr.message || "Could not start audit.",
+        }, { status: startErr instanceof SerankingApiError ? startErr.status : 502 });
+      }
+    }
+
     return Response.json({
       siteUrl,
       domain,
       data: cached?.payload || null,
       status: job?.status || "missing",
-      message: cached ? "Cached audit expired — scheduled refresh will run soon." : "No audit yet — scheduled refresh pending.",
+      message: cached
+        ? "Cached audit expired — open again to start a fresh run."
+        : "No audit yet — starting automatically on next load.",
     });
   } catch (err) {
     const status = err instanceof SerankingApiError ? err.status : err.status || 500;

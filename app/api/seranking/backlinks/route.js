@@ -1,7 +1,5 @@
 import { resolveWebsiteAccess } from "../../../../lib/resolveWebsiteAccess.js";
-import { fetchBacklinksSummary, resolveDomainFromSite } from "../../../../lib/seranking/api.js";
-import { getCachedSnapshot } from "../../../../lib/seranking/cache.js";
-import { DATA_TYPES } from "../../../../lib/seranking/config.js";
+import { loadBacklinks } from "../../../../lib/seranking/loadBundle.js";
 import { isSerankingConfigured } from "../../../../lib/seranking/config.js";
 import { SerankingApiError } from "../../../../lib/seranking/client.js";
 
@@ -14,29 +12,15 @@ export async function GET(req) {
     }
     const { siteUrl } = await resolveWebsiteAccess(req);
     const force = req.nextUrl.searchParams.get("refresh") === "1";
-    const allowManual = force;
-    const domain = resolveDomainFromSite(siteUrl);
 
-    if (!force) {
-      const cached = await getCachedSnapshot(siteUrl, DATA_TYPES.BACKLINKS_SUMMARY);
-      if (cached?.payload && !cached.expired) {
-        return Response.json({
-          siteUrl,
-          domain,
-          data: cached.payload,
-          fromCache: true,
-          fetchedAt: cached.fetchedAt,
-          expiresAt: cached.expiresAt,
-        });
-      }
-    }
-
-    const result = await fetchBacklinksSummary(siteUrl, domain, { allowManual, force });
+    const result = await loadBacklinks(siteUrl, { allowManual: true, force });
     return Response.json({
-      siteUrl,
-      domain,
+      siteUrl: result.siteUrl,
+      domain: result.domain,
       data: result.data,
       fromCache: result.fromCache,
+      fetchedAt: result.fetchedAt,
+      expiresAt: result.expiresAt,
       creditsSpent: result.creditsSpent || 0,
     });
   } catch (err) {
