@@ -1,6 +1,6 @@
-import { requirePermission } from "../../../../lib/middleware/auth";
-import { PERMISSIONS } from "../../../../lib/rbac";
-import { pullMetaDraftsForSite } from "../../../../lib/metaDraftPull.js";
+import { requirePermission } from "../../../../../lib/middleware/auth";
+import { PERMISSIONS } from "../../../../../lib/rbac";
+import { pullMetaDraftsForSite } from "../../../../../lib/metaDraftPull.js";
 
 export const runtime = "nodejs";
 
