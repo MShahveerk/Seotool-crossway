@@ -1,8 +1,8 @@
 "use client";
 
 import { Compass, ExternalLink, Search, Sparkles } from "lucide-react";
-import KeywordResearchSection from "./seo/KeywordResearchSection";
-import AiKeywordResearchSection from "./seo/AiKeywordResearchSection";
+import KeywordResearchSection from "./KeywordResearchSection";
+import AiKeywordResearchSection from "./AiKeywordResearchSection";
 
 function siteHost(url) {
   if (!url) return "";
