@@ -673,6 +673,12 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
 
             {tab === "seeds" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <p className="md:col-span-2 text-sm text-gray-600">
+                  Every filled Seeds field is injected into all three agents for{" "}
+                  <strong>manual Generate</strong> and <strong>auto</strong> (seed cadence and Excel).
+                  General prompt / must-follow keywords on Run are used the same way. Excel rows add a
+                  topic brief on top — they do not wipe these standing Seeds.
+                </p>
                 {[
                   ["secondaryKeywords", "Secondary keywords", true],
                   ["targetAudience", "Target audience", true],

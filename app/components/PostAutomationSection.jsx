@@ -561,6 +561,11 @@ export default function PostAutomationSection({ selectedSite = "" }) {
 
             {tab === "seeds" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <p className="md:col-span-2 text-sm text-gray-600">
+                  Every filled Seeds field is injected into Strategist + Copywriter for{" "}
+                  <strong>manual Generate</strong> and <strong>auto</strong> (seed cadence and Excel).
+                  Excel rows add a topic brief on top — they do not wipe these standing Seeds.
+                </p>
                 <div className="md:col-span-2">
                   <label className={labelClass}>General auto prompt</label>
                   <textarea
