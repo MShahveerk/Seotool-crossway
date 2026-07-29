@@ -79,7 +79,7 @@ export default function BlogBoardSection({ selectedSite = "" }) {
     boardId: `blogs-${room}`,
     brand: "Blog Board",
     subtitle:
-      "Trello-style blog pipeline. Drag to change status — except Published, which stays locked. Arrows mark scheduled auto-publishes.",
+      "Drag to change status · double-click for details. Published is locked. Soft arrows mark scheduled auto-publishes.",
     columns: BLOG_BOARD_COLUMNS,
     autoMoves: BLOG_AUTO_MOVES,
     items,
@@ -88,6 +88,7 @@ export default function BlogBoardSection({ selectedSite = "" }) {
     loading,
     error,
     siteLabel: selectedSite || "All sites",
+    itemKind: "blog",
   };
 
   return (

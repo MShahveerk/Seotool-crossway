@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Syne } from "next/font/google";
 import { formatScheduleShort } from "@/lib/timezone";
 import AutoMoveArrows from "./AutoMoveArrows";
+import BoardItemModal from "./BoardItemModal";
 import KanbanCard from "./KanbanCard";
 import NativeKanbanCard from "./NativeKanbanCard";
 
@@ -36,8 +37,10 @@ export default function KanbanBoard({
   error,
   siteLabel,
   playhtml = true,
+  itemKind = "post",
 }) {
   const [toast, setToast] = useState("");
+  const [detailItem, setDetailItem] = useState(null);
   const boundsId = `${boardId}-bounds`;
   const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
   const grouped = useMemo(
@@ -143,6 +146,7 @@ export default function KanbanBoard({
                         boundsSelector={`#${boundsId}`}
                         locked={Boolean(col.locked) || getColumn(item) === "published"}
                         onMoveToColumn={handleMove}
+                        onOpenDetails={setDetailItem}
                         index={index}
                       />
                     ))}
@@ -154,6 +158,14 @@ export default function KanbanBoard({
         </div>
       </div>
       {toast ? <div className="cw-board__toast" role="status">{toast}</div> : null}
+      {detailItem ? (
+        <BoardItemModal
+          item={detailItem}
+          kind={itemKind}
+          columnLabel={columns.find((c) => c.id === getColumn(detailItem))?.label || ""}
+          onClose={() => setDetailItem(null)}
+        />
+      ) : null}
     </div>
   );
 }

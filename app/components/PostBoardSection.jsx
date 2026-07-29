@@ -78,7 +78,7 @@ export default function PostBoardSection({ selectedSite = "" }) {
     boardId: `posts-${room}`,
     brand: "Post Board",
     subtitle:
-      "Drag cards across statuses. Published is locked. Soft arrows show automatic pipeline moves and when they fire.",
+      "Drag to change status · double-click for details. Published is locked. Soft arrows show automatic pipeline moves.",
     columns: POST_BOARD_COLUMNS,
     autoMoves: POST_AUTO_MOVES,
     items,
@@ -87,6 +87,7 @@ export default function PostBoardSection({ selectedSite = "" }) {
     loading,
     error,
     siteLabel: selectedSite || "All Meta / site accounts",
+    itemKind: "post",
   };
 
   return (

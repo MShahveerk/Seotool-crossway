@@ -15,6 +15,7 @@ export default function KanbanCard({
   boardId,
   locked,
   onMoveToColumn,
+  onOpenDetails,
   index = 0,
 }) {
   const { isLoading: playLoading } = usePlayContext();
@@ -22,8 +23,11 @@ export default function KanbanCard({
   const [imgFailed, setImgFailed] = useState(false);
   const cardRef = useRef(null);
   const dragState = useRef(null);
+  const didDragRef = useRef(false);
   const onMoveRef = useRef(onMoveToColumn);
+  const onOpenRef = useRef(onOpenDetails);
   onMoveRef.current = onMoveToColumn;
+  onOpenRef.current = onOpenDetails;
 
   const title = item.displayTitle || item.title || item.userEditedTitle || "Untitled";
   const media = resolveBoardMedia(item);
@@ -65,6 +69,7 @@ export default function KanbanCard({
       if (moving) return;
       if (e.target?.closest?.("a,button,input,textarea,select")) return;
 
+      didDragRef.current = false;
       dragState.current = {
         pointerId: e.pointerId,
         startX: e.clientX,
@@ -80,6 +85,7 @@ export default function KanbanCard({
         if (!st.dragging && Math.hypot(dx, dy) < 5) return;
         if (!st.dragging) {
           st.dragging = true;
+          didDragRef.current = true;
           el.classList.add("cw-board__card--dragging");
           el.style.zIndex = "50";
           try {
@@ -167,6 +173,13 @@ export default function KanbanCard({
     </>
   );
 
+  const openDetails = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    if (didDragRef.current) return;
+    onOpenRef.current?.(item);
+  };
+
   return (
     <article
       ref={cardRef}
@@ -175,6 +188,8 @@ export default function KanbanCard({
       data-locked={locked ? "true" : "false"}
       data-moving={moving ? "true" : "false"}
       style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+      onDoubleClick={openDetails}
+      title="Double-click for details"
     >
       {body}
     </article>

@@ -5,7 +5,14 @@ import { formatScheduleShort } from "@/lib/timezone";
 import { isBoardVideoPath, resolveBoardMedia } from "./resolveBoardMedia";
 
 /** HTML5 drag fallback when playhtml is unavailable. */
-export default function NativeKanbanCard({ item, columnId, locked, onMoveToColumn, index = 0 }) {
+export default function NativeKanbanCard({
+  item,
+  columnId,
+  locked,
+  onMoveToColumn,
+  onOpenDetails,
+  index = 0,
+}) {
   const [moving, setMoving] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const title = item.displayTitle || item.title || item.userEditedTitle || "Untitled";
@@ -14,7 +21,13 @@ export default function NativeKanbanCard({ item, columnId, locked, onMoveToColum
 
   if (locked) {
     return (
-      <article className="cw-board__card" data-locked="true" style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}>
+      <article
+        className="cw-board__card"
+        data-locked="true"
+        style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+        onDoubleClick={() => onOpenDetails?.(item)}
+        title="Double-click for details"
+      >
         {media && !imgFailed ? (
           <div className="cw-board__card-media">
             {isBoardVideoPath(media) ? (
@@ -36,6 +49,11 @@ export default function NativeKanbanCard({ item, columnId, locked, onMoveToColum
       draggable
       data-moving={moving ? "true" : "false"}
       style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+      title="Double-click for details"
+      onDoubleClick={(e) => {
+        e.preventDefault();
+        onOpenDetails?.(item);
+      }}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/cw-board-item", JSON.stringify({ id: item.id, from: columnId }));
         e.dataTransfer.effectAllowed = "move";

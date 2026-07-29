@@ -426,3 +426,197 @@
   .cw-board__inner { padding: 1rem 0.75rem 1.25rem; }
   .cw-board__lanes { --lane-w: 14rem; }
 }
+
+/* —— Detail modal —— */
+.cw-board-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(4, 10, 6, 0.72);
+  backdrop-filter: blur(8px);
+  animation: cw-board-fade-up 0.22s ease both;
+}
+
+.cw-board-modal__panel {
+  width: min(36rem, 100%);
+  max-height: min(90vh, 880px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 1rem;
+  border: 1px solid rgba(14, 255, 42, 0.22);
+  background:
+    radial-gradient(ellipse 80% 40% at 10% 0%, rgba(14, 255, 42, 0.1), transparent 55%),
+    linear-gradient(165deg, #121a14 0%, #0d1410 100%);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+  color: var(--board-ink);
+  overflow: hidden;
+  animation: cw-board-brand-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cw-board-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1.1rem 1.2rem 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cw-board-modal__eyebrow {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--board-muted);
+}
+
+.cw-board-modal__title {
+  margin-top: 0.25rem;
+  font-family: var(--font-board-display), var(--font-nunito), system-ui, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: #f4fff5;
+}
+
+.cw-board-modal__close {
+  flex-shrink: 0;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--board-muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.cw-board-modal__close:hover {
+  border-color: rgba(14, 255, 42, 0.35);
+  color: #fff;
+}
+
+.cw-board-modal__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1.2rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.cw-board-modal__media {
+  border-radius: 0.65rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.35);
+  max-height: 16rem;
+}
+
+.cw-board-modal__media img,
+.cw-board-modal__media video {
+  display: block;
+  width: 100%;
+  max-height: 16rem;
+  object-fit: contain;
+  background: #000;
+}
+
+.cw-board-modal__prose {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba(232, 240, 233, 0.88);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cw-board-modal__prose--muted {
+  color: var(--board-muted);
+  font-size: 0.82rem;
+  max-height: 10rem;
+  overflow: auto;
+}
+
+.cw-board-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 0.85rem;
+  margin: 0;
+}
+
+.cw-board-modal__field {
+  margin: 0;
+}
+
+.cw-board-modal__field dt {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--board-muted);
+  margin-bottom: 0.15rem;
+}
+
+.cw-board-modal__field dd {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #eef7ef;
+  word-break: break-word;
+}
+
+.cw-board-modal__error {
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  background: rgba(255, 107, 107, 0.1);
+  font-size: 0.8rem;
+  color: #ffc9c9;
+}
+
+.cw-board-modal__error strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.cw-board-modal__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.85rem 1.2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.cw-board-modal__hint {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--board-muted);
+}
+
+.cw-board-modal__btn {
+  padding: 0.45rem 0.95rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(14, 255, 42, 0.35);
+  background: rgba(14, 255, 42, 0.12);
+  color: #e8ffe9;
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.cw-board-modal__btn:hover {
+  background: rgba(14, 255, 42, 0.22);
+}
+
+@media (max-width: 560px) {
+  .cw-board-modal__grid { grid-template-columns: 1fr; }
+}
