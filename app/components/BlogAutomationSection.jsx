@@ -770,7 +770,9 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                 <div>
                   <label className={labelClass}>Reference image</label>
                   <p className="mt-0.5 text-xs text-gray-500 mb-1">
-                    Used as a style reference via OpenAI image edits (high fidelity when supported).
+                    Required look lock: every image run uses OpenAI image edits with high input
+                    fidelity against this file (not text-only generation). Re-upload if a run says
+                    the reference could not be loaded.
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-3">
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:border-[#1d9c35]">
