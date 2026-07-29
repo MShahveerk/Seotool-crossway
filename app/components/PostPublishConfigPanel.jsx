@@ -40,6 +40,7 @@ function generateSecret() {
 export default function PostPublishConfigPanel({ selectedSite = "" }) {
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [showConfig, setShowConfig] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [metaPulling, setMetaPulling] = useState(false);
   const [emailTesting, setEmailTesting] = useState(false);
   const [emailPulling, setEmailPulling] = useState(false);
