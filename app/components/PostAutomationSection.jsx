@@ -17,6 +17,7 @@ import AgentRoster from "./postsStudio/AgentRoster";
 import RunConsole from "./postsStudio/RunConsole";
 import ExcelQueuePanel from "./postsStudio/ExcelQueuePanel";
 import ModelCombobox from "./studioShared/ModelCombobox";
+import StudioReferenceImages from "./studioShared/StudioReferenceImages";
 import {
   INTERVAL_OPTIONS,
   AUTO_SOURCE_OPTIONS,
@@ -667,57 +668,12 @@ export default function PostAutomationSection({ selectedSite = "" }) {
                     placeholder="Brand look: colors, lighting, composition, what to avoid…"
                   />
                 </div>
-                <div>
-                  <label className={labelClass}>Reference image</label>
-                  <p className="mt-0.5 text-xs text-gray-500 mb-1">
-                    Required look lock: every image run uses OpenAI image edits with high input
-                    fidelity against this file (not text-only generation). Re-upload if a run says
-                    the reference could not be loaded.
-                  </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-3">
-                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:border-[#1d9c35]">
-                      <FiUpload /> Upload image
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="sr-only"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file || !selectedSite) return;
-                          const form = new FormData();
-                          form.append("file", file);
-                          const res = await fetch(`/api/admin/post-automation/site/asset${siteQ}`, {
-                            method: "POST",
-                            body: form,
-                          });
-                          const data = await res.json();
-                          if (!res.ok) {
-                            setSaveMessage({ ok: false, text: data.error || "Upload failed." });
-                            return;
-                          }
-                          setSiteConfig(data.config);
-                          setSaveMessage({
-                            ok: true,
-                            text: "Reference image uploaded for all image runs.",
-                          });
-                        }}
-                      />
-                    </label>
-                    {siteConfig.referenceImagePath && (
-                      <div className="flex items-center gap-3 min-w-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={siteConfig.referenceImagePath}
-                          alt="Reference"
-                          className="h-14 w-14 rounded-lg object-cover border border-gray-200"
-                        />
-                        <span className="text-xs font-mono text-gray-500 truncate max-w-[220px]">
-                          {siteConfig.referenceImagePath}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <StudioReferenceImages
+                  paths={siteConfig.referenceImagePaths || (siteConfig.referenceImagePath ? [siteConfig.referenceImagePath] : [])}
+                  uploadUrl={selectedSite ? `/api/admin/post-automation/site/asset${siteQ}` : ""}
+                  onConfig={setSiteConfig}
+                  onMessage={setSaveMessage}
+                />
               </div>
             )}
 

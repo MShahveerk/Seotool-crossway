@@ -635,7 +635,10 @@ model BlogAutomationSiteConfig {
   contentType          String?   @map("content_type") @db.VarChar(128)
   brandNotes           String?   @map("brand_notes") @db.Text
   serpNotes            String?   @map("serp_notes") @db.Text
+  /// Legacy primary reference (same as referenceImagePaths[0]).
   referenceImagePath   String?   @map("reference_image_path") @db.VarChar(512)
+  /// Up to 4 Assets style-reference image paths (first = richest fidelity).
+  referenceImagePaths  Json?     @map("reference_image_paths")
   imagePrompt          String?   @map("image_prompt") @db.Text
   /// When true, generate up to 3 alternate featured images alongside the primary.
   generateBackupImages Boolean   @default(false) @map("generate_backup_images")
@@ -758,7 +761,10 @@ model PostAutomationSiteConfig {
   ctaText              String?   @map("cta_text") @db.VarChar(512)
   ctaUrl               String?   @map("cta_url") @db.VarChar(2048)
   brandNotes           String?   @map("brand_notes") @db.Text
+  /// Legacy primary reference (same as referenceImagePaths[0]).
   referenceImagePath   String?   @map("reference_image_path") @db.VarChar(512)
+  /// Up to 4 Assets style-reference image paths (first = richest fidelity).
+  referenceImagePaths  Json?     @map("reference_image_paths")
   imagePrompt          String?   @map("image_prompt") @db.Text
   /// When true, generate up to 3 alternate feed creatives alongside the primary.
   generateBackupImages Boolean   @default(false) @map("generate_backup_images")
