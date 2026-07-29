@@ -11,6 +11,7 @@ import {
   FiLink,
   FiCpu,
   FiUpload,
+  FiXCircle,
 } from "react-icons/fi";
 import AgentRoster from "./blogStudio/AgentRoster";
 import RunConsole from "./blogStudio/RunConsole";
@@ -71,6 +72,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   const [interpreting, setInterpreting] = useState(false);
   const [triggeringExternal, setTriggeringExternal] = useState(false);
   const [manualPrompt, setManualPrompt] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
   const siteQ = useMemo(
     () => (selectedSite ? `?siteLink=${encodeURIComponent(selectedSite)}` : ""),
@@ -253,9 +255,70 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     }
   };
 
-  const cancelRun = async () => {
-    if (!activeRun?.id) return;
-    await fetch(`/api/admin/blog-automation/runs/${activeRun.id}/cancel`, { method: "POST" });
+  const liveRuns = useMemo(
+    () => runs.filter((r) => r.status === "queued" || r.status === "running"),
+    [runs]
+  );
+  const hasLiveAutomation =
+    liveRuns.length > 0 ||
+    ["queued", "running"].includes(String(activeRun?.status || ""));
+
+  const cancelRun = async (runId) => {
+    const id = runId || activeRun?.id || liveRuns[0]?.id;
+    if (!selectedSite) return;
+    setCancelling(true);
+    setSaveMessage(null);
+    try {
+      const res = await fetch(`/api/admin/blog-automation/site/cancel${siteQ}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(id ? { runId: id } : {}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to cancel.");
+      const cancelled = data.run || data.runs?.[0] || null;
+      if (cancelled) setActiveRun(cancelled);
+      setSaveMessage({
+        ok: true,
+        text:
+          data.count > 1
+            ? `Cancelled ${data.count} running automations.`
+            : "Automation cancelled. Excel row (if any) returned to pending.",
+      });
+      await loadRuns();
+    } catch (err) {
+      setSaveMessage({ ok: false, text: err.message });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const cancelAllLive = async () => {
+    if (!selectedSite) return;
+    setCancelling(true);
+    setSaveMessage(null);
+    try {
+      const res = await fetch(`/api/admin/blog-automation/site/cancel${siteQ}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to cancel.");
+      if (data.runs?.[0]) setActiveRun(data.runs[0]);
+      setSaveMessage({
+        ok: true,
+        text:
+          data.count > 0
+            ? `Cancelled ${data.count} automation${data.count === 1 ? "" : "s"}.`
+            : "No running automations to cancel.",
+      });
+      await loadRuns();
+    } catch (err) {
+      setSaveMessage({ ok: false, text: err.message });
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const toggleAuto = async () => {
@@ -427,6 +490,17 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
               </button>
             ))}
             <div className="ml-auto flex items-center gap-2 pb-1">
+              {hasLiveAutomation && (
+                <button
+                  type="button"
+                  onClick={cancelAllLive}
+                  disabled={cancelling}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
+                >
+                  {cancelling ? <FiRefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FiXCircle className="h-3.5 w-3.5" />}
+                  Cancel automation
+                </button>
+              )}
               <button
                 type="button"
                 onClick={toggleAuto}
@@ -849,11 +923,27 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
             )}
           </div>
 
-          <RunConsole run={activeRun} onCancel={cancelRun} />
+          <RunConsole
+            run={activeRun}
+            onCancel={() => cancelRun(activeRun?.id)}
+            cancelling={cancelling}
+          />
 
           {runs.length > 0 && (
             <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Recent runs</p>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Recent runs</p>
+                {hasLiveAutomation && (
+                  <button
+                    type="button"
+                    onClick={cancelAllLive}
+                    disabled={cancelling}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 hover:underline disabled:opacity-50"
+                  >
+                    <FiXCircle /> Cancel running automation
+                  </button>
+                )}
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -862,11 +952,14 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                       <th className="py-2 pr-3">Topic</th>
                       <th className="py-2 pr-3">Status</th>
                       <th className="py-2 pr-3">Cost</th>
-                      <th className="py-2">Trigger</th>
+                      <th className="py-2 pr-3">Trigger</th>
+                      <th className="py-2"> </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {runs.map((r) => (
+                    {runs.map((r) => {
+                      const live = r.status === "queued" || r.status === "running";
+                      return (
                       <tr
                         key={r.id}
                         className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer"
@@ -884,9 +977,26 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                         <td className="py-2 pr-3 font-mono text-xs">
                           {r.totalCostUsd != null ? `$${Number(r.totalCostUsd).toFixed(4)}` : "—"}
                         </td>
-                        <td className="py-2 text-xs text-gray-500">{r.trigger}</td>
+                        <td className="py-2 pr-3 text-xs text-gray-500">{r.trigger}</td>
+                        <td className="py-2 text-right">
+                          {live && (
+                            <button
+                              type="button"
+                              disabled={cancelling}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                cancelRun(r.id);
+                              }}
+                              className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                            >
+                              <FiXCircle className="h-3 w-3" />
+                              Cancel
+                            </button>
+                          )}
+                        </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

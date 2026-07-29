@@ -8,7 +8,7 @@ export async function POST(_req, { params }) {
   try {
     await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
     const { id } = await params;
-    const run = await cancelStudioRun(id);
+    const run = await cancelStudioRun(id, { hard: true });
     return Response.json({ run });
   } catch (error) {
     return Response.json(

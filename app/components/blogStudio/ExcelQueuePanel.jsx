@@ -14,6 +14,7 @@ import {
   FiPlay,
   FiPause,
   FiCalendar,
+  FiXCircle,
 } from "react-icons/fi";
 import { INTERVAL_OPTIONS, inputClass, labelClass, formatWhen } from "./studioConstants";
 
@@ -91,6 +92,7 @@ export default function ExcelQueuePanel({
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingSchedule, setSavingSchedule] = useState(false);
+  const [cancellingRun, setCancellingRun] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [useAi, setUseAi] = useState(true);
   const [dirty, setDirty] = useState(false);
@@ -254,6 +256,33 @@ export default function ExcelQueuePanel({
     }
   };
 
+  const cancelRunningAutomation = async () => {
+    if (!siteLink) return;
+    setCancellingRun(true);
+    onMessage?.(null);
+    try {
+      const res = await fetch(`/api/admin/blog-automation/site/cancel${siteQ}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to cancel.");
+      onMessage?.({
+        ok: true,
+        text:
+          data.count > 0
+            ? `Cancelled ${data.count} automation${data.count === 1 ? "" : "s"}. Queue row unlocked.`
+            : "No running automations to cancel.",
+      });
+      await load();
+    } catch (err) {
+      onMessage?.({ ok: false, text: err.message });
+    } finally {
+      setCancellingRun(false);
+    }
+  };
+
   const skipRow = async (row) => {
     try {
       const res = await fetch(`/api/admin/blog-automation/site/excel${siteQ}`, {
@@ -385,6 +414,17 @@ export default function ExcelQueuePanel({
                 Next run: {formatNextRun(schedule?.nextRunAt, schedule?.due)} · Last:{" "}
                 {formatWhen(schedule?.lastAutoAt || siteConfig?.lastAutoAt)}
               </p>
+              {(schedule?.todaysStatus === "processing" || schedule?.statusLabel === "Running now") && (
+                <button
+                  type="button"
+                  onClick={cancelRunningAutomation}
+                  disabled={cancellingRun}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                >
+                  {cancellingRun ? <FiRefreshCw className="animate-spin" /> : <FiXCircle />}
+                  Cancel running automation
+                </button>
+              )}
             </div>
           </div>
         </div>
