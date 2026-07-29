@@ -19,6 +19,9 @@ import {
   INTERVAL_OPTIONS,
   AUTO_SOURCE_OPTIONS,
   PROVIDERS,
+  IMAGE_PROVIDERS,
+  modelsForProvider,
+  defaultModelForProvider,
   inputClass,
   labelClass,
   formatWhen,
@@ -497,13 +500,27 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
 
             {tab === "agents" && (
               <div className="space-y-6">
+                <p className="text-sm text-gray-600">
+                  Pick a provider, then choose from the verified model list for that provider. Image
+                  generation uses OpenAI image models only.
+                </p>
                 {[
-                  ["interpreter", "Interpreter", "interpreterProvider", "interpreterModel", "interpreterPrompt"],
-                  ["agent1", "Strategist (Agent 1)", "agent1Provider", "agent1Model", "agent1Prompt"],
-                  ["agent2", "Architect (Agent 2)", "agent2Provider", "agent2Model", "agent2Prompt"],
-                  ["agent3", "Writer (Agent 3)", "agent3Provider", "agent3Model", "agent3Prompt"],
-                  ["image", "Image", "imageProvider", "imageModel", "imagePromptSystem"],
-                ].map(([id, title, pKey, mKey, promptKey]) => (
+                  ["interpreter", "Interpreter", "interpreterProvider", "interpreterModel", "interpreterPrompt", "chat"],
+                  ["agent1", "Strategist (Agent 1)", "agent1Provider", "agent1Model", "agent1Prompt", "chat"],
+                  ["agent2", "Architect (Agent 2)", "agent2Provider", "agent2Model", "agent2Prompt", "chat"],
+                  ["agent3", "Writer (Agent 3)", "agent3Provider", "agent3Model", "agent3Prompt", "chat"],
+                  ["image", "Image", "imageProvider", "imageModel", "imagePromptSystem", "image"],
+                ].map(([id, title, pKey, mKey, promptKey, kind]) => {
+                  const providerList = kind === "image" ? IMAGE_PROVIDERS : PROVIDERS;
+                  const providerValue =
+                    kind === "image"
+                      ? "openai"
+                      : siteConfig[pKey] || "openai";
+                  const modelList = modelsForProvider(providerValue, {
+                    kind,
+                    current: siteConfig[mKey] || "",
+                  });
+                  return (
                   <div key={id} className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <FiCpu className="text-[#1d9c35]" />
@@ -514,10 +531,17 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                         <label className={labelClass}>Provider</label>
                         <select
                           className={`${inputClass} mt-1`}
-                          value={siteConfig[pKey] || "openai"}
-                          onChange={(e) => patchSite({ [pKey]: e.target.value })}
+                          value={providerValue}
+                          onChange={(e) => {
+                            const nextProvider = e.target.value;
+                            const nextModel = defaultModelForProvider(
+                              nextProvider,
+                              kind === "image" ? "image" : "chat"
+                            );
+                            patchSite({ [pKey]: nextProvider, [mKey]: nextModel });
+                          }}
                         >
-                          {PROVIDERS.map((p) => (
+                          {providerList.map((p) => (
                             <option key={p.value} value={p.value}>
                               {p.label}
                             </option>
@@ -526,11 +550,17 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                       </div>
                       <div>
                         <label className={labelClass}>Model</label>
-                        <input
-                          className={`${inputClass} mt-1 font-mono`}
-                          value={siteConfig[mKey] || ""}
+                        <select
+                          className={`${inputClass} mt-1 font-mono text-xs`}
+                          value={siteConfig[mKey] || modelList[0]?.value || ""}
                           onChange={(e) => patchSite({ [mKey]: e.target.value })}
-                        />
+                        >
+                          {modelList.map((m) => (
+                            <option key={m.value} value={m.value}>
+                              {m.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                     <label className={labelClass}>System prompt</label>
@@ -540,7 +570,8 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                       onChange={(e) => patchSite({ [promptKey]: e.target.value })}
                     />
                   </div>
-                ))}
+                  );
+                })}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {[
                     ["openaiApiKey", "OpenAI API key"],
