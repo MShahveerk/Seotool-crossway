@@ -35,6 +35,7 @@ model User {
   blogsReceived      BlogPost[]             @relation("BlogAssignee")
   blogsCreated       BlogPost[]             @relation("BlogCreatedBy")
   blogRevisions      BlogPostRevision[]     @relation("BlogRevisionActor")
+  blogStudioRuns     BlogAutomationRun[]    @relation("BlogStudioRunTriggeredBy")
 
   @@index([role])
   @@index([isActive], map: "users_is_active_idx")
@@ -604,4 +605,79 @@ model BlogPostRevision {
 
   @@index([blogPostId, createdAt], map: "blog_post_revisions_post_created_idx")
   @@map("blog_post_revisions")
+}
+
+/// Per-site internal Blog Automation Studio configuration (3-agent pipeline).
+model BlogAutomationSiteConfig {
+  id                   String    @id @default(cuid()) @db.VarChar(191)
+  siteLink             String    @unique @map("site_link") @db.VarChar(512)
+  autoEnabled          Boolean   @default(false) @map("auto_enabled")
+  autoIntervalMinutes  Int       @default(1440) @map("auto_interval_minutes")
+  lastAutoAt           DateTime? @map("last_auto_at")
+  seedPrompt           String?   @map("seed_prompt") @db.Text
+  mustFollowKeywords   String?   @map("must_follow_keywords") @db.Text
+  internalLinksJson    Json?     @map("internal_links_json")
+  externalLinksJson    Json?     @map("external_links_json")
+  secondaryKeywords    String?   @map("secondary_keywords") @db.Text
+  targetAudience       String?   @map("target_audience") @db.Text
+  location             String?   @db.VarChar(512)
+  ctaText              String?   @map("cta_text") @db.VarChar(512)
+  ctaUrl               String?   @map("cta_url") @db.VarChar(2048)
+  wordCountRange       String?   @map("word_count_range") @db.VarChar(64)
+  contentType          String?   @map("content_type") @db.VarChar(128)
+  brandNotes           String?   @map("brand_notes") @db.Text
+  serpNotes            String?   @map("serp_notes") @db.Text
+  referenceImagePath   String?   @map("reference_image_path") @db.VarChar(512)
+  imagePrompt          String?   @map("image_prompt") @db.Text
+  agent1Prompt         String?   @map("agent1_prompt") @db.Text
+  agent2Prompt         String?   @map("agent2_prompt") @db.Text
+  agent3Prompt         String?   @map("agent3_prompt") @db.Text
+  interpreterPrompt    String?   @map("interpreter_prompt") @db.Text
+  imagePromptSystem    String?   @map("image_prompt_system") @db.Text
+  agent1Provider       String    @default("openai") @map("agent1_provider") @db.VarChar(32)
+  agent1Model          String    @default("gpt-5.4-mini") @map("agent1_model") @db.VarChar(128)
+  agent2Provider       String    @default("openai") @map("agent2_provider") @db.VarChar(32)
+  agent2Model          String    @default("gpt-5.4-mini") @map("agent2_model") @db.VarChar(128)
+  agent3Provider       String    @default("anthropic") @map("agent3_provider") @db.VarChar(32)
+  agent3Model          String    @default("claude-sonnet-4-6") @map("agent3_model") @db.VarChar(128)
+  interpreterProvider  String    @default("openai") @map("interpreter_provider") @db.VarChar(32)
+  interpreterModel     String    @default("gpt-5.4-mini") @map("interpreter_model") @db.VarChar(128)
+  imageProvider        String    @default("openai") @map("image_provider") @db.VarChar(32)
+  imageModel           String    @default("gpt-image-1") @map("image_model") @db.VarChar(128)
+  openaiApiKey         String?   @map("openai_api_key") @db.Text
+  anthropicApiKey      String?   @map("anthropic_api_key") @db.Text
+  openrouterApiKey     String?   @map("openrouter_api_key") @db.Text
+  pricingOverrides     Json?     @map("pricing_overrides")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@map("blog_automation_site_configs")
+}
+
+/// One internal studio pipeline execution (manual or auto).
+model BlogAutomationRun {
+  id                 String    @id @default(cuid()) @db.VarChar(191)
+  siteLink           String    @map("site_link") @db.VarChar(512)
+  trigger            String    @default("manual") @db.VarChar(32)
+  status             String    @default("queued") @db.VarChar(32)
+  topic              String?   @db.VarChar(512)
+  seedPromptSnapshot String?   @map("seed_prompt_snapshot") @db.Text
+  keywordsSnapshot   String?   @map("keywords_snapshot") @db.Text
+  stagesJson         Json?     @map("stages_json")
+  draftPreviewJson   Json?     @map("draft_preview_json")
+  blogPostId         String?   @map("blog_post_id") @db.VarChar(191)
+  totalCostUsd       Float?    @map("total_cost_usd")
+  errorMessage       String?   @map("error_message") @db.Text
+  cancelRequested    Boolean   @default(false) @map("cancel_requested")
+  triggeredById      String?   @map("triggered_by_id") @db.VarChar(191)
+  startedAt          DateTime? @map("started_at")
+  finishedAt         DateTime? @map("finished_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  triggeredBy User? @relation("BlogStudioRunTriggeredBy", fields: [triggeredById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([siteLink, createdAt], map: "blog_automation_runs_site_created_idx")
+  @@index([status], map: "blog_automation_runs_status_idx")
+  @@map("blog_automation_runs")
 }

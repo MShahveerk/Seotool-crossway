@@ -89,7 +89,7 @@ const blogsMenuItems = [
   { id: "my-blog-approvals", label: "Blog Approvals", icon: FileText },
   { id: "admin-blogs", label: "Create Blog", icon: FileText, role: "super_admin" },
   { id: "blog-board", label: "Blog Board", icon: Columns3, role: "super_admin" },
-  { id: "blog-automation", label: "Blog Automation", icon: Sparkles, role: "super_admin" },
+  { id: "blog-automation", label: "Blog Automation Studio", icon: Sparkles, role: "super_admin" },
 ];
 
 function canAccessCreateItem(item, role) {

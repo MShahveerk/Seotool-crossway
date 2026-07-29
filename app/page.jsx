@@ -205,7 +205,7 @@ export default function Home() {
         );
       case "blog-automation":
         return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
-          <BlogAutomationSection />
+          <BlogAutomationSection selectedSite={selectedSite} />
         ) : (
           <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
         );
