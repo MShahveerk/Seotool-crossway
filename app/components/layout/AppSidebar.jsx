@@ -14,6 +14,7 @@ import {
   Globe,
   HelpCircle,
   LayoutDashboard,
+  Columns3,
   LogOut,
   Megaphone,
   Search,
@@ -81,11 +82,13 @@ const smmMenuItems = [
   { id: "calendar", label: "Content Calendar", icon: Calendar },
   { id: "my-approvals", label: "SMM Post Approvals", icon: CheckSquare },
   { id: "admin-approvals", label: "Create Post", icon: ClipboardList, role: "super_admin" },
+  { id: "post-board", label: "Post Board", icon: Columns3, role: "super_admin" },
 ];
 
 const blogsMenuItems = [
   { id: "my-blog-approvals", label: "Blog Approvals", icon: FileText },
   { id: "admin-blogs", label: "Create Blog", icon: FileText, role: "super_admin" },
+  { id: "blog-board", label: "Blog Board", icon: Columns3, role: "super_admin" },
   { id: "blog-automation", label: "Blog Automation", icon: Sparkles, role: "super_admin" },
 ];
 
@@ -93,7 +96,11 @@ function canAccessCreateItem(item, role) {
   if (!item.role) return true;
   if (role === item.role) return true;
   return (
-    (item.id === "admin-approvals" || item.id === "admin-blogs" || item.id === "blog-automation") &&
+    (item.id === "admin-approvals" ||
+      item.id === "admin-blogs" ||
+      item.id === "blog-automation" ||
+      item.id === "post-board" ||
+      item.id === "blog-board") &&
     role === "smm"
   );
 }

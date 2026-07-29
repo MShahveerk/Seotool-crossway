@@ -3,6 +3,8 @@ const nextConfig = {
   // Use webpack instead of Turbopack for stable dev behavior on Windows
   // Do NOT include turbopack config when using webpack - it causes conflicts
 
+  // playhtml / @playhtml/react ship as ESM packages used in client board UI
+  transpilePackages: ["playhtml", "@playhtml/react", "@playhtml/common"],
 
   // Docker / self-hosted: produces a minimal server bundle (see DEPLOYMENT.md)
   output: process.env.DOCKER_BUILD === "1" ? "standalone" : undefined,
@@ -54,7 +56,8 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://www.googleapis.com https://www.google-analytics.com",
+              "connect-src 'self' https://www.googleapis.com https://www.google-analytics.com https://*.partykit.dev wss://*.partykit.dev https://playhtml.fun wss://playhtml.fun",
+              "worker-src 'self' blob:",
               "frame-ancestors 'self'",
             ].join("; "),
           },

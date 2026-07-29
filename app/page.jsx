@@ -14,6 +14,8 @@ import MyApprovalsSection from "./components/MyApprovalsSection";
 import MyBlogApprovalsSection from "./components/MyBlogApprovalsSection";
 import AdminBlogSection from "./components/AdminBlogSection";
 import BlogAutomationSection from "./components/BlogAutomationSection";
+import PostBoardSection from "./components/PostBoardSection";
+import BlogBoardSection from "./components/BlogBoardSection";
 import UrlInspectionSection from "./components/seo/UrlInspectionSection";
 import SiteHealthSection from "./components/seo/SiteHealthSection";
 import UnifiedSiteAuditSection from "./components/seo/UnifiedSiteAuditSection";
@@ -166,9 +168,21 @@ export default function Home() {
         ) : (
           <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
         );
+      case "post-board":
+        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+          <PostBoardSection selectedSite={selectedSite} />
+        ) : (
+          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+        );
       case "admin-blogs":
         return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
           <AdminBlogSection selectedSite={selectedSite} />
+        ) : (
+          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+        );
+      case "blog-board":
+        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+          <BlogBoardSection selectedSite={selectedSite} />
         ) : (
           <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
         );
