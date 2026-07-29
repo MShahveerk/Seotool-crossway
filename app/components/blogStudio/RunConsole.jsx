@@ -80,7 +80,20 @@ export default function RunConsole({ run, onCancel, cancelling }) {
                     {String(stage.error)}
                   </pre>
                 )}
-                {stage.preview && stage.status === "succeeded" && (
+                {stage.agent === "image" && stage.status === "succeeded" ? (
+                  <p className="mt-2 text-[11px] text-gray-600">
+                    {stage.usedReference
+                      ? `Style refs applied: ${stage.referenceCount || 1}`
+                      : "No style reference attached — text-only generation"}
+                    {stage.note ? <span className="block mt-0.5 text-gray-500">{stage.note}</span> : null}
+                    {stage.promptPreview ? (
+                      <span className="block mt-1 text-gray-500 line-clamp-3 whitespace-pre-wrap">
+                        {String(stage.promptPreview).slice(0, 280)}
+                      </span>
+                    ) : null}
+                  </p>
+                ) : null}
+                {stage.preview && stage.status === "succeeded" && stage.agent !== "image" && (
                   <pre className="mt-2 max-h-24 overflow-auto rounded bg-gray-50 border border-gray-100 p-2 text-[10px] text-gray-600 whitespace-pre-wrap">
                     {String(stage.preview).slice(0, 500)}
                   </pre>
