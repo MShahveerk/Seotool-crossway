@@ -349,7 +349,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {["all", "pending", "edited", "declined", "approved"].map((s) => {
+          {["all", "pending", "edited", "declined"].map((s) => {
             const active = statusFilter === s;
             return (
               <button

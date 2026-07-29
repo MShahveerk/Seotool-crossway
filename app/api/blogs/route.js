@@ -14,11 +14,17 @@ export async function GET(req) {
     const siteParam = req.nextUrl.searchParams.get("site") || req.nextUrl.searchParams.get("url") || "";
     const whereClause = await buildBlogSiteFilter(prisma, siteParam, session.user, session.user.role);
 
+    const statusParam = String(req.nextUrl.searchParams.get("status") || "").trim();
+    const openOnly = statusParam !== "all";
+    const statusFilter = openOnly
+      ? { status: { in: ["pending", "edited", "declined"] } }
+      : { status: { not: "draft" } };
+
     const blogs = await prisma.blogPost.findMany({
       where: {
         ...whereClause,
         hiddenFromAssignee: false,
-        status: { not: "draft" },
+        ...statusFilter,
         ...(session.user.role === ROLES.APPROVER ? { assigneeId: session.user.id } : {}),
       },
       include: BLOG_INCLUDE,
