@@ -802,14 +802,6 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                   {wpPulling ? "Pulling…" : "Pull by post ID"}
                 </button>
               </div>
-              <WordpressPullChooser
-                open={wpChooserOpen}
-                siteLink={selectedSite}
-                onlyScheduled={wpChooserScheduledOnly}
-                includeTrash={wpIncludeTrash}
-                onClose={() => setWpChooserOpen(false)}
-                onPulled={handleWordpressChooserPulled}
-              />
               <WordpressDiagnosticsPanel diagnostics={wpDiagnostics} />
               <p className="md:col-span-2 text-xs text-gray-500">
                 If pulls return 0, create the application password on a WordPress Administrator/Editor account (not a limited user). In wp-admin, open the post and copy the ID from the URL (?post=123).
@@ -1159,6 +1151,15 @@ export default function AdminBlogSection({ selectedSite = "" }) {
           </button>
         </div>
       </form>
+
+      <WordpressPullChooser
+        open={wpChooserOpen}
+        siteLink={selectedSite}
+        onlyScheduled={wpChooserScheduledOnly}
+        includeTrash={wpIncludeTrash}
+        onClose={() => setWpChooserOpen(false)}
+        onPulled={handleWordpressChooserPulled}
+      />
     </div>
   );
 }

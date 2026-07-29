@@ -36,6 +36,10 @@ export async function PATCH(req, { params }) {
     const excerpt = body.excerpt !== undefined ? String(body.excerpt).trim() : existing.excerpt;
     const slug = body.slug !== undefined ? String(body.slug).trim() : existing.slug;
     const wpStatus = body.wpStatus !== undefined ? String(body.wpStatus).trim() : existing.wpStatus;
+    const featuredImageAlt =
+      body.featuredImageAlt !== undefined
+        ? String(body.featuredImageAlt || "").trim() || null
+        : existing.featuredImageAlt;
 
     const payload = buildBlogPayload({
       title,
@@ -50,10 +54,12 @@ export async function PATCH(req, { params }) {
       seoTitle: body.seoTitle,
       metaDescription: body.metaDescription,
       focusKeyword: body.focusKeyword,
-      featuredImageAlt: body.featuredImageAlt ?? existing.featuredImageAlt,
+      featuredImageAlt,
       featuredImageUrl: existing.featuredImagePath,
     });
 
+    // Keep userEdited* in sync so previews (which prefer edited fields) stay accurate.
+    const syncEdited = body.syncEditedFields !== false;
     const blog = await prisma.blogPost.update({
       where: { id },
       data: {
@@ -64,8 +70,20 @@ export async function PATCH(req, { params }) {
         wpStatus,
         payload,
         scheduledFor,
+        featuredImageAlt,
+        ...(syncEdited
+          ? {
+              userEditedTitle: title || null,
+              userEditedContent: content || null,
+              userEditedExcerpt: excerpt || null,
+              userEditedSlug: slug || null,
+            }
+          : {}),
         hiddenFromAssignee: body.hiddenFromAssignee ?? existing.hiddenFromAssignee,
-        status: body.status && ["pending", "approved", "declined", "edited"].includes(body.status) ? body.status : undefined,
+        status:
+          body.status && ["pending", "approved", "declined", "edited", "draft"].includes(body.status)
+            ? body.status
+            : undefined,
       },
       include: BLOG_INCLUDE,
     });

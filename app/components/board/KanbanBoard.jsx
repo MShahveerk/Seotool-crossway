@@ -35,6 +35,7 @@ export default function KanbanBoard({
   items,
   getColumn,
   onMoveToColumn,
+  onItemSaved,
   loading,
   error,
   siteLabel,
@@ -205,6 +206,10 @@ export default function KanbanBoard({
           kind={itemKind}
           columnLabel={columns.find((c) => c.id === getColumn(detailItem))?.label || ""}
           onClose={() => setDetailItem(null)}
+          onSaved={(updated) => {
+            setDetailItem(updated);
+            onItemSaved?.(updated);
+          }}
         />
       ) : null}
       {pendingMove ? (

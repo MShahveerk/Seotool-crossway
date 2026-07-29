@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import {
   FiCheck,
@@ -83,7 +84,12 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [declineOpen, setDeclineOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
+  const [portalReady, setPortalReady] = useState(false);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -459,9 +465,10 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
         </div>
       )}
 
-      {activeId && activeBlog ? (
+      {portalReady && activeId && activeBlog
+        ? createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="blog-review-title"
@@ -469,7 +476,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
             if (e.target === e.currentTarget && !busy) closeReview();
           }}
         >
-          <div className="flex h-[100dvh] w-full max-w-6xl flex-col overflow-hidden bg-white shadow-2xl sm:h-[min(92vh,920px)] sm:rounded-2xl">
+          <div className="flex h-[100dvh] w-full max-w-6xl flex-col overflow-hidden bg-white shadow-2xl sm:h-[min(92vh,920px)] sm:rounded-2xl sm:ring-1 sm:ring-black/10">
             {/* Header */}
             <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
               <div className="min-w-0">
@@ -878,8 +885,10 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
               </div>
             </footer>
           </div>
-        </div>
-      ) : null}
+        </div>,
+        document.body
+        )
+        : null}
     </div>
   );
 }

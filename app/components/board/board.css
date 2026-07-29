@@ -431,22 +431,30 @@
 .cw-board-modal {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 220;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 1rem;
+  padding: 0;
   background: rgba(4, 10, 6, 0.72);
   backdrop-filter: blur(8px);
   animation: cw-board-fade-up 0.22s ease both;
 }
 
+@media (min-width: 640px) {
+  .cw-board-modal {
+    align-items: center;
+    padding: 1rem;
+  }
+}
+
 .cw-board-modal__panel {
   width: min(36rem, 100%);
   max-height: min(90vh, 880px);
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  border-radius: 1rem;
+  border-radius: 0;
   border: 1px solid rgba(14, 255, 42, 0.22);
   background:
     radial-gradient(ellipse 80% 40% at 10% 0%, rgba(14, 255, 42, 0.1), transparent 55%),
@@ -455,6 +463,17 @@
   color: var(--board-ink);
   overflow: hidden;
   animation: cw-board-brand-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (min-width: 640px) {
+  .cw-board-modal__panel {
+    height: min(92vh, 920px);
+    border-radius: 1rem;
+  }
+}
+
+.cw-board-modal__panel--wide {
+  width: min(64rem, 100%);
 }
 
 .cw-board-modal__head {
@@ -501,11 +520,60 @@
   color: #fff;
 }
 
+.cw-board-modal__tabs {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.cw-board-modal__tab {
+  padding: 0.65rem 0.85rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--board-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.cw-board-modal__tab.is-active {
+  color: #e8ffe9;
+  border-bottom-color: var(--board-accent);
+}
+
+.cw-board-modal__banner {
+  margin: 0;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.8rem;
+}
+
+.cw-board-modal__banner--error {
+  background: rgba(255, 107, 107, 0.12);
+  color: #ffc9c9;
+  border-bottom: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.cw-board-modal__banner--ok {
+  background: rgba(14, 255, 42, 0.1);
+  color: #d7ffd9;
+  border-bottom: 1px solid rgba(14, 255, 42, 0.25);
+}
+
 .cw-board-modal__body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding: 1rem 1.2rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.cw-board-modal__preview,
+.cw-board-modal__form {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
@@ -519,6 +587,10 @@
   max-height: 16rem;
 }
 
+.cw-board-modal__media--lg {
+  max-height: 22rem;
+}
+
 .cw-board-modal__media img,
 .cw-board-modal__media video {
   display: block;
@@ -526,6 +598,22 @@
   max-height: 16rem;
   object-fit: contain;
   background: #000;
+}
+
+.cw-board-modal__media--lg img,
+.cw-board-modal__media--lg video {
+  max-height: 22rem;
+}
+
+.cw-board-modal__media-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 8rem;
+  border-radius: 0.65rem;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  color: var(--board-muted);
+  font-size: 0.8rem;
 }
 
 .cw-board-modal__prose {
@@ -537,11 +625,111 @@
   word-break: break-word;
 }
 
+.cw-board-modal__prose--lead {
+  font-size: 0.95rem;
+  color: #f4fff5;
+}
+
 .cw-board-modal__prose--muted {
   color: var(--board-muted);
   font-size: 0.82rem;
-  max-height: 10rem;
-  overflow: auto;
+}
+
+.cw-board-modal__html {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: rgba(232, 240, 233, 0.9);
+  word-break: break-word;
+}
+
+.cw-board-modal__html p { margin: 0.55rem 0; }
+.cw-board-modal__html h2,
+.cw-board-modal__html h3 {
+  margin: 1rem 0 0.4rem;
+  color: #f4fff5;
+  font-family: var(--font-board-display), var(--font-nunito), system-ui, sans-serif;
+}
+.cw-board-modal__html ul,
+.cw-board-modal__html ol { padding-left: 1.25rem; margin: 0.5rem 0; }
+.cw-board-modal__html a { color: var(--board-accent); }
+.cw-board-modal__html img { max-width: 100%; border-radius: 0.4rem; }
+
+.cw-board-modal__note {
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(125, 211, 252, 0.25);
+  background: rgba(125, 211, 252, 0.08);
+  font-size: 0.8rem;
+  color: #dbeafe;
+}
+
+.cw-board-modal__note strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--board-sky);
+}
+
+.cw-board-modal__note p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.cw-board-modal__label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--board-muted);
+}
+
+.cw-board-modal__input,
+.cw-board-modal__textarea {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: #f4fff5;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.cw-board-modal__input--mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+.cw-board-modal__textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+  line-height: 1.45;
+}
+
+.cw-board-modal__input:focus,
+.cw-board-modal__textarea:focus {
+  outline: none;
+  border-color: rgba(14, 255, 42, 0.45);
+  box-shadow: 0 0 0 2px rgba(14, 255, 42, 0.12);
+}
+
+.cw-board-modal__input:disabled,
+.cw-board-modal__textarea:disabled {
+  opacity: 0.55;
+}
+
+.cw-board-modal__editor {
+  border-radius: 0.55rem;
+  overflow: hidden;
+  background: #fff;
+  color: #111;
 }
 
 .cw-board-modal__grid {
@@ -602,6 +790,12 @@
   color: var(--board-muted);
 }
 
+.cw-board-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
 .cw-board-modal__btn {
   padding: 0.45rem 0.95rem;
   border-radius: 0.45rem;
@@ -615,6 +809,27 @@
 
 .cw-board-modal__btn:hover {
   background: rgba(14, 255, 42, 0.22);
+}
+
+.cw-board-modal__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cw-board-modal__btn--ghost {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--board-muted);
+}
+
+.cw-board-modal__btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.cw-board-modal__btn--primary {
+  background: rgba(14, 255, 42, 0.22);
+  border-color: rgba(14, 255, 42, 0.5);
 }
 
 @media (max-width: 560px) {

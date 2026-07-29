@@ -72,6 +72,23 @@ export default function PostBoardSection({ selectedSite = "" }) {
     return data;
   }, []);
 
+  const onItemSaved = useCallback((updated) => {
+    setItems((prev) =>
+      prev.map((row) =>
+        row.id === updated.id
+          ? {
+              ...row,
+              ...updated,
+              displayTitle: updated.userEditedTitle || updated.title,
+              imagePath: updated.imagePath || updated.mediaPath || row.imagePath || "",
+            }
+          : row
+      )
+    );
+    window.dispatchEvent(new CustomEvent("approvals:admin-refresh"));
+    window.dispatchEvent(new CustomEvent("approvals:user-updated"));
+  }, []);
+
   const getColumn = useCallback((item) => getPostBoardColumn(item), []);
   const room = useMemo(() => roomKey(selectedSite), [selectedSite]);
 
@@ -79,12 +96,13 @@ export default function PostBoardSection({ selectedSite = "" }) {
     boardId: `posts-${room}`,
     brand: "Post Board",
     subtitle:
-      "Drag to change status (you'll confirm side effects) · double-click for details. Draft → Pending sends approval emails.",
+      "Drag to change status · double-click to preview & edit. Draft → Pending sends approval emails.",
     columns: POST_BOARD_COLUMNS,
     autoMoves: POST_AUTO_MOVES,
     items,
     getColumn,
     onMoveToColumn,
+    onItemSaved,
     loading,
     error,
     siteLabel: selectedSite || "All Meta / site accounts",

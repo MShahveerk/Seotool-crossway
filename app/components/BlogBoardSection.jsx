@@ -73,6 +73,26 @@ export default function BlogBoardSection({ selectedSite = "" }) {
     return data;
   }, []);
 
+  const onItemSaved = useCallback((updated) => {
+    setItems((prev) =>
+      prev.map((row) =>
+        row.id === updated.id
+          ? {
+              ...row,
+              ...updated,
+              displayTitle: updated.userEditedTitle || updated.title,
+              imagePath:
+                updated.featuredImagePath ||
+                updated.featuredImageUrl ||
+                updated.payload?.featuredImageUrl ||
+                row.imagePath ||
+                "",
+            }
+          : row
+      )
+    );
+  }, []);
+
   const getColumn = useCallback((item) => getBlogBoardColumn(item), []);
   const room = useMemo(() => roomKey(selectedSite), [selectedSite]);
 
@@ -80,12 +100,13 @@ export default function BlogBoardSection({ selectedSite = "" }) {
     boardId: `blogs-${room}`,
     brand: "Blog Board",
     subtitle:
-      "Drag to change status (you'll confirm side effects) · double-click for details. Draft → Pending sends approval emails.",
+      "Drag to change status · double-click to preview & edit. Draft → Pending sends approval emails.",
     columns: BLOG_BOARD_COLUMNS,
     autoMoves: BLOG_AUTO_MOVES,
     items,
     getColumn,
     onMoveToColumn,
+    onItemSaved,
     loading,
     error,
     siteLabel: selectedSite || "All sites",
