@@ -850,3 +850,23 @@ model PostAutomationQueueRow {
   @@index([siteLink, status, rowIndex], map: "post_automation_queue_site_status_idx")
   @@map("post_automation_queue_rows")
 }
+
+/// Per-site autoscheduler for posts or blogs (fills blank scheduledFor on free weekdays).
+model ContentAutoscheduleConfig {
+  id             String    @id @default(cuid()) @db.VarChar(191)
+  /// "post" | "blog"
+  kind           String    @db.VarChar(16)
+  siteLink       String    @map("site_link") @db.VarChar(512)
+  enabled        Boolean   @default(false)
+  horizonDays    Int       @default(14) @map("horizon_days")
+  itemsPerDay    Int       @default(1) @map("items_per_day")
+  scheduleHour   Int       @default(10) @map("schedule_hour")
+  scheduleMinute Int       @default(0) @map("schedule_minute")
+  lastRunAt      DateTime? @map("last_run_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@unique([kind, siteLink], map: "content_autoschedule_kind_site_unique")
+  @@index([enabled], map: "content_autoschedule_enabled_idx")
+  @@map("content_autoschedule_configs")
+}

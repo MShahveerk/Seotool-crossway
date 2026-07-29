@@ -17,6 +17,16 @@ const nextConfig = {
   // Security headers
   async headers() {
     return [
+      // Media API: avoid document CSP leaking onto binary responses (Chrome ORB quirks).
+      {
+        source: "/api/uploads/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Cache-Control", value: "public, max-age=300, must-revalidate" },
+        ],
+      },
       {
         source: "/:path*",
         headers: [
@@ -54,7 +64,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https:",
+              "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
               "connect-src 'self' https://www.googleapis.com https://www.google-analytics.com https://*.partykit.dev wss://*.partykit.dev https://playhtml.fun wss://playhtml.fun",
               "worker-src 'self' blob:",

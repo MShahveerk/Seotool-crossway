@@ -16,6 +16,8 @@ import MyBlogApprovalsSection from "./components/MyBlogApprovalsSection";
 import AdminBlogSection from "./components/AdminBlogSection";
 import BlogAutomationSection from "./components/BlogAutomationSection";
 import PostAutomationSection from "./components/PostAutomationSection";
+import PostAutoscheduleSection from "./components/PostAutoscheduleSection";
+import BlogAutoscheduleSection from "./components/BlogAutoscheduleSection";
 import UrlInspectionSection from "./components/seo/UrlInspectionSection";
 import SiteHealthSection from "./components/seo/SiteHealthSection";
 import UnifiedSiteAuditSection from "./components/seo/UnifiedSiteAuditSection";
@@ -213,6 +215,18 @@ export default function Home() {
       case "post-automation":
         return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
           <PostAutomationSection selectedSite={selectedSite} />
+        ) : (
+          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+        );
+      case "post-autoschedule":
+        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+          <PostAutoscheduleSection selectedSite={selectedSite} />
+        ) : (
+          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+        );
+      case "blog-autoschedule":
+        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+          <BlogAutoscheduleSection selectedSite={selectedSite} />
         ) : (
           <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
         );

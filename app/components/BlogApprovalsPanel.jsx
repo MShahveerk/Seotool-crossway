@@ -25,6 +25,23 @@ import BlogRichTextEditor from "./BlogRichTextEditor";
 import HumanizeTextButton from "./HumanizeTextButton";
 import EmptyState from "./ui-shared/EmptyState";
 import { LoadingSpinner } from "./ui-shared/LoadingBlock";
+import { publicMediaUrl } from "../../lib/publicMediaUrl";
+
+/** Chrome sometimes caches a bad first paint — retry once with a bust, then hide. */
+function onMediaImgError(e) {
+  const el = e.currentTarget;
+  if (!el || el.dataset.retried === "1") {
+    if (el) el.style.visibility = "hidden";
+    return;
+  }
+  el.dataset.retried = "1";
+  const base = String(el.currentSrc || el.src || "").split("?")[0];
+  if (!base || base.startsWith("blob:") || base.startsWith("data:")) {
+    el.style.visibility = "hidden";
+    return;
+  }
+  el.src = `${base}?v=${Date.now()}`;
+}
 
 const TABS = [
   { id: "content", label: "Content" },
@@ -149,7 +166,11 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     };
   }, [activeId]);
 
-  const featuredPreviewUrl = localPreviewUrl || activeBlog?.featuredImagePath || null;
+  const featuredPreviewUrl =
+    localPreviewUrl ||
+    (activeBlog?.featuredImagePath
+      ? publicMediaUrl(activeBlog.featuredImagePath, { bust: activeBlog.updatedAt || activeBlog.id })
+      : null);
   const originalAlt = activeBlog?.featuredImageAlt || "";
   const altChanged = draft.featuredImageAlt !== originalAlt;
   const canSaveImage = Boolean(featuredFile) || altChanged;
@@ -438,13 +459,15 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                     <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
                       {blog.featuredImagePath ? (
                         <img
-                          src={blog.featuredImagePath}
+                          src={publicMediaUrl(blog.featuredImagePath, {
+                            bust: blog.updatedAt || blog.id,
+                          })}
                           alt=""
                           className="h-full w-full object-cover"
                           loading="lazy"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
+                          decoding="async"
+                          referrerPolicy="no-referrer"
+                          onError={onMediaImgError}
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-slate-400">
@@ -643,9 +666,9 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                             src={featuredPreviewUrl}
                             alt={draft.featuredImageAlt || activeBlog.title || "Featured"}
                             className="max-h-80 w-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.style.display = "none";
-                            }}
+                            decoding="async"
+                            referrerPolicy="no-referrer"
+                            onError={onMediaImgError}
                           />
                         ) : (
                           <div className="flex h-52 items-center justify-center gap-2 text-sm text-slate-400">
@@ -791,6 +814,9 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                           src={featuredPreviewUrl}
                           alt=""
                           className="aspect-[16/9] w-full rounded-xl object-cover ring-1 ring-slate-200"
+                          decoding="async"
+                          referrerPolicy="no-referrer"
+                          onError={onMediaImgError}
                         />
                       ) : null}
                       <h3 className="text-2xl font-semibold tracking-tight text-slate-900">

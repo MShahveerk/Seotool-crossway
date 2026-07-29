@@ -1,3 +1,5 @@
+import { publicMediaUrl } from "@/lib/publicMediaUrl";
+
 /** Resolve approval/blog media paths for board card previews. */
 export function resolveBoardMedia(item) {
   if (!item) return "";
@@ -10,12 +12,9 @@ export function resolveBoardMedia(item) {
     payload.featured_image ||
     payload.image ||
     "";
-  const src = String(raw || "").trim();
-  if (!src) return "";
-  if (/^(https?:|data:|blob:)/i.test(src)) return src;
-  if (src.startsWith("/")) return src;
-  // Bare filename from disk → public uploads API
-  return `/api/uploads/${src.replace(/^.*[\\/]/, "")}`;
+  return publicMediaUrl(raw, {
+    bust: item.updatedAt || item.id || null,
+  });
 }
 
 export function isBoardVideoPath(path) {

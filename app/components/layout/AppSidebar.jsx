@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
+  CalendarClock,
   CheckSquare,
   ChevronDown,
   ClipboardList,
@@ -84,6 +85,7 @@ const smmMenuItems = [
   { id: "admin-approvals", label: "Create Post", icon: ClipboardList, role: "super_admin" },
   { id: "post-board", label: "Post Board", icon: Columns3, role: "super_admin" },
   { id: "post-automation", label: "Post Automation Studio", icon: Sparkles, role: "super_admin" },
+  { id: "post-autoschedule", label: "Post Autoscheduler", icon: CalendarClock, role: "super_admin" },
 ];
 
 const blogsMenuItems = [
@@ -91,6 +93,7 @@ const blogsMenuItems = [
   { id: "admin-blogs", label: "Create Blog", icon: FileText, role: "super_admin" },
   { id: "blog-board", label: "Blog Board", icon: Columns3, role: "super_admin" },
   { id: "blog-automation", label: "Blog Automation Studio", icon: Sparkles, role: "super_admin" },
+  { id: "blog-autoschedule", label: "Blog Autoscheduler", icon: CalendarClock, role: "super_admin" },
 ];
 
 function canAccessCreateItem(item, role) {
@@ -101,6 +104,8 @@ function canAccessCreateItem(item, role) {
       item.id === "admin-blogs" ||
       item.id === "blog-automation" ||
       item.id === "post-automation" ||
+      item.id === "post-autoschedule" ||
+      item.id === "blog-autoschedule" ||
       item.id === "post-board" ||
       item.id === "blog-board") &&
     role === "smm"

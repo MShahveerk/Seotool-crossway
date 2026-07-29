@@ -125,9 +125,22 @@ export default function RunConsole({ run, onCancel, cancelling }) {
               {preview.featuredImagePath && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={preview.featuredImagePath}
+                  src={
+                    preview.featuredImagePath.startsWith("/") ||
+                    /^(https?:|data:|blob:)/i.test(preview.featuredImagePath)
+                      ? preview.featuredImagePath
+                      : `/api/uploads/${preview.featuredImagePath}`
+                  }
                   alt=""
                   className="mt-3 w-full max-h-40 object-cover rounded-lg border border-gray-200"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    const el = e.currentTarget;
+                    if (el.dataset.retried === "1") return;
+                    el.dataset.retried = "1";
+                    const base = String(el.src || "").split("?")[0];
+                    if (base) el.src = `${base}?v=${Date.now()}`;
+                  }}
                 />
               )}
               {preview.html && (
