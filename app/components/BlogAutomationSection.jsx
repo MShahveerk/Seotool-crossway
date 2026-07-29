@@ -626,17 +626,28 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
 
             {tab === "assets" && (
               <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Image system prompt (Agents), visual guidelines below, and the reference image are applied
+                  on <strong>every</strong> manual and auto run (including Excel queue rows).
+                </p>
                 <div>
-                  <label className={labelClass}>Image generation prompt</label>
+                  <label className={labelClass}>Image visual guidelines</label>
                   <textarea
                     className={`${inputClass} mt-1 min-h-[100px]`}
                     value={siteConfig.imagePrompt || ""}
                     onChange={(e) => patchSite({ imagePrompt: e.target.value })}
-                    placeholder="Visual direction for the featured image agent…"
+                    placeholder="Brand look: colors, lighting, composition, what to avoid…"
                   />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Standing style brief. Excel “image direction” and the writer’s image_prompt add topic
+                    detail on top — they do not replace this.
+                  </p>
                 </div>
                 <div>
-                  <label className={labelClass}>Reference image (optional)</label>
+                  <label className={labelClass}>Reference image</label>
+                  <p className="mt-0.5 text-xs text-gray-500 mb-1">
+                    Used as a style reference via OpenAI image edits (high fidelity when supported).
+                  </p>
                   <div className="mt-1 flex flex-wrap items-center gap-3">
                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:border-[#1d9c35]">
                       Upload image
@@ -659,14 +670,25 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                             return;
                           }
                           setSiteConfig(data.config);
-                          setSaveMessage({ ok: true, text: "Reference image uploaded." });
+                          setSaveMessage({
+                            ok: true,
+                            text: "Reference image uploaded — used for all manual and auto image runs.",
+                          });
                         }}
                       />
                     </label>
                     {siteConfig.referenceImagePath && (
-                      <span className="text-xs font-mono text-gray-500 truncate max-w-[280px]">
-                        {siteConfig.referenceImagePath}
-                      </span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={siteConfig.referenceImagePath}
+                          alt="Reference"
+                          className="h-14 w-20 rounded-lg object-cover border border-gray-200"
+                        />
+                        <span className="text-xs font-mono text-gray-500 truncate max-w-[220px]">
+                          {siteConfig.referenceImagePath}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </div>
