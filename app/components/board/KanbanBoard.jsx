@@ -133,25 +133,30 @@ export default function KanbanBoard({
   };
 
   return (
-    <div className={`cw-board ${syne.variable}`}>
+    <div
+      className={`cw-board cw-board--fill ${syne.variable}`}
+      style={{ "--lane-count": columns.length }}
+    >
       <div className="cw-board__atmosphere" aria-hidden="true" />
       <div className="cw-board__inner">
         <header className="cw-board__header">
-          <div>
+          <div className="cw-board__header-copy">
             <h1 className="cw-board__brand">{brand}</h1>
             <p className="cw-board__sub">{subtitle}</p>
           </div>
           <div className="cw-board__meta">
-            <span className="cw-board__chip cw-board__chip--live">Live board</span>
-            <span className="cw-board__chip">{siteLabel || "All accounts"}</span>
-            <span className="cw-board__chip">{items.length} items</span>
+            <span className="cw-board__chip cw-board__chip--live">Live</span>
+            <span className="cw-board__chip cw-board__chip--site" title={siteLabel || "All accounts"}>
+              {siteLabel || "All accounts"}
+            </span>
+            <span className="cw-board__chip">{items.length}</span>
           </div>
         </header>
 
         {error ? <div className="cw-board__error">{error}</div> : null}
 
         <div className="cw-board__scroller" data-board-scroller={boardId} id={boundsId}>
-          <div className="cw-board__lanes" style={{ position: "relative" }}>
+          <div className="cw-board__lanes">
             <AutoMoveArrows boardId={boardId} autoMoves={resolvedAutoMoves} columns={columns} />
             {columns.map((col) => {
               const list = grouped[col.id] || [];
@@ -163,13 +168,14 @@ export default function KanbanBoard({
                   data-column-id={col.id}
                   data-locked={col.locked ? "true" : "false"}
                   data-drop-active="false"
+                  data-tone={col.tone}
                 >
                   <div className="cw-board__lane-head">
                     <div className="cw-board__lane-title">
-                      <span>{col.label}</span>
+                      <span className="cw-board__lane-label">{col.label}</span>
                       <span className="cw-board__count">{list.length}</span>
                     </div>
-                    <p className="cw-board__lane-hint">{col.hint}</p>
+                    {col.hint ? <p className="cw-board__lane-hint">{col.hint}</p> : null}
                     <span className="cw-board__lane-tone" data-tone={col.tone} />
                   </div>
                   <div className="cw-board__cards">
@@ -177,7 +183,7 @@ export default function KanbanBoard({
                       <p className="cw-board__empty">Loading…</p>
                     ) : null}
                     {!loading && list.length === 0 ? (
-                      <p className="cw-board__empty">Drop cards here</p>
+                      <p className="cw-board__empty">Drop here</p>
                     ) : null}
                     {list.map((item, index) => (
                       <Card

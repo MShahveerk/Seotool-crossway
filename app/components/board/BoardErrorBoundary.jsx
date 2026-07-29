@@ -18,9 +18,9 @@ export default class BoardErrorBoundary extends Component {
   }
 
   render() {
-    if (this.state.failed) {
-      return this.props.fallback?.(this.state.message) ?? this.props.children;
-    }
-    return this.props.children;
+    const content = this.state.failed
+      ? this.props.fallback?.(this.state.message) ?? this.props.children
+      : this.props.children;
+    return <div className="flex min-h-0 w-full flex-1 flex-col">{content}</div>;
   }
 }

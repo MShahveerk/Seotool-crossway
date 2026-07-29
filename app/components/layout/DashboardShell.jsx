@@ -17,6 +17,7 @@ export default function DashboardLayout({
 }) {
   const sectionLabel = getSectionLabel(activeSection);
   const isDashboard = activeSection === "dashboard";
+  const isBoard = activeSection === "post-board" || activeSection === "blog-board";
 
   return (
     <SidebarProvider defaultOpen>
@@ -26,7 +27,7 @@ export default function DashboardLayout({
         selectedSite={selectedSite}
         onSelectedSiteChange={onSelectedSiteChange}
       />
-      <SidebarInset className="mesh-bg">
+      <SidebarInset className="mesh-bg flex min-h-svh flex-col">
         <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border/60 surface-glass px-4">
           <SidebarTrigger className="-ml-1 transition-smooth hover:bg-emerald-50" />
           <Separator orientation="vertical" className="hidden h-5 sm:block" />
@@ -55,7 +56,8 @@ export default function DashboardLayout({
         <main
           id="main-content"
           className={cn(
-            "flex-1 p-3 pt-4 sm:p-4 lg:p-5",
+            "flex min-h-0 flex-1 flex-col",
+            isBoard ? "p-2 sm:p-2.5 lg:p-3" : "p-3 pt-4 sm:p-4 lg:p-5",
             isDashboard ? "bg-muted/20" : "bg-transparent"
           )}
         >
@@ -63,8 +65,10 @@ export default function DashboardLayout({
             <div className="mx-auto max-w-6xl rounded-2xl border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-sm transition-smooth sm:p-6 hover:shadow-md">
               {children}
             </div>
+          ) : isBoard ? (
+            <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>
           ) : (
-            <div className="mx-auto max-w-[1400px]">{children}</div>
+            <div className="mx-auto w-full max-w-[1400px]">{children}</div>
           )}
         </main>
       </SidebarInset>

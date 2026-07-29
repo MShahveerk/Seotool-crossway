@@ -33,7 +33,10 @@ export function StaggerItem({ children, index = 0, className, as: Tag = "div", .
 /** Re-mounts and animates when `sectionKey` changes (dashboard section nav) */
 export function SectionTransition({ sectionKey, children, className }) {
   return (
-    <div key={sectionKey} className={cn("animate-section-enter", className)}>
+    <div
+      key={sectionKey}
+      className={cn("animate-section-enter flex min-h-0 flex-1 flex-col", className)}
+    >
       {children}
     </div>
   );

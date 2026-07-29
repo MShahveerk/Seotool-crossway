@@ -20,17 +20,19 @@ export default function PlayBoardShell({ room, children }) {
   setBoardRoom(roomId);
 
   return (
-    <PlayProvider
-      key={roomId}
-      initOptions={{
-        room: () => getBoardRoom(),
-        cursors: { enabled: true, room: "page" },
-        onError: () => {
-          console.warn("[Crossway Board] playhtml connection failed — drag still works locally.");
-        },
-      }}
-    >
-      {children}
-    </PlayProvider>
+    <div className="flex min-h-0 w-full flex-1 flex-col">
+      <PlayProvider
+        key={roomId}
+        initOptions={{
+          room: () => getBoardRoom(),
+          cursors: { enabled: true, room: "page" },
+          onError: () => {
+            console.warn("[Crossway Board] playhtml connection failed — drag still works locally.");
+          },
+        }}
+      >
+        {children}
+      </PlayProvider>
+    </div>
   );
 }

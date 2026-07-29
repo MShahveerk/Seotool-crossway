@@ -114,10 +114,12 @@ export default function BlogBoardSection({ selectedSite = "" }) {
   };
 
   return (
-    <BoardErrorBoundary fallback={() => <KanbanBoard {...boardProps} playhtml={false} />}>
-      <PlayBoardShell room={room}>
-        <KanbanBoard {...boardProps} playhtml />
-      </PlayBoardShell>
-    </BoardErrorBoundary>
+    <div className="flex min-h-0 w-full flex-1 flex-col">
+      <BoardErrorBoundary fallback={() => <KanbanBoard {...boardProps} playhtml={false} />}>
+        <PlayBoardShell room={room}>
+          <KanbanBoard {...boardProps} playhtml />
+        </PlayBoardShell>
+      </BoardErrorBoundary>
+    </div>
   );
 }
