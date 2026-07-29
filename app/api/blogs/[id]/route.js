@@ -166,15 +166,22 @@ export async function PATCH(req, { params }) {
           },
         });
       } else {
+        const approveData = {
+          ...editFields,
+          status: action === "approve" ? "approved" : "edited",
+          lastAction: action,
+          respondedAt: now,
+          awaitingAdminReview: true,
+        };
+        if (action === "approve") {
+          const { resolveScheduleOnApprove } = await import("../../../../lib/approvalSchedule.js");
+          approveData.scheduledFor = resolveScheduleOnApprove(
+            editFields.scheduledFor !== undefined ? editFields.scheduledFor : blog.scheduledFor
+          );
+        }
         await prisma.blogPost.update({
           where: { id },
-          data: {
-            ...editFields,
-            status: action === "approve" ? "approved" : "edited",
-            lastAction: action,
-            respondedAt: now,
-            awaitingAdminReview: true,
-          },
+          data: approveData,
         });
       }
     } else if (action === "decline") {
@@ -204,8 +211,25 @@ export async function PATCH(req, { params }) {
       return Response.json({ error: "Invalid action." }, { status: 400 });
     }
 
-    const updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
+    let updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
     await recordBlogRevision(updated, { action, actorId: session.user.id });
+
+    if (action === "approve" && updated?.scheduledFor) {
+      try {
+        const { syncBlogScheduleToWordpress, publishBlogNow } = await import(
+          "../../../../lib/blogPublishJobs.js"
+        );
+        const due = new Date(updated.scheduledFor).getTime() <= Date.now();
+        if (due && isAdmin) {
+          await publishBlogNow(updated.id);
+          updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
+        } else {
+          await syncBlogScheduleToWordpress(updated, updated.scheduledFor);
+        }
+      } catch (err) {
+        console.warn(`[blog] post-approve WP sync failed for ${id}: ${err.message}`);
+      }
+    }
 
     if (action === "resend_for_approval" && updated) {
       try {

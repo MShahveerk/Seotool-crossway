@@ -9,6 +9,7 @@ import HumanizeTextButton from "./HumanizeTextButton";
 import FileChooseField from "./ui-shared/FileChooseField";
 import InboundApiDocsPanel from "./InboundApiDocsPanel";
 import EmailInboundConfigFields from "./EmailInboundConfigFields";
+import WordpressPullChooser from "./WordpressPullChooser";
 
 const DEFAULT_CONFIG = {
   enabled: true,
@@ -180,6 +181,8 @@ export default function AdminBlogSection({ selectedSite = "" }) {
   const [wpPostId, setWpPostId] = useState("");
   const [wpIncludeTrash, setWpIncludeTrash] = useState(false);
   const [wpDiagnostics, setWpDiagnostics] = useState(null);
+  const [wpChooserOpen, setWpChooserOpen] = useState(false);
+  const [wpChooserScheduledOnly, setWpChooserScheduledOnly] = useState(false);
   const [publishBusyId, setPublishBusyId] = useState("");
   const [logsForId, setLogsForId] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -374,6 +377,40 @@ export default function AdminBlogSection({ selectedSite = "" }) {
     }
   };
 
+  const summarizePullResult = (data) => {
+    const counts = data.statusCounts
+      ? Object.entries(data.statusCounts)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(", ")
+      : "";
+    const scheduledHint =
+      data.scheduledDraftCount > 0
+        ? ` (${data.scheduledDraftCount} draft(s) have a future publish date)`
+        : "";
+    const fetched =
+      data.fetched ?? data.total ?? (Number(data.imported || 0) + Number(data.updated || 0));
+    const summary = `Fetched ${fetched} from WordPress: ${data.imported || 0} imported, ${data.updated || 0} updated, ${data.skipped || 0} skipped.`;
+    return [summary, counts ? `WP totals — ${counts}${scheduledHint}.` : null, data.diagnosis || data.message, ...(data.pullErrors || [])]
+      .filter(Boolean)
+      .join(" ");
+  };
+
+  const openWordpressChooser = ({ onlyScheduled = false } = {}) => {
+    if (!selectedSite) {
+      setError("Select a site first.");
+      return;
+    }
+    setWpChooserScheduledOnly(onlyScheduled);
+    setWpChooserOpen(true);
+  };
+
+  const handleWordpressChooserPulled = async (data) => {
+    setWpDiagnostics(data.diagnostics || null);
+    setMessage(summarizePullResult(data));
+    await loadConfig();
+    await loadBlogs();
+  };
+
   const pullWordpressDrafts = async ({ onlyScheduled = false, byPostId = false } = {}) => {
     if (!selectedSite) {
       setError("Select a site first.");
@@ -381,6 +418,11 @@ export default function AdminBlogSection({ selectedSite = "" }) {
     }
     if (byPostId && !String(wpPostId || "").trim()) {
       setError("Enter a WordPress post ID first.");
+      return;
+    }
+    // Prefer the chooser for bulk pulls so users can preview and select.
+    if (!byPostId) {
+      openWordpressChooser({ onlyScheduled });
       return;
     }
     setWpPulling(true);
@@ -400,21 +442,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
       const data = await res.json();
       setWpDiagnostics(data.diagnostics || null);
       if (!res.ok) throw new Error(data.error || "Pull failed");
-      const counts = data.statusCounts
-        ? Object.entries(data.statusCounts)
-            .map(([k, v]) => `${k}: ${v}`)
-            .join(", ")
-        : "";
-      const scheduledHint =
-        data.scheduledDraftCount > 0
-          ? ` (${data.scheduledDraftCount} draft(s) have a future publish date)`
-          : "";
-      const summary = `Fetched ${data.fetched ?? data.total ?? 0} from WordPress: ${data.imported || 0} imported, ${data.updated || 0} updated, ${data.skipped || 0} skipped.`;
-      setMessage(
-        [summary, counts ? `WP totals — ${counts}${scheduledHint}.` : null, data.diagnosis || data.message, ...(data.pullErrors || [])]
-          .filter(Boolean)
-          .join(" ")
-      );
+      setMessage(summarizePullResult(data));
       await loadConfig();
       await loadBlogs();
     } catch (err) {
@@ -743,19 +771,19 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => pullWordpressDrafts({ onlyScheduled: false })}
+                  onClick={() => openWordpressChooser({ onlyScheduled: false })}
                   disabled={wpPulling || configLoading}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#1d9c35] text-[#1d9c35] text-sm font-semibold disabled:opacity-50"
                 >
-                  <FiRefreshCw /> {wpPulling ? "Pulling…" : "Pull all drafts"}
+                  <FiRefreshCw /> Browse & pull blogs
                 </button>
                 <button
                   type="button"
-                  onClick={() => pullWordpressDrafts({ onlyScheduled: true })}
+                  onClick={() => openWordpressChooser({ onlyScheduled: true })}
                   disabled={wpPulling || configLoading}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm font-semibold disabled:opacity-50"
                 >
-                  Pull scheduled only
+                  Browse scheduled only
                 </button>
                 <button
                   type="button"
@@ -771,9 +799,17 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                   disabled={wpPulling || configLoading}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm font-semibold disabled:opacity-50"
                 >
-                  Pull by post ID
+                  {wpPulling ? "Pulling…" : "Pull by post ID"}
                 </button>
               </div>
+              <WordpressPullChooser
+                open={wpChooserOpen}
+                siteLink={selectedSite}
+                onlyScheduled={wpChooserScheduledOnly}
+                includeTrash={wpIncludeTrash}
+                onClose={() => setWpChooserOpen(false)}
+                onPulled={handleWordpressChooserPulled}
+              />
               <WordpressDiagnosticsPanel diagnostics={wpDiagnostics} />
               <p className="md:col-span-2 text-xs text-gray-500">
                 If pulls return 0, create the application password on a WordPress Administrator/Editor account (not a limited user). In wp-admin, open the post and copy the ID from the URL (?post=123).

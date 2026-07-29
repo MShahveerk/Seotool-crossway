@@ -9,6 +9,7 @@ import {
 import { BLOG_INCLUDE } from "@/lib/blogAccess.js";
 import { resolveScheduleOnApprove } from "@/lib/approvalSchedule.js";
 import { notifyOnBoardMove } from "@/lib/boardNotifications.js";
+import { publishBlogNow, syncBlogScheduleToWordpress } from "@/lib/blogPublishJobs.js";
 
 export const runtime = "nodejs";
 
@@ -57,9 +58,7 @@ export async function PATCH(req, { params }) {
     }
 
     if (toColumn === "approved") {
-      if (!existing.scheduledFor) {
-        data.scheduledFor = resolveScheduleOnApprove(null);
-      }
+      data.scheduledFor = resolveScheduleOnApprove(existing.scheduledFor);
       data.lastAction = "approve";
       data.respondedAt = new Date();
       data.hiddenFromAssignee = false;
@@ -72,11 +71,27 @@ export async function PATCH(req, { params }) {
       data.respondedAt = new Date();
     }
 
-    const updated = await prisma.blogPost.update({
+    let updated = await prisma.blogPost.update({
       where: { id },
       data,
       include: BLOG_INCLUDE,
     });
+
+    let publish = null;
+    let scheduleSync = null;
+
+    if (toColumn === "approved") {
+      const dueAt = updated.scheduledFor ? new Date(updated.scheduledFor).getTime() : 0;
+      if (dueAt && dueAt <= Date.now()) {
+        // Schedule already due → publish live to WordPress now
+        publish = await publishBlogNow(updated.id);
+        updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
+      } else if (updated.scheduledFor) {
+        // Future schedule → reflect on WordPress as future
+        scheduleSync = await syncBlogScheduleToWordpress(updated, updated.scheduledFor);
+        updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
+      }
+    }
 
     const notify = await notifyOnBoardMove({
       kind: "blog",
@@ -91,8 +106,10 @@ export async function PATCH(req, { params }) {
       blog: updated,
       fromColumn,
       toColumn,
-      boardColumn: getBlogBoardColumn({ ...updated, ...mapped }),
+      boardColumn: getBlogBoardColumn(updated),
       notify,
+      publish,
+      scheduleSync,
     });
   } catch (error) {
     return Response.json({ error: error.message || "Move failed." }, { status: error.status || 500 });

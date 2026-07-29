@@ -134,15 +134,26 @@ export async function GET(req) {
     const title = blog.userEditedTitle || blog.title || "Untitled blog";
 
     if (action === "approve") {
-      await prisma.blogPost.update({
+      const { resolveScheduleOnApprove } = await import("../../../../lib/approvalSchedule.js");
+      const scheduledFor = resolveScheduleOnApprove(blog.scheduledFor);
+      const updated = await prisma.blogPost.update({
         where: { id },
         data: {
           status: "approved",
           lastAction: "approve",
           respondedAt: new Date(),
           awaitingAdminReview: true,
+          scheduledFor,
         },
       });
+      try {
+        const { syncBlogScheduleToWordpress } = await import("../../../../lib/blogPublishJobs.js");
+        if (updated.scheduledFor) {
+          await syncBlogScheduleToWordpress(updated, updated.scheduledFor);
+        }
+      } catch (err) {
+        console.warn(`[blog] quick-action WP schedule sync failed for ${id}: ${err.message}`);
+      }
       return resultPage({
         title: "Blog approved",
         message:
