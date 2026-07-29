@@ -75,7 +75,11 @@ export default function RunConsole({ run, onCancel, cancelling }) {
                     <p className="text-[11px] text-gray-500 mt-1">{formatMoney(stage.costUsd)}</p>
                   </div>
                 </div>
-                {stage.error && <p className="mt-1 text-xs text-red-600">{stage.error}</p>}
+                {stage.error && (
+                  <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-red-50 border border-red-100 p-2 text-[11px] text-red-700 whitespace-pre-wrap break-words">
+                    {String(stage.error)}
+                  </pre>
+                )}
                 {stage.preview && stage.status === "succeeded" && (
                   <pre className="mt-2 max-h-24 overflow-auto rounded bg-gray-50 border border-gray-100 p-2 text-[10px] text-gray-600 whitespace-pre-wrap">
                     {String(stage.preview).slice(0, 500)}
@@ -85,9 +89,12 @@ export default function RunConsole({ run, onCancel, cancelling }) {
             ))}
           </ol>
           {run.errorMessage && (
-            <p className="mt-3 text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-              {run.errorMessage}
-            </p>
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-red-800">Run failed</p>
+              <pre className="mt-1 max-h-48 overflow-auto text-sm text-red-800 whitespace-pre-wrap break-words font-sans">
+                {run.errorMessage}
+              </pre>
+            </div>
           )}
           <p className="mt-3 text-[11px] text-gray-400">
             Started {formatWhen(run.startedAt || run.createdAt)}

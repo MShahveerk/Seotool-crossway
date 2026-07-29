@@ -472,13 +472,16 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                   </div>
                 </div>
                 <div>
-                  <label className={labelClass}>Seed prompt</label>
+                  <label className={labelClass}>General / seed prompt</label>
                   <textarea
                     className={`${inputClass} mt-1 min-h-[100px]`}
                     value={siteConfig.seedPrompt || ""}
                     onChange={(e) => patchSite({ seedPrompt: e.target.value })}
-                    placeholder="Daily / auto seed instructions for the agents…"
+                    placeholder="Standing brief for agents (brand voice, niche, what every post should cover)…"
                   />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Used for manual runs and Auto (seed mode). Also editable on Schedule.
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -700,6 +703,20 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                   Control how often Internal Studio creates the next draft for this site. Pause anytime to
                   run a specific manual topic without the queue advancing.
                 </p>
+
+                <div>
+                  <label className={labelClass}>General prompt for auto</label>
+                  <textarea
+                    className={`${inputClass} mt-1 min-h-[120px]`}
+                    value={siteConfig.seedPrompt || ""}
+                    onChange={(e) => patchSite({ seedPrompt: e.target.value })}
+                    placeholder="e.g. Write practical, trustworthy SEO blogs for shippers researching freight forwarding. Keep tone expert but clear. Always tie advice back to Crossway services when natural…"
+                  />
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Standing instructions the agents always receive on auto (and manual) runs. Pair with
+                    must-follow keywords on Run, or switch topic source to Excel queue.
+                  </p>
+                </div>
 
                 <div>
                   <label className={labelClass}>How often</label>
