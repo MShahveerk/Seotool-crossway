@@ -18,6 +18,7 @@ export async function GET(req) {
       where: {
         ...whereClause,
         hiddenFromAssignee: false,
+        status: { not: "draft" },
         ...(session.user.role === ROLES.APPROVER ? { assigneeId: session.user.id } : {}),
       },
       include: BLOG_INCLUDE,

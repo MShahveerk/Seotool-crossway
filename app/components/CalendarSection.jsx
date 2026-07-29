@@ -210,8 +210,8 @@ export default function CalendarSection({ selectedSite = "" }) {
     }
   };
 
-  const submitCreate = async (e) => {
-    e.preventDefault();
+  const submitCreate = async (e, { asDraft = false } = {}) => {
+    if (e?.preventDefault) e.preventDefault();
     if (!canManage) return;
     if (!selectedSite) {
       setError("Select a client account first.");
@@ -238,13 +238,14 @@ export default function CalendarSection({ selectedSite = "" }) {
         const iso = datetimeLocalToUtcIso(form.scheduledFor);
         if (iso) fd.append("scheduledFor", iso);
       }
-      if (form.approveOnAssignment) fd.append("approveOnAssignment", "1");
+      if (!asDraft && form.approveOnAssignment) fd.append("approveOnAssignment", "1");
+      fd.append("asDraft", asDraft ? "1" : "0");
 
       const res = await fetch("/api/admin/approvals", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create post");
 
-      setSuccess("Post scheduled on the calendar.");
+      setSuccess(asDraft ? "Draft saved on the calendar." : "Post scheduled on the calendar.");
       setCreateOpen(false);
       const day = selectedDay || new Date();
       setForm({
@@ -596,12 +597,20 @@ export default function CalendarSection({ selectedSite = "" }) {
                   Cancel
                 </button>
                 <button
+                  type="button"
+                  disabled={submitting || !selectedSite}
+                  onClick={(e) => submitCreate(e, { asDraft: true })}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-gray-300 bg-white text-gray-900 disabled:opacity-60"
+                >
+                  {submitting ? "Saving…" : "Create draft"}
+                </button>
+                <button
                   type="submit"
                   disabled={submitting || !selectedSite}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-black text-white disabled:opacity-60"
                 >
                   <FiImage className="w-4 h-4" />
-                  {submitting ? "Scheduling…" : "Schedule post"}
+                  {submitting ? "Creating…" : "Create"}
                 </button>
               </div>
             </form>

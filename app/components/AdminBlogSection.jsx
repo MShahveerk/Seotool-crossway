@@ -549,8 +549,8 @@ export default function AdminBlogSection({ selectedSite = "" }) {
     }
   };
 
-  const submitBlog = async (e) => {
-    e.preventDefault();
+  const submitBlog = async (e, { asDraft = false } = {}) => {
+    if (e?.preventDefault) e.preventDefault();
     if (!selectedSite) {
       setError("Select a client site first.");
       return;
@@ -580,14 +580,19 @@ export default function AdminBlogSection({ selectedSite = "" }) {
         const iso = datetimeLocalToUtcIso(form.scheduledFor);
         if (iso) fd.set("scheduledFor", iso);
       }
-      if (form.approveOnAssignment) fd.set("approveOnAssignment", "1");
+      if (!asDraft && form.approveOnAssignment) fd.set("approveOnAssignment", "1");
+      fd.set("asDraft", asDraft ? "1" : "0");
       if (featuredFile) fd.set("featuredImage", featuredFile);
 
       const res = await fetch("/api/admin/blogs", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create blog");
 
-      setMessage(`Blog "${data.blog?.title}" created and sent for approval.`);
+      setMessage(
+        asDraft
+          ? `Draft "${data.blog?.title}" saved. Assignees will not see it until you send it for approval.`
+          : `Blog "${data.blog?.title}" created and sent for approval.`
+      );
       setForm({
         title: "",
         slug: "",
@@ -1100,9 +1105,23 @@ export default function AdminBlogSection({ selectedSite = "" }) {
         </label>
         {error ? <p className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p> : null}
         {message ? <p className="text-sm text-green-800 bg-green-50 border border-green-100 rounded-lg px-3 py-2">{message}</p> : null}
-        <button type="submit" disabled={loading} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gray-900 text-white text-sm font-semibold disabled:opacity-50">
-          <FiFileText /> {loading ? "Saving…" : "Send blog for approval"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="submit"
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gray-900 text-white text-sm font-semibold disabled:opacity-50"
+          >
+            <FiFileText /> {loading ? "Saving…" : "Create"}
+          </button>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={(e) => submitBlog(e, { asDraft: true })}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm font-semibold disabled:opacity-50 hover:bg-gray-50"
+          >
+            {loading ? "Saving…" : "Create draft"}
+          </button>
+        </div>
       </form>
     </div>
   );

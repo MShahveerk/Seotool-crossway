@@ -316,8 +316,8 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e, { asDraft = false } = {}) => {
+    if (e?.preventDefault) e.preventDefault();
     setError("");
     setSuccess("");
     if (!form.imageFile) {
@@ -334,7 +334,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
     }
     setSubmitting(true);
     try {
-      const wasApproveOnAssignment = form.approveOnAssignment;
+      const wasApproveOnAssignment = !asDraft && form.approveOnAssignment;
       
       const submitSingle = async (fileObj, platformName) => {
         const fd = new FormData();
@@ -343,6 +343,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
         fd.append("caption", form.caption.trim());
         fd.append("selectedSite", selectedSite);
         fd.append("approveOnAssignment", wasApproveOnAssignment ? "1" : "0");
+        fd.append("asDraft", asDraft ? "1" : "0");
         if (platformName) {
           fd.append("targetPlatform", platformName);
         }
@@ -374,9 +375,11 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
       }
 
       setSuccess(
-        wasApproveOnAssignment
-          ? "Approval created and recorded as approved (assignee does not need to review)."
-          : "Approval(s) created and assigned."
+        asDraft
+          ? "Draft saved. Assignees will not see it until you move it to Pending."
+          : wasApproveOnAssignment
+            ? "Approval created and recorded as approved (assignee does not need to review)."
+            : "Approval(s) created and assigned."
       );
       setForm({ title: "", caption: "", imageFile: null, approveOnAssignment: false, scheduledFor: "" });
       setCroppedFilesState(null);
@@ -591,14 +594,24 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
               )}
             </div>
           </div>
-          <button
-            type="submit"
-            disabled={submitting || !selectedSite.trim()}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl font-semibold disabled:opacity-60"
-          >
-            <FiImage className="w-4 h-4" />
-            {submitting ? "Creating…" : "Create & assign approval"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="submit"
+              disabled={submitting || !selectedSite.trim()}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl font-semibold disabled:opacity-60"
+            >
+              <FiImage className="w-4 h-4" />
+              {submitting ? "Creating…" : "Create"}
+            </button>
+            <button
+              type="button"
+              disabled={submitting || !selectedSite.trim()}
+              onClick={(e) => handleSubmit(e, { asDraft: true })}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-900 font-semibold disabled:opacity-60 hover:bg-gray-50"
+            >
+              {submitting ? "Saving…" : "Create draft"}
+            </button>
+          </div>
         </form>
 
         <div>

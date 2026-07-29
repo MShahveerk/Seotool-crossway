@@ -48,9 +48,15 @@ export async function PATCH(req, { params }) {
       status: mapped.status,
       publishStatus: mapped.publishStatus,
     };
+    if (typeof mapped.hiddenFromAssignee === "boolean") {
+      data.hiddenFromAssignee = mapped.hiddenFromAssignee;
+    }
 
     if (toColumn === "approved" && !existing.scheduledFor) {
       data.scheduledFor = resolveScheduleOnApprove(null);
+    }
+    if (toColumn === "pending" && existing.status === "draft") {
+      data.hiddenFromAssignee = false;
     }
 
     const updated = await prisma.blogPost.update({

@@ -52,6 +52,7 @@ export async function POST(req) {
         categories: form.get("categories"),
         tags: form.get("tags"),
         approveOnAssignment: form.get("approveOnAssignment"),
+        asDraft: form.get("asDraft"),
         featuredImageAlt: form.get("featuredImageAlt"),
         seoTitle: form.get("seoTitle"),
         metaDescription: form.get("metaDescription"),
@@ -70,11 +71,17 @@ export async function POST(req) {
     if (!content) return Response.json({ error: "Content is required." }, { status: 400 });
     if (!selectedSite) return Response.json({ error: "Selected site is required." }, { status: 400 });
 
+    const asDraft =
+      fields.asDraft === true ||
+      fields.asDraft === "1" ||
+      fields.asDraft === "true" ||
+      fields.asDraft === "on";
     const approveOnAssignment =
-      fields.approveOnAssignment === true ||
-      fields.approveOnAssignment === "1" ||
-      fields.approveOnAssignment === "true" ||
-      fields.approveOnAssignment === "on";
+      !asDraft &&
+      (fields.approveOnAssignment === true ||
+        fields.approveOnAssignment === "1" ||
+        fields.approveOnAssignment === "true" ||
+        fields.approveOnAssignment === "on");
 
     const scheduledFor = parseScheduledDate(fields.scheduledFor || fields.date);
     let categories = [];
@@ -125,12 +132,13 @@ export async function POST(req) {
     });
 
     const now = new Date();
+    const initialStatus = asDraft ? "draft" : approveOnAssignment ? "approved" : "pending";
     const blog = await prisma.blogPost.create({
       data: {
         siteLink: siteUrlLink,
         assigneeId: assignee.id,
         createdById: session.user.id,
-        status: approveOnAssignment ? "approved" : "pending",
+        status: initialStatus,
         source: "manual",
         title,
         slug: payload.slug,
@@ -144,6 +152,7 @@ export async function POST(req) {
         lastAction: approveOnAssignment ? "approve" : null,
         respondedAt: approveOnAssignment ? now : null,
         skippedAssigneeReview: approveOnAssignment,
+        hiddenFromAssignee: asDraft,
         publishStatus: "unpublish",
       },
       include: BLOG_INCLUDE,
@@ -151,15 +160,17 @@ export async function POST(req) {
 
     await recordBlogRevision(blog, { action: "create", actorId: session.user.id });
 
-    const token = createBlogQuickActionToken(blog.id);
-    await notifyBlogApprovers({
-      blog,
-      approvers: allApprovers,
-      creator: session.user,
-      token,
-      skipped: approveOnAssignment,
-      operatorUser: session.user,
-    });
+    if (!asDraft) {
+      const token = createBlogQuickActionToken(blog.id);
+      await notifyBlogApprovers({
+        blog,
+        approvers: allApprovers,
+        creator: session.user,
+        token,
+        skipped: approveOnAssignment,
+        operatorUser: session.user,
+      });
+    }
 
     return Response.json({ blog }, { status: 201 });
   } catch (error) {

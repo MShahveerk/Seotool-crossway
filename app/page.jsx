@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "./components/DashboardLayout";
@@ -14,8 +15,6 @@ import MyApprovalsSection from "./components/MyApprovalsSection";
 import MyBlogApprovalsSection from "./components/MyBlogApprovalsSection";
 import AdminBlogSection from "./components/AdminBlogSection";
 import BlogAutomationSection from "./components/BlogAutomationSection";
-import PostBoardSection from "./components/PostBoardSection";
-import BlogBoardSection from "./components/BlogBoardSection";
 import UrlInspectionSection from "./components/seo/UrlInspectionSection";
 import SiteHealthSection from "./components/seo/SiteHealthSection";
 import UnifiedSiteAuditSection from "./components/seo/UnifiedSiteAuditSection";
@@ -26,6 +25,24 @@ import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { LoadingSpinner } from "./components/ui-shared/LoadingBlock";
 import { SectionTransition } from "./components/ui-shared/Motion";
+
+/** playhtml touches `document` at import time — never SSR/prerender these boards. */
+const PostBoardSection = dynamic(() => import("./components/PostBoardSection"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <LoadingSpinner label="Loading post board" />
+    </div>
+  ),
+});
+const BlogBoardSection = dynamic(() => import("./components/BlogBoardSection"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <LoadingSpinner label="Loading blog board" />
+    </div>
+  ),
+});
 
 const SECTION_ALIASES = {
   "seranking-audit": "site-audit",

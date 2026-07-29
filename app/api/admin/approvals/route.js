@@ -128,10 +128,14 @@ export async function POST(req) {
     const instructions = "";
     const selectedSite = String(form.get("selectedSite") || "").trim();
     const approveOnAssignmentRaw = form.get("approveOnAssignment");
+    const asDraftRaw = form.get("asDraft");
+    const asDraft =
+      asDraftRaw === "1" || asDraftRaw === "true" || asDraftRaw === "on";
     const approveOnAssignment =
-      approveOnAssignmentRaw === "1" ||
-      approveOnAssignmentRaw === "true" ||
-      approveOnAssignmentRaw === "on";
+      !asDraft &&
+      (approveOnAssignmentRaw === "1" ||
+        approveOnAssignmentRaw === "true" ||
+        approveOnAssignmentRaw === "on");
     const scheduledForRaw = form.get("scheduledFor");
     const scheduledFor = scheduledForRaw ? new Date(scheduledForRaw) : null;
 
@@ -227,6 +231,7 @@ export async function POST(req) {
     }
 
     const now = new Date();
+    const initialStatus = asDraft ? "draft" : approveOnAssignment ? "approved" : "pending";
     const approval = await prisma.approval.create({
       data: {
         title,
@@ -234,10 +239,11 @@ export async function POST(req) {
         imagePath,
         assigneeId: assignee.id,
         createdById: session.user.id,
-        status: approveOnAssignment ? "approved" : "pending",
+        status: initialStatus,
         lastAction: approveOnAssignment ? "approve" : null,
         respondedAt: approveOnAssignment ? now : null,
         awaitingAdminReview: false,
+        hiddenFromAssignee: asDraft,
         scheduledFor: (!isNaN(scheduledFor) ? scheduledFor : null),
         facebookPageId: fbPageId,
         instagramUserId: igUserId,
@@ -288,7 +294,7 @@ export async function POST(req) {
       console.error("Failed to generate HMAC token", err);
     }
 
-    if (!approveOnAssignment) {
+    if (!approveOnAssignment && !asDraft) {
       try {
         const { sendPostApprovalNotification } = await import("../../../../lib/email.js");
         const { collectApprovalEmailRecipients } = await import("../../../../lib/approvalRecipients.js");
