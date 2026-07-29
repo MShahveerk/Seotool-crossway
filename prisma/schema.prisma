@@ -612,8 +612,11 @@ model BlogAutomationSiteConfig {
   id                   String    @id @default(cuid()) @db.VarChar(191)
   siteLink             String    @unique @map("site_link") @db.VarChar(512)
   autoEnabled          Boolean   @default(false) @map("auto_enabled")
+  /// How often internal auto runs (minutes). Default 1440 = once per day.
   autoIntervalMinutes  Int       @default(1440) @map("auto_interval_minutes")
   lastAutoAt           DateTime? @map("last_auto_at")
+  /// Internal auto topic source: "seed" (seed prompt/keywords) or "excel" (queue rows).
+  autoSource           String    @default("seed") @map("auto_source") @db.VarChar(32)
   seedPrompt           String?   @map("seed_prompt") @db.Text
   mustFollowKeywords   String?   @map("must_follow_keywords") @db.Text
   internalLinksJson    Json?     @map("internal_links_json")
@@ -680,4 +683,51 @@ model BlogAutomationRun {
   @@index([siteLink, createdAt], map: "blog_automation_runs_site_created_idx")
   @@index([status], map: "blog_automation_runs_status_idx")
   @@map("blog_automation_runs")
+}
+
+/// Excel / spreadsheet campaign feeding the internal studio queue (max 50 rows).
+model BlogAutomationCampaign {
+  id           String   @id @default(cuid()) @db.VarChar(191)
+  siteLink     String   @map("site_link") @db.VarChar(512)
+  fileName     String?  @map("file_name") @db.VarChar(512)
+  status       String   @default("active") @db.VarChar(32)
+  headersJson  Json?    @map("headers_json")
+  rowCount     Int      @default(0) @map("row_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  rows BlogAutomationQueueRow[]
+
+  @@index([siteLink, createdAt], map: "blog_automation_campaigns_site_created_idx")
+  @@map("blog_automation_campaigns")
+}
+
+/// One editable queue row from an Excel upload (processed one-per-interval when autoSource=excel).
+model BlogAutomationQueueRow {
+  id           String    @id @default(cuid()) @db.VarChar(191)
+  campaignId   String    @map("campaign_id") @db.VarChar(191)
+  siteLink     String    @map("site_link") @db.VarChar(512)
+  rowIndex     Int       @map("row_index")
+  status       String    @default("pending") @db.VarChar(32)
+  topic        String?   @db.VarChar(512)
+  keywords     String?   @db.Text
+  seedContext  String?   @map("seed_context") @db.Text
+  imagePrompt  String?   @map("image_prompt") @db.Text
+  audience     String?   @db.Text
+  ctaText      String?   @map("cta_text") @db.VarChar(512)
+  ctaUrl       String?   @map("cta_url") @db.VarChar(2048)
+  notes        String?   @db.Text
+  rawJson      Json?     @map("raw_json")
+  runId        String?   @map("run_id") @db.VarChar(191)
+  blogPostId   String?   @map("blog_post_id") @db.VarChar(191)
+  errorMessage String?   @map("error_message") @db.Text
+  processedAt  DateTime? @map("processed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  campaign BlogAutomationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([campaignId, rowIndex], map: "blog_automation_queue_campaign_row_unique")
+  @@index([siteLink, status, rowIndex], map: "blog_automation_queue_site_status_idx")
+  @@map("blog_automation_queue_rows")
 }

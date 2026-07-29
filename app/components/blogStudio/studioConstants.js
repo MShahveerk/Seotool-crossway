@@ -1,10 +1,26 @@
 export const INTERVAL_OPTIONS = [
+  { value: 30, label: "Every 30 minutes" },
   { value: 60, label: "Every hour" },
+  { value: 180, label: "Every 3 hours" },
   { value: 360, label: "Every 6 hours" },
   { value: 720, label: "Every 12 hours" },
-  { value: 1440, label: "Every day" },
+  { value: 1440, label: "Every day (recommended)" },
   { value: 2880, label: "Every 2 days" },
+  { value: 4320, label: "Every 3 days" },
   { value: 10080, label: "Every week" },
+];
+
+export const AUTO_SOURCE_OPTIONS = [
+  {
+    value: "seed",
+    label: "Seed prompt",
+    hint: "Uses SEO Seeds + rotating must-follow keywords each run.",
+  },
+  {
+    value: "excel",
+    label: "Excel queue",
+    hint: "Processes one spreadsheet row per interval (max 50 rows).",
+  },
 ];
 
 export const PROVIDERS = [

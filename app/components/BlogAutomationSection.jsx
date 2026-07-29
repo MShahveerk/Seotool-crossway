@@ -14,8 +14,10 @@ import {
 } from "react-icons/fi";
 import AgentRoster from "./blogStudio/AgentRoster";
 import RunConsole from "./blogStudio/RunConsole";
+import ExcelQueuePanel from "./blogStudio/ExcelQueuePanel";
 import {
   INTERVAL_OPTIONS,
+  AUTO_SOURCE_OPTIONS,
   PROVIDERS,
   inputClass,
   labelClass,
@@ -26,6 +28,7 @@ const TABS = [
   { id: "run", label: "Run" },
   { id: "agents", label: "Agents" },
   { id: "seeds", label: "SEO Seeds" },
+  { id: "excel", label: "Excel queue" },
   { id: "links", label: "Links" },
   { id: "assets", label: "Assets" },
   { id: "schedule", label: "Schedule" },
@@ -353,8 +356,8 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                 Crossway content pipeline
               </h1>
               <p className="mt-1 text-sm text-gray-600 max-w-2xl">
-                Configure three SEO agents, seed keywords, and generate pending blog drafts in-app — or keep
-                External n8n. Only one engine can be active.
+                Configure three SEO agents, seed keywords, or an Excel campaign queue — then generate pending
+                drafts in-app. Or keep External n8n. Only one engine can be active.
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
@@ -682,14 +685,24 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
               </div>
             )}
 
+            {tab === "excel" && (
+              <ExcelQueuePanel
+                siteLink={selectedSite}
+                siteConfig={siteConfig}
+                onPatchSite={patchSite}
+                onMessage={setSaveMessage}
+              />
+            )}
+
             {tab === "schedule" && (
-              <div className="space-y-4 max-w-lg">
+              <div className="space-y-5 max-w-xl">
                 <p className="text-sm text-gray-600">
-                  When Auto is on and Internal Studio is the active engine, Crossway queues a draft on this
-                  interval using the seed prompt and rotating must-follow keywords.
+                  Control how often Internal Studio creates the next draft for this site. Pause anytime to
+                  run a specific manual topic without the queue advancing.
                 </p>
+
                 <div>
-                  <label className={labelClass}>Interval</label>
+                  <label className={labelClass}>How often</label>
                   <select
                     className={`${inputClass} mt-1`}
                     value={siteConfig.autoIntervalMinutes || 1440}
@@ -701,19 +714,66 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                       </option>
                     ))}
                   </select>
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Excel mode processes one row per tick. Seed mode generates from SEO Seeds each tick.
+                  </p>
                 </div>
+
+                <div>
+                  <label className={labelClass}>Topic source</label>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {AUTO_SOURCE_OPTIONS.map((opt) => {
+                      const active = (siteConfig.autoSource || "seed") === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => patchSite({ autoSource: opt.value })}
+                          className={`rounded-xl border px-3 py-3 text-left transition ${
+                            active
+                              ? "border-[#1d9c35] bg-[#f3faf4] shadow-sm"
+                              : "border-gray-200 bg-white hover:border-gray-300"
+                          }`}
+                        >
+                          <p className="text-sm font-semibold text-gray-900">{opt.label}</p>
+                          <p className="mt-1 text-xs text-gray-500 leading-snug">{opt.hint}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {siteConfig.autoSource === "excel" && (
+                    <button
+                      type="button"
+                      onClick={() => setTab("excel")}
+                      className="mt-2 text-xs font-semibold text-[#1d9c35] hover:underline"
+                    >
+                      Open Excel queue →
+                    </button>
+                  )}
+                </div>
+
                 <p className="text-xs text-gray-500">
                   Last auto: {formatWhen(siteConfig.lastAutoAt)} · Status:{" "}
                   <strong>{siteConfig.autoEnabled ? "Running" : "Paused"}</strong>
                 </p>
-                <button
-                  type="button"
-                  onClick={toggleAuto}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                  {siteConfig.autoEnabled ? <FiPause /> : <FiPlay />}
-                  {siteConfig.autoEnabled ? "Pause auto" : "Enable auto"}
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleAuto}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                  >
+                    {siteConfig.autoEnabled ? <FiPause /> : <FiPlay />}
+                    {siteConfig.autoEnabled ? "Pause auto" : "Enable auto"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveSiteConfig}
+                    disabled={saving}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#1d9c35] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    <FiSave /> Save schedule
+                  </button>
+                </div>
               </div>
             )}
           </div>
