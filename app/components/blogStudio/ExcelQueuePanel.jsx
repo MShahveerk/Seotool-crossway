@@ -15,6 +15,7 @@ import {
   FiPause,
   FiCalendar,
   FiXCircle,
+  FiDownload,
 } from "react-icons/fi";
 import { INTERVAL_OPTIONS, inputClass, labelClass, formatWhen } from "./studioConstants";
 
@@ -345,6 +346,13 @@ export default function ExcelQueuePanel({
               />
               AI column mapping
             </label>
+            <a
+              href="/api/admin/blog-automation/site/excel/template"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 shadow-sm transition hover:border-[#1d9c35]/40"
+            >
+              <FiDownload />
+              Download template
+            </a>
             <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#1d9c35] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#178c2e] disabled:opacity-50">
               {uploading ? <FiRefreshCw className="animate-spin" /> : <FiUpload />}
               {uploading ? "Importing…" : "Upload spreadsheet"}
@@ -520,9 +528,15 @@ export default function ExcelQueuePanel({
           <FiUpload className="mx-auto h-8 w-8 text-[#1d9c35]" />
           <p className="mt-3 text-sm font-semibold text-gray-800">No spreadsheet campaign yet</p>
           <p className="mx-auto mt-1 max-w-md text-xs text-gray-500">
-            Columns can be anything — Topic, Keywords, Brief, Image prompt, Audience, CTA… The
-            interpreter normalizes them into the editable grid below.
+            Download the template if you don’t have a sheet, or upload your own. Columns can be
+            anything — Topic, Keywords, Brief, Image prompt, Audience, CTA… The interpreter maps them.
           </p>
+          <a
+            href="/api/admin/blog-automation/site/excel/template"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-800 hover:border-[#1d9c35]/40"
+          >
+            <FiDownload /> Download Excel template
+          </a>
         </div>
       ) : (
         <>

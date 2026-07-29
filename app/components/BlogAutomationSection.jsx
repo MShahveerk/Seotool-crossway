@@ -472,7 +472,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
 
       {isInternal && siteConfig && (
         <>
-          <AgentRoster config={siteConfig} />
+          <AgentRoster config={siteConfig} onPatchSite={patchSite} />
 
           <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-1">
             {TABS.filter((t) => t.id !== "external").map((t) => (
@@ -622,19 +622,29 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                           ))}
                         </select>
                       </div>
-                      <div>
+                      <div className="relative">
                         <label className={labelClass}>Model</label>
                         <select
-                          className={`${inputClass} mt-1 font-mono text-xs`}
+                          className={`${inputClass} mt-1 appearance-none pr-9 text-sm font-semibold bg-white cursor-pointer border-[#1d9c35]/35`}
                           value={siteConfig[mKey] || modelList[0]?.value || ""}
                           onChange={(e) => patchSite({ [mKey]: e.target.value })}
                         >
+                          {modelList.length === 0 && (
+                            <option value="">No models available</option>
+                          )}
                           {modelList.map((m) => (
                             <option key={m.value} value={m.value}>
                               {m.label}
                             </option>
                           ))}
                         </select>
+                        <span className="pointer-events-none absolute right-3 bottom-2.5 text-gray-400 text-xs">
+                          ▼
+                        </span>
+                        <p className="mt-1 text-[11px] text-gray-500">
+                          {modelList.length} model{modelList.length === 1 ? "" : "s"} for{" "}
+                          {providerValue}
+                        </p>
                       </div>
                     </div>
                     <label className={labelClass}>System prompt</label>
