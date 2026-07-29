@@ -15,7 +15,7 @@ import { inputClass, labelClass, formatWhen } from "./studioConstants";
 
 const COLUMNS = [
   { key: "topic", label: "Topic", wide: true },
-  { key: "keywords", label: "Keywords", wide: true },
+  { key: "keywords", label: "Keywords (primary + secondary)", wide: true },
   { key: "seedContext", label: "Context / brief", wide: true },
   { key: "imagePrompt", label: "Image direction", wide: true },
   { key: "audience", label: "Audience" },
