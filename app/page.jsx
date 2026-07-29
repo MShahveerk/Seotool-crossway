@@ -15,6 +15,7 @@ import MyApprovalsSection from "./components/MyApprovalsSection";
 import MyBlogApprovalsSection from "./components/MyBlogApprovalsSection";
 import AdminBlogSection from "./components/AdminBlogSection";
 import BlogAutomationSection from "./components/BlogAutomationSection";
+import PostAutomationSection from "./components/PostAutomationSection";
 import UrlInspectionSection from "./components/seo/UrlInspectionSection";
 import SiteHealthSection from "./components/seo/SiteHealthSection";
 import UnifiedSiteAuditSection from "./components/seo/UnifiedSiteAuditSection";
@@ -206,6 +207,12 @@ export default function Home() {
       case "blog-automation":
         return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
           <BlogAutomationSection selectedSite={selectedSite} />
+        ) : (
+          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+        );
+      case "post-automation":
+        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+          <PostAutomationSection selectedSite={selectedSite} />
         ) : (
           <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
         );

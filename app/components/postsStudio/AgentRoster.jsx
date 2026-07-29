@@ -26,7 +26,7 @@ export default function AgentRoster({ config, onPatchSite }) {
           </p>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
         {AGENT_ROLES.map((role, i) => {
           const ok = Boolean(ready[role.readyKey]);
           const isImage = role.id === "image";
@@ -97,7 +97,7 @@ export default function AgentRoster({ config, onPatchSite }) {
                     Model
                   </label>
                   <ModelCombobox
-                    id={`roster-${role.id}`}
+                    id={`post-roster-${role.id}`}
                     className={`${inputClass} mt-1 text-xs font-semibold`}
                     value={modelValue}
                     options={modelList}

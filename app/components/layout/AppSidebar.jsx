@@ -83,6 +83,7 @@ const smmMenuItems = [
   { id: "my-approvals", label: "SMM Post Approvals", icon: CheckSquare },
   { id: "admin-approvals", label: "Create Post", icon: ClipboardList, role: "super_admin" },
   { id: "post-board", label: "Post Board", icon: Columns3, role: "super_admin" },
+  { id: "post-automation", label: "Post Automation Studio", icon: Sparkles, role: "super_admin" },
 ];
 
 const blogsMenuItems = [
@@ -99,6 +100,7 @@ function canAccessCreateItem(item, role) {
     (item.id === "admin-approvals" ||
       item.id === "admin-blogs" ||
       item.id === "blog-automation" ||
+      item.id === "post-automation" ||
       item.id === "post-board" ||
       item.id === "blog-board") &&
     role === "smm"
