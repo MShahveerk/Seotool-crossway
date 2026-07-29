@@ -1,6 +1,7 @@
 import prisma from "../../../../lib/prisma";
 import { verifyApprovalQuickActionToken } from "../../../../lib/approvalQuickAction.js";
 import { declineFormPage, resultPage, QUICK_ACTION_REASON_MAX } from "../../../../lib/quickActionPages.js";
+import { resolveScheduleOnApprove } from "../../../../lib/approvalSchedule.js";
 
 export const runtime = "nodejs";
 
@@ -136,6 +137,8 @@ export async function GET(req) {
           lastAction: "approve",
           respondedAt: new Date(),
           awaitingAdminReview: true,
+          scheduledFor: resolveScheduleOnApprove(approval.scheduledFor),
+          publishStatus: approval.publishStatus === "published" ? approval.publishStatus : "unpublish",
         },
         include: {
           assignee: { select: { id: true, email: true, name: true } },
@@ -156,7 +159,7 @@ export async function GET(req) {
       return resultPage({
         title: "Post approved",
         message:
-          "Thanks — you have approved this content. The Crossway team has been notified and can proceed with scheduling or publishing.",
+          "Thanks — you have approved this content. It has been scheduled for publishing and the Crossway team has been notified.",
         tone: "success",
         kindLabel: "Approved",
         detail: approval.title ? `Post: ${approval.title}` : "",

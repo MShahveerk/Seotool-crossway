@@ -31,6 +31,14 @@ const POST_SOURCE_LABELS = {
   email_inbound: "Email",
 };
 
+const POST_STATUS_LABELS = {
+  draft: "Draft",
+  pending: "Pending",
+  edited: "Edited",
+  approved: "Approved",
+  declined: "Declined",
+};
+
 function formatDateTime(iso) {
   if (!iso) return "—";
   return formatScheduleShort(iso) || String(iso);
@@ -668,7 +676,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                         </div>
                       </div>
                       <div className="hidden sm:block capitalize text-gray-700">
-                        {a.status}
+                        {POST_STATUS_LABELS[a.status] || a.status}
                         {a.source && a.source !== "manual" ? (
                           <span className="block text-[10px] normal-case text-gray-400">
                             {POST_SOURCE_LABELS[a.source] || a.source}

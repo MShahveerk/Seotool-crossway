@@ -6,6 +6,7 @@ import {
   fetchCaptionMapByApprovalIds,
   mergeCaptionFieldsIntoApprovals,
 } from "../../../../lib/approvalCaptionMerge";
+import { resolveScheduleOnApprove } from "../../../../lib/approvalSchedule.js";
 
 export const runtime = "nodejs";
 
@@ -67,6 +68,8 @@ export async function PATCH(req, { params }) {
         lastAction: "approve",
         respondedAt: now,
         awaitingAdminReview: true,
+        scheduledFor: resolveScheduleOnApprove(approval.scheduledFor),
+        publishStatus: approval.publishStatus === "published" ? approval.publishStatus : "unpublish",
       };
       if (body.editedText !== undefined) {
         const editedTextForApprove = String(body.editedText ?? "").trim();

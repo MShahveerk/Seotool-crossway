@@ -31,8 +31,12 @@ export async function GET(req) {
     const assigneeId = session.user.id;
     const forSmmDisplay = req.nextUrl?.searchParams?.get("smmDisplay") === "1";
 
-    // SMM users see everything. Others only see their assigned items.
-    let whereClause = session.user.role === ROLES.SMM ? {} : { assigneeId };
+    // SMM users see everything except email drafts (those stay in admin Create Post until daily promotion).
+    // Assignees never see draft status — drafts are not yet submitted for approval.
+    let whereClause =
+      session.user.role === ROLES.SMM
+        ? { status: { not: "draft" } }
+        : { assigneeId, status: { not: "draft" } };
 
     if (session.user.role === ROLES.APPROVER) {
       const user = await prisma.user.findUnique({
@@ -50,6 +54,7 @@ export async function GET(req) {
         whereClause = {
           AND: [
             { assigneeId },
+            { status: { not: "draft" } },
             {
               OR: [
                 { facebookPageId: { in: allowedSites } },

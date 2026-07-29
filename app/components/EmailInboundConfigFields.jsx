@@ -6,9 +6,18 @@ export default function EmailInboundConfigFields({ config, setConfig, contentTyp
       <div>
         <p className="font-semibold text-gray-900">Email inbound (IMAP)</p>
         <p className="mt-0.5 text-xs text-gray-600">
-          Poll an inbox using the same credentials as your mail provider (e.g. Gmail app password). Unread messages
-          with an image or video attachment become {contentType === "blog" ? "blog drafts" : "post approvals"}.
-          {contentType === "blog" ? ' Use subject prefix `[BLOG]`.' : " Any unread email with media works."}
+          {contentType === "blog" ? (
+            <>
+              Poll an inbox for unread messages. Subject must start with <code className="font-mono">[BLOG]</code> and
+              include an image attachment or HTML body.
+            </>
+          ) : (
+            <>
+              Subject <strong>must include</strong> <code className="font-mono">SMM POST</code> and have an image/video
+              attachment. Only <strong>one draft</strong> is kept per account at a time (newest email wins). Every 24
+              hours the draft is sent for approval; after approval it is scheduled for publishing.
+            </>
+          )}
         </p>
       </div>
 
@@ -46,7 +55,7 @@ export default function EmailInboundConfigFields({ config, setConfig, contentTyp
             className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
             value={config.imapUser || ""}
             onChange={(e) => setConfig((c) => ({ ...c, imapUser: e.target.value }))}
-            placeholder="you@company.com"
+            placeholder="you@gmail.com"
           />
         </label>
         <label className="block">
