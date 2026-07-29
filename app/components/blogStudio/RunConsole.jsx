@@ -122,27 +122,30 @@ export default function RunConsole({ run, onCancel, cancelling }) {
                 {preview.slug && <span className="font-mono bg-white border rounded px-2 py-0.5">/{preview.slug}</span>}
                 {preview.seoTitle && <span className="bg-white border rounded px-2 py-0.5">SEO: {preview.seoTitle}</span>}
               </div>
-              {preview.featuredImagePath && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={
-                    preview.featuredImagePath.startsWith("/") ||
-                    /^(https?:|data:|blob:)/i.test(preview.featuredImagePath)
-                      ? preview.featuredImagePath
-                      : `/api/uploads/${preview.featuredImagePath}`
-                  }
-                  alt=""
-                  className="mt-3 w-full max-h-40 object-cover rounded-lg border border-gray-200"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    const el = e.currentTarget;
-                    if (el.dataset.retried === "1") return;
-                    el.dataset.retried = "1";
-                    const base = String(el.src || "").split("?")[0];
-                    if (base) el.src = `${base}?v=${Date.now()}`;
-                  }}
-                />
-              )}
+              {preview.featuredImagePath ? (
+                <div className="mt-3 overflow-hidden rounded-lg border border-gray-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={
+                      preview.featuredImagePath.startsWith("/") ||
+                      /^(https?:|data:|blob:)/i.test(preview.featuredImagePath)
+                        ? preview.featuredImagePath
+                        : `/api/uploads/${String(preview.featuredImagePath).replace(/^.*[\\/]/, "")}`
+                    }
+                    alt=""
+                    className="w-full max-h-40 object-cover"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const el = e.currentTarget;
+                      if (el.dataset.retried === "1") return;
+                      el.dataset.retried = "1";
+                      const base = String(el.src || "").split("?")[0];
+                      if (base) el.src = `${base}?_cb=${Date.now()}`;
+                    }}
+                  />
+                </div>
+              ) : null}
               {preview.html && (
                 <div
                   className="mt-3 max-h-72 overflow-auto rounded-lg border border-gray-200 bg-white p-4 prose prose-sm max-w-none text-gray-800"

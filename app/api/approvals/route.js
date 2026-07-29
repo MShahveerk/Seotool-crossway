@@ -7,10 +7,45 @@ import {
   fetchCaptionMapByApprovalIds,
   mergeCaptionFieldsIntoApprovals,
 } from "../../../lib/approvalCaptionMerge";
+import {
+  buildApprovalSiteOrFilter,
+  buildSiteApproverApprovalWhere,
+  resolveSiteEquivalents,
+} from "../../../lib/siteAccess";
 
 export const runtime = "nodejs";
 
-/** GET — approvals assigned to the current user. Query: smmDisplay=1 includes auto-approved-on-assignment rows (SMM cards only). */
+const APPROVAL_SELECT = {
+  id: true,
+  title: true,
+  userEditedTitle: true,
+  caption: true,
+  userEditedCaption: true,
+  instructions: true,
+  userEditedInstructions: true,
+  bodyText: true,
+  imagePath: true,
+  backupImagePaths: true,
+  status: true,
+  userEditedText: true,
+  respondedAt: true,
+  lastAction: true,
+  createdAt: true,
+  updatedAt: true,
+  hiddenFromAssignee: true,
+  skippedAssigneeReview: true,
+  awaitingAdminReview: true,
+  scheduledFor: true,
+  publishStatus: true,
+  siteLink: true,
+  facebookPageId: true,
+  instagramUserId: true,
+  source: true,
+  assigneeId: true,
+  createdById: true,
+};
+
+/** GET — approvals for SMM Post Approvals. Query: site, smmDisplay=1, countOnly=1 */
 export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
@@ -21,171 +56,114 @@ export async function GET(req) {
       });
     }
 
-    if (session.user.role === ROLES.SUPER_ADMIN) {
-      return new Response(JSON.stringify({ approvals: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const assigneeId = session.user.id;
+    const role = session.user.role;
+    const userId = session.user.id;
     const forSmmDisplay = req.nextUrl?.searchParams?.get("smmDisplay") === "1";
+    const siteParam =
+      req.nextUrl?.searchParams?.get("site") || req.nextUrl?.searchParams?.get("url");
 
-    // SMM users see everything except email drafts (those stay in admin Create Post until daily promotion).
-    // Assignees never see draft status — drafts are not yet submitted for approval.
-    let whereClause =
-      session.user.role === ROLES.SMM
-        ? { status: { not: "draft" } }
-        : { assigneeId, status: { not: "draft" } };
-
-    if (session.user.role === ROLES.APPROVER) {
+    // Pending / actionable posts must always be listable for SMM + super_admin.
+    // Site approvers/users see primary-assignee rows OR any post for their mapped sites
+    // (same audience as approval emails — secondary approvers were previously excluded).
+    let whereClause;
+    if (role === ROLES.SUPER_ADMIN || role === ROLES.SMM) {
+      whereClause = { status: { not: "draft" } };
+    } else if (role === ROLES.APPROVER || role === ROLES.USER) {
       const user = await prisma.user.findUnique({
-        where: { id: assigneeId },
-        include: { accessibleSites: true }
+        where: { id: userId },
+        include: { accessibleSites: true },
       });
-      const allowedSites = [
-        user.siteLink,
-        user.facebookPageId,
-        user.instagramUserId,
-        ...(user.accessibleSites || []).map(s => s.siteLink)
-      ].filter(Boolean);
-
-      if (allowedSites.length > 0) {
-        whereClause = {
-          AND: [
-            { assigneeId },
-            { status: { not: "draft" } },
-            {
-              OR: [
-                { facebookPageId: { in: allowedSites } },
-                { siteLink: { in: allowedSites } }
-              ]
-            }
-          ]
-        };
-      }
+      whereClause = await buildSiteApproverApprovalWhere(prisma, user || { id: userId });
+    } else {
+      whereClause = { assigneeId: userId, status: { not: "draft" } };
     }
 
-    // Filter by selected site / meta page ID if specified in the query
-    const siteParam = req.nextUrl?.searchParams?.get("site") || req.nextUrl?.searchParams?.get("url");
     if (siteParam) {
-      const cleanSite = String(siteParam).trim();
-      const normalizeLocal = (s) => {
-        try {
-          const u = new URL(s.startsWith("http") ? s : `https://${s}`);
-          return u.hostname.replace(/^www\./i, "").toLowerCase();
-        } catch {
-          return s.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/+$/, "").toLowerCase();
-        }
-      };
-      const normSite = normalizeLocal(cleanSite);
-      
-      const siteFilter = {
-        OR: [
-          { facebookPageId: cleanSite },
-          { instagramUserId: cleanSite },
-          { siteLink: cleanSite },
-          { siteLink: { contains: normSite } }
-        ]
-      };
-
-      whereClause = whereClause.AND 
-        ? { AND: [...whereClause.AND, siteFilter] }
-        : { AND: [whereClause, siteFilter] };
+      const equivalents = await resolveSiteEquivalents(prisma, String(siteParam).trim());
+      const siteFilter = buildApprovalSiteOrFilter(equivalents);
+      if (siteFilter) {
+        whereClause = { AND: [whereClause, siteFilter] };
+      }
     }
 
     const countOnly = req.nextUrl?.searchParams?.get("countOnly") === "1";
     if (countOnly) {
-      let hiddenIds = new Set();
-      try {
-        const hiddenRows = await prisma.$queryRaw(
-          Prisma.sql`SELECT id FROM approvals WHERE assignee_id = ${assigneeId} AND hidden_from_assignee = true`
-        );
-        hiddenIds = new Set(
-          Array.isArray(hiddenRows) ? hiddenRows.map((r) => String((r && r.id) || "")).filter(Boolean) : []
-        );
-      } catch {}
-
-      let skippedIds = new Set();
-      try {
-        const skippedRows = await prisma.$queryRaw(
-          Prisma.sql`SELECT id FROM approvals WHERE assignee_id = ${assigneeId} AND skipped_assignee_review = true`
-        );
-        skippedIds = new Set(
-          Array.isArray(skippedRows) ? skippedRows.map((r) => String((r && r.id) || "")).filter(Boolean) : []
-        );
-      } catch {}
-
       const matchRows = await prisma.approval.findMany({
         where: {
-          ...whereClause,
-          status: { in: ["pending", "edited"] },
+          AND: [
+            whereClause,
+            { status: { in: ["pending", "edited"] } },
+            { hiddenFromAssignee: false },
+            ...(forSmmDisplay ? [] : [{ skippedAssigneeReview: false }]),
+          ],
         },
         select: { id: true },
       });
-
-      const count = matchRows.filter((a) => !hiddenIds.has(a.id) && !skippedIds.has(a.id)).length;
-
-      return new Response(JSON.stringify({ count }), {
+      return new Response(JSON.stringify({ count: matchRows.length }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    const rows = await prisma.approval.findMany({
-      where: whereClause,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        title: true,
-        userEditedTitle: true,
-        caption: true,
-        userEditedCaption: true,
-        instructions: true,
-        userEditedInstructions: true,
-        bodyText: true,
-        imagePath: true,
-        status: true,
-        userEditedText: true,
-        respondedAt: true,
-        lastAction: true,
-        createdAt: true,
-        updatedAt: true,
-        hiddenFromAssignee: true,
-        skippedAssigneeReview: true,
-      },
+    const selectWithAssignee = {
+      ...APPROVAL_SELECT,
+      assignee: { select: { id: true, name: true, email: true } },
+    };
+
+    let rows;
+    try {
+      rows = await prisma.approval.findMany({
+        where: whereClause,
+        orderBy: { createdAt: "desc" },
+        select: selectWithAssignee,
+      });
+    } catch (selectErr) {
+      // Fallback if backupImagePaths column not migrated yet
+      if (
+        String(selectErr.message || "").includes("backupImagePaths") ||
+        String(selectErr.message || "").includes("backup_image")
+      ) {
+        const { backupImagePaths: _b, ...rest } = APPROVAL_SELECT;
+        rows = await prisma.approval.findMany({
+          where: whereClause,
+          orderBy: { createdAt: "desc" },
+          select: {
+            ...rest,
+            assignee: { select: { id: true, name: true, email: true } },
+          },
+        });
+        rows = rows.map((r) => ({ ...r, backupImagePaths: [] }));
+      } else {
+        throw selectErr;
+      }
+    }
+
+    // Assignees: hide draft-like hidden rows. SMM/super_admin still see non-draft pending.
+    let approvals = rows.filter((a) => {
+      if (role === ROLES.APPROVER && a.hiddenFromAssignee) return false;
+      if (role === ROLES.APPROVER && a.skippedAssigneeReview && !forSmmDisplay) return false;
+      return true;
     });
 
-    let hiddenIds = new Set();
-    try {
-      const hiddenRows = await prisma.$queryRaw(
-        Prisma.sql`SELECT id FROM approvals WHERE assignee_id = ${assigneeId} AND hidden_from_assignee = true`
-      );
-      hiddenIds = new Set(
-        Array.isArray(hiddenRows) ? hiddenRows.map((r) => String((r && r.id) || "")).filter(Boolean) : []
-      );
-    } catch {
-      // Column missing or DB mismatch — return all rows for this assignee
+    // For pure assignee view (not smmDisplay), skip auto-approved-on-assignment
+    if (role !== ROLES.SUPER_ADMIN && role !== ROLES.SMM && !forSmmDisplay) {
+      approvals = approvals.filter((a) => !a.skippedAssigneeReview);
+      approvals = approvals.filter((a) => !a.hiddenFromAssignee);
     }
 
-    let approvals = rows.filter((a) => !hiddenIds.has(a.id));
-
-    if (!forSmmDisplay) {
-      let skippedIds = new Set();
-      try {
-        const skippedRows = await prisma.$queryRaw(
-          Prisma.sql`SELECT id FROM approvals WHERE assignee_id = ${assigneeId} AND skipped_assignee_review = true`
-        );
-        skippedIds = new Set(
-          Array.isArray(skippedRows)
-            ? skippedRows.map((r) => String((r && r.id) || "")).filter(Boolean)
-            : []
-        );
-      } catch {
-        // Column missing — keep all visible rows
-      }
-      approvals = approvals.filter((a) => !skippedIds.has(a.id));
-    }
+    // Prefer actionable first in the payload order
+    const rank = (s) => {
+      const v = String(s || "").toLowerCase();
+      if (v === "pending") return 0;
+      if (v === "edited") return 1;
+      if (v === "approved") return 2;
+      return 3;
+    };
+    approvals.sort((a, b) => {
+      const d = rank(a.status) - rank(b.status);
+      if (d !== 0) return d;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
     const captionMap = await fetchCaptionMapByApprovalIds(
       prisma,
@@ -198,7 +176,8 @@ export async function GET(req) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message || "Failed to load approvals" }), {
+    console.error("[approvals GET]", error);
+    return new Response(JSON.stringify({ error: error.message || "Failed to list approvals" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

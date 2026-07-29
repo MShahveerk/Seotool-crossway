@@ -1,6 +1,7 @@
 "use client";
 
 import { FiExternalLink, FiLoader, FiXCircle } from "react-icons/fi";
+import ApprovalMediaPreview from "../ApprovalMediaPreview";
 import { formatMoney, formatWhen, statusTone } from "./studioConstants";
 
 export default function RunConsole({ run, onCancel, cancelling }) {
@@ -122,14 +123,14 @@ export default function RunConsole({ run, onCancel, cancelling }) {
                   <span className="bg-white border rounded px-2 py-0.5 capitalize">{preview.platform}</span>
                 </div>
               )}
-              {preview.imagePath && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={preview.imagePath}
-                  alt=""
-                  className="mt-3 w-full max-h-56 object-cover rounded-lg border border-gray-200 aspect-square"
-                />
-              )}
+              {preview.imagePath ? (
+                <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 aspect-square bg-slate-50">
+                  <ApprovalMediaPreview
+                    src={preview.imagePath}
+                    className="w-full max-h-56 h-full object-cover"
+                  />
+                </div>
+              ) : null}
               {preview.caption && (
                 <pre className="mt-3 max-h-72 overflow-auto rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-800 whitespace-pre-wrap font-sans">
                   {preview.caption}

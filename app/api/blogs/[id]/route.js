@@ -65,6 +65,43 @@ export async function PATCH(req, { params }) {
     const isAssignee = blog.assigneeId === session.user.id;
     if (!isAdmin && !isAssignee) return Response.json({ error: "Forbidden" }, { status: 403 });
 
+    if (action === "promote_backup") {
+      if (!OPEN.has(blog.status)) {
+        return Response.json(
+          { error: "Can only switch images before approval is closed." },
+          { status: 400 }
+        );
+      }
+      const backups = Array.isArray(blog.backupImagePaths)
+        ? blog.backupImagePaths.map((p) => String(p || "").trim()).filter(Boolean)
+        : [];
+      const idx = Number(body.backupIndex);
+      if (!Number.isInteger(idx) || idx < 0 || idx >= backups.length) {
+        return Response.json({ error: "Invalid backupIndex." }, { status: 400 });
+      }
+      const chosen = backups[idx];
+      const nextBackups = [blog.featuredImagePath, ...backups.filter((_, i) => i !== idx)]
+        .map((p) => String(p || "").trim())
+        .filter((p) => p && p !== chosen)
+        .slice(0, 3);
+      const payload = applyFeaturedToPayload(blog.payload, {
+        featuredImagePath: chosen,
+        featuredImageAlt: blog.featuredImageAlt || "",
+        replacedImage: true,
+      });
+      const updated = await prisma.blogPost.update({
+        where: { id },
+        data: {
+          featuredImagePath: chosen,
+          backupImagePaths: nextBackups,
+          payload,
+          lastAction: "promote_backup",
+        },
+        include: BLOG_INCLUDE,
+      });
+      return Response.json({ blog: updated });
+    }
+
     const isOpen = OPEN.has(blog.status);
     const declinedOk = blog.status === "declined" && DECLINED_ACTIONS.has(action);
     const scheduleOk = action === "schedule" && (isAdmin || blog.status === "approved");

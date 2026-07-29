@@ -58,6 +58,8 @@ model Approval {
   caption               String    @default("") @db.VarChar(2000)
   bodyText              String    @map("body_text") @db.Text
   imagePath             String    @map("image_path") @db.VarChar(512)
+  /// Up to 3 alternate creatives; assignee/admin can promote one before approval.
+  backupImagePaths      Json?     @map("backup_image_paths")
   assigneeId            String    @map("assignee_id") @db.VarChar(191)
   createdById           String    @map("created_by_id") @db.VarChar(191)
   status                String    @default("pending") @db.VarChar(32)
@@ -322,6 +324,8 @@ model BlogPost {
   wpStatus              String    @default("draft") @map("wp_status") @db.VarChar(32)
   featuredImagePath     String?   @map("featured_image_path") @db.VarChar(512)
   featuredImageAlt      String?   @map("featured_image_alt") @db.VarChar(512)
+  /// Up to 3 alternate featured images; switchable before approval.
+  backupImagePaths      Json?     @map("backup_image_paths")
   payload               Json
   userEditedTitle       String?   @map("user_edited_title") @db.VarChar(512)
   userEditedSlug        String?   @map("user_edited_slug") @db.VarChar(255)
@@ -633,6 +637,8 @@ model BlogAutomationSiteConfig {
   serpNotes            String?   @map("serp_notes") @db.Text
   referenceImagePath   String?   @map("reference_image_path") @db.VarChar(512)
   imagePrompt          String?   @map("image_prompt") @db.Text
+  /// When true, generate up to 3 alternate featured images alongside the primary.
+  generateBackupImages Boolean   @default(false) @map("generate_backup_images")
   agent1Prompt         String?   @map("agent1_prompt") @db.Text
   agent2Prompt         String?   @map("agent2_prompt") @db.Text
   agent3Prompt         String?   @map("agent3_prompt") @db.Text
@@ -754,6 +760,8 @@ model PostAutomationSiteConfig {
   brandNotes           String?   @map("brand_notes") @db.Text
   referenceImagePath   String?   @map("reference_image_path") @db.VarChar(512)
   imagePrompt          String?   @map("image_prompt") @db.Text
+  /// When true, generate up to 3 alternate feed creatives alongside the primary.
+  generateBackupImages Boolean   @default(false) @map("generate_backup_images")
   agent1Prompt         String?   @map("agent1_prompt") @db.Text
   agent2Prompt         String?   @map("agent2_prompt") @db.Text
   interpreterPrompt    String?   @map("interpreter_prompt") @db.Text

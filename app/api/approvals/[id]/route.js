@@ -7,6 +7,7 @@ import {
   mergeCaptionFieldsIntoApprovals,
 } from "../../../../lib/approvalCaptionMerge";
 import { resolveScheduleOnApprove } from "../../../../lib/approvalSchedule.js";
+import { userCanAccessApproval } from "../../../../lib/siteAccess.js";
 
 export const runtime = "nodejs";
 
@@ -39,13 +40,7 @@ export async function PATCH(req, { params }) {
       });
     }
 
-    let hasAccess = false;
-    if (session.user.role === ROLES.SUPER_ADMIN) {
-      hasAccess = true;
-    } else if (approval.assigneeId === session.user.id) {
-      hasAccess = true;
-    }
-
+    const hasAccess = await userCanAccessApproval(prisma, session.user, approval);
     if (!hasAccess) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
@@ -53,7 +48,7 @@ export async function PATCH(req, { params }) {
       });
     }
 
-    if (!OPEN_STATUSES.has(approval.status)) {
+    if (!OPEN_STATUSES.has(approval.status) && action !== "promote_backup") {
       return new Response(
         JSON.stringify({ error: "This approval is already closed (approved or declined)." }),
         { status: 400, headers: { "Content-Type": "application/json" } }
@@ -62,7 +57,37 @@ export async function PATCH(req, { params }) {
 
     const now = new Date();
 
-    if (action === "approve") {
+    if (action === "promote_backup") {
+      if (!OPEN_STATUSES.has(approval.status)) {
+        return new Response(
+          JSON.stringify({ error: "Can only switch images before approval is closed." }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      const backups = Array.isArray(approval.backupImagePaths)
+        ? approval.backupImagePaths.map((p) => String(p || "").trim()).filter(Boolean)
+        : [];
+      const idx = Number(body.backupIndex);
+      if (!Number.isInteger(idx) || idx < 0 || idx >= backups.length) {
+        return new Response(JSON.stringify({ error: "Invalid backupIndex." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      const chosen = backups[idx];
+      const nextBackups = [approval.imagePath, ...backups.filter((_, i) => i !== idx)]
+        .map((p) => String(p || "").trim())
+        .filter((p) => p && p !== chosen)
+        .slice(0, 3);
+      await prisma.approval.update({
+        where: { id },
+        data: {
+          imagePath: chosen,
+          backupImagePaths: nextBackups,
+          lastAction: "promote_backup",
+        },
+      });
+    } else if (action === "approve") {
       const approveData = {
         status: "approved",
         lastAction: "approve",
@@ -199,10 +224,10 @@ export async function PATCH(req, { params }) {
         data: editData,
       });
     } else {
-      return new Response(JSON.stringify({ error: "Invalid action. Use approve, decline, or edit." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Invalid action. Use approve, decline, edit, or promote_backup." }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     const updated = await prisma.approval.findUnique({

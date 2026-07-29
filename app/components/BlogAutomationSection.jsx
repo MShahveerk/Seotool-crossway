@@ -736,8 +736,24 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
               <div className="space-y-4">
                 <p className="text-sm text-gray-600">
                   Image system prompt (Agents), visual guidelines below, and the reference image are applied
-                  on <strong>every</strong> manual and auto run (including Excel queue rows).
+                  on <strong>every</strong> manual and auto run (including Excel queue rows). Featured images
+                  generate as optimized JPEG (1536×1024).
                 </p>
+                <label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50/80 px-4 py-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1 rounded border-gray-300 text-[#1d9c35] focus:ring-[#1d9c35]"
+                    checked={Boolean(siteConfig.generateBackupImages)}
+                    onChange={(e) => patchSite({ generateBackupImages: e.target.checked })}
+                  />
+                  <span>
+                    <span className="text-sm font-semibold text-gray-900">Generate 3 backup images</span>
+                    <span className="block text-xs text-gray-500 mt-0.5">
+                      Adds alternate featured images you can switch to in Blog Approvals before approving.
+                      Uses extra image API cost when enabled.
+                    </span>
+                  </span>
+                </label>
                 <div>
                   <label className={labelClass}>Image visual guidelines</label>
                   <textarea

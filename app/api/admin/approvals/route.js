@@ -1,11 +1,7 @@
-import { mkdir, writeFile } from "fs/promises";
-import { existsSync } from "fs";
-import path from "path";
-import crypto from "crypto";
 import { Prisma } from "@prisma/client";
-import { requireSuperAdmin, requirePermission } from "../../../../lib/middleware/auth";
+import { requirePermission } from "../../../../lib/middleware/auth";
 import prisma from "../../../../lib/prisma";
-import { ROLES, PERMISSIONS } from "../../../../lib/rbac";
+import { PERMISSIONS } from "../../../../lib/rbac";
 import {
   fetchCaptionMapByApprovalIds,
   mergeCaptionFieldsIntoApprovals,
@@ -15,6 +11,7 @@ import {
   resolveSiteEquivalents,
 } from "../../../../lib/siteAccess";
 import { findAssigneesForSite } from "../../../../lib/blogAssignee.js";
+import { saveApprovalMediaBuffer } from "../../../../lib/approvalMedia.js";
 
 export const runtime = "nodejs";
 
@@ -40,17 +37,6 @@ function normalizeSiteForMatch(raw) {
   } catch {
     return s.replace(/^https?:\/\//i, "").replace(/\/+$/, "").toLowerCase();
   }
-}
-
-function extFromMime(mime) {
-  if (mime === "image/jpeg") return ".jpg";
-  if (mime === "image/png") return ".png";
-  if (mime === "image/webp") return ".webp";
-  if (mime === "image/gif") return ".gif";
-  if (mime === "video/mp4") return ".mp4";
-  if (mime === "video/webm") return ".webm";
-  if (mime === "video/quicktime") return ".mov";
-  return "";
 }
 
 function mediaMaxBytes(mime) {
@@ -177,14 +163,6 @@ export async function POST(req) {
       );
     }
 
-    const ext = extFromMime(mime);
-    if (!ext) {
-      return new Response(JSON.stringify({ error: "Could not derive file extension for this MIME type." }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
     const maxAllowed = mediaMaxBytes(mime);
     if (image.size > maxAllowed) {
       const mb = VIDEO_TYPES.has(mime) ? Math.round(VIDEO_MAX_BYTES / (1024 * 1024)) : 5;
@@ -206,16 +184,8 @@ export async function POST(req) {
     });
 
     const buf = Buffer.from(await image.arrayBuffer());
-    const fileName = `${crypto.randomBytes(20).toString("hex")}${ext}`;
-    const isProductionDisk = existsSync("/var/data");
-    const uploadsDir = isProductionDisk 
-      ? "/var/data/uploads/approvals" 
-      : path.join(process.cwd(), "public", "uploads", "approvals");
-    await mkdir(uploadsDir, { recursive: true });
-    const diskPath = path.join(uploadsDir, fileName);
-    await writeFile(diskPath, buf);
-
-    const imagePath = `/api/uploads/${fileName}`;
+    // Magic-byte sniff picks correct extension (Chrome nosniff/ORB safe).
+    const imagePath = await saveApprovalMediaBuffer(buf, mime);
 
     const targetPlatform = form.get("targetPlatform") ? String(form.get("targetPlatform")).trim().toLowerCase() : null;
 

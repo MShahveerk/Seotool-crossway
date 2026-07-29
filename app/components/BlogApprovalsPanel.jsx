@@ -26,21 +26,21 @@ import HumanizeTextButton from "./HumanizeTextButton";
 import EmptyState from "./ui-shared/EmptyState";
 import { LoadingSpinner } from "./ui-shared/LoadingBlock";
 import { publicMediaUrl } from "../../lib/publicMediaUrl";
+import BackupImageSwitcher from "./BackupImageSwitcher";
 
 /** Chrome sometimes caches a bad first paint — retry once with a bust, then hide. */
 function onMediaImgError(e) {
   const el = e.currentTarget;
-  if (!el || el.dataset.retried === "1") {
-    if (el) el.style.visibility = "hidden";
+  if (!el) return;
+  // Retry once with cache-bust; keep element visible so Chrome can recover after ORB.
+  if (el.dataset.retried === "1") {
+    el.alt = "Image unavailable";
     return;
   }
   el.dataset.retried = "1";
   const base = String(el.currentSrc || el.src || "").split("?")[0];
-  if (!base || base.startsWith("blob:") || base.startsWith("data:")) {
-    el.style.visibility = "hidden";
-    return;
-  }
-  el.src = `${base}?v=${Date.now()}`;
+  if (!base || base.startsWith("blob:") || base.startsWith("data:")) return;
+  el.src = `${base}?_cb=${Date.now()}`;
 }
 
 const TABS = [
@@ -660,22 +660,54 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
 
                   {tab === "media" ? (
                     <div className="space-y-4">
-                      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                        {featuredPreviewUrl ? (
-                          <img
-                            src={featuredPreviewUrl}
-                            alt={draft.featuredImageAlt || activeBlog.title || "Featured"}
-                            className="max-h-80 w-full object-cover"
-                            decoding="async"
-                            referrerPolicy="no-referrer"
-                            onError={onMediaImgError}
-                          />
-                        ) : (
-                          <div className="flex h-52 items-center justify-center gap-2 text-sm text-slate-400">
-                            <FiImage className="h-5 w-5" /> No featured image yet
-                          </div>
-                        )}
-                      </div>
+                      {["pending", "edited"].includes(String(activeBlog?.status || "")) &&
+                      (activeBlog?.featuredImagePath ||
+                        (Array.isArray(activeBlog?.backupImagePaths) &&
+                          activeBlog.backupImagePaths.length)) ? (
+                        <BackupImageSwitcher
+                          primaryPath={activeBlog.featuredImagePath}
+                          backupPaths={activeBlog.backupImagePaths}
+                          alt={draft.featuredImageAlt || activeBlog.title || "Featured"}
+                          onPromote={async (idx) => {
+                            try {
+                              const res = await fetch(`/api/blogs/${activeBlog.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  action: "promote_backup",
+                                  backupIndex: idx,
+                                }),
+                              });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.error || "Failed to switch image");
+                              setActiveBlog(data.blog);
+                              setBlogs((prev) =>
+                                prev.map((b) => (b.id === data.blog.id ? { ...b, ...data.blog } : b))
+                              );
+                              setImageMessage("Primary featured image updated.");
+                            } catch (err) {
+                              setImageMessage(err.message || "Failed to switch image");
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                          {featuredPreviewUrl ? (
+                            <img
+                              src={featuredPreviewUrl}
+                              alt={draft.featuredImageAlt || activeBlog.title || "Featured"}
+                              className="max-h-80 w-full object-cover"
+                              decoding="async"
+                              referrerPolicy="no-referrer"
+                              onError={onMediaImgError}
+                            />
+                          ) : (
+                            <div className="flex h-52 items-center justify-center gap-2 text-sm text-slate-400">
+                              <FiImage className="h-5 w-5" /> No featured image yet
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       <input
                         ref={fileInputRef}

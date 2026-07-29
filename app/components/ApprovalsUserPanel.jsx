@@ -1,11 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiCheck, FiEdit2, FiX, FiRefreshCw, FiChevronDown, FiChevronUp, FiClock } from "react-icons/fi";
 import { formatScheduleShort } from "../../lib/timezone";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
+import BackupImageSwitcher from "./BackupImageSwitcher";
 import HumanizeTextButton from "./HumanizeTextButton";
 import { toastSuccess, toastError } from "@/lib/toast";
+import { publicMediaUrl } from "../../lib/publicMediaUrl";
+
+const TABS = [
+  { id: "actionable", label: "Needs action" },
+  { id: "pending", label: "Pending" },
+  { id: "edited", label: "Edited" },
+  { id: "all", label: "All" },
+  { id: "closed", label: "Closed" },
+];
 
 function displayBody(a) {
   if (a.userEditedText && String(a.userEditedText).trim()) return a.userEditedText;
@@ -91,28 +101,80 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [tab, setTab] = useState("actionable");
   const [openId, setOpenId] = useState(null);
   const [editDraft, setEditDraft] = useState("");
   const [titleDraft, setTitleDraft] = useState("");
   const [captionDraft, setCaptionDraft] = useState("");
   const [instructionsDraft, setInstructionsDraft] = useState("");
   const [acting, setActing] = useState(false);
+  const [promoting, setPromoting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const query = selectedSite ? `?site=${encodeURIComponent(selectedSite)}` : "";
-      const res = await fetch(`/api/approvals${query}`);
+      const params = new URLSearchParams();
+      params.set("smmDisplay", "1");
+      if (selectedSite) params.set("site", selectedSite);
+      const res = await fetch(`/api/approvals?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load approvals");
-      setItems(data.approvals || []);
+      setItems(Array.isArray(data.approvals) ? data.approvals : []);
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
   }, [selectedSite]);
+
+  const visibleItems = useMemo(() => {
+    const list = items.filter((a) => String(a.status || "").toLowerCase() !== "draft");
+    switch (tab) {
+      case "pending":
+        return list.filter((a) => a.status === "pending");
+      case "edited":
+        return list.filter((a) => a.status === "edited");
+      case "closed":
+        return list.filter((a) => a.status === "approved" || a.status === "declined");
+      case "actionable":
+        return list.filter((a) => a.status === "pending" || a.status === "edited");
+      default:
+        return list;
+    }
+  }, [items, tab]);
+
+  const counts = useMemo(() => {
+    const list = items.filter((a) => String(a.status || "").toLowerCase() !== "draft");
+    return {
+      actionable: list.filter((a) => a.status === "pending" || a.status === "edited").length,
+      pending: list.filter((a) => a.status === "pending").length,
+      edited: list.filter((a) => a.status === "edited").length,
+      closed: list.filter((a) => a.status === "approved" || a.status === "declined").length,
+      all: list.length,
+    };
+  }, [items]);
+
+  const promoteBackup = async (approvalId, backupIndex) => {
+    setPromoting(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/approvals/${approvalId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "promote_backup", backupIndex }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to switch image");
+      toastSuccess("Primary image updated");
+      await load();
+    } catch (e) {
+      setError(e.message);
+      toastError("Could not switch image", e.message);
+    } finally {
+      setPromoting(false);
+    }
+  };
 
   useEffect(() => {
     load();
@@ -175,12 +237,11 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          Review the <strong>heading</strong>, <strong>caption</strong>, and media from your administrator. You can
-          edit the heading and caption, add optional <strong>posting instructions or suggestions</strong> for your own
-          reference, edit accompanying text (media stays fixed), then approve, save your edit, or decline. Items your
-          administrator marked as approved on assignment do not appear here — no action needed from you.
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="text-sm text-gray-600 max-w-3xl">
+          Pending posts from Create Post, inbound, and Post Automation Studio appear here
+          {selectedSite ? " for the selected site" : ""}. Review media (switch backups if available), edit copy, then
+          approve or decline.
         </p>
         <button
           type="button"
@@ -191,17 +252,45 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
           Refresh
         </button>
       </div>
+
+      <div className="flex flex-wrap gap-1 border-b border-gray-200 pb-1">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg border-b-2 transition ${
+              tab === t.id
+                ? "border-[#1d9c35] text-[#1d9c35]"
+                : "border-transparent text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            {t.label}
+            <span className="ml-1 text-[10px] opacity-70">({counts[t.id] ?? 0})</span>
+          </button>
+        ))}
+      </div>
+
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
       )}
 
-      {items.length === 0 ? (
+      {!selectedSite ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Tip: select a client site in the header to focus this list. Without a site filter, SMM/admin see all
+          non-draft posts.
+        </div>
+      ) : null}
+
+      {visibleItems.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/80 px-6 py-10 text-center text-sm text-gray-500">
-          No approvals assigned to you yet.
+          {items.length === 0
+            ? "No posts to review yet for this view."
+            : "No posts in this tab. Try “Needs action” or “All”."}
         </div>
       ) : (
         <ul className="space-y-3">
-          {items.map((a) => {
+          {visibleItems.map((a) => {
             const open = openId === a.id;
             const closed = a.status === "approved" || a.status === "declined";
             const canAct = a.status === "pending" || a.status === "edited";
@@ -222,33 +311,78 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                 <button
                   type="button"
                   onClick={() => toggleOpen(a)}
-                  className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50/80"
+                  className="w-full flex items-stretch gap-3 px-4 py-3 text-left hover:bg-gray-50/80"
                 >
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{titleShown || "Approval"}</p>
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200">
+                    {a.imagePath ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={publicMediaUrl(a.imagePath, { bust: a.updatedAt || a.id })}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-gray-900 truncate">{titleShown || "Approval"}</p>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                          a.status === "pending"
+                            ? "bg-amber-50 text-amber-900 ring-1 ring-amber-200"
+                            : a.status === "edited"
+                              ? "bg-sky-50 text-sky-900 ring-1 ring-sky-200"
+                              : a.status === "approved"
+                                ? "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200"
+                                : "bg-gray-100 text-gray-600 ring-1 ring-gray-200"
+                        }`}
+                      >
+                        {a.status}
+                      </span>
+                      {Array.isArray(a.backupImagePaths) && a.backupImagePaths.length > 0 ? (
+                        <span className="text-[10px] font-semibold text-[#1d9c35]">
+                          +{a.backupImagePaths.length} backup
+                          {a.backupImagePaths.length === 1 ? "" : "s"}
+                        </span>
+                      ) : null}
+                    </div>
                     {subline ? (
                       <p className="text-xs text-gray-600 truncate mt-0.5">{subline}</p>
                     ) : null}
-                    <p className="text-xs text-gray-500 capitalize mt-0.5">
-                      {a.status}
-                      {closed && a.respondedAt ? ` · ${new Date(a.respondedAt).toLocaleString()}` : ""}
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {a.source ? `${a.source} · ` : ""}
+                      {closed && a.respondedAt
+                        ? new Date(a.respondedAt).toLocaleString()
+                        : new Date(a.createdAt).toLocaleString()}
                     </p>
                   </div>
                   {open ? (
-                    <FiChevronUp className="w-5 h-5 text-gray-400 shrink-0" />
+                    <FiChevronUp className="w-5 h-5 text-gray-400 shrink-0 self-center" />
                   ) : (
-                    <FiChevronDown className="w-5 h-5 text-gray-400 shrink-0" />
+                    <FiChevronDown className="w-5 h-5 text-gray-400 shrink-0 self-center" />
                   )}
                 </button>
                 {open && (
                   <div className="px-4 pb-4 border-t border-gray-100 pt-4 space-y-4">
-                    <div className="rounded-lg border border-gray-100 overflow-hidden bg-gray-50">
-                      <ApprovalMediaPreview
-                        src={a.imagePath}
-                        className="w-full max-h-[320px] object-contain bg-black"
-                        videoControls
+                    {canAct ? (
+                      <BackupImageSwitcher
+                        primaryPath={a.imagePath}
+                        backupPaths={a.backupImagePaths}
+                        alt={titleShown}
+                        disabled={!canAct}
+                        promoting={promoting}
+                        onPromote={(idx) => promoteBackup(a.id, idx)}
                       />
-                    </div>
+                    ) : (
+                      <div className="rounded-lg border border-gray-100 overflow-hidden bg-gray-50">
+                        <ApprovalMediaPreview
+                          src={a.imagePath}
+                          bust={a.updatedAt || a.id}
+                          className="w-full max-h-[320px] object-contain bg-black"
+                          videoControls
+                        />
+                      </div>
+                    )}
                     {!canAct ? (
                       <>
                         <div className="grid gap-3 sm:grid-cols-2">

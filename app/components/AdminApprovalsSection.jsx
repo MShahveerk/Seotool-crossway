@@ -20,6 +20,7 @@ import {
   timezoneShortLabel,
 } from "../../lib/timezone";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
+import BackupImageSwitcher from "./BackupImageSwitcher";
 import MediaCropModal from "./MediaCropModal";
 import HumanizeTextButton from "./HumanizeTextButton";
 import PostPublishConfigPanel from "./PostPublishConfigPanel";
@@ -133,6 +134,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
   });
   const [expandedApprovalId, setExpandedApprovalId] = useState(null);
   const [actionsMenuId, setActionsMenuId] = useState(null);
+  const [promotingBackup, setPromotingBackup] = useState(false);
   const actionsMenuWrapRef = useRef(null);
   const approvalImageInputRef = useRef(null);
 
@@ -266,6 +268,25 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
       }
     } catch (e) {
       setError(e.message);
+    }
+  };
+
+  const promoteBackup = async (id, backupIndex) => {
+    setError("");
+    setPromotingBackup(true);
+    try {
+      const res = await fetch(`/api/approvals/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "promote_backup", backupIndex }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to switch image");
+      await load();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setPromotingBackup(false);
     }
   };
 
@@ -815,13 +836,26 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
                               Media preview
                             </p>
-                            <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
-                              <ApprovalMediaPreview
-                                src={a.imagePath}
-                                className="w-full max-h-[220px] object-contain bg-black"
-                                videoControls
+                            {["pending", "edited"].includes(String(a.status || "")) &&
+                            Array.isArray(a.backupImagePaths) &&
+                            a.backupImagePaths.length > 0 ? (
+                              <BackupImageSwitcher
+                                primaryPath={a.imagePath}
+                                backupPaths={a.backupImagePaths}
+                                alt={a.title || "Creative"}
+                                promoting={promotingBackup}
+                                onPromote={(idx) => promoteBackup(a.id, idx)}
                               />
-                            </div>
+                            ) : (
+                              <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
+                                <ApprovalMediaPreview
+                                  src={a.imagePath}
+                                  bust={a.updatedAt || a.id}
+                                  className="w-full max-h-[220px] object-contain bg-black"
+                                  videoControls
+                                />
+                              </div>
+                            )}
                           </div>
                             <div className="space-y-4 min-w-0">
                             <div className="grid gap-3 sm:grid-cols-2">
