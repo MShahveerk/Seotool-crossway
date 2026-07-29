@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FiUpload,
   FiSave,
@@ -101,6 +101,20 @@ export default function ExcelQueuePanel({
 
   const siteQ = siteLink ? `?siteLink=${encodeURIComponent(siteLink)}` : "";
 
+  // Keep parent callbacks in refs so load() does not re-fire when parent re-renders.
+  const onPatchSiteRef = useRef(onPatchSite);
+  const onMessageRef = useRef(onMessage);
+  const siteConfigRef = useRef(siteConfig);
+  useEffect(() => {
+    onPatchSiteRef.current = onPatchSite;
+  }, [onPatchSite]);
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
+  useEffect(() => {
+    siteConfigRef.current = siteConfig;
+  }, [siteConfig]);
+
   const load = useCallback(async () => {
     if (!siteLink) return;
     setLoading(true);
@@ -111,14 +125,26 @@ export default function ExcelQueuePanel({
       setCampaign(data.campaign || null);
       setSchedule(data.schedule || null);
       setMaxRows(data.maxRows || 50);
+
+      // Only sync schedule fields when they actually differ (avoids parent update loops).
       if (data.config) {
-        onPatchSite?.({
-          autoIntervalMinutes: data.config.autoIntervalMinutes,
-          autoEnabled: data.config.autoEnabled,
-          autoSource: data.config.autoSource,
-          lastAutoAt: data.config.lastAutoAt,
-        });
+        const cur = siteConfigRef.current || {};
+        const patch = {};
+        if (cur.autoIntervalMinutes !== data.config.autoIntervalMinutes) {
+          patch.autoIntervalMinutes = data.config.autoIntervalMinutes;
+        }
+        if (Boolean(cur.autoEnabled) !== Boolean(data.config.autoEnabled)) {
+          patch.autoEnabled = data.config.autoEnabled;
+        }
+        if ((cur.autoSource || "seed") !== (data.config.autoSource || "seed")) {
+          patch.autoSource = data.config.autoSource;
+        }
+        const curLast = cur.lastAutoAt ? String(cur.lastAutoAt) : "";
+        const nextLast = data.config.lastAutoAt ? String(data.config.lastAutoAt) : "";
+        if (curLast !== nextLast) patch.lastAutoAt = data.config.lastAutoAt;
+        if (Object.keys(patch).length) onPatchSiteRef.current?.(patch);
       }
+
       const next = {};
       for (const r of data.campaign?.rows || []) {
         next[r.id] = {
@@ -135,11 +161,11 @@ export default function ExcelQueuePanel({
       setDrafts(next);
       setDirty(false);
     } catch (err) {
-      onMessage?.({ ok: false, text: err.message });
+      onMessageRef.current?.({ ok: false, text: err.message });
     } finally {
       setLoading(false);
     }
-  }, [siteLink, siteQ, onMessage, onPatchSite]);
+  }, [siteLink, siteQ]);
 
   useEffect(() => {
     load();

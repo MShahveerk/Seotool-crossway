@@ -153,7 +153,10 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     return () => clearInterval(t);
   }, [activeRun?.id, activeRun?.status, loadRuns]);
 
-  const patchSite = (patch) => setSiteConfig((c) => (c ? { ...c, ...patch } : c));
+  const patchSite = useCallback(
+    (patch) => setSiteConfig((c) => (c ? { ...c, ...patch } : c)),
+    []
+  );
 
   const saveEngine = async (mode) => {
     setSaving(true);
