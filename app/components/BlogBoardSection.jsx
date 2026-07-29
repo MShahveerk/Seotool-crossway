@@ -31,11 +31,19 @@ export default function BlogBoardSection({ selectedSite = "" }) {
       setItems(
         (data.blogs || [])
           .filter((b) => b.status !== "deleted")
-          .map((b) => ({
-            ...b,
-            displayTitle: b.title,
-            imagePath: b.featuredImagePath || b.featuredImageUrl || "",
-          }))
+          .map((b) => {
+            const payload = b.payload && typeof b.payload === "object" ? b.payload : {};
+            return {
+              ...b,
+              displayTitle: b.title,
+              imagePath:
+                b.featuredImagePath ||
+                b.featuredImageUrl ||
+                payload.featuredImageUrl ||
+                payload.featured_image ||
+                "",
+            };
+          })
       );
     } catch (err) {
       setError(err.message || "Failed to load blogs");

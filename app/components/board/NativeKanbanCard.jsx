@@ -2,21 +2,29 @@
 
 import { useState } from "react";
 import { formatScheduleShort } from "@/lib/timezone";
-
-function isVideoPath(path) {
-  return /\.(mp4|webm|mov)(\?|$)/i.test(String(path || ""));
-}
+import { isBoardVideoPath, resolveBoardMedia } from "./resolveBoardMedia";
 
 /** HTML5 drag fallback when playhtml is unavailable. */
 export default function NativeKanbanCard({ item, columnId, locked, onMoveToColumn, index = 0 }) {
   const [moving, setMoving] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
   const title = item.displayTitle || item.title || item.userEditedTitle || "Untitled";
-  const media = item.imagePath || item.featuredImagePath || "";
+  const media = resolveBoardMedia(item);
   const scheduleLabel = item.scheduledFor ? formatScheduleShort(item.scheduledFor) : "";
 
   if (locked) {
     return (
       <article className="cw-board__card" data-locked="true" style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}>
+        {media && !imgFailed ? (
+          <div className="cw-board__card-media">
+            {isBoardVideoPath(media) ? (
+              <video src={media} muted playsInline preload="metadata" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={media} alt="" draggable={false} onError={() => setImgFailed(true)} />
+            )}
+          </div>
+        ) : null}
         <div className="cw-board__card-title">{title}</div>
       </article>
     );
@@ -45,13 +53,13 @@ export default function NativeKanbanCard({ item, columnId, locked, onMoveToColum
         }
       }}
     >
-      {media ? (
+      {media && !imgFailed ? (
         <div className="cw-board__card-media">
-          {isVideoPath(media) ? (
+          {isBoardVideoPath(media) ? (
             <video src={media} muted playsInline preload="metadata" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={media} alt="" />
+            <img src={media} alt="" draggable={false} onError={() => setImgFailed(true)} />
           )}
         </div>
       ) : null}

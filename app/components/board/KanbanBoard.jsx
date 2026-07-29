@@ -38,7 +38,6 @@ export default function KanbanBoard({
   playhtml = true,
 }) {
   const [toast, setToast] = useState("");
-  const [dropHint, setDropHint] = useState("");
   const boundsId = `${boardId}-bounds`;
   const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
   const grouped = useMemo(
@@ -118,9 +117,7 @@ export default function KanbanBoard({
                   data-board-id={boardId}
                   data-column-id={col.id}
                   data-locked={col.locked ? "true" : "false"}
-                  data-drop-active={dropHint === col.id ? "true" : "false"}
-                  onPointerEnter={() => setDropHint(col.id)}
-                  onPointerLeave={() => setDropHint((h) => (h === col.id ? "" : h))}
+                  data-drop-active="false"
                 >
                   <div className="cw-board__lane-head">
                     <div className="cw-board__lane-title">

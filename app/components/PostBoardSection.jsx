@@ -32,6 +32,7 @@ export default function PostBoardSection({ selectedSite = "" }) {
         (data.approvals || []).map((a) => ({
           ...a,
           displayTitle: a.userEditedTitle || a.title,
+          imagePath: a.imagePath || a.mediaPath || "",
         }))
       );
     } catch (err) {

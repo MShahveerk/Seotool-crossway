@@ -1,92 +1,155 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { CanMoveElement, usePlayContext } from "@playhtml/react";
+import { useEffect, useRef, useState } from "react";
+import { usePlayContext } from "@playhtml/react";
 import { formatScheduleShort } from "@/lib/timezone";
-
-function isVideoPath(path) {
-  return /\.(mp4|webm|mov)(\?|$)/i.test(String(path || ""));
-}
+import { isBoardVideoPath, resolveBoardMedia } from "./resolveBoardMedia";
 
 /**
- * Draggable playhtml card. Dropping over a column commits a status change.
- * Published cards are locked (no CanMove).
+ * Physically draggable board card (pointer capture + translate).
+ * Lives inside PlayProvider for live cursors/room; status changes on drop into a column.
  */
 export default function KanbanCard({
   item,
   columnId,
   boardId,
-  boundsSelector,
   locked,
   onMoveToColumn,
   index = 0,
 }) {
-  const { deleteElementData } = usePlayContext();
+  const { isLoading: playLoading } = usePlayContext();
   const [moving, setMoving] = useState(false);
-  const dragActive = useRef(false);
-  const elementId = `${boardId}-card-${item.id}`;
+  const [imgFailed, setImgFailed] = useState(false);
+  const cardRef = useRef(null);
+  const dragState = useRef(null);
+  const onMoveRef = useRef(onMoveToColumn);
+  onMoveRef.current = onMoveToColumn;
 
   const title = item.displayTitle || item.title || item.userEditedTitle || "Untitled";
-  const media = item.imagePath || item.featuredImagePath || "";
+  const media = resolveBoardMedia(item);
   const scheduleLabel = item.scheduledFor ? formatScheduleShort(item.scheduledFor) : "";
   const source = item.source && item.source !== "manual" ? item.source : "";
 
-  const commitDrop = async (el) => {
-    if (!el || locked || moving) return;
-    const rect = el.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const lanes = document.querySelectorAll(`[data-board-id="${boardId}"][data-column-id]`);
-    let hit = null;
-    lanes.forEach((lane) => {
-      const r = lane.getBoundingClientRect();
-      if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
-        hit = lane.getAttribute("data-column-id");
-      }
-    });
+  useEffect(() => {
+    setImgFailed(false);
+  }, [media]);
 
-    const clearPlayPos = () => {
-      try {
-        deleteElementData?.(elementId);
-      } catch {
-        /* ignore */
-      }
-      if (el) {
-        el.style.transform = "";
-        el.style.left = "";
-        el.style.top = "";
-      }
+  useEffect(() => {
+    if (locked) return undefined;
+    const el = cardRef.current;
+    if (!el) return undefined;
+
+    const clearTransform = () => {
+      el.style.transform = "";
+      el.style.zIndex = "";
+      el.classList.remove("cw-board__card--dragging");
+      document.querySelectorAll("[data-board-id][data-drop-active='true']").forEach((lane) => {
+        lane.setAttribute("data-drop-active", "false");
+      });
     };
 
-    if (!hit || hit === columnId) {
-      clearPlayPos();
-      return;
-    }
-    if (hit === "published") {
-      clearPlayPos();
-      return;
-    }
+    const hitColumnAt = (clientX, clientY) => {
+      const lanes = document.querySelectorAll(`[data-board-id="${boardId}"][data-column-id]`);
+      let hit = null;
+      lanes.forEach((lane) => {
+        const r = lane.getBoundingClientRect();
+        const active = clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
+        lane.setAttribute("data-drop-active", active ? "true" : "false");
+        if (active) hit = lane.getAttribute("data-column-id");
+      });
+      return hit;
+    };
 
-    setMoving(true);
-    try {
-      await onMoveToColumn(item, hit, columnId);
-      clearPlayPos();
-    } catch {
-      clearPlayPos();
-    } finally {
-      setMoving(false);
-    }
-  };
+    const onPointerDown = (e) => {
+      if (e.button != null && e.button !== 0) return;
+      if (moving) return;
+      if (e.target?.closest?.("a,button,input,textarea,select")) return;
+
+      dragState.current = {
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        dragging: false,
+      };
+
+      const onPointerMove = (ev) => {
+        const st = dragState.current;
+        if (!st || ev.pointerId !== st.pointerId) return;
+        const dx = ev.clientX - st.startX;
+        const dy = ev.clientY - st.startY;
+        if (!st.dragging && Math.hypot(dx, dy) < 5) return;
+        if (!st.dragging) {
+          st.dragging = true;
+          el.classList.add("cw-board__card--dragging");
+          el.style.zIndex = "50";
+          try {
+            el.setPointerCapture(ev.pointerId);
+          } catch {
+            /* ignore */
+          }
+        }
+        el.style.transform = `translate(${dx}px, ${dy}px)`;
+        hitColumnAt(ev.clientX, ev.clientY);
+        ev.preventDefault();
+      };
+
+      const finish = async (ev) => {
+        const st = dragState.current;
+        if (!st || ev.pointerId !== st.pointerId) return;
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", finish);
+        window.removeEventListener("pointercancel", finish);
+        dragState.current = null;
+        try {
+          el.releasePointerCapture(ev.pointerId);
+        } catch {
+          /* ignore */
+        }
+
+        const hit = st.dragging ? hitColumnAt(ev.clientX, ev.clientY) : null;
+        clearTransform();
+
+        if (!st.dragging || !hit || hit === columnId || hit === "published") return;
+
+        setMoving(true);
+        try {
+          await onMoveRef.current(item, hit, columnId);
+        } catch {
+          /* toast handled upstream */
+        } finally {
+          setMoving(false);
+          clearTransform();
+        }
+      };
+
+      window.addEventListener("pointermove", onPointerMove, { passive: false });
+      window.addEventListener("pointerup", finish);
+      window.addEventListener("pointercancel", finish);
+    };
+
+    el.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      el.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [locked, moving, columnId, boardId, item]);
 
   const body = (
     <>
-      {media ? (
+      {media && !imgFailed ? (
         <div className="cw-board__card-media">
-          {isVideoPath(media) ? (
+          {isBoardVideoPath(media) ? (
             <video src={media} muted playsInline preload="metadata" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={media} alt="" />
+            <img
+              src={media}
+              alt=""
+              loading="eager"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              draggable={false}
+              onError={() => setImgFailed(true)}
+            />
           )}
         </div>
       ) : null}
@@ -99,52 +162,21 @@ export default function KanbanCard({
         {source ? <span className="cw-board__card-tag">{source}</span> : null}
         {item.publishError ? <span className="cw-board__card-tag cw-board__card-tag--danger">error</span> : null}
         {locked ? <span className="cw-board__card-tag">locked</span> : null}
+        {!locked && playLoading ? <span className="cw-board__card-tag">syncing</span> : null}
       </div>
     </>
   );
 
-  if (locked) {
-    return (
-      <article
-        className="cw-board__card"
-        data-locked="true"
-        style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
-      >
-        {body}
-      </article>
-    );
-  }
-
   return (
-    <CanMoveElement
-      standalone
-      bounds={boundsSelector}
-      boundsMinVisible={0.35}
-      boundsMinVisiblePx={40}
+    <article
+      ref={cardRef}
+      id={`${boardId}-card-${item.id}`}
+      className="cw-board__card"
+      data-locked={locked ? "true" : "false"}
+      data-moving={moving ? "true" : "false"}
+      style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
     >
-      {({ ref }) => (
-        <article
-          ref={ref}
-          id={elementId}
-          className="cw-board__card"
-          data-moving={moving ? "true" : "false"}
-          style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
-          onPointerDown={() => {
-            dragActive.current = true;
-          }}
-          onPointerUp={(e) => {
-            if (!dragActive.current) return;
-            dragActive.current = false;
-            const el = e.currentTarget;
-            window.setTimeout(() => commitDrop(el), 40);
-          }}
-          onPointerCancel={() => {
-            dragActive.current = false;
-          }}
-        >
-          {body}
-        </article>
-      )}
-    </CanMoveElement>
+      {body}
+    </article>
   );
 }

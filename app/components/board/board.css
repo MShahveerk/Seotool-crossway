@@ -113,10 +113,15 @@
 .cw-board__scroller {
   position: relative;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
   padding-bottom: 0.5rem;
   scrollbar-width: thin;
   scrollbar-color: rgba(14, 255, 42, 0.35) transparent;
+}
+
+.cw-board__lane,
+.cw-board__cards {
+  overflow: visible;
 }
 
 .cw-board__lanes {
@@ -226,6 +231,16 @@
   color: rgba(232, 240, 233, 0.35);
 }
 
+/* playhtml adds .playhtml-loading (pointer-events:none) until PartyKit syncs — never block the board */
+.cw-board .playhtml-loading,
+.cw-board [can-move].playhtml-loading {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  animation: none !important;
+  transform: none;
+}
+
 .cw-board__card {
   position: relative;
   z-index: 2;
@@ -239,8 +254,17 @@
   cursor: grab;
   touch-action: none;
   user-select: none;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  -webkit-user-drag: none;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
   animation: cw-board-card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cw-board__card--dragging {
+  cursor: grabbing;
+  transition: none !important;
+  animation: none !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(14, 255, 42, 0.35);
+  opacity: 0.96;
 }
 
 .cw-board__card:hover {
@@ -306,7 +330,8 @@
   height: 5.5rem;
   border-radius: 0.45rem;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 
 .cw-board__card-media img,
@@ -315,6 +340,9 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .cw-board__arrows {
