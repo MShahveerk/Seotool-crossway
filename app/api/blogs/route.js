@@ -14,11 +14,17 @@ export async function GET(req) {
     const siteParam = req.nextUrl.searchParams.get("site") || req.nextUrl.searchParams.get("url") || "";
     const whereClause = await buildBlogSiteFilter(prisma, siteParam, session.user, session.user.role);
 
-    const statusParam = String(req.nextUrl.searchParams.get("status") || "").trim();
-    const openOnly = statusParam !== "all";
-    const statusFilter = openOnly
-      ? { status: { in: ["pending", "edited", "declined"] } }
-      : { status: { not: "draft" } };
+    const statusParam = String(req.nextUrl.searchParams.get("status") || "open").trim().toLowerCase();
+    const ALLOWED = new Set(["pending", "edited", "declined", "approved"]);
+    let statusFilter;
+    if (statusParam === "all") {
+      statusFilter = { status: { in: ["pending", "edited", "declined", "approved"] } };
+    } else if (ALLOWED.has(statusParam)) {
+      statusFilter = { status: statusParam };
+    } else {
+      // Default "open" queue
+      statusFilter = { status: { in: ["pending", "edited", "declined"] } };
+    }
 
     const blogs = await prisma.blogPost.findMany({
       where: {

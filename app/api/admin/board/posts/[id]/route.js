@@ -54,10 +54,12 @@ export async function PATCH(req, { params }) {
       data.awaitingAdminReview = false;
       data.lastAction = "approve";
       data.respondedAt = new Date();
+      data.publishError = null;
     }
-    if (toColumn === "pending") {
+    if (toColumn === "pending" || toColumn === "edited" || toColumn === "draft") {
       data.awaitingAdminReview = false;
-      data.hiddenFromAssignee = false;
+      data.hiddenFromAssignee = toColumn === "draft" ? true : false;
+      data.publishError = null;
     }
     if (toColumn === "declined") {
       data.lastAction = "decline";

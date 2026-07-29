@@ -10,6 +10,8 @@ import { BLOG_INCLUDE } from "@/lib/blogAccess.js";
 import { resolveScheduleOnApprove } from "@/lib/approvalSchedule.js";
 import { notifyOnBoardMove } from "@/lib/boardNotifications.js";
 import { publishBlogNow, syncBlogScheduleToWordpress } from "@/lib/blogPublishJobs.js";
+import { pullBlogBackToWordpressDraft } from "@/lib/blogWordpressPullback.js";
+import { revertDeclinedBlogToDraft } from "@/lib/blogDecline.js";
 
 export const runtime = "nodejs";
 
@@ -62,9 +64,12 @@ export async function PATCH(req, { params }) {
       data.lastAction = "approve";
       data.respondedAt = new Date();
       data.hiddenFromAssignee = false;
+      data.publishError = null;
     }
-    if (toColumn === "pending") {
-      data.hiddenFromAssignee = false;
+    if (toColumn === "pending" || toColumn === "edited" || toColumn === "draft") {
+      data.hiddenFromAssignee = toColumn === "draft" ? true : false;
+      // Leaving the publish path — clear stale error badge
+      data.publishError = null;
     }
     if (toColumn === "declined") {
       data.lastAction = "decline";
@@ -79,18 +84,35 @@ export async function PATCH(req, { params }) {
 
     let publish = null;
     let scheduleSync = null;
+    let wpPullback = null;
 
     if (toColumn === "approved") {
       const dueAt = updated.scheduledFor ? new Date(updated.scheduledFor).getTime() : 0;
       if (dueAt && dueAt <= Date.now()) {
-        // Schedule already due → publish live to WordPress now
         publish = await publishBlogNow(updated.id);
         updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
       } else if (updated.scheduledFor) {
-        // Future schedule → reflect on WordPress as future
         scheduleSync = await syncBlogScheduleToWordpress(updated, updated.scheduledFor);
         updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
       }
+    }
+
+    // Leaving Approved/Failed → cancel WP future publish so WordPress cannot go live alone.
+    const leavingPublishPath =
+      (fromColumn === "approved" || fromColumn === "failed") &&
+      ["pending", "edited", "draft", "declined"].includes(toColumn);
+
+    if (leavingPublishPath) {
+      if (toColumn === "declined") {
+        const note = await revertDeclinedBlogToDraft(updated);
+        wpPullback = { synced: Boolean(note && !String(note).startsWith("Warning")), note };
+      } else {
+        wpPullback = await pullBlogBackToWordpressDraft(updated, {
+          clearSchedule: false,
+          keepDateAsDraft: Boolean(updated.scheduledFor),
+        });
+      }
+      updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
     }
 
     const notify = await notifyOnBoardMove({
@@ -110,6 +132,7 @@ export async function PATCH(req, { params }) {
       notify,
       publish,
       scheduleSync,
+      wpPullback,
     });
   } catch (error) {
     return Response.json({ error: error.message || "Move failed." }, { status: error.status || 500 });

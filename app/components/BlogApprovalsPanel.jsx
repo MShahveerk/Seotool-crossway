@@ -81,11 +81,13 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
   const [tab, setTab] = useState("content");
   const [showPreview, setShowPreview] = useState(true);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("open");
   const [declineOpen, setDeclineOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
   const [portalReady, setPortalReady] = useState(false);
+  const [activeSnapshot, setActiveSnapshot] = useState(null);
   const fileInputRef = useRef(null);
+  const closeReviewRef = useRef(() => {});
 
   useEffect(() => {
     setPortalReady(true);
@@ -95,8 +97,11 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     setLoading(true);
     setError("");
     try {
-      const q = selectedSite ? `?site=${encodeURIComponent(selectedSite)}` : "";
-      const res = await fetch(`/api/blogs${q}`);
+      const params = new URLSearchParams();
+      if (selectedSite) params.set("site", selectedSite);
+      // open = pending/edited/declined; all includes approved; specific status chips pass through
+      params.set("status", statusFilter || "open");
+      const res = await fetch(`/api/blogs?${params}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load blogs");
       setBlogs(data.blogs || []);
@@ -106,16 +111,16 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     } finally {
       setLoading(false);
     }
-  }, [selectedSite]);
+  }, [selectedSite, statusFilter]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const activeBlog = useMemo(
-    () => (activeId ? blogs.find((b) => b.id === activeId) || null : null),
-    [activeId, blogs]
-  );
+  const activeBlog = useMemo(() => {
+    if (!activeId) return null;
+    return blogs.find((b) => b.id === activeId) || activeSnapshot || null;
+  }, [activeId, blogs, activeSnapshot]);
 
   const [localPreviewUrl, setLocalPreviewUrl] = useState(null);
 
@@ -134,15 +139,15 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e) => {
-      if (e.key === "Escape" && !busy && !imageBusy) closeReview();
+      // Always allow Escape — approve/WP sync can take a while and must not trap the UI
+      if (e.key === "Escape") closeReviewRef.current();
     };
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId, busy, imageBusy]);
+  }, [activeId]);
 
   const featuredPreviewUrl = localPreviewUrl || activeBlog?.featuredImagePath || null;
   const originalAlt = activeBlog?.featuredImageAlt || "";
@@ -151,9 +156,9 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    // Status filtering is done by the API; only search locally.
+    if (!q) return blogs;
     return blogs.filter((blog) => {
-      if (statusFilter !== "all" && blog.status !== statusFilter) return false;
-      if (!q) return true;
       const hay = [
         blog.title,
         blog.userEditedTitle,
@@ -166,11 +171,12 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [blogs, query, statusFilter]);
+  }, [blogs, query]);
 
   const openBlog = (blog) => {
     const meta = blog.payload?.meta || {};
     setActiveId(blog.id);
+    setActiveSnapshot(blog);
     setTab("content");
     setShowPreview(true);
     setDeclineOpen(false);
@@ -193,12 +199,16 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
 
   const closeReview = () => {
     setActiveId(null);
+    setActiveSnapshot(null);
     setFeaturedFile(null);
     setImageMessage("");
     setDeclineOpen(false);
     setDeclineReason("");
+    setBusy(false);
+    setImageBusy(false);
     setDraft(emptyDraft());
   };
+  closeReviewRef.current = closeReview;
 
   const remove = async (id) => {
     if (!window.confirm("Delete this blog from the approval queue? A WordPress pull can re-import it later.")) {
@@ -286,11 +296,19 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
         });
       }
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Action failed");
-      if (data.warning) setError(data.warning);
+
+      // Close immediately so WP sync latency cannot trap the dialog
+      const warning = data.warning || "";
       closeReview();
-      await load();
+      if (action === "approve") {
+        // Show the approved item in the Approved filter (triggers its own reload)
+        setStatusFilter("approved");
+      } else {
+        void load();
+      }
+      if (warning) setError(warning);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -355,20 +373,27 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {["all", "pending", "edited", "declined"].map((s) => {
-            const active = statusFilter === s;
+          {[
+            { id: "open", label: "Open" },
+            { id: "pending", label: "Pending" },
+            { id: "edited", label: "Edited" },
+            { id: "declined", label: "Declined" },
+            { id: "approved", label: "Approved" },
+            { id: "all", label: "All" },
+          ].map((s) => {
+            const active = statusFilter === s.id;
             return (
               <button
-                key={s}
+                key={s.id}
                 type="button"
-                onClick={() => setStatusFilter(s)}
+                onClick={() => setStatusFilter(s.id)}
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition ${
                   active
                     ? "bg-[#1d9c35] text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
-                {s}
+                {s.label}
               </button>
             );
           })}
@@ -473,7 +498,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
           aria-modal="true"
           aria-labelledby="blog-review-title"
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !busy) closeReview();
+            if (e.target === e.currentTarget) closeReview();
           }}
         >
           <div className="flex h-[100dvh] w-full max-w-6xl flex-col overflow-hidden bg-white shadow-2xl sm:h-[min(92vh,920px)] sm:rounded-2xl sm:ring-1 sm:ring-black/10">
@@ -518,8 +543,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                 <button
                   type="button"
                   onClick={closeReview}
-                  disabled={busy}
-                  className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
                   aria-label="Close"
                 >
                   <FiX className="h-4 w-4" />
@@ -849,8 +873,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                 <button
                   type="button"
                   onClick={closeReview}
-                  disabled={busy}
-                  className="rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
+                  className="rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700"
                 >
                   Close
                 </button>
@@ -862,7 +885,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                 >
                   Save edits
                 </button>
-                {activeBlog.status !== "declined" ? (
+                {["pending", "edited"].includes(activeBlog.status) ? (
                   <>
                     <button
                       type="button"
@@ -878,7 +901,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                       onClick={() => act(activeId, "approve")}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-[#1d9c35] px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-50"
                     >
-                      <FiCheck /> Approve
+                      <FiCheck /> {busy ? "Approving…" : "Approve"}
                     </button>
                   </>
                 ) : null}
