@@ -90,6 +90,26 @@ export async function PATCH(req, { params }) {
 
     await recordBlogRevision(blog, { action: "admin_update", actorId: session.user.id });
 
+    // Board/admin schedule edits on approved blogs must re-sync WP future date.
+    const prevMs = existing.scheduledFor ? new Date(existing.scheduledFor).getTime() : null;
+    const nextMs = scheduledFor ? new Date(scheduledFor).getTime() : null;
+    const scheduleChanged = body.scheduledFor !== undefined && prevMs !== nextMs;
+    if (
+      scheduleChanged &&
+      scheduledFor &&
+      blog.status === "approved" &&
+      blog.publishStatus !== "published"
+    ) {
+      try {
+        const { syncBlogScheduleToWordpress } = await import("../../../../../lib/blogPublishJobs.js");
+        await syncBlogScheduleToWordpress(blog, scheduledFor);
+        const refreshed = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
+        return Response.json({ blog: refreshed || blog });
+      } catch (err) {
+        console.warn(`[blog] admin schedule WP sync failed for ${id}: ${err.message}`);
+      }
+    }
+
     return Response.json({ blog });
   } catch (error) {
     return Response.json({ error: error.message || "Failed to update blog." }, { status: error.status || 500 });

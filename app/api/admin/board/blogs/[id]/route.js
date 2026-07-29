@@ -7,7 +7,7 @@ import {
   getBlogBoardColumn,
 } from "@/lib/boardMeta.js";
 import { BLOG_INCLUDE } from "@/lib/blogAccess.js";
-import { resolveScheduleOnApprove } from "@/lib/approvalSchedule.js";
+import { isScheduleDue, resolveScheduleOnApprove } from "@/lib/approvalSchedule.js";
 import { notifyOnBoardMove } from "@/lib/boardNotifications.js";
 import { publishBlogNow, syncBlogScheduleToWordpress } from "@/lib/blogPublishJobs.js";
 import { pullBlogBackToWordpressDraft } from "@/lib/blogWordpressPullback.js";
@@ -87,12 +87,13 @@ export async function PATCH(req, { params }) {
     let wpPullback = null;
 
     if (toColumn === "approved") {
-      const dueAt = updated.scheduledFor ? new Date(updated.scheduledFor).getTime() : 0;
-      if (dueAt && dueAt <= Date.now()) {
+      if (isScheduleDue(updated.scheduledFor)) {
         publish = await publishBlogNow(updated.id);
         updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
       } else if (updated.scheduledFor) {
-        scheduleSync = await syncBlogScheduleToWordpress(updated, updated.scheduledFor);
+        scheduleSync = await syncBlogScheduleToWordpress(updated, updated.scheduledFor, {
+          publishIfDue: false,
+        });
         updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
       }
     }

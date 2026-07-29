@@ -216,18 +216,35 @@ export async function PATCH(req, { params }) {
 
     if (action === "approve" && updated?.scheduledFor) {
       try {
+        const { isScheduleDue } = await import("../../../../lib/approvalSchedule.js");
         const { syncBlogScheduleToWordpress, publishBlogNow } = await import(
           "../../../../lib/blogPublishJobs.js"
         );
-        const due = new Date(updated.scheduledFor).getTime() <= Date.now();
-        if (due && isAdmin) {
+        if (isScheduleDue(updated.scheduledFor) && isAdmin) {
           await publishBlogNow(updated.id);
           updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
         } else {
-          await syncBlogScheduleToWordpress(updated, updated.scheduledFor);
+          await syncBlogScheduleToWordpress(updated, updated.scheduledFor, { publishIfDue: false });
         }
       } catch (err) {
         console.warn(`[blog] post-approve WP sync failed for ${id}: ${err.message}`);
+      }
+    }
+
+    // Reschedule on an approved blog must re-sync WordPress future date.
+    if (
+      action === "schedule" &&
+      updated &&
+      updated.status === "approved" &&
+      updated.publishStatus !== "published" &&
+      updated.scheduledFor
+    ) {
+      try {
+        const { syncBlogScheduleToWordpress } = await import("../../../../lib/blogPublishJobs.js");
+        await syncBlogScheduleToWordpress(updated, updated.scheduledFor);
+        updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
+      } catch (err) {
+        console.warn(`[blog] reschedule WP sync failed for ${id}: ${err.message}`);
       }
     }
 
