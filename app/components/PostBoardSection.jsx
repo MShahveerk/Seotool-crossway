@@ -69,6 +69,7 @@ export default function PostBoardSection({ selectedSite = "" }) {
     );
     window.dispatchEvent(new CustomEvent("approvals:admin-refresh"));
     window.dispatchEvent(new CustomEvent("approvals:user-updated"));
+    return data;
   }, []);
 
   const getColumn = useCallback((item) => getPostBoardColumn(item), []);
@@ -78,7 +79,7 @@ export default function PostBoardSection({ selectedSite = "" }) {
     boardId: `posts-${room}`,
     brand: "Post Board",
     subtitle:
-      "Drag to change status · double-click for details. Published is locked. Soft arrows show automatic pipeline moves.",
+      "Drag to change status (you'll confirm side effects) · double-click for details. Draft → Pending sends approval emails.",
     columns: POST_BOARD_COLUMNS,
     autoMoves: POST_AUTO_MOVES,
     items,

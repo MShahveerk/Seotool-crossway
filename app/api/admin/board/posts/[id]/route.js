@@ -7,13 +7,14 @@ import {
   postColumnToUpdate,
 } from "@/lib/boardMeta.js";
 import { resolveScheduleOnApprove } from "@/lib/approvalSchedule.js";
+import { notifyOnBoardMove } from "@/lib/boardNotifications.js";
 
 export const runtime = "nodejs";
 
 /** PATCH — move a post card to another board column (status). Published is locked. */
 export async function PATCH(req, { params }) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    const session = await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
     const { id } = await params;
     const body = await req.json();
     const toColumn = String(body.column || body.status || "").trim().toLowerCase();
@@ -22,7 +23,13 @@ export async function PATCH(req, { params }) {
       return Response.json({ error: "column is required." }, { status: 400 });
     }
 
-    const existing = await prisma.approval.findUnique({ where: { id } });
+    const existing = await prisma.approval.findUnique({
+      where: { id },
+      include: {
+        assignee: { select: { id: true, email: true, name: true, role: true } },
+        createdBy: { select: { id: true, email: true, name: true, role: true } },
+      },
+    });
     if (!existing) return Response.json({ error: "Post not found." }, { status: 404 });
 
     if (existing.publishStatus === "published" || toColumn === "published") {
@@ -45,18 +52,33 @@ export async function PATCH(req, { params }) {
     if (toColumn === "approved") {
       data.scheduledFor = resolveScheduleOnApprove(existing.scheduledFor);
       data.awaitingAdminReview = false;
+      data.lastAction = "approve";
+      data.respondedAt = new Date();
     }
-    if (toColumn === "pending" && existing.status === "draft") {
+    if (toColumn === "pending") {
       data.awaitingAdminReview = false;
+      data.hiddenFromAssignee = false;
+    }
+    if (toColumn === "declined") {
+      data.lastAction = "decline";
+      data.respondedAt = new Date();
     }
 
     const updated = await prisma.approval.update({
       where: { id },
       data,
       include: {
-        assignee: { select: { id: true, email: true, name: true } },
-        createdBy: { select: { id: true, email: true, name: true } },
+        assignee: { select: { id: true, email: true, name: true, role: true } },
+        createdBy: { select: { id: true, email: true, name: true, role: true } },
       },
+    });
+
+    const notify = await notifyOnBoardMove({
+      kind: "post",
+      fromColumn,
+      toColumn,
+      item: updated,
+      operatorUser: session.user,
     });
 
     return Response.json({
@@ -65,6 +87,7 @@ export async function PATCH(req, { params }) {
       fromColumn,
       toColumn,
       boardColumn: getPostBoardColumn(updated),
+      notify,
     });
   } catch (error) {
     return Response.json({ error: error.message || "Move failed." }, { status: error.status || 500 });

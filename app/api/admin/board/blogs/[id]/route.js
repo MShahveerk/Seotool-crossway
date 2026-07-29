@@ -8,13 +8,14 @@ import {
 } from "@/lib/boardMeta.js";
 import { BLOG_INCLUDE } from "@/lib/blogAccess.js";
 import { resolveScheduleOnApprove } from "@/lib/approvalSchedule.js";
+import { notifyOnBoardMove } from "@/lib/boardNotifications.js";
 
 export const runtime = "nodejs";
 
 /** PATCH — move a blog card to another board column (status). Published is locked. */
 export async function PATCH(req, { params }) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    const session = await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
     const { id } = await params;
     const body = await req.json();
     const toColumn = String(body.column || body.status || "").trim().toLowerCase();
@@ -23,7 +24,10 @@ export async function PATCH(req, { params }) {
       return Response.json({ error: "column is required." }, { status: 400 });
     }
 
-    const existing = await prisma.blogPost.findUnique({ where: { id } });
+    const existing = await prisma.blogPost.findUnique({
+      where: { id },
+      include: BLOG_INCLUDE,
+    });
     if (!existing) return Response.json({ error: "Blog not found." }, { status: 404 });
 
     if (existing.publishStatus === "published" || toColumn === "published") {
@@ -52,11 +56,20 @@ export async function PATCH(req, { params }) {
       data.hiddenFromAssignee = mapped.hiddenFromAssignee;
     }
 
-    if (toColumn === "approved" && !existing.scheduledFor) {
-      data.scheduledFor = resolveScheduleOnApprove(null);
-    }
-    if (toColumn === "pending" && existing.status === "draft") {
+    if (toColumn === "approved") {
+      if (!existing.scheduledFor) {
+        data.scheduledFor = resolveScheduleOnApprove(null);
+      }
+      data.lastAction = "approve";
+      data.respondedAt = new Date();
       data.hiddenFromAssignee = false;
+    }
+    if (toColumn === "pending") {
+      data.hiddenFromAssignee = false;
+    }
+    if (toColumn === "declined") {
+      data.lastAction = "decline";
+      data.respondedAt = new Date();
     }
 
     const updated = await prisma.blogPost.update({
@@ -65,12 +78,21 @@ export async function PATCH(req, { params }) {
       include: BLOG_INCLUDE,
     });
 
+    const notify = await notifyOnBoardMove({
+      kind: "blog",
+      fromColumn,
+      toColumn,
+      item: updated,
+      operatorUser: session.user,
+    });
+
     return Response.json({
       ok: true,
       blog: updated,
       fromColumn,
       toColumn,
       boardColumn: getBlogBoardColumn({ ...updated, ...mapped }),
+      notify,
     });
   } catch (error) {
     return Response.json({ error: error.message || "Move failed." }, { status: error.status || 500 });

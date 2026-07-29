@@ -3,8 +3,10 @@
 import { useMemo, useState } from "react";
 import { Syne } from "next/font/google";
 import { formatScheduleShort } from "@/lib/timezone";
+import { describeBoardMove } from "@/lib/boardMoveEffects";
 import AutoMoveArrows from "./AutoMoveArrows";
 import BoardItemModal from "./BoardItemModal";
+import BoardMoveConfirmModal from "./BoardMoveConfirmModal";
 import KanbanCard from "./KanbanCard";
 import NativeKanbanCard from "./NativeKanbanCard";
 
@@ -41,6 +43,8 @@ export default function KanbanBoard({
 }) {
   const [toast, setToast] = useState("");
   const [detailItem, setDetailItem] = useState(null);
+  const [pendingMove, setPendingMove] = useState(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const boundsId = `${boardId}-bounds`;
   const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
   const grouped = useMemo(
@@ -77,16 +81,53 @@ export default function KanbanBoard({
     });
   }, [autoMoves, grouped]);
 
-  const handleMove = async (item, toColumn, fromColumn) => {
+  const requestMove = async (item, toColumn, fromColumn) => {
+    const from = fromColumn || getColumn(item);
+    if (!toColumn || toColumn === from || toColumn === "published") {
+      throw new Error("Invalid move");
+    }
+
+    const effect = describeBoardMove(itemKind, from, toColumn, item);
+    if (effect.requiresConfirm) {
+      // Pause until user confirms — card already snapped back visually
+      setPendingMove({ item, toColumn, fromColumn: from, effect });
+      // Resolve without throwing so the card doesn't show a failure toast
+      return;
+    }
+
+    await commitMove(item, toColumn, from);
+  };
+
+  const commitMove = async (item, toColumn, fromColumn) => {
     setToast("");
     try {
-      await onMoveToColumn(item, toColumn, fromColumn);
-      setToast(`Moved to ${columns.find((c) => c.id === toColumn)?.label || toColumn}`);
-      window.setTimeout(() => setToast(""), 2200);
+      const result = await onMoveToColumn(item, toColumn, fromColumn);
+      const toLabel = columns.find((c) => c.id === toColumn)?.label || toColumn;
+      const notified = result?.notify?.notified;
+      setToast(
+        notified > 0
+          ? `Moved to ${toLabel} · ${notified} approval email${notified === 1 ? "" : "s"} sent`
+          : `Moved to ${toLabel}`
+      );
+      window.setTimeout(() => setToast(""), 3200);
+      return result;
     } catch (err) {
       setToast(err.message || "Move failed");
       window.setTimeout(() => setToast(""), 3200);
       throw err;
+    }
+  };
+
+  const confirmPendingMove = async () => {
+    if (!pendingMove) return;
+    setConfirmBusy(true);
+    try {
+      await commitMove(pendingMove.item, pendingMove.toColumn, pendingMove.fromColumn);
+      setPendingMove(null);
+    } catch {
+      /* toast already set */
+    } finally {
+      setConfirmBusy(false);
     }
   };
 
@@ -145,7 +186,7 @@ export default function KanbanBoard({
                         boardId={boardId}
                         boundsSelector={`#${boundsId}`}
                         locked={Boolean(col.locked) || getColumn(item) === "published"}
-                        onMoveToColumn={handleMove}
+                        onMoveToColumn={requestMove}
                         onOpenDetails={setDetailItem}
                         index={index}
                       />
@@ -164,6 +205,22 @@ export default function KanbanBoard({
           kind={itemKind}
           columnLabel={columns.find((c) => c.id === getColumn(detailItem))?.label || ""}
           onClose={() => setDetailItem(null)}
+        />
+      ) : null}
+      {pendingMove ? (
+        <BoardMoveConfirmModal
+          effect={pendingMove.effect}
+          itemTitle={
+            pendingMove.item.displayTitle ||
+            pendingMove.item.userEditedTitle ||
+            pendingMove.item.title ||
+            ""
+          }
+          busy={confirmBusy}
+          onConfirm={confirmPendingMove}
+          onCancel={() => {
+            if (!confirmBusy) setPendingMove(null);
+          }}
         />
       ) : null}
     </div>

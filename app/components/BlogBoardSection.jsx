@@ -70,6 +70,7 @@ export default function BlogBoardSection({ selectedSite = "" }) {
     setItems((prev) =>
       prev.map((row) => (row.id === item.id ? { ...row, ...data.blog } : row))
     );
+    return data;
   }, []);
 
   const getColumn = useCallback((item) => getBlogBoardColumn(item), []);
@@ -79,7 +80,7 @@ export default function BlogBoardSection({ selectedSite = "" }) {
     boardId: `blogs-${room}`,
     brand: "Blog Board",
     subtitle:
-      "Drag to change status · double-click for details. Published is locked. Soft arrows mark scheduled auto-publishes.",
+      "Drag to change status (you'll confirm side effects) · double-click for details. Draft → Pending sends approval emails.",
     columns: BLOG_BOARD_COLUMNS,
     autoMoves: BLOG_AUTO_MOVES,
     items,
