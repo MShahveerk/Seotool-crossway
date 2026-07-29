@@ -747,6 +747,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                 siteConfig={siteConfig}
                 onPatchSite={patchSite}
                 onMessage={setSaveMessage}
+                onToggleAuto={toggleAuto}
               />
             )}
 

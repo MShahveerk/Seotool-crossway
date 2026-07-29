@@ -10,8 +10,12 @@ import {
   FiSkipForward,
   FiCheck,
   FiAlertCircle,
+  FiClock,
+  FiPlay,
+  FiPause,
+  FiCalendar,
 } from "react-icons/fi";
-import { inputClass, labelClass, formatWhen } from "./studioConstants";
+import { INTERVAL_OPTIONS, inputClass, labelClass, formatWhen } from "./studioConstants";
 
 const COLUMNS = [
   { key: "topic", label: "Topic", wide: true },
@@ -24,7 +28,8 @@ const COLUMNS = [
   { key: "notes", label: "Notes" },
 ];
 
-function rowTone(status) {
+function rowTone(status, isToday) {
+  if (isToday) return "border-l-[#1d9c35] bg-[#e8f7eb]/80 ring-1 ring-inset ring-[#1d9c35]/25";
   switch (String(status || "")) {
     case "done":
       return "border-l-[#1d9c35] bg-emerald-50/40";
@@ -55,17 +60,37 @@ function statusBadge(status) {
   );
 }
 
+function formatNextRun(iso, due) {
+  if (due) return "Next cron tick (due now)";
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    const today = new Date();
+    const sameDay =
+      d.getFullYear() === today.getFullYear() &&
+      d.getMonth() === today.getMonth() &&
+      d.getDate() === today.getDate();
+    const time = d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    return sameDay ? `Today · ${time}` : time;
+  } catch {
+    return iso;
+  }
+}
+
 export default function ExcelQueuePanel({
   siteLink,
   siteConfig,
   onPatchSite,
   onMessage,
+  onToggleAuto,
 }) {
   const [campaign, setCampaign] = useState(null);
+  const [schedule, setSchedule] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingSchedule, setSavingSchedule] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [useAi, setUseAi] = useState(true);
   const [dirty, setDirty] = useState(false);
@@ -81,7 +106,16 @@ export default function ExcelQueuePanel({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load queue.");
       setCampaign(data.campaign || null);
+      setSchedule(data.schedule || null);
       setMaxRows(data.maxRows || 50);
+      if (data.config) {
+        onPatchSite?.({
+          autoIntervalMinutes: data.config.autoIntervalMinutes,
+          autoEnabled: data.config.autoEnabled,
+          autoSource: data.config.autoSource,
+          lastAutoAt: data.config.lastAutoAt,
+        });
+      }
       const next = {};
       for (const r of data.campaign?.rows || []) {
         next[r.id] = {
@@ -102,21 +136,35 @@ export default function ExcelQueuePanel({
     } finally {
       setLoading(false);
     }
-  }, [siteLink, siteQ, onMessage]);
+  }, [siteLink, siteQ, onMessage, onPatchSite]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const rows = campaign?.rows || [];
-  const visible = showAll ? rows : rows.slice(0, 10);
-  const pendingCount = rows.filter((r) => r.status === "pending").length;
-  const doneCount = rows.filter((r) => r.status === "done").length;
+  const todaysRowId = schedule?.todaysRowId || null;
+
+  const visible = useMemo(() => {
+    const base = showAll ? rows : rows.slice(0, 10);
+    if (!showAll && todaysRowId && !base.some((r) => r.id === todaysRowId)) {
+      const today = rows.find((r) => r.id === todaysRowId);
+      if (today) return [...base, today];
+    }
+    return base;
+  }, [rows, showAll, todaysRowId]);
+
+  const pendingCount = schedule?.pendingCount ?? rows.filter((r) => r.status === "pending").length;
+  const doneCount = schedule?.doneCount ?? rows.filter((r) => r.status === "done").length;
 
   const progressPct = useMemo(() => {
     if (!rows.length) return 0;
     return Math.round(((doneCount + rows.filter((r) => r.status === "skipped").length) / rows.length) * 100);
   }, [rows, doneCount]);
+
+  const intervalLabel =
+    INTERVAL_OPTIONS.find((o) => o.value === Number(siteConfig?.autoIntervalMinutes || schedule?.intervalMinutes || 1440))
+      ?.label || `Every ${siteConfig?.autoIntervalMinutes || 1440} minutes`;
 
   const setCell = (id, key, value) => {
     setDrafts((d) => ({ ...d, [id]: { ...d[id], [key]: value } }));
@@ -137,12 +185,11 @@ export default function ExcelQueuePanel({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed.");
-      setCampaign(data.campaign);
       onPatchSite?.({ autoSource: "excel" });
       const cost = data.usage?.costUsd != null ? ` · interpret ~$${Number(data.usage.costUsd).toFixed(4)}` : "";
       onMessage?.({
         ok: true,
-        text: `Imported ${data.campaign?.rowCount || 0} rows from ${data.campaign?.fileName || "spreadsheet"}${cost}. Review cells, then enable Auto on Schedule.`,
+        text: `Imported ${data.campaign?.rowCount || 0} rows from ${data.campaign?.fileName || "spreadsheet"}${cost}. Set frequency below and enable Auto.`,
       });
       await load();
     } catch (err) {
@@ -165,12 +212,45 @@ export default function ExcelQueuePanel({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed.");
       setCampaign(data.campaign);
+      if (data.schedule) setSchedule(data.schedule);
       setDirty(false);
       onMessage?.({ ok: true, text: "Queue cells saved." });
     } catch (err) {
       onMessage?.({ ok: false, text: err.message });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveExcelSchedule = async ({ flipAuto = false } = {}) => {
+    if (!siteLink) return;
+    setSavingSchedule(true);
+    onMessage?.(null);
+    try {
+      const nextEnabled = flipAuto ? !siteConfig?.autoEnabled : Boolean(siteConfig?.autoEnabled);
+      const res = await fetch(`/api/admin/blog-automation/site${siteQ}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          autoSource: "excel",
+          autoIntervalMinutes: Number(siteConfig?.autoIntervalMinutes) || 1440,
+          autoEnabled: nextEnabled,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save Excel schedule.");
+      onPatchSite?.(data.config || { autoSource: "excel", autoEnabled: nextEnabled });
+      onMessage?.({
+        ok: true,
+        text: flipAuto
+          ? `Excel Auto ${nextEnabled ? "enabled" : "paused"} · ${intervalLabel}.`
+          : `Excel frequency saved · ${intervalLabel}.`,
+      });
+      await load();
+    } catch (err) {
+      onMessage?.({ ok: false, text: err.message });
+    } finally {
+      setSavingSchedule(false);
     }
   };
 
@@ -184,7 +264,9 @@ export default function ExcelQueuePanel({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Skip failed.");
       setCampaign(data.campaign);
+      if (data.schedule) setSchedule(data.schedule);
       onMessage?.({ ok: true, text: `Skipped row ${row.rowIndex + 1}.` });
+      await load();
     } catch (err) {
       onMessage?.({ ok: false, text: err.message });
     }
@@ -195,6 +277,14 @@ export default function ExcelQueuePanel({
       <p className="text-sm text-gray-600">Select a site to manage the Excel campaign queue.</p>
     );
   }
+
+  const todaysTopic = schedule?.todaysTopic || schedule?.nextTopic;
+  const todaysNum =
+    schedule?.todaysRowIndex != null
+      ? schedule.todaysRowIndex + 1
+      : schedule?.nextRowIndex != null
+        ? schedule.nextRowIndex + 1
+        : null;
 
   return (
     <div className="space-y-5">
@@ -212,9 +302,8 @@ export default function ExcelQueuePanel({
               Excel → one blog per interval
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-gray-600">
-              Upload any .xlsx / .xls / .csv (max {maxRows} rows). The interpreter maps columns into
-              topic, keywords, brief, and image direction. SEO can edit every cell before Auto runs
-              the next pending row.
+              Upload any .xlsx / .xls / .csv (max {maxRows} rows). Set how often a row runs, see which
+              row is scheduled today, then enable Auto.
             </p>
           </div>
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
@@ -246,13 +335,118 @@ export default function ExcelQueuePanel({
         </div>
       </div>
 
+      {/* Today's row + frequency */}
+      <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+        <div
+          className={`rounded-2xl border px-4 py-4 ${
+            schedule?.scheduledForToday || schedule?.due
+              ? "border-[#1d9c35]/40 bg-[#f3faf4]"
+              : "border-gray-200 bg-white"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[#dff7de] text-[#1d9c35]">
+              <FiCalendar className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className={labelClass}>Scheduled for today</p>
+              {todaysNum != null && (schedule?.scheduledForToday || schedule?.due || schedule?.todaysRowId) ? (
+                <>
+                  <p className="mt-1 text-lg font-semibold text-gray-900 truncate">
+                    Row {todaysNum}
+                    {todaysTopic ? ` · ${todaysTopic}` : ""}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    {schedule?.statusLabel || "—"}
+                    {schedule?.todaysStatus ? ` · status ${schedule.todaysStatus}` : ""}
+                  </p>
+                </>
+              ) : schedule?.nextRowIndex != null ? (
+                <>
+                  <p className="mt-1 text-lg font-semibold text-gray-900 truncate">
+                    No row due today
+                  </p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    Next up: Row {schedule.nextRowIndex + 1}
+                    {schedule.nextTopic ? ` · ${schedule.nextTopic}` : ""} ·{" "}
+                    {formatNextRun(schedule.nextRunAt, schedule.due)}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">Nothing queued</p>
+                  <p className="mt-1 text-xs text-gray-600">
+                    {schedule?.statusLabel || "Upload a spreadsheet or wait for pending rows."}
+                  </p>
+                </>
+              )}
+              <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-gray-500">
+                <FiClock className="h-3.5 w-3.5" />
+                Next run: {formatNextRun(schedule?.nextRunAt, schedule?.due)} · Last:{" "}
+                {formatWhen(schedule?.lastAutoAt || siteConfig?.lastAutoAt)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 space-y-3">
+          <div>
+            <p className={labelClass}>Excel run frequency</p>
+            <p className="mt-0.5 text-xs text-gray-500">How often the next pending row is processed.</p>
+          </div>
+          <select
+            className={inputClass}
+            value={siteConfig?.autoIntervalMinutes || schedule?.intervalMinutes || 1440}
+            onChange={(e) =>
+              onPatchSite?.({
+                autoIntervalMinutes: Number(e.target.value),
+                autoSource: "excel",
+              })
+            }
+          >
+            {INTERVAL_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={saveExcelSchedule}
+              disabled={savingSchedule}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1d9c35] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+            >
+              {savingSchedule ? <FiRefreshCw className="animate-spin" /> : <FiSave />}
+              Save frequency
+            </button>
+            <button
+              type="button"
+              onClick={() => saveExcelSchedule({ flipAuto: true })}
+              disabled={savingSchedule}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50 ${
+                siteConfig?.autoEnabled
+                  ? "border-[#1d9c35]/40 bg-[#dff7de] text-[#145c22]"
+                  : "border-gray-200 bg-white text-gray-700"
+              }`}
+            >
+              {siteConfig?.autoEnabled ? <FiPause /> : <FiPlay />}
+              Auto {siteConfig?.autoEnabled ? "on" : "paused"}
+            </button>
+          </div>
+          <p className="text-[11px] text-gray-500">
+            Source locked to <strong>Excel queue</strong> when you save here · {intervalLabel}
+          </p>
+        </div>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
           <p className={labelClass}>Auto source</p>
           <p className="mt-1 text-sm font-semibold text-gray-900">
-            {siteConfig?.autoSource === "excel" ? "Excel queue" : "Seed prompt"}
+            {(siteConfig?.autoSource || schedule?.autoSource) === "excel" ? "Excel queue" : "Seed prompt"}
           </p>
-          <p className="mt-1 text-xs text-gray-500">Switch on the Schedule tab.</p>
+          <p className="mt-1 text-xs text-gray-500">Saving frequency sets Excel as source.</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
           <p className={labelClass}>Queue progress</p>
@@ -296,6 +490,7 @@ export default function ExcelQueuePanel({
             <p className="text-xs text-gray-500">
               Showing {visible.length} of {rows.length}
               {!showAll && rows.length > 10 ? " · top 10 by default" : ""}
+              {todaysRowId ? " · today’s row highlighted" : ""}
             </p>
             <div className="flex flex-wrap items-center gap-2">
               {rows.length > 10 && (
@@ -333,7 +528,7 @@ export default function ExcelQueuePanel({
                 <thead>
                   <tr className="bg-[#f7faf8] text-[10px] font-bold uppercase tracking-wider text-gray-500">
                     <th className="sticky left-0 z-10 bg-[#f7faf8] px-3 py-3 w-14">#</th>
-                    <th className="px-2 py-3 w-24">Status</th>
+                    <th className="px-2 py-3 w-28">Status</th>
                     {COLUMNS.map((c) => (
                       <th key={c.key} className={`px-2 py-3 ${c.wide ? "min-w-[180px]" : "min-w-[120px]"}`}>
                         {c.label}
@@ -346,13 +541,21 @@ export default function ExcelQueuePanel({
                   {visible.map((row) => {
                     const editable = ["pending", "failed"].includes(row.status);
                     const d = drafts[row.id] || {};
+                    const isToday = row.id === todaysRowId;
                     return (
                       <tr
                         key={row.id}
-                        className={`border-t border-gray-100 border-l-4 align-top transition-colors ${rowTone(row.status)}`}
+                        className={`border-t border-gray-100 border-l-4 align-top transition-colors ${rowTone(row.status, isToday)}`}
                       >
                         <td className="sticky left-0 z-10 bg-inherit px-3 py-2 font-mono text-xs text-gray-500">
-                          {row.rowIndex + 1}
+                          <div className="flex flex-col gap-1">
+                            <span>{row.rowIndex + 1}</span>
+                            {isToday && (
+                              <span className="inline-flex w-fit rounded bg-[#1d9c35] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                                Today
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-2 py-2">
                           {statusBadge(row.status)}

@@ -3,10 +3,13 @@ import { PERMISSIONS } from "@/lib/rbac";
 import { ENGINE_INTERNAL, getEngineMode } from "@/lib/blogStudio/engine.js";
 import {
   getActiveCampaign,
+  getExcelQueuePayload,
   uploadAndImportSpreadsheet,
   bulkUpdateQueueRows,
+  computeExcelSchedule,
   EXCEL_MAX_ROWS,
 } from "@/lib/blogStudio/excelQueue.js";
+import { getSiteStudioConfig } from "@/lib/blogStudio/engine.js";
 
 export const runtime = "nodejs";
 
@@ -14,14 +17,14 @@ function siteFrom(req) {
   return String(new URL(req.url).searchParams.get("siteLink") || "").trim();
 }
 
-/** GET active campaign + rows */
+/** GET active campaign + rows + today's schedule */
 export async function GET(req) {
   try {
     await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
     const siteLink = siteFrom(req);
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
-    const campaign = await getActiveCampaign(siteLink);
-    return Response.json({ campaign, maxRows: EXCEL_MAX_ROWS });
+    const payload = await getExcelQueuePayload(siteLink);
+    return Response.json(payload);
   } catch (error) {
     return Response.json(
       { error: error.message || "Failed to load excel queue." },
@@ -58,11 +61,12 @@ export async function POST(req) {
     }
 
     const result = await uploadAndImportSpreadsheet({ siteLink, file, useAi });
+    const payload = await getExcelQueuePayload(siteLink);
     return Response.json({
-      campaign: result.campaign,
+      ...payload,
       usage: result.usage,
       sheetName: result.sheetName,
-      maxRows: EXCEL_MAX_ROWS,
+      columnMap: result.columnMap,
     });
   } catch (error) {
     return Response.json(
@@ -96,7 +100,9 @@ export async function PUT(req) {
     const safe = updates.filter((u) => ownedSet.has(u.id));
     const rows = await bulkUpdateQueueRows(safe);
     const campaign = await getActiveCampaign(siteLink);
-    return Response.json({ rows, campaign });
+    const siteConfig = await getSiteStudioConfig(siteLink);
+    const schedule = computeExcelSchedule({ siteConfig, campaign });
+    return Response.json({ rows, campaign, schedule });
   } catch (error) {
     return Response.json(
       { error: error.message || "Failed to update rows." },
