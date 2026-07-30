@@ -98,6 +98,7 @@ export default function AdminSection() {
   // Meta Accounts Dropdown State
   const [metaAccounts, setMetaAccounts] = useState([]);
   const [loadingMetaAccounts, setLoadingMetaAccounts] = useState(false);
+  const [metaAccountsError, setMetaAccountsError] = useState("");
 
   useEffect(() => {
     fetchUsers();
@@ -132,18 +133,24 @@ export default function AdminSection() {
 
   const fetchMetaAccounts = async () => {
     setLoadingMetaAccounts(true);
+    setMetaAccountsError("");
     try {
       const res = await fetch("/api/admin/meta-accounts");
       const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setMetaAccounts(data.accounts || []);
-      } else {
-        console.error("Failed to load Meta accounts", data.error || res.status);
-        setMetaAccounts([]);
+      const accounts = Array.isArray(data.accounts) ? data.accounts : [];
+      setMetaAccounts(accounts);
+      if (!res.ok) {
+        setMetaAccountsError(data.error || `Failed to load Meta accounts (${res.status})`);
+      } else if (accounts.length === 0) {
+        setMetaAccountsError(
+          data.error ||
+            "No Meta accounts found. Set META_PAGE_ACCESS_TOKEN on the server (Render env), then redeploy/restart."
+        );
       }
     } catch (err) {
       console.error("Failed to load Meta accounts", err);
       setMetaAccounts([]);
+      setMetaAccountsError(err.message || "Failed to load Meta accounts");
     } finally {
       setLoadingMetaAccounts(false);
     }
@@ -1219,8 +1226,47 @@ export default function AdminSection() {
                       ))}
                     </select>
                   ) : (
-                    <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
-                      No Meta accounts found. Please ensure <code>META_PAGE_ACCESS_TOKEN</code> is set in your environment variables.
+                    <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200 space-y-1">
+                      <p>{metaAccountsError || "No Meta accounts found."}</p>
+                      <p>
+                        On Render, set <code>META_PAGE_ACCESS_TOKEN</code> (Page or System User token from Meta for
+                        Developers), save, and restart the service. You can also type a Facebook Page ID manually below
+                        if needed.
+                      </p>
+                      <div className="pt-1">
+                        <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                          Facebook Page ID (manual)
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.facebookPageId || ""}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              facebookPageId: e.target.value.trim(),
+                            })
+                          }
+                          placeholder="e.g. 123456789012345"
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm"
+                        />
+                      </div>
+                      <div className="pt-1">
+                        <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                          Instagram User ID (optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.instagramUserId || ""}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              instagramUserId: e.target.value.trim(),
+                            })
+                          }
+                          placeholder="Optional Instagram business account ID"
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
