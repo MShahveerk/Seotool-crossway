@@ -6,9 +6,9 @@ import { recordBlogRevision, restoreBlogRevision } from "../../../../../../../..
 
 export const runtime = "nodejs";
 
-export async function POST(_req, { params }) {
+export async function (req, { params }) {
   try {
-    const session = await requireAdminRoute(req);
+    const session = await requireAdminRoute(req, "admin-blogs");
     const { id, revisionId } = await params;
     const blog = await prisma.blogPost.findUnique({ where: { id } });
     if (!blog) return Response.json({ error: "Blog not found." }, { status: 404 });

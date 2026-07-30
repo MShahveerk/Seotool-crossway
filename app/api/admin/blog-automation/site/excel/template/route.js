@@ -5,9 +5,9 @@ import { buildExcelTemplateBuffer } from "@/lib/blogStudio/excelTemplate.js";
 export const runtime = "nodejs";
 
 /** GET downloadable .xlsx campaign template */
-export async function GET() {
+export async function GET(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const buffer = buildExcelTemplateBuffer();
     const filename = "crossway-blog-automation-excel-template.xlsx";
     const body = Buffer.isBuffer(buffer) ? new Uint8Array(buffer) : buffer;

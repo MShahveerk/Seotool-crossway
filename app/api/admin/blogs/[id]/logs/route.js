@@ -4,9 +4,9 @@ import prisma from "../../../../../../lib/prisma";
 
 export const runtime = "nodejs";
 
-export async function GET(_req, { params }) {
+export async function (req, { params }) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-blogs");
     const { id } = await params;
     const blog = await prisma.blogPost.findUnique({ where: { id }, select: { id: true, title: true } });
     if (!blog) return Response.json({ error: "Blog not found." }, { status: 404 });

@@ -15,7 +15,7 @@ function siteFrom(req) {
 
 export async function GET(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const siteLink = siteFrom(req);
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
     const config = await getSiteStudioConfig(siteLink);
@@ -30,7 +30,7 @@ export async function GET(req) {
 
 export async function PUT(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const siteLink = siteFrom(req);
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
     const body = await req.json();

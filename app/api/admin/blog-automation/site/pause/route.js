@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const url = new URL(req.url);
     const siteLink = String(url.searchParams.get("siteLink") || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });

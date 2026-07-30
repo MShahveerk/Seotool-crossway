@@ -83,18 +83,18 @@ const smmMenuItems = [
   { id: "smm-statistics", label: "SMM Statistics", icon: Megaphone },
   { id: "calendar", label: "Content Calendar", icon: Calendar },
   { id: "my-approvals", label: "SMM Post Approvals", icon: CheckSquare },
-  { id: "admin-approvals", label: "Create Post", icon: ClipboardList, role: "super_admin" },
-  { id: "post-board", label: "Post Board", icon: Columns3, role: "super_admin" },
-  { id: "post-automation", label: "Post Automation Studio", icon: Sparkles, role: "super_admin" },
-  { id: "post-autoschedule", label: "Post Autoscheduler", icon: CalendarClock, role: "super_admin" },
+  { id: "admin-approvals", label: "Create Post", icon: ClipboardList },
+  { id: "post-board", label: "Post Board", icon: Columns3 },
+  { id: "post-automation", label: "Post Automation Studio", icon: Sparkles },
+  { id: "post-autoschedule", label: "Post Autoscheduler", icon: CalendarClock },
 ];
 
 const blogsMenuItems = [
   { id: "my-blog-approvals", label: "Blog Approvals", icon: FileText },
-  { id: "admin-blogs", label: "Create Blog", icon: FileText, role: "super_admin" },
-  { id: "blog-board", label: "Blog Board", icon: Columns3, role: "super_admin" },
-  { id: "blog-automation", label: "Blog Automation Studio", icon: Sparkles, role: "super_admin" },
-  { id: "blog-autoschedule", label: "Blog Autoscheduler", icon: CalendarClock, role: "super_admin" },
+  { id: "admin-blogs", label: "Create Blog", icon: FileText },
+  { id: "blog-board", label: "Blog Board", icon: Columns3 },
+  { id: "blog-automation", label: "Blog Automation Studio", icon: Sparkles },
+  { id: "blog-autoschedule", label: "Blog Autoscheduler", icon: CalendarClock },
 ];
 
 function groupContainsSection(items, sectionId) {
@@ -140,7 +140,8 @@ export default function AppSidebar({
 
   const userRole = session?.user?.role;
 
-  const isSuperAdmin = session?.user?.role === "super_admin";
+  const canManageUsers = sessionCanAccessSection(session, "user-management");
+  const canSeeAdminApprovals = sessionCanAccessSection(session, "admin-approvals");
   const hasGlobalSiteAccess = sessionHasGlobalSiteAccess(session);
   const userSiteLink = session?.user?.siteLink || "";
 
@@ -178,7 +179,7 @@ export default function AppSidebar({
   }, [availableSites, hasGlobalSiteAccess, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
 
   useEffect(() => {
-    if (!isSuperAdmin) return undefined;
+    if (!canSeeAdminApprovals) return undefined;
     const loadUnread = async () => {
       try {
         const res = await fetch("/api/admin/approvals?countOnly=1");
@@ -196,10 +197,10 @@ export default function AppSidebar({
       clearInterval(interval);
       window.removeEventListener("approvals:admin-refresh", onRefresh);
     };
-  }, [isSuperAdmin]);
+  }, [canSeeAdminApprovals]);
 
   useEffect(() => {
-    if (isSuperAdmin) return undefined;
+    if (canSeeAdminApprovals) return undefined;
     const loadUserUnread = async () => {
       try {
         const res = await fetch("/api/approvals?countOnly=1");
@@ -217,7 +218,7 @@ export default function AppSidebar({
       clearInterval(interval);
       window.removeEventListener("approvals:user-updated", onRefresh);
     };
-  }, [isSuperAdmin]);
+  }, [canSeeAdminApprovals]);
 
   const selectedSiteEntry = availableSites.find((s) => entryMatchesSelectValue(s, selectedSite));
   const effectiveSiteForSeo = hasGlobalSiteAccess ? selectedSite : userSiteLink || selectedSite;
@@ -412,7 +413,7 @@ export default function AppSidebar({
 
         {showBlogsGroup ? renderMenuGroup("Blogs", FileText, visibleBlogItems, blogsOpen, setBlogsOpen, "blogs") : null}
 
-        {isSuperAdmin ? (
+        {canManageUsers ? (
           <SidebarGroup>
             <SidebarGroupLabel className="flex items-center gap-2">
               <Shield className="size-3.5 shrink-0 opacity-80" aria-hidden />

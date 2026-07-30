@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 export async function GET(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "post-automation");
     const siteKey = req.nextUrl.searchParams.get("siteKey") || req.nextUrl.searchParams.get("site") || "";
     if (!siteKey) return Response.json({ error: "siteKey is required." }, { status: 400 });
     const config = await getSitePostConfig(siteKey);
@@ -22,7 +22,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "post-automation");
     const body = await req.json();
     const siteKey = String(body.siteKey || body.site || body.selectedSite || "").trim();
     if (!siteKey) return Response.json({ error: "siteKey is required." }, { status: 400 });

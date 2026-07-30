@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export async function POST(req, { params }) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-approvals");
     const { id } = await params;
     const result = await publishApprovalNow(id);
     return Response.json(result);

@@ -8,9 +8,9 @@ import { recordBlogRevision } from "../../../../../lib/blogRevisions.js";
 
 export const runtime = "nodejs";
 
-export async function GET(_req, { params }) {
+export async function (req, { params }) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-blogs");
     const { id } = await params;
     const blog = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
     if (!blog) return Response.json({ error: "Blog not found." }, { status: 404 });
@@ -22,7 +22,7 @@ export async function GET(_req, { params }) {
 
 export async function PATCH(req, { params }) {
   try {
-    const session = await requireAdminRoute(req);
+    const session = await requireAdminRoute(req, "admin-blogs");
     const { id } = await params;
     const body = await req.json();
     const existing = await prisma.blogPost.findUnique({ where: { id } });
@@ -116,9 +116,9 @@ export async function PATCH(req, { params }) {
   }
 }
 
-export async function DELETE(_req, { params }) {
+export async function (req, { params }) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-blogs");
     const { id } = await params;
     await prisma.blogPost.delete({ where: { id } });
     return Response.json({ ok: true });

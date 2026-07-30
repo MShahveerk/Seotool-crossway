@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 /** POST — mark user response as seen (clears awaitingAdminReview) */
 export async function POST(req, { params }) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-approvals");
     const { id } = await params;
 
     const existing = await prisma.approval.findUnique({ where: { id } });

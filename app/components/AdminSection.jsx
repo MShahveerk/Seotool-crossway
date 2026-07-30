@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { validatePassword } from "../../lib/validation";
 import { 
@@ -48,7 +49,21 @@ import SiteAssociationsModal from "./SiteAssociationsModal";
 import SeoDigestSettingsPanel from "./SeoDigestSettingsPanel";
 import ReportsManagementPanel from "./ReportsManagementPanel";
 import ModulePermissionPicker from "./ModulePermissionPicker";
-import { getDefaultModulePermissionsForRole } from "@/lib/modulePermissions";
+import { coerceModulePermissionsForForm, getDefaultModulePermissionsForRole } from "@/lib/modulePermissions";
+
+const EMPTY_USER_FORM = {
+  email: "",
+  password: "",
+  name: "",
+  role: "user",
+  siteLink: "",
+  gtmContainerId: "",
+  facebookPageId: "",
+  instagramUserId: "",
+  isActive: true,
+  accessibleSites: [],
+  modulePermissions: getDefaultModulePermissionsForRole("user"),
+};
 
 export default function AdminSection() {
   const { data: session } = useSession();
@@ -59,21 +74,13 @@ export default function AdminSection() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    name: "",
-    role: "user",
-    siteLink: "",
-    gtmContainerId: "",
-    facebookPageId: "",
-    instagramUserId: "",
-    isActive: true,
-    accessibleSites: [],
-    modulePermissions: getDefaultModulePermissionsForRole("user"),
-  });
+  const [formData, setFormData] = useState({ ...EMPTY_USER_FORM });
   const [currentPage, setCurrentPage] = useState(1);
   const [activeActionMenuUserId, setActiveActionMenuUserId] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [showSiteAssociations, setShowSiteAssociations] = useState(false);
+  const [portalReady, setPortalReady] = useState(false);
   const [siteIntegrationForm, setSiteIntegrationForm] = useState({
     userId: "",
     siteUrl: "",
@@ -94,6 +101,10 @@ export default function AdminSection() {
 
   useEffect(() => {
     fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    setPortalReady(true);
   }, []);
 
   useEffect(() => {
@@ -204,18 +215,7 @@ export default function AdminSection() {
         }
       }
 
-      setEditingUser(null);
-      setFormData({
-        email: "",
-        password: "",
-        name: "",
-        role: "user",
-        siteLink: "",
-        gtmContainerId: "",
-        facebookPageId: "",
-        instagramUserId: "",
-        isActive: true,
-      });
+      closeUserModal();
       fetchUsers();
     } catch (err) {
       setError(err.message);
@@ -243,7 +243,36 @@ export default function AdminSection() {
     }
   };
 
+  const closeUserModal = () => {
+    setShowCreateModal(false);
+    setEditingUser(null);
+    setShowAdvancedSettings(false);
+    setFormData({
+      ...EMPTY_USER_FORM,
+      modulePermissions: getDefaultModulePermissionsForRole("user"),
+    });
+    setSiteIntegrationForm({
+      userId: "",
+      siteUrl: "",
+      propertyId: "",
+      emailOrVerification: "",
+    });
+    setIntegrationPreview(null);
+    setSmmBaselines(
+      DEFAULT_SMM_BASELINES.map((row) => ({
+        ...row,
+        accountHandle: "",
+        followers: "",
+      }))
+    );
+    setSmmFetchStatusByPlatform({});
+  };
+
   const handleEdit = (user) => {
+    setActiveActionMenuUserId(null);
+    setShowCreateModal(false);
+    setShowAdvancedSettings(false);
+    setError("");
     setEditingUser(user);
     setFormData({
       email: user.email,
@@ -255,8 +284,10 @@ export default function AdminSection() {
       facebookPageId: user.facebookPageId || "",
       instagramUserId: user.instagramUserId || "",
       isActive: user.isActive !== false,
-      accessibleSites: Array.isArray(user.accessibleSites) ? user.accessibleSites.map((s) => s.siteLink || s) : [],
-      modulePermissions: user.modulePermissions || getDefaultModulePermissionsForRole(user.role || "user"),
+      accessibleSites: Array.isArray(user.accessibleSites)
+        ? user.accessibleSites.map((s) => s.siteLink || s)
+        : [],
+      modulePermissions: coerceModulePermissionsForForm(user.modulePermissions, user.role || "user"),
     });
     setSiteIntegrationForm({
       userId: user.id,
@@ -314,8 +345,6 @@ export default function AdminSection() {
       setLoadingSmmBaseline(false);
     }
   };
-
-  const [successMessage, setSuccessMessage] = useState("");
 
   const saveSiteIntegrationForUserId = async (userId, { silent = false } = {}) => {
     if (!silent) {
@@ -644,19 +673,7 @@ export default function AdminSection() {
       }
 
       setShowCreateModal(false);
-      setFormData({
-        email: "",
-        password: "",
-        name: "",
-        role: "user",
-        siteLink: "",
-        gtmContainerId: "",
-        facebookPageId: "",
-        instagramUserId: "",
-        isActive: true,
-        accessibleSites: [],
-        modulePermissions: getDefaultModulePermissionsForRole("user"),
-      });
+      setFormData({ ...EMPTY_USER_FORM, modulePermissions: getDefaultModulePermissionsForRole("user") });
       setSiteIntegrationForm({
         userId: "",
         siteUrl: "",
@@ -764,9 +781,6 @@ export default function AdminSection() {
     return integrationSiteKeys(integration).some((key) => keys.has(key));
   };
 
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  const [showSiteAssociations, setShowSiteAssociations] = useState(false);
-
   const showFullUserSetup = Boolean(
     (!editingUser || (editingUser && editingUser.role !== ROLES.SUPER_ADMIN)) && showAdvancedSettings
   );
@@ -838,17 +852,11 @@ export default function AdminSection() {
             <button
               onClick={() => {
                 setShowCreateModal(true);
+                setEditingUser(null);
+                setShowAdvancedSettings(false);
                 setFormData({
-                  email: "",
-                  password: "",
-                  name: "",
-                  role: "user",
-                  siteLink: "",
-                  gtmContainerId: "",
-                  facebookPageId: "",
-                  instagramUserId: "",
-                  isActive: true,
-                  accessibleSites: [],
+                  ...EMPTY_USER_FORM,
+                  modulePermissions: getDefaultModulePermissionsForRole("user"),
                 });
                 setSiteIntegrationForm({
                   userId: "",
@@ -1049,19 +1057,37 @@ export default function AdminSection() {
         </div>
       </div>
 
-      {/* Create/Edit Modal */}
-      {(showCreateModal || editingUser) && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-50 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-300">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-black">
-                {editingUser ? "Edit User" : "Create New User"}
-              </h3>
-            </div>
-            <form
-              onSubmit={editingUser ? handleUpdateUser : handleCreateUser}
-              className="p-6 space-y-4"
+      {/* Create/Edit Modal — portaled so section transforms cannot clip it */}
+      {portalReady && (showCreateModal || editingUser)
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="user-modal-title"
+              onClick={closeUserModal}
             >
+              <div
+                className="bg-white dark:bg-gray-50 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-6 border-b border-gray-200 dark:border-gray-300 flex items-center justify-between gap-3">
+                  <h3 id="user-modal-title" className="text-xl font-bold text-gray-900 dark:text-black">
+                    {editingUser ? "Edit User" : "Create New User"}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={closeUserModal}
+                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                    aria-label="Close"
+                  >
+                    <FiX className="w-5 h-5" />
+                  </button>
+                </div>
+                <form
+                  onSubmit={editingUser ? handleUpdateUser : handleCreateUser}
+                  className="p-6 space-y-4"
+                >
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
                   Email
@@ -1131,7 +1157,7 @@ export default function AdminSection() {
                     setFormData({
                       ...formData,
                       role,
-                      modulePermissions: getDefaultModulePermissionsForRole(role),
+                      modulePermissions: coerceModulePermissionsForForm(null, role),
                     });
                   }}
                   disabled={editingUser?.role === ROLES.SUPER_ADMIN}
@@ -1494,37 +1520,7 @@ export default function AdminSection() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setEditingUser(null);
-                    setFormData({
-                      email: "",
-                      password: "",
-                      name: "",
-                      role: "user",
-                      siteLink: "",
-                      gtmContainerId: "",
-                      facebookPageId: "",
-                      instagramUserId: "",
-                      isActive: true,
-                      accessibleSites: [],
-                    });
-                    setSiteIntegrationForm({
-                      userId: "",
-                      siteUrl: "",
-                      propertyId: "",
-                      emailOrVerification: "",
-                    });
-                    setIntegrationPreview(null);
-                    setSmmBaselines(
-                      DEFAULT_SMM_BASELINES.map((row) => ({
-                        ...row,
-                        accountHandle: "",
-                        followers: "",
-                      }))
-                    );
-                    setSmmFetchStatusByPlatform({});
-                  }}
+                  onClick={closeUserModal}
                   className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-200 hover:bg-gray-200 dark:hover:bg-gray-300 text-gray-700 dark:text-gray-800 rounded-xl font-semibold transition-colors"
                 >
                   <FiX className="w-4 h-4" />
@@ -1533,8 +1529,10 @@ export default function AdminSection() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+        </div>,
+            document.body
+          )
+        : null}
       <SiteAssociationsModal
         isOpen={showSiteAssociations}
         onClose={() => setShowSiteAssociations(false)}

@@ -7,9 +7,9 @@ import {
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "post-automation");
     const config = await getGlobalPostsAutomationConfig();
     return Response.json({ config });
   } catch (error) {
@@ -22,7 +22,7 @@ export async function GET() {
 
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "post-automation");
     const body = await req.json();
     const config = await saveGlobalPostsAutomationConfig(body || {});
     return Response.json({ config });

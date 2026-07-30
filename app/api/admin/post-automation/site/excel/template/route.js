@@ -4,9 +4,9 @@ import { buildExcelTemplateBuffer } from "@/lib/postsStudio/excelTemplate.js";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "post-automation");
     const buffer = buildExcelTemplateBuffer();
     const body = Buffer.isBuffer(buffer) ? new Uint8Array(buffer) : buffer;
     return new Response(body, {

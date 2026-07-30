@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-approvals");
     const body = await req.json();
     const contentType = String(body.contentType || "post").toLowerCase();
     const siteKey = String(body.siteKey || body.siteLink || body.site || "").trim();

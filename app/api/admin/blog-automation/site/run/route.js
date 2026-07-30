@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    const session = await requireAdminRoute(req);
+    const session = await requireAdminRoute(req, "blog-automation");
     const mode = await getEngineMode();
     if (mode !== ENGINE_INTERNAL) {
       return Response.json(

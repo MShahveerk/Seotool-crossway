@@ -20,7 +20,7 @@ function siteFrom(req) {
 /** GET active campaign + rows + today's schedule */
 export async function GET(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const siteLink = siteFrom(req);
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
     const payload = await getExcelQueuePayload(siteLink);
@@ -36,7 +36,7 @@ export async function GET(req) {
 /** POST multipart upload (.xlsx / .xls / .csv) */
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const mode = await getEngineMode();
     if (mode !== ENGINE_INTERNAL) {
       return Response.json(
@@ -79,7 +79,7 @@ export async function POST(req) {
 /** PUT bulk cell edits: { rows: [{ id, topic, keywords, ... }] } */
 export async function PUT(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const siteLink = siteFrom(req);
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
 

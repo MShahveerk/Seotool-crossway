@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 /** Hard-delete all tombstone rows (status=deleted) for a site. */
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-blogs");
     const body = await req.json();
     const siteLink = String(body.siteLink || body.url || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });

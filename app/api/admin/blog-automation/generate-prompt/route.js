@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const body = await req.json().catch(() => ({}));
     const result = await generateBlogPrompt({
       topic: body.topic || "",

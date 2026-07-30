@@ -8,9 +8,9 @@ import {
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const [config, history] = await Promise.all([
       getBlogAutomationConfig(),
       getBlogAutomationHistory(),
@@ -26,7 +26,7 @@ export async function GET() {
 
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const body = await req.json();
     const config = await saveBlogAutomationConfig(body);
     return Response.json({ config: sanitizeConfigForClient(config) });

@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 
 export async function GET(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-blogs");
     const site = req.nextUrl.searchParams.get("site") || req.nextUrl.searchParams.get("url") || "";
     let where = {};
     if (site) {
@@ -33,7 +33,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const session = await requireAdminRoute(req);
+    const session = await requireAdminRoute(req, "admin-blogs");
     const contentType = req.headers.get("content-type") || "";
     let fields = {};
     let featuredFile = null;

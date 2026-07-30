@@ -4,9 +4,9 @@ import { publishBlogNow } from "../../../../../../lib/blogPublishJobs.js";
 
 export const runtime = "nodejs";
 
-export async function POST(_req, { params }) {
+export async function (req, { params }) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-blogs");
     const { id } = await params;
     const result = await publishBlogNow(id);
     return Response.json({ ok: result.success, ...result });

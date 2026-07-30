@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 /** POST — append a reference image (max 4). */
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const url = new URL(req.url);
     const siteLink = String(url.searchParams.get("siteLink") || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
@@ -48,7 +48,7 @@ export async function POST(req) {
 /** DELETE — remove a reference by path (?path=) or clear all (?all=1). */
 export async function DELETE(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const url = new URL(req.url);
     const siteLink = String(url.searchParams.get("siteLink") || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });

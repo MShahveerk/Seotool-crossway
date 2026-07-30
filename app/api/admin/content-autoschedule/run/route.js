@@ -1,4 +1,4 @@
-import { requireAdminRoute } from "../../../../../lib/adminAuth";
+import { requireAutoscheduleRoute } from "../../../../../lib/adminAuth";
 
 import { normalizeKind } from "@/lib/contentAutoschedule/engine.js";
 import { runAutoscheduleForSite } from "@/lib/contentAutoschedule/runner.js";
@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAutoscheduleRoute(req);
     const url = new URL(req.url);
     const kind = normalizeKind(url.searchParams.get("kind"));
     const siteLink = String(url.searchParams.get("siteLink") || "").trim();

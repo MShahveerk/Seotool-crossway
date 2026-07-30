@@ -4,9 +4,9 @@ import { cancelStudioRun } from "@/lib/blogStudio/runner.js";
 
 export const runtime = "nodejs";
 
-export async function POST(_req, { params }) {
+export async function (req, { params }) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const { id } = await params;
     const run = await cancelStudioRun(id, { hard: true });
     return Response.json({ run });

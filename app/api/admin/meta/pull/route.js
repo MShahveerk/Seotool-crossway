@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-approvals");
     const body = await req.json().catch(() => ({}));
     const siteKey =
       String(body.siteKey || body.site || req.nextUrl.searchParams.get("siteKey") || "").trim();

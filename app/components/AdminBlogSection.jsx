@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { sessionCanAccessSection } from "@/lib/clientPermissions";
 import { FiFileText, FiRefreshCw, FiSave, FiSettings, FiTrash2, FiZap } from "react-icons/fi";
 import { datetimeLocalToUtcIso, formatScheduleShort, timezoneShortLabel } from "../../lib/timezone";
 import BlogRichTextEditor, { isRichTextEmpty } from "./BlogRichTextEditor";
@@ -150,8 +151,7 @@ function WordpressDiagnosticsPanel({ diagnostics, title = "WordPress diagnostics
 
 export default function AdminBlogSection({ selectedSite = "" }) {
   const { data: session } = useSession();
-  const canManageContent =
-    session?.user?.role === "super_admin" || session?.user?.role === "smm";
+  const canManageContent = sessionCanAccessSection(session, "admin-blogs");
   const [form, setForm] = useState({
     title: "",
     slug: "",

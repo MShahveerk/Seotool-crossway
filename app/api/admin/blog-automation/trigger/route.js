@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    const session = await requireAdminRoute(req);
+    const session = await requireAdminRoute(req, "blog-automation");
     const body = await req.json().catch(() => ({}));
     const run = await triggerBlogWebhook({
       prompt: body.prompt || "",

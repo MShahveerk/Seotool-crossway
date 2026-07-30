@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 
 export async function GET(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const siteLink = req.nextUrl.searchParams.get("siteLink") || req.nextUrl.searchParams.get("url") || "";
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
     const config = await getSitePublishConfig(siteLink);
@@ -23,7 +23,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const body = await req.json();
     const siteLink = String(body.siteLink || body.url || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });

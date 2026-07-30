@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export async function GET(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "blog-automation");
     const url = new URL(req.url);
     const siteLink = String(url.searchParams.get("siteLink") || "").trim();
     const take = Math.min(50, Math.max(1, Number(url.searchParams.get("limit")) || 20));

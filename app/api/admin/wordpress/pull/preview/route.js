@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 /** POST — list WordPress posts available to pull (no import). */
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-blogs");
     const body = await req.json();
     const siteLink = String(body.siteLink || body.url || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });

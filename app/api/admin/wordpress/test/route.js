@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-blogs");
     const body = await req.json();
     const siteLink = String(body.siteLink || body.url || "").trim();
 

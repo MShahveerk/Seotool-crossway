@@ -1,25 +1,40 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import {
   MODULES,
   MODULE_LABELS,
   MODULE_SUB_PERMISSIONS,
-  getDefaultModulePermissionsForRole,
+  coerceModulePermissionsForForm,
 } from "@/lib/modulePermissions";
 
 const MODULE_ORDER = [MODULES.GSC, MODULES.SEO, MODULES.SOCIAL, MODULES.BLOGS];
 
-function clonePermissions(perms) {
-  return {
-    [MODULES.GSC]: [...(perms[MODULES.GSC] || [])],
-    [MODULES.SEO]: [...(perms[MODULES.SEO] || [])],
-    [MODULES.SOCIAL]: [...(perms[MODULES.SOCIAL] || [])],
-    [MODULES.BLOGS]: [...(perms[MODULES.BLOGS] || [])],
-  };
+function IndeterminateCheckbox({ checked, indeterminate, onChange, disabled, className }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.indeterminate = indeterminate;
+    }
+  }, [indeterminate]);
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      disabled={disabled}
+      className={className}
+    />
+  );
 }
 
 export default function ModulePermissionPicker({ value, onChange, role, disabled = false }) {
-  const perms = value || getDefaultModulePermissionsForRole(role || "user");
+  const perms = coerceModulePermissionsForForm(value, role || "user");
+
+  const emit = (next) => onChange(coerceModulePermissionsForForm(next, role || "user"));
 
   const toggleSection = (module, sectionId) => {
     if (disabled) return;
@@ -27,7 +42,7 @@ export default function ModulePermissionPicker({ value, onChange, role, disabled
     const next = current.includes(sectionId)
       ? current.filter((id) => id !== sectionId)
       : [...current, sectionId];
-    onChange({ ...clonePermissions(perms), [module]: next });
+    emit({ ...perms, [module]: next });
   };
 
   const toggleModuleAll = (module) => {
@@ -35,19 +50,16 @@ export default function ModulePermissionPicker({ value, onChange, role, disabled
     const allIds = MODULE_SUB_PERMISSIONS[module].map((p) => p.id);
     const current = perms[module] || [];
     const allSelected = allIds.every((id) => current.includes(id));
-    onChange({
-      ...clonePermissions(perms),
-      [module]: allSelected ? [] : allIds,
-    });
+    emit({ ...perms, [module]: allSelected ? [] : allIds });
   };
 
   const applyRoleDefaults = () => {
     if (disabled) return;
-    onChange(getDefaultModulePermissionsForRole(role || "user"));
+    emit(coerceModulePermissionsForForm(null, role || "user"));
   };
 
   return (
-    <div className="col-span-1 md:col-span-2 rounded-xl border border-gray-200 dark:border-gray-300 p-4 space-y-4 bg-white/80">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-300 p-4 space-y-4 bg-white/80">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-sm font-bold text-gray-900 dark:text-gray-900">Module permissions</p>
@@ -78,12 +90,9 @@ export default function ModulePermissionPicker({ value, onChange, role, disabled
               className="rounded-lg border border-gray-200 bg-gray-50/80 p-3 space-y-2"
             >
               <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
+                <IndeterminateCheckbox
                   checked={allSelected}
-                  ref={(el) => {
-                    if (el) el.indeterminate = someSelected;
-                  }}
+                  indeterminate={someSelected}
                   onChange={() => toggleModuleAll(module)}
                   disabled={disabled}
                   className="w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"

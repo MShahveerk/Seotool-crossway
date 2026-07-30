@@ -4,9 +4,9 @@ import prisma from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-export async function GET(_req, { params }) {
+export async function (req, { params }) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "post-automation");
     const { id } = await params;
     const run = await prisma.postAutomationRun.findUnique({ where: { id } });
     if (!run) return Response.json({ error: "Run not found." }, { status: 404 });

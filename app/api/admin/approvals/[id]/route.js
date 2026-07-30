@@ -27,7 +27,7 @@ function publicPathToDisk(publicPath) {
 /** PATCH — schedule / visibility / content edits from board or admin UI */
 export async function PATCH(req, { params }) {
   try {
-    const session = await requireAdminRoute(req);
+    const session = await requireAdminRoute(req, "admin-approvals");
     const { id } = await params;
     const body = await req.json();
 
@@ -125,7 +125,7 @@ export async function PATCH(req, { params }) {
 /** DELETE — remove approval row and try to remove uploaded media */
 export async function DELETE(req, { params }) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-approvals");
     const { id } = await params;
 
     const existing = await prisma.approval.findUnique({ where: { id } });

@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
-import { ROLES } from "../../../../lib/rbac";
+import { hasGlobalSiteAccess } from "../../../../lib/modulePermissions";
 import axios from "axios";
 
 export const runtime = "nodejs";
@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id || (session.user.role !== ROLES.SUPER_ADMIN && session.user.role !== ROLES.SMM)) {
+    if (!session?.user?.id || !hasGlobalSiteAccess(session.user)) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 403,
         headers: { "Content-Type": "application/json" },

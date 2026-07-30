@@ -45,7 +45,7 @@ function mediaMaxBytes(mime) {
 /** GET — list approvals (optional ?countOnly=1 for unread badge) */
 export async function GET(req) {
   try {
-    await requireAdminRoute(req);
+    await requireAdminRoute(req, "admin-approvals");
 
     const countOnly = req.nextUrl.searchParams.get("countOnly") === "1";
     if (countOnly) {
@@ -102,7 +102,7 @@ export async function GET(req) {
 /** POST — multipart: media file field `image` (legacy key), title, selectedSite, optional approveOnAssignment */
 export async function POST(req) {
   try {
-    const session = await requireAdminRoute(req);
+    const session = await requireAdminRoute(req, "admin-approvals");
 
     const form = await req.formData();
     const image = form.get("image");
