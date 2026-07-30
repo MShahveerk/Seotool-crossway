@@ -1,12 +1,12 @@
-import { requirePermission } from "../../../../../lib/middleware/auth";
-import { PERMISSIONS } from "../../../../../lib/rbac";
+import { requireAdminRoute } from "../../../../../lib/adminAuth";
+
 import { generateBlogPrompt } from "../../../../../lib/blogAutomation.js";
 
 export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const body = await req.json().catch(() => ({}));
     const result = await generateBlogPrompt({
       topic: body.topic || "",

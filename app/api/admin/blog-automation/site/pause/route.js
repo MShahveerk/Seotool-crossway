@@ -1,5 +1,5 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../../lib/adminAuth";
+
 import {
   getSiteStudioConfig,
   saveSiteStudioConfig,
@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const url = new URL(req.url);
     const siteLink = String(url.searchParams.get("siteLink") || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });

@@ -1,12 +1,12 @@
-import { requirePermission } from "../../../../../lib/middleware/auth";
-import { PERMISSIONS } from "../../../../../lib/rbac";
+import { requireAdminRoute } from "../../../../../lib/adminAuth";
+
 import { triggerBlogWebhook, getBlogAutomationHistory } from "../../../../../lib/blogAutomation.js";
 
 export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    const session = await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    const session = await requireAdminRoute(req);
     const body = await req.json().catch(() => ({}));
     const run = await triggerBlogWebhook({
       prompt: body.prompt || "",

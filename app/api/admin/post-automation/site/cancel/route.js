@@ -1,5 +1,5 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../../lib/adminAuth";
+
 import { cancelActiveStudioRunsForSite, cancelStudioRun } from "@/lib/postsStudio/runner.js";
 import prisma from "@/lib/prisma";
 
@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const siteLink = String(new URL(req.url).searchParams.get("siteLink") || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
     const body = await req.json().catch(() => ({}));

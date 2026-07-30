@@ -1,6 +1,5 @@
-import { requirePermission } from "../../../../lib/middleware/auth";
+import { requireAdminRoute } from "../../../../lib/adminAuth";
 import prisma from "../../../../lib/prisma";
-import { PERMISSIONS } from "../../../../lib/rbac";
 import { buildBlogPayload, parseScheduledDate, parseSeoMetaInput } from "../../../../lib/blogPayload.js";
 import { findAssigneesForSite, notifyBlogApprovers, createBlogQuickActionToken } from "../../../../lib/blogAssignee.js";
 import { saveBlogFeaturedImage } from "../../../../lib/blogMedia.js";
@@ -12,7 +11,7 @@ export const runtime = "nodejs";
 
 export async function GET(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const site = req.nextUrl.searchParams.get("site") || req.nextUrl.searchParams.get("url") || "";
     let where = {};
     if (site) {
@@ -34,7 +33,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const session = await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    const session = await requireAdminRoute(req);
     const contentType = req.headers.get("content-type") || "";
     let fields = {};
     let featuredFile = null;

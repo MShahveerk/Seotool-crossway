@@ -1,12 +1,12 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../lib/adminAuth";
+
 import { pullMetaDraftsForSite } from "@/lib/metaDraftPull.js";
 
 export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const body = await req.json().catch(() => ({}));
     const siteKey =
       String(body.siteKey || body.site || req.nextUrl.searchParams.get("siteKey") || "").trim();

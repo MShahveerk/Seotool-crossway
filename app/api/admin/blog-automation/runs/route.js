@@ -1,12 +1,12 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../lib/adminAuth";
+
 import prisma from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
 export async function GET(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const url = new URL(req.url);
     const siteLink = String(url.searchParams.get("siteLink") || "").trim();
     const take = Math.min(50, Math.max(1, Number(url.searchParams.get("limit")) || 20));

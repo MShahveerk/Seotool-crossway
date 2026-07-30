@@ -1,5 +1,5 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../lib/adminAuth";
+
 import { getSitePostConfig } from "@/lib/postPublishConfig.js";
 import { getSitePublishConfig } from "@/lib/blogPublishConfig.js";
 import { testImapConnection, pullEmailPostsForSite, pullEmailBlogsForSite } from "@/lib/emailInboundPull.js";
@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const body = await req.json();
     const contentType = String(body.contentType || "post").toLowerCase();
     const siteKey = String(body.siteKey || body.siteLink || body.site || "").trim();

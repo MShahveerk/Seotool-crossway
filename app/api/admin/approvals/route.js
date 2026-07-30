@@ -1,7 +1,6 @@
 import { Prisma } from "@prisma/client";
-import { requirePermission } from "../../../../lib/middleware/auth";
+import { requireAdminRoute } from "../../../../lib/adminAuth";
 import prisma from "../../../../lib/prisma";
-import { PERMISSIONS } from "../../../../lib/rbac";
 import {
   fetchCaptionMapByApprovalIds,
   mergeCaptionFieldsIntoApprovals,
@@ -46,7 +45,7 @@ function mediaMaxBytes(mime) {
 /** GET — list approvals (optional ?countOnly=1 for unread badge) */
 export async function GET(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
 
     const countOnly = req.nextUrl.searchParams.get("countOnly") === "1";
     if (countOnly) {
@@ -103,7 +102,7 @@ export async function GET(req) {
 /** POST — multipart: media file field `image` (legacy key), title, selectedSite, optional approveOnAssignment */
 export async function POST(req) {
   try {
-    const session = await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    const session = await requireAdminRoute(req);
 
     const form = await req.formData();
     const image = form.get("image");

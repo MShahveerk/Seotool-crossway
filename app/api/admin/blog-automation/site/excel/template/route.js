@@ -1,5 +1,5 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../../../lib/adminAuth";
+
 import { buildExcelTemplateBuffer } from "@/lib/blogStudio/excelTemplate.js";
 
 export const runtime = "nodejs";
@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 /** GET downloadable .xlsx campaign template */
 export async function GET() {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const buffer = buildExcelTemplateBuffer();
     const filename = "crossway-blog-automation-excel-template.xlsx";
     const body = Buffer.isBuffer(buffer) ? new Uint8Array(buffer) : buffer;

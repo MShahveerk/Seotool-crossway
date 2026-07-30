@@ -1,12 +1,12 @@
-import { requirePermission } from "../../../../../../lib/middleware/auth";
-import { PERMISSIONS } from "../../../../../../lib/rbac";
+import { requireAdminRoute } from "../../../../../../lib/adminAuth";
+
 import { listBlogRevisions } from "../../../../../../lib/blogRevisions.js";
 
 export const runtime = "nodejs";
 
 export async function GET(_req, { params }) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const { id } = await params;
     const revisions = await listBlogRevisions(id);
     return Response.json({ revisions });

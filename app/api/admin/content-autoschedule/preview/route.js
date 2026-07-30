@@ -1,5 +1,5 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../lib/adminAuth";
+
 import { normalizeKind } from "@/lib/contentAutoschedule/engine.js";
 import { getAutoschedulePreview } from "@/lib/contentAutoschedule/runner.js";
 
@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function GET(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const url = new URL(req.url);
     const kind = normalizeKind(url.searchParams.get("kind"));
     const siteLink = String(url.searchParams.get("siteLink") || "").trim();

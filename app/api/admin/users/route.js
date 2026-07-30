@@ -1,6 +1,7 @@
 import { requireSuperAdmin } from "../../../../lib/middleware/auth";
 import { getAllUsers, createUser, hashPassword, getUserByEmail, assignAccessibleSites } from "../../../../lib/auth";
 import { ROLES } from "../../../../lib/rbac";
+import { validateModulePermissionsInput } from "../../../../lib/modulePermissions";
 import { logger } from "../../../../lib/logger";
 
 // GET /api/admin/users - Get all users (Super Admin only)
@@ -53,6 +54,7 @@ export async function POST(req) {
       instagramUserId = null,
       isActive = true,
       accessibleSites = [],
+      modulePermissions = null,
     } = body;
     
     if (!email || !password) {
@@ -87,6 +89,14 @@ export async function POST(req) {
       );
     }
     
+    const permCheck = validateModulePermissionsInput(modulePermissions, { role });
+    if (!permCheck.valid) {
+      return new Response(JSON.stringify({ error: permCheck.error }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Check if user already exists
     const existingUser = await getUserByEmail(email);
     if (existingUser) {
@@ -113,6 +123,7 @@ export async function POST(req) {
         instagramUserId,
         isActive: Boolean(isActive),
         skipVerification: true,
+        modulePermissions: permCheck.value,
       }
     );
 
@@ -138,6 +149,7 @@ export async function POST(req) {
           gtmContainerId: user.gtmContainerId || null,
           facebookPageId: user.facebookPageId || null,
           instagramUserId: user.instagramUserId || null,
+          modulePermissions: user.modulePermissions ?? null,
           emailVerified: user.emailVerified,
           status: user.status,
         },

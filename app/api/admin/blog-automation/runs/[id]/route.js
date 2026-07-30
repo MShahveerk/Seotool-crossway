@@ -1,12 +1,12 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../../lib/adminAuth";
+
 import prisma from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
 export async function GET(_req, { params }) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const { id } = await params;
     const run = await prisma.blogAutomationRun.findUnique({ where: { id } });
     if (!run) return Response.json({ error: "Run not found." }, { status: 404 });

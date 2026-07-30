@@ -1,5 +1,5 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../lib/adminAuth";
+
 import {
   getSiteStudioConfig,
   saveSiteStudioConfig,
@@ -15,7 +15,7 @@ function siteFrom(req) {
 
 export async function GET(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const siteLink = siteFrom(req);
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
     const config = await getSiteStudioConfig(siteLink);
@@ -30,7 +30,7 @@ export async function GET(req) {
 
 export async function PUT(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const siteLink = siteFrom(req);
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
     const body = await req.json();

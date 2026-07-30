@@ -1,5 +1,5 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../lib/adminAuth";
+
 import {
   getAutoscheduleConfig,
   saveAutoscheduleConfig,
@@ -18,7 +18,7 @@ function paramsFrom(req) {
 
 export async function GET(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const { kind, siteLink } = paramsFrom(req);
     if (!kind || !siteLink) {
       return Response.json({ error: "kind and siteLink are required." }, { status: 400 });
@@ -35,7 +35,7 @@ export async function GET(req) {
 
 export async function PUT(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const { kind, siteLink } = paramsFrom(req);
     if (!kind || !siteLink) {
       return Response.json({ error: "kind and siteLink are required." }, { status: 400 });

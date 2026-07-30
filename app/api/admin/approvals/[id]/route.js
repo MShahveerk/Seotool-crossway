@@ -2,7 +2,7 @@ import { unlink } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 import { Prisma } from "@prisma/client";
-import { requirePermission } from "../../../../../lib/middleware/auth";
+import { requireAdminRoute } from "../../../../../lib/adminAuth";
 import prisma from "../../../../../lib/prisma";
 import { PERMISSIONS, ROLES } from "../../../../../lib/rbac";
 
@@ -27,7 +27,7 @@ function publicPathToDisk(publicPath) {
 /** PATCH — schedule / visibility / content edits from board or admin UI */
 export async function PATCH(req, { params }) {
   try {
-    const session = await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    const session = await requireAdminRoute(req);
     const { id } = await params;
     const body = await req.json();
 
@@ -125,7 +125,7 @@ export async function PATCH(req, { params }) {
 /** DELETE — remove approval row and try to remove uploaded media */
 export async function DELETE(req, { params }) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const { id } = await params;
 
     const existing = await prisma.approval.findUnique({ where: { id } });

@@ -1,5 +1,5 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../../lib/adminAuth";
+
 import { ENGINE_INTERNAL, getEngineMode, getSiteStudioConfig } from "@/lib/postsStudio/engine.js";
 import {
   getActiveCampaign,
@@ -18,7 +18,7 @@ function siteFrom(req) {
 
 export async function GET(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const siteLink = siteFrom(req);
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
     const payload = await getExcelQueuePayload(siteLink);
@@ -33,7 +33,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const mode = await getEngineMode();
     if (mode !== ENGINE_INTERNAL) {
       return Response.json(
@@ -72,7 +72,7 @@ export async function POST(req) {
 
 export async function PUT(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const siteLink = siteFrom(req);
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
     const body = await req.json();

@@ -1,5 +1,5 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../../lib/adminAuth";
+
 import { enqueueStudioRun } from "@/lib/blogStudio/runner.js";
 import { ENGINE_INTERNAL, getEngineMode } from "@/lib/blogStudio/engine.js";
 
@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 
 export async function POST(req) {
   try {
-    const session = await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    const session = await requireAdminRoute(req);
     const mode = await getEngineMode();
     if (mode !== ENGINE_INTERNAL) {
       return Response.json(

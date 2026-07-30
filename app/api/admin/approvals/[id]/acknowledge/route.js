@@ -1,5 +1,5 @@
-import { requirePermission } from "../../../../../../lib/middleware/auth";
-import { PERMISSIONS } from "../../../../../../lib/rbac";
+import { requireAdminRoute } from "../../../../../../lib/adminAuth";
+
 import prisma from "../../../../../../lib/prisma";
 
 export const runtime = "nodejs";
@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 /** POST — mark user response as seen (clears awaitingAdminReview) */
 export async function POST(req, { params }) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const { id } = await params;
 
     const existing = await prisma.approval.findUnique({ where: { id } });

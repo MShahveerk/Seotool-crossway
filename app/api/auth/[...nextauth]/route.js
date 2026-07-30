@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { getUserByEmail, verifyPassword } from "../../../../lib/auth";
 import { logger } from "../../../../lib/logger";
+import { resolveModulePermissions } from "../../../../lib/modulePermissions";
 
 /** Only use Secure / __Secure- cookies when the app is served over HTTPS (e.g. Vercel). On http://localhost, secure cookies are not stored — `npm run start` would break login/session. */
 const useSecureCookies =
@@ -77,6 +78,8 @@ export const authOptions = {
           email: user.email,
           name: user.name,
           role: user.role || "user",
+          modulePermissions: user.modulePermissions ?? null,
+          resolvedPermissions: resolveModulePermissions(user),
           siteLink: user.siteLink || null,
           gtmContainerId: user.gtmContainerId || null,
           facebookPageId: user.facebookPageId || null,
@@ -101,6 +104,8 @@ export const authOptions = {
         token.email = user.email;
         token.name = user.name;
         token.role = user.role;
+        token.modulePermissions = user.modulePermissions ?? null;
+        token.resolvedPermissions = user.resolvedPermissions ?? resolveModulePermissions(user);
         token.siteLink = user.siteLink;
         token.gtmContainerId = user.gtmContainerId || null;
         token.facebookPageId = user.facebookPageId || null;
@@ -116,6 +121,8 @@ export const authOptions = {
           );
           if (userData && userData.isActive !== false) {
             token.role = userData.role || "user";
+            token.modulePermissions = userData.modulePermissions ?? null;
+            token.resolvedPermissions = resolveModulePermissions(userData);
             token.siteLink = userData.siteLink || null;
             token.gtmContainerId = userData.gtmContainerId || null;
             token.facebookPageId = userData.facebookPageId || null;
@@ -135,6 +142,8 @@ export const authOptions = {
         session.user.email = token.email;
         session.user.name = token.name;
         session.user.role = token.role || "user";
+        session.user.modulePermissions = token.modulePermissions ?? null;
+        session.user.resolvedPermissions = token.resolvedPermissions ?? null;
         session.user.siteLink = token.siteLink || null;
         session.user.gtmContainerId = token.gtmContainerId || null;
         session.user.facebookPageId = token.facebookPageId || null;

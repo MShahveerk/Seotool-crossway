@@ -1,5 +1,5 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../lib/adminAuth";
+
 import {
   getGlobalPostsAutomationConfig,
   saveGlobalPostsAutomationConfig,
@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const config = await getGlobalPostsAutomationConfig();
     return Response.json({ config });
   } catch (error) {
@@ -22,7 +22,7 @@ export async function GET() {
 
 export async function POST(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const body = await req.json();
     const config = await saveGlobalPostsAutomationConfig(body || {});
     return Response.json({ config });

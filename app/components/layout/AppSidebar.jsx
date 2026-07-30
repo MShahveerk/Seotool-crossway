@@ -27,6 +27,7 @@ import {
   Link2,
 } from "lucide-react";
 import { isMetaPageId } from "@/lib/siteAccess";
+import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";
 import {
   entryMatchesSelectValue,
   getClientAccountSelectValue,
@@ -96,34 +97,15 @@ const blogsMenuItems = [
   { id: "blog-autoschedule", label: "Blog Autoscheduler", icon: CalendarClock, role: "super_admin" },
 ];
 
-function canAccessCreateItem(item, role) {
-  if (!item.role) return true;
-  if (role === item.role) return true;
-  return (
-    (item.id === "admin-approvals" ||
-      item.id === "admin-blogs" ||
-      item.id === "blog-automation" ||
-      item.id === "post-automation" ||
-      item.id === "post-autoschedule" ||
-      item.id === "blog-autoschedule" ||
-      item.id === "post-board" ||
-      item.id === "blog-board") &&
-    role === "smm"
-  );
-}
-
 function groupContainsSection(items, sectionId) {
   return items.some((item) => item.id === sectionId);
 }
 
-function filterMenuItem(item, { role, hasGlobalSiteAccess, isWebsiteSelected }) {
-  if (role === "approver") {
-    return item.id === "calendar" || item.id === "my-approvals";
-  }
-  if (item.id === "website-statistics" && hasGlobalSiteAccess && !isWebsiteSelected) {
+function filterMenuItem(item, { session, hasGlobalSiteAccess, isWebsiteSelected }) {
+  if (!sessionCanAccessSection(session, item.id)) {
     return false;
   }
-  if (item.role && !canAccessCreateItem(item, role)) {
+  if (item.id === "website-statistics" && hasGlobalSiteAccess && !isWebsiteSelected) {
     return false;
   }
   return true;
@@ -159,7 +141,7 @@ export default function AppSidebar({
   const userRole = session?.user?.role;
 
   const isSuperAdmin = session?.user?.role === "super_admin";
-  const hasGlobalSiteAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
+  const hasGlobalSiteAccess = sessionHasGlobalSiteAccess(session);
   const userSiteLink = session?.user?.siteLink || "";
 
   useEffect(() => {
@@ -285,8 +267,10 @@ export default function AppSidebar({
     if (groupContainsSection(blogsMenuItems, activeSection)) setBlogsOpen(true);
   }, [activeSection]);
 
-  const menuContext = { role: userRole, hasGlobalSiteAccess, isWebsiteSelected };
+  const menuContext = { session, hasGlobalSiteAccess, isWebsiteSelected };
 
+  const showDashboard =
+    sessionCanAccessSection(session, "dashboard") && userRole !== "approver";
   const visibleGscItems = gscMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleSeoItems = seoMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleSmmItems = smmMenuItems.filter((item) => filterMenuItem(item, menuContext));
@@ -296,10 +280,10 @@ export default function AppSidebar({
     ? visibleSeoItems
     : visibleSeoItems.filter((item) => item.id === "site-explorer");
 
-  const showGscGroup = userRole !== "approver" && isWebsiteSelected && visibleGscItems.length > 0;
-  const showSeoGroup = userRole !== "approver" && seoItemsForMenu.length > 0;
+  const showGscGroup = isWebsiteSelected && visibleGscItems.length > 0;
+  const showSeoGroup = seoItemsForMenu.length > 0;
   const showSmmGroup = visibleSmmItems.length > 0;
-  const showBlogsGroup = userRole !== "approver" && visibleBlogItems.length > 0;
+  const showBlogsGroup = visibleBlogItems.length > 0;
 
   const getItemBadge = (item) => {
     if (item.id === "my-approvals" && approvalUserUnread > 0) {
@@ -408,7 +392,7 @@ export default function AppSidebar({
       </SidebarHeader>
 
       <SidebarContent>
-        {userRole !== "approver" ? (
+        {showDashboard ? (
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>{renderNavItem(dashboardItem, null)}</SidebarMenu>

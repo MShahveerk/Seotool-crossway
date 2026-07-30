@@ -1,5 +1,5 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../../lib/adminAuth";
+
 import prisma from "@/lib/prisma";
 import {
   blogColumnToUpdate,
@@ -18,7 +18,7 @@ export const runtime = "nodejs";
 /** PATCH — move a blog card to another board column (status). Published is locked. */
 export async function PATCH(req, { params }) {
   try {
-    const session = await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    const session = await requireAdminRoute(req);
     const { id } = await params;
     const body = await req.json();
     const toColumn = String(body.column || body.status || "").trim().toLowerCase();

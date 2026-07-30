@@ -26,6 +26,7 @@ import UnifiedSiteExplorerSection from "./components/seo/UnifiedSiteExplorerSect
 import SerankingBacklinksSection from "./components/seranking/SerankingBacklinksSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
+import { sessionCanAccessSection } from "../lib/clientPermissions";
 import { LoadingSpinner } from "./components/ui-shared/LoadingBlock";
 import { SectionTransition } from "./components/ui-shared/Motion";
 
@@ -100,8 +101,12 @@ export default function Home() {
   useEffect(() => {
     if (status === "unauthenticated") {
       router.replace("/login");
-    } else if (status === "authenticated" && session?.user?.role === "approver" && activeSection === "dashboard") {
-      setActiveSection("calendar");
+    } else if (
+      status === "authenticated" &&
+      !sessionCanAccessSection(session, "dashboard") &&
+      activeSection === "dashboard"
+    ) {
+      setActiveSection(sessionCanAccessSection(session, "calendar") ? "calendar" : "my-approvals");
     }
   }, [status, router, session, activeSection]);
 
@@ -137,6 +142,18 @@ export default function Home() {
     "";
 
   const renderSection = () => {
+    const fallback = () => (
+      <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+    );
+
+    const resolvedSection = resolveSection(activeSection);
+    if (
+      resolvedSection !== "dashboard" &&
+      !sessionCanAccessSection(session, resolvedSection)
+    ) {
+      return fallback();
+    }
+
     switch (activeSection) {
       case "dashboard":
         return <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />;
@@ -177,64 +194,66 @@ export default function Home() {
       case "my-blog-approvals":
         return <MyBlogApprovalsSection selectedSite={selectedSite} />;
       case "user-management":
-        return session?.user?.role === "super_admin" ? (
+        return sessionCanAccessSection(session, "user-management") ? (
           <AdminSection />
         ) : (
-          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+          fallback()
         );
       case "admin-approvals":
-        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+        return sessionCanAccessSection(session, "admin-approvals") ? (
           <AdminApprovalsSection selectedSite={selectedSite} />
         ) : (
-          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+          fallback()
         );
       case "post-board":
-        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+        return sessionCanAccessSection(session, "post-board") ? (
           <PostBoardSection selectedSite={selectedSite} />
         ) : (
-          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+          fallback()
         );
       case "admin-blogs":
-        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+        return sessionCanAccessSection(session, "admin-blogs") ? (
           <AdminBlogSection selectedSite={selectedSite} />
         ) : (
-          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+          fallback()
         );
       case "blog-board":
-        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+        return sessionCanAccessSection(session, "blog-board") ? (
           <BlogBoardSection selectedSite={selectedSite} />
         ) : (
-          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+          fallback()
         );
       case "blog-automation":
-        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+        return sessionCanAccessSection(session, "blog-automation") ? (
           <BlogAutomationSection selectedSite={selectedSite} />
         ) : (
-          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+          fallback()
         );
       case "post-automation":
-        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+        return sessionCanAccessSection(session, "post-automation") ? (
           <PostAutomationSection selectedSite={selectedSite} />
         ) : (
-          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+          fallback()
         );
       case "post-autoschedule":
-        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+        return sessionCanAccessSection(session, "post-autoschedule") ? (
           <PostAutoscheduleSection selectedSite={selectedSite} />
         ) : (
-          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+          fallback()
         );
       case "blog-autoschedule":
-        return session?.user?.role === "super_admin" || session?.user?.role === "smm" ? (
+        return sessionCanAccessSection(session, "blog-autoschedule") ? (
           <BlogAutoscheduleSection selectedSite={selectedSite} />
         ) : (
-          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+          fallback()
         );
       default:
-        return session?.user?.role === "approver" ? (
+        return sessionCanAccessSection(session, "dashboard") ? (
+          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+        ) : sessionCanAccessSection(session, "calendar") ? (
           <CalendarSection />
         ) : (
-          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+          fallback()
         );
     }
   };

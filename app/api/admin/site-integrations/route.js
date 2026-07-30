@@ -1,4 +1,5 @@
-import { requireSuperAdmin, requirePermission } from "../../../../lib/middleware/auth";
+import { requireSuperAdmin } from "../../../../lib/middleware/auth";
+import { requireGlobalSiteAccess } from "../../../../lib/adminAuth";
 import { getAllUsers, getUserById, syncSiteAssignmentForIntegration } from "../../../../lib/auth";
 import { getSearchAnalyticsTimeSeries } from "../../../../lib/searchconsole";
 import { normalizeSiteOrigin } from "../../../../lib/validation";
@@ -85,7 +86,7 @@ function getLast28Days() {
 // GET /api/admin/site-integrations - Return integrated sites for current super admin or SMM
 export async function GET() {
   try {
-    const session = await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    const session = await requireGlobalSiteAccess();
     const users = await getAllUsers(true);
     const currentSuperAdmin = users.find((u) => u.id === session.user.id) || null;
 

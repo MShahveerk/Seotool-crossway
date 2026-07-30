@@ -1,5 +1,4 @@
-import { requirePermission } from "../../../../lib/middleware/auth";
-import { PERMISSIONS } from "../../../../lib/rbac";
+import { requireAdminRoute } from "../../../../lib/adminAuth";
 import {
   getBlogAutomationConfig,
   saveBlogAutomationConfig,
@@ -11,7 +10,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const [config, history] = await Promise.all([
       getBlogAutomationConfig(),
       getBlogAutomationHistory(),
@@ -27,7 +26,7 @@ export async function GET() {
 
 export async function POST(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const body = await req.json();
     const config = await saveBlogAutomationConfig(body);
     return Response.json({ config: sanitizeConfigForClient(config) });

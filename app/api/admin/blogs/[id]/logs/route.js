@@ -1,12 +1,12 @@
-import { requirePermission } from "../../../../../../lib/middleware/auth";
+import { requireAdminRoute } from "../../../../../../lib/adminAuth";
 import prisma from "../../../../../../lib/prisma";
-import { PERMISSIONS } from "../../../../../../lib/rbac";
+
 
 export const runtime = "nodejs";
 
 export async function GET(_req, { params }) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const { id } = await params;
     const blog = await prisma.blogPost.findUnique({ where: { id }, select: { id: true, title: true } });
     if (!blog) return Response.json({ error: "Blog not found." }, { status: 404 });

@@ -13,6 +13,8 @@ model User {
   password             String                   @map("password_hash") @db.Text
   name                 String?                  @db.VarChar(255)
   role                 String                   @default("user") @db.VarChar(50)
+  /// Granular module access: { gsc: string[], seo: string[], social: string[], blogs: string[] }
+  modulePermissions    Json?                    @map("module_permissions")
   siteLink             String?                  @map("site_link") @db.VarChar(512)
   gtmContainerId       String?                  @map("gtm_container_id") @db.VarChar(64)
   facebookPageId       String?                  @map("facebook_page_id") @db.VarChar(191)

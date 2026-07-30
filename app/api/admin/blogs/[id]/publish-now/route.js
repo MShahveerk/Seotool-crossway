@@ -1,12 +1,12 @@
-import { requirePermission } from "../../../../../../lib/middleware/auth";
-import { PERMISSIONS } from "../../../../../../lib/rbac";
+import { requireAdminRoute } from "../../../../../../lib/adminAuth";
+
 import { publishBlogNow } from "../../../../../../lib/blogPublishJobs.js";
 
 export const runtime = "nodejs";
 
 export async function POST(_req, { params }) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const { id } = await params;
     const result = await publishBlogNow(id);
     return Response.json({ ok: result.success, ...result });

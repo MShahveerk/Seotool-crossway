@@ -8,6 +8,7 @@ import {
   hashPassword,
 } from "../../../../../lib/auth";
 import { ROLES, isMultiSiteRole } from "../../../../../lib/rbac";
+import { validateModulePermissionsInput } from "../../../../../lib/modulePermissions";
 import { validatePassword } from "../../../../../lib/validation";
 import prisma from "../../../../../lib/prisma";
 
@@ -41,6 +42,7 @@ export async function GET(req, { params }) {
           facebookPageId: user.facebookPageId || null,
           instagramUserId: user.instagramUserId || null,
           accessibleSites: user.accessibleSites || [],
+          modulePermissions: user.modulePermissions ?? null,
           isActive: user.isActive !== false,
           emailVerified: user.emailVerified || false,
           status: user.status || (user.emailVerified ? "active" : "pending"),
@@ -140,6 +142,19 @@ export async function PATCH(req, { params }) {
       }
     }
     
+    if (body.modulePermissions !== undefined) {
+      const permCheck = validateModulePermissionsInput(body.modulePermissions, {
+        role: body.role || existing.role,
+      });
+      if (!permCheck.valid) {
+        return new Response(JSON.stringify({ error: permCheck.error }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      body.modulePermissions = permCheck.value;
+    }
+
     const nextRole = body.role || existing.role;
     let siteLinkUpdated = false;
 
@@ -221,6 +236,7 @@ export async function PATCH(req, { params }) {
           facebookPageId: user.facebookPageId || null,
           instagramUserId: user.instagramUserId || null,
           accessibleSites: user.accessibleSites || [],
+          modulePermissions: user.modulePermissions ?? null,
           isActive: user.isActive !== false,
           emailVerified: user.emailVerified || false,
           status: user.status || (user.emailVerified ? "active" : "pending"),

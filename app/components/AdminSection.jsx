@@ -47,6 +47,8 @@ const SMM_BASELINE_PLATFORM_LABEL = {
 import SiteAssociationsModal from "./SiteAssociationsModal";
 import SeoDigestSettingsPanel from "./SeoDigestSettingsPanel";
 import ReportsManagementPanel from "./ReportsManagementPanel";
+import ModulePermissionPicker from "./ModulePermissionPicker";
+import { getDefaultModulePermissionsForRole } from "@/lib/modulePermissions";
 
 export default function AdminSection() {
   const { data: session } = useSession();
@@ -68,6 +70,7 @@ export default function AdminSection() {
     instagramUserId: "",
     isActive: true,
     accessibleSites: [],
+    modulePermissions: getDefaultModulePermissionsForRole("user"),
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [activeActionMenuUserId, setActiveActionMenuUserId] = useState(null);
@@ -171,6 +174,7 @@ export default function AdminSection() {
       };
       if (editingUser?.role !== ROLES.SUPER_ADMIN) {
         payload.role = formData.role;
+        payload.modulePermissions = formData.modulePermissions;
       }
       const siteTrim = String(formData.siteLink || "").trim();
       if (siteTrim) {
@@ -252,6 +256,7 @@ export default function AdminSection() {
       instagramUserId: user.instagramUserId || "",
       isActive: user.isActive !== false,
       accessibleSites: Array.isArray(user.accessibleSites) ? user.accessibleSites.map((s) => s.siteLink || s) : [],
+      modulePermissions: user.modulePermissions || getDefaultModulePermissionsForRole(user.role || "user"),
     });
     setSiteIntegrationForm({
       userId: user.id,
@@ -579,6 +584,7 @@ export default function AdminSection() {
           facebookPageId: formData.facebookPageId || null,
           instagramUserId: formData.instagramUserId || null,
           accessibleSites: formData.accessibleSites || [],
+          modulePermissions: formData.modulePermissions,
         }),
       });
 
@@ -649,6 +655,7 @@ export default function AdminSection() {
         instagramUserId: "",
         isActive: true,
         accessibleSites: [],
+        modulePermissions: getDefaultModulePermissionsForRole("user"),
       });
       setSiteIntegrationForm({
         userId: "",
@@ -1119,7 +1126,14 @@ export default function AdminSection() {
                 </label>
                 <select
                   value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  onChange={(e) => {
+                    const role = e.target.value;
+                    setFormData({
+                      ...formData,
+                      role,
+                      modulePermissions: getDefaultModulePermissionsForRole(role),
+                    });
+                  }}
                   disabled={editingUser?.role === ROLES.SUPER_ADMIN}
                   className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black"
                 >
@@ -1132,6 +1146,14 @@ export default function AdminSection() {
                   <option value="approver">Approver (SMM Approvals)</option>
                 </select>
               </div>
+
+              {(!editingUser || editingUser.role !== ROLES.SUPER_ADMIN) && (
+                <ModulePermissionPicker
+                  value={formData.modulePermissions}
+                  onChange={(modulePermissions) => setFormData({ ...formData, modulePermissions })}
+                  role={formData.role}
+                />
+              )}
 
               {(!editingUser || (editingUser && editingUser.role !== ROLES.SUPER_ADMIN)) && (
                 <div className="col-span-1 md:col-span-2 rounded-lg border border-[#0EFF2A]/20 bg-[#0EFF2A]/5 p-4 dark:border-[#0EFF2A]/10 dark:bg-[#0EFF2A]/5">

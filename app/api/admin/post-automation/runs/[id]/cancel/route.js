@@ -1,12 +1,12 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../../../lib/adminAuth";
+
 import { cancelStudioRun } from "@/lib/postsStudio/runner.js";
 
 export const runtime = "nodejs";
 
 export async function POST(_req, { params }) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const { id } = await params;
     const run = await cancelStudioRun(id, { hard: true });
     return Response.json({ run });

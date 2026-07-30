@@ -1,5 +1,5 @@
-import { requirePermission } from "@/lib/middleware/auth";
-import { PERMISSIONS } from "@/lib/rbac";
+import { requireAdminRoute } from "../../../../../../lib/adminAuth";
+
 import { saveBlogFeaturedImage } from "@/lib/blogMedia.js";
 import { saveSiteStudioConfig, sanitizeSiteConfigForClient, getSiteStudioConfig } from "@/lib/postsStudio/engine.js";
 import {
@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 /** POST — append a reference image (max 4). */
 export async function POST(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const siteLink = String(new URL(req.url).searchParams.get("siteLink") || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
     const form = await req.formData();
@@ -44,7 +44,7 @@ export async function POST(req) {
 /** DELETE — remove a reference by path (?path=) or clear all (?all=1). */
 export async function DELETE(req) {
   try {
-    await requirePermission(PERMISSIONS.VIEW_ALL_DATA);
+    await requireAdminRoute(req);
     const url = new URL(req.url);
     const siteLink = String(url.searchParams.get("siteLink") || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
