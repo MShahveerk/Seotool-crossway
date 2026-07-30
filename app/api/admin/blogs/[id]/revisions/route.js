@@ -4,7 +4,7 @@ import { listBlogRevisions } from "../../../../../../lib/blogRevisions.js";
 
 export const runtime = "nodejs";
 
-export async function (req, { params }) {
+export async function GET(req, { params }) {
   try {
     await requireAdminRoute(req, "admin-blogs");
     const { id } = await params;

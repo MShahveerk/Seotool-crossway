@@ -6,7 +6,7 @@ import { recordBlogRevision, restoreBlogRevision } from "../../../../../../../..
 
 export const runtime = "nodejs";
 
-export async function (req, { params }) {
+export async function POST(req, { params }) {
   try {
     const session = await requireAdminRoute(req, "admin-blogs");
     const { id, revisionId } = await params;

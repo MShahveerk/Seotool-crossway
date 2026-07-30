@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-export async function (req, { params }) {
+export async function GET(req, { params }) {
   try {
     await requireAdminRoute(req, "blog-automation");
     const { id } = await params;

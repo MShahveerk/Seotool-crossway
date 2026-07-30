@@ -15,8 +15,8 @@ for (const file of walk(path.join("app", "api", "admin"))) {
   let s = fs.readFileSync(file, "utf8");
   if (!s.includes("requireAdminRoute")) continue;
   const orig = s;
-  s = s.replace(/export async function (GET|POST|PATCH|PUT|DELETE)\(\s*_req/g, "export async function $1(req");
-  s = s.replace(/export async function (GET|POST|PATCH|PUT|DELETE)\(\s*\)/g, "export async function $1(req)");
+  s = s.replace(/export async function (GET|POST|PATCH|PUT|DELETE)\(\s*_req/g, (_, m) => `export async function ${m}(req`);
+  s = s.replace(/export async function (GET|POST|PATCH|PUT|DELETE)\(\s*\)/g, (_, m) => `export async function ${m}(req)`);
   if (s !== orig) {
     fs.writeFileSync(file, s);
     n++;

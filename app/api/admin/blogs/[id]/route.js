@@ -8,7 +8,7 @@ import { recordBlogRevision } from "../../../../../lib/blogRevisions.js";
 
 export const runtime = "nodejs";
 
-export async function (req, { params }) {
+export async function GET(req, { params }) {
   try {
     await requireAdminRoute(req, "admin-blogs");
     const { id } = await params;
@@ -116,7 +116,7 @@ export async function PATCH(req, { params }) {
   }
 }
 
-export async function (req, { params }) {
+export async function DELETE(req, { params }) {
   try {
     await requireAdminRoute(req, "admin-blogs");
     const { id } = await params;
