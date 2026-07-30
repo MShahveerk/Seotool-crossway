@@ -16,8 +16,8 @@ const rules = [
   { match: "/blogs/", section: "admin-blogs" },
   { match: "/blogs/route.js", section: "admin-blogs" },
   { match: "/wordpress/", section: "admin-blogs" },
-  { match: "/meta/pull/", section: "admin-approvals" },
-  { match: "/email-inbound/", section: "admin-approvals" },
+  { match: "/meta/pull/", section: "post-automation" },
+  { match: "/email-inbound/", section: "post-automation" },
 ];
 
 function normalize(p) {

@@ -1,19 +1,11 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
-import { hasGlobalSiteAccess } from "../../../../lib/modulePermissions";
+import { requireGlobalSiteAccess } from "../../../../lib/adminAuth";
 import axios from "axios";
 
 export const runtime = "nodejs";
 
-export async function GET(req) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !hasGlobalSiteAccess(session.user)) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    await requireGlobalSiteAccess();
 
     const metaToken = process.env.META_PAGE_ACCESS_TOKEN || process.env.META_APP_ACCESS_TOKEN;
     if (!metaToken) {
@@ -41,7 +33,7 @@ export async function GET(req) {
       const response = await axios.get(url);
 
       if (response.data && response.data.data) {
-        accounts = response.data.data.map(page => ({
+        accounts = response.data.data.map((page) => ({
           id: page.id,
           name: page.name,
           facebookPageId: page.id,
@@ -58,13 +50,15 @@ export async function GET(req) {
         const response = await axios.get(url);
 
         if (response.data && response.data.id) {
-          accounts = [{
-            id: response.data.id,
-            name: response.data.name || "Configured Page",
-            facebookPageId: response.data.id,
-            instagramUserId: response.data.instagram_business_account?.id || null,
-            siteLink: response.data.website ? extractFirstUrl(response.data.website) : "",
-          }];
+          accounts = [
+            {
+              id: response.data.id,
+              name: response.data.name || "Configured Page",
+              facebookPageId: response.data.id,
+              instagramUserId: response.data.instagram_business_account?.id || null,
+              siteLink: response.data.website ? extractFirstUrl(response.data.website) : "",
+            },
+          ];
         }
       } catch (innerErr) {
         console.error("Fallback /me fetch also failed", innerErr.response?.data || innerErr.message);
@@ -77,8 +71,14 @@ export async function GET(req) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message || "Failed to fetch Meta accounts" }), {
-      status: 500,
+    const msg = error.message || "Failed to fetch Meta accounts";
+    const forbidden =
+      msg === "Unauthorized" ||
+      msg.includes("Forbidden") ||
+      msg.includes("Insufficient permissions") ||
+      msg.includes("Super admin");
+    return new Response(JSON.stringify({ error: msg }), {
+      status: forbidden ? 403 : 500,
       headers: { "Content-Type": "application/json" },
     });
   }

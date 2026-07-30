@@ -342,17 +342,16 @@ export async function GET() {
       }
     );
   } catch (error) {
-    if (error.message === "Unauthorized" || error.message.includes("Super admin")) {
-      return new Response(
-        JSON.stringify({ error: "Forbidden: Super admin access required" }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ error: error.message || "Failed to fetch integrations" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    const msg = error.message || "Failed to fetch integrations";
+    const forbidden =
+      msg === "Unauthorized" ||
+      msg.includes("Forbidden") ||
+      msg.includes("Insufficient permissions") ||
+      msg.includes("Super admin");
+    return new Response(JSON.stringify({ error: msg }), {
+      status: forbidden ? 403 : 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
 

@@ -134,12 +134,16 @@ export default function AdminSection() {
     setLoadingMetaAccounts(true);
     try {
       const res = await fetch("/api/admin/meta-accounts");
-      const data = await res.json();
-      if (res.ok && data.accounts) {
-        setMetaAccounts(data.accounts);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setMetaAccounts(data.accounts || []);
+      } else {
+        console.error("Failed to load Meta accounts", data.error || res.status);
+        setMetaAccounts([]);
       }
     } catch (err) {
       console.error("Failed to load Meta accounts", err);
+      setMetaAccounts([]);
     } finally {
       setLoadingMetaAccounts(false);
     }
