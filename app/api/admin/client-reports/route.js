@@ -5,26 +5,59 @@ import {
   isClientReportsEnabled,
   listRecentReportSendLogs,
 } from "../../../../lib/clientReportSettings";
-import { listApproverReportTargets } from "../../../../lib/clientReportBuilder";
 import { envFlag } from "../../../../lib/seoJobs";
+import prisma from "../../../../lib/prisma";
+import { ROLES } from "../../../../lib/rbac";
 
 export const runtime = "nodejs";
 
 /**
  * GET /api/admin/client-reports
+ * Preview who receives client slide decks from user prefs.
  */
 export async function GET() {
   try {
     await requireSuperAdmin();
-    const [dbEnabled, effectiveEnabled, targets, logs] = await Promise.all([
+    const [dbEnabled, effectiveEnabled, users, logs] = await Promise.all([
       getClientReportsEnabled(),
       isClientReportsEnabled(),
-      listApproverReportTargets(),
+      prisma.user.findMany({
+        where: { isActive: true, deletedAt: null },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          siteLink: true,
+          facebookPageId: true,
+          receiveWebsiteReport: true,
+          receiveSmmReport: true,
+          receiveCombinedReport: true,
+          accessibleSites: { select: { siteLink: true } },
+        },
+        orderBy: { email: "asc" },
+      }),
       listRecentReportSendLogs(30),
     ]);
 
-    const uniqueApprovers = new Set(targets.map((t) => t.approver.email).filter(Boolean));
-    const uniqueSites = new Set(targets.map((t) => t.siteKey));
+    const recipients = users
+      .filter((u) => {
+        if (u.role === ROLES.SUPER_ADMIN) return true;
+        return u.receiveWebsiteReport || u.receiveSmmReport || u.receiveCombinedReport;
+      })
+      .map((u) => ({
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        receiveWebsiteReport: u.role === ROLES.SUPER_ADMIN ? true : Boolean(u.receiveWebsiteReport),
+        receiveSmmReport: u.role === ROLES.SUPER_ADMIN ? true : Boolean(u.receiveSmmReport),
+        receiveCombinedReport: Boolean(u.receiveCombinedReport),
+        sites: [
+          u.siteLink,
+          u.facebookPageId,
+          ...(u.accessibleSites || []).map((s) => s.siteLink),
+        ].filter(Boolean),
+      }));
 
     return new Response(
       JSON.stringify({
@@ -32,17 +65,11 @@ export async function GET() {
         effectiveEnabled,
         envFlag: envFlag("CLIENT_REPORTS_EMAIL"),
         schedule: "Mondays 07:00 (server local time)",
-        approverCount: uniqueApprovers.size,
-        siteAssignmentCount: targets.length,
-        uniqueSiteCount: uniqueSites.size,
-        targets: targets.map((t) => ({
-          email: t.approver.email,
-          name: t.approver.name,
-          siteKey: t.siteKey,
-        })),
+        recipientCount: recipients.length,
+        recipients,
         recentLogs: logs,
         note:
-          "Approvers receive PDF reports for sites assigned to them. Meta-only pages without website + GTM link get SMM reports only.",
+          "Client landscape PDF decks are emailed per user report preferences (any role). Super admins always receive all eligible sites. Configure toggles under each user in Admin.",
       }),
       {
         status: 200,

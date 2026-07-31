@@ -1,5 +1,5 @@
 import { requireSuperAdmin } from "../../../../lib/middleware/auth";
-import { runManualClientReports } from "../../../../lib/clientReportJobs";
+import { sendClientReportsNow } from "../../../../lib/reports/sendJobs";
 
 export const runtime = "nodejs";
 
@@ -19,7 +19,7 @@ export async function POST(req) {
       });
     }
 
-    const result = await runManualClientReports({ siteKey, trigger: "manual" });
+    const result = await sendClientReportsNow({ siteKey, trigger: "manual" });
     return new Response(JSON.stringify(result), {
       status: result.ok ? 200 : 400,
       headers: { "Content-Type": "application/json" },

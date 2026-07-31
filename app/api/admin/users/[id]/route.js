@@ -9,6 +9,7 @@ import {
 } from "../../../../../lib/auth";
 import { ROLES, isMultiSiteRole } from "../../../../../lib/rbac";
 import { validateModulePermissionsInput } from "../../../../../lib/modulePermissions";
+import { pickReportPreferencesFromBody } from "../../../../../lib/reports/reportPreferences";
 import { validatePassword } from "../../../../../lib/validation";
 import prisma from "../../../../../lib/prisma";
 
@@ -43,6 +44,10 @@ export async function GET(req, { params }) {
           instagramUserId: user.instagramUserId || null,
           accessibleSites: user.accessibleSites || [],
           modulePermissions: user.modulePermissions ?? null,
+          weeklyDigestEnabled: user.weeklyDigestEnabled === true,
+          receiveWebsiteReport: user.receiveWebsiteReport === true,
+          receiveSmmReport: user.receiveSmmReport === true,
+          receiveCombinedReport: user.receiveCombinedReport === true,
           isActive: user.isActive !== false,
           emailVerified: user.emailVerified || false,
           status: user.status || (user.emailVerified ? "active" : "pending"),
@@ -237,6 +242,10 @@ export async function PATCH(req, { params }) {
           instagramUserId: user.instagramUserId || null,
           accessibleSites: user.accessibleSites || [],
           modulePermissions: user.modulePermissions ?? null,
+          weeklyDigestEnabled: user.weeklyDigestEnabled === true,
+          receiveWebsiteReport: user.receiveWebsiteReport === true,
+          receiveSmmReport: user.receiveSmmReport === true,
+          receiveCombinedReport: user.receiveCombinedReport === true,
           isActive: user.isActive !== false,
           emailVerified: user.emailVerified || false,
           status: user.status || (user.emailVerified ? "active" : "pending"),

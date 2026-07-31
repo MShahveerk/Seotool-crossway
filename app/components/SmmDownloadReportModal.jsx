@@ -1,22 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { FiDownload, FiX } from "react-icons/fi";
+import { useSession } from "next-auth/react";
 import { formatYearMonth, humanMonthYear } from "../../lib/smmReportMonthRange";
-import { buildStandardFollowerRows } from "../../lib/unifiedMarketingReportPdf";
+import { sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";
 
 function siteFileSlug(url) {
   try {
     return new URL(url).hostname.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").slice(0, 48) || "site";
   } catch {
-    return "site";
+    return String(url || "site")
+      .replace(/[^a-z0-9]+/gi, "-")
+      .slice(0, 48);
   }
 }
 
-function formatNumber(value) {
-  return new Intl.NumberFormat("en-US").format(Math.round(Number(value || 0)));
-}
-
+/**
+ * Download landscape slide decks: SMM, Website, or Combined.
+ */
 export default function SmmDownloadReportModal({
   open = false,
   onClose,
@@ -25,24 +27,21 @@ export default function SmmDownloadReportModal({
   platform = "all",
   initialMonth = "",
 }) {
+  const { data: session } = useSession();
   const maxMonth = formatYearMonth(new Date());
   const [reportMonth, setReportMonth] = useState(() => initialMonth || maxMonth);
-  const [includeWebsite, setIncludeWebsite] = useState(true);
+  const [deckKind, setDeckKind] = useState("smm");
   const [websiteReportsAvailable, setWebsiteReportsAvailable] = useState(true);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [smmPayload, setSmmPayload] = useState(null);
-  const [gscPayload, setGscPayload] = useState(null);
-  const [gscError, setGscError] = useState("");
-  const [baselineRows, setBaselineRows] = useState([]);
   const [pdfWorking, setPdfWorking] = useState(false);
+
+  const canPassUrl = isSuperAdmin || sessionHasGlobalSiteAccess(session);
 
   useEffect(() => {
     if (open) {
       const m = initialMonth && initialMonth <= maxMonth ? initialMonth : maxMonth;
       setReportMonth(m);
       setError("");
-      setGscError("");
     }
   }, [open, initialMonth, maxMonth]);
 
@@ -52,13 +51,13 @@ export default function SmmDownloadReportModal({
     (async () => {
       try {
         const q = new URLSearchParams();
-        if (isSuperAdmin) q.set("url", activeSite);
+        if (canPassUrl) q.set("url", activeSite);
         const res = await fetch(`/api/reports/context?${q.toString()}`);
         const data = await res.json();
         if (!cancelled && res.ok) {
           const canInclude = data.includeWebsiteReports === true;
           setWebsiteReportsAvailable(canInclude);
-          setIncludeWebsite(canInclude);
+          if (!canInclude && deckKind !== "smm") setDeckKind("smm");
         }
       } catch {
         /* keep default */
@@ -67,98 +66,16 @@ export default function SmmDownloadReportModal({
     return () => {
       cancelled = true;
     };
-  }, [open, activeSite, isSuperAdmin]);
-
-  const loadPreview = useCallback(async () => {
-    if (!activeSite) {
-      setError("No site is selected.");
-      setSmmPayload(null);
-      setGscPayload(null);
-      setBaselineRows([]);
-      return;
-    }
-    setLoading(true);
-    setError("");
-    setGscError("");
-    setBaselineRows([]);
-    try {
-      const smmQ = new URLSearchParams({
-        endMonth: reportMonth,
-        monthSpan: "1",
-        platform: "all",
-        range: "28d",
-        ...(isSuperAdmin ? { url: activeSite } : {}),
-      });
-      const smmRes = await fetch(`/api/smm/stats?${smmQ.toString()}`);
-      const smmData = await smmRes.json();
-      if (!smmRes.ok) throw new Error(smmData.error || "Could not load social metrics.");
-      setSmmPayload(smmData);
-
-      const baseParams = new URLSearchParams();
-      if (isSuperAdmin) baseParams.set("url", activeSite);
-      const bRes = await fetch(`/api/smm/baseline?${baseParams.toString()}`);
-      const bData = await bRes.json();
-      if (bRes.ok) setBaselineRows(Array.isArray(bData.baselines) ? bData.baselines : []);
-      else setBaselineRows([]);
-
-      if (includeWebsite) {
-        const bounds = getCalendarMonthYmdBounds(reportMonth);
-        if (!bounds) {
-          setGscPayload(null);
-          setGscError("Invalid month.");
-        } else {
-          const gq = new URLSearchParams({
-            range: "custom",
-            startDate: bounds.startDate,
-            endDate: bounds.endDate,
-            pageSize: "50",
-            page: "1",
-            ...(isSuperAdmin ? { url: activeSite } : {}),
-          });
-          const gscRes = await fetch(`/api/searchconsole/performance?${gq.toString()}`);
-          const gscData = await gscRes.json();
-          if (!gscRes.ok) {
-            setGscPayload(null);
-            setGscError(
-              gscData.userMessage ||
-                gscData.error ||
-                "Search performance could not be loaded (property may be unverified or API unavailable)."
-            );
-          } else {
-            setGscPayload(gscData);
-            setGscError("");
-          }
-        }
-      } else {
-        setGscPayload(null);
-        setGscError("");
-      }
-    } catch (e) {
-      setSmmPayload(null);
-      setGscPayload(null);
-      setBaselineRows([]);
-      setError(e.message || "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  }, [activeSite, includeWebsite, isSuperAdmin, reportMonth]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const t = setTimeout(() => {
-      loadPreview();
-    }, 280);
-    return () => clearTimeout(t);
-  }, [open, loadPreview]);
+  }, [open, activeSite, canPassUrl, deckKind]);
 
   const downloadPdf = async () => {
     if (!activeSite) return;
     setPdfWorking(true);
     setError("");
     try {
-      const section = includeWebsite && websiteReportsAvailable ? "full" : "smm";
+      const section = deckKind === "combined" ? "combined" : deckKind === "website" ? "website" : "smm";
       const q = new URLSearchParams({ section, month: reportMonth });
-      if (isSuperAdmin) q.set("url", activeSite);
+      if (canPassUrl) q.set("url", activeSite);
       const res = await fetch(`/api/reports/export?${q.toString()}`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -167,7 +84,7 @@ export default function SmmDownloadReportModal({
       const blob = await res.blob();
       const cd = res.headers.get("Content-Disposition") || "";
       const match = /filename="([^"]+)"/.exec(cd);
-      const filename = match?.[1] || `site-report-${siteFileSlug(activeSite)}-${reportMonth}.pdf`;
+      const filename = match?.[1] || `crossway-${section}-${siteFileSlug(activeSite)}-${reportMonth}.pdf`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -184,7 +101,12 @@ export default function SmmDownloadReportModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="smm-report-modal-title">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="smm-report-modal-title"
+    >
       <button
         type="button"
         className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
@@ -198,8 +120,7 @@ export default function SmmDownloadReportModal({
               Download report
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Choose a month. Your PDF includes a <strong>Social Media Report</strong> with follower trends vs last
-              week and last month, plus optional <strong>Website Performance</strong> for the same month.
+              Landscape Crossway slide decks — social, website, or combined for {humanMonthYear(reportMonth)}.
             </p>
           </div>
           <button
@@ -214,7 +135,10 @@ export default function SmmDownloadReportModal({
 
         <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
           <div>
-            <label htmlFor="report-month-input" className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
+            <label
+              htmlFor="report-month-input"
+              className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5"
+            >
               Report month
             </label>
             <input
@@ -225,64 +149,49 @@ export default function SmmDownloadReportModal({
               onChange={(e) => setReportMonth(e.target.value || maxMonth)}
               className="w-full max-w-xs px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 bg-white"
             />
-            <p className="text-xs text-gray-500 mt-1.5">{humanMonthYear(reportMonth)}</p>
           </div>
 
-          <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-gray-200 bg-white px-4 py-3">
-            <input
-              type="checkbox"
-              className="mt-1 h-4 w-4 rounded border-gray-300"
-              checked={includeWebsite}
-              onChange={(e) => setIncludeWebsite(e.target.checked)}
-              disabled={!websiteReportsAvailable}
-            />
-            <span>
-              <span className="block text-sm font-semibold text-gray-900">Include Website Performance</span>
-              <span className="block text-xs text-gray-600 mt-0.5">
-                Adds how your site performed on Google for the same calendar month. Disabled for Meta-only accounts
-                without a linked website and GTM container.
-              </span>
-            </span>
-          </label>
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Deck type</legend>
+            {[
+              { id: "smm", label: "Social media", hint: "Platform KPIs and content" },
+              {
+                id: "website",
+                label: "Website performance",
+                hint: "GSC, audience map, keywords, audit",
+                disabled: !websiteReportsAvailable,
+              },
+              {
+                id: "combined",
+                label: "Combined",
+                hint: "Website + social in one deck",
+                disabled: !websiteReportsAvailable,
+              },
+            ].map((opt) => (
+              <label
+                key={opt.id}
+                className={`flex items-start gap-3 cursor-pointer rounded-xl border px-4 py-3 ${
+                  opt.disabled ? "opacity-50 cursor-not-allowed border-gray-100" : "border-gray-200 bg-white"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="deckKind"
+                  className="mt-1 h-4 w-4 border-gray-300"
+                  checked={deckKind === opt.id}
+                  disabled={opt.disabled}
+                  onChange={() => setDeckKind(opt.id)}
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-gray-900">{opt.label}</span>
+                  <span className="block text-xs text-gray-600 mt-0.5">{opt.hint}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
 
-          {error ? <p className="text-sm text-red-700 rounded-lg bg-red-50 border border-red-100 px-3 py-2">{error}</p> : null}
-
-          {loading ? (
-            <p className="text-sm text-gray-500 py-4 text-center">Loading preview…</p>
-          ) : smmPayload ? (
-            <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4 text-sm space-y-2">
-              <p className="font-semibold text-gray-900">Preview</p>
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Social media snapshot</p>
-              <ul className="text-gray-800 space-y-1">
-                {buildStandardFollowerRows(baselineRows).map((c) => (
-                  <li key={c.platform} className="flex justify-between gap-2">
-                    <span className="truncate">
-                      {c.platform}
-                      {c.accountName && c.accountName !== "—" ? (
-                        <span className="text-gray-500"> · {String(c.accountName).slice(0, 28)}</span>
-                      ) : null}
-                    </span>
-                    <span className="tabular-nums shrink-0">{formatNumber(c.followers)}</span>
-                  </li>
-                ))}
-              </ul>
-              {includeWebsite ? (
-                gscError ? (
-                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
-                    Search data: {gscError}
-                  </p>
-                ) : gscPayload?.totals ? (
-                  <p className="text-gray-700">
-                    <span className="text-gray-500">Search clicks:</span> {formatNumber(gscPayload.totals.clicks)}
-                    &nbsp;|&nbsp;
-                    <span className="text-gray-500">Impressions:</span>{" "}
-                    {formatNumber(gscPayload.totals.impressions)}
-                  </p>
-                ) : (
-                  <p className="text-xs text-gray-500">Search data: nothing returned for this range.</p>
-                )
-              ) : null}
-            </div>
+          {error ? (
+            <p className="text-sm text-red-700 rounded-lg bg-red-50 border border-red-100 px-3 py-2">{error}</p>
           ) : null}
         </div>
 
@@ -297,7 +206,7 @@ export default function SmmDownloadReportModal({
           <button
             type="button"
             onClick={downloadPdf}
-            disabled={pdfWorking || !smmPayload || loading}
+            disabled={pdfWorking || !activeSite}
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
           >
             <FiDownload className="w-4 h-4" />

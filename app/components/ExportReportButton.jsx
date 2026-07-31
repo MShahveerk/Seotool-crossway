@@ -2,25 +2,30 @@
 
 import { useState } from "react";
 import { FiDownload } from "react-icons/fi";
+import { useSession } from "next-auth/react";
+import { sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";
 
 /**
- * Download a section-specific PDF via /api/reports/export.
- * @param {string} section - smm | website | seo-opportunities | url-inspection | etc.
- * @param {string} activeSite
- * @param {boolean} isSuperAdmin
- * @param {string} [label]
- * @param {string} [className]
+ * Download a landscape slide-deck PDF via /api/reports/export.
+ * @param {string} section - website | smm | combined | legacy tool ids (mapped server-side)
  */
 export default function ExportReportButton({
   section = "smm",
   activeSite = "",
   isSuperAdmin = false,
+  canPassUrl,
   label = "Export report",
   className = "",
   month = "",
 }) {
+  const { data: session } = useSession();
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
+
+  const passUrl =
+    typeof canPassUrl === "boolean"
+      ? canPassUrl
+      : isSuperAdmin || sessionHasGlobalSiteAccess(session);
 
   const handleExport = async () => {
     if (!activeSite) {
@@ -31,7 +36,7 @@ export default function ExportReportButton({
     setError("");
     try {
       const q = new URLSearchParams({ section });
-      if (isSuperAdmin) q.set("url", activeSite);
+      if (passUrl) q.set("url", activeSite);
       if (month) q.set("month", month);
       const res = await fetch(`/api/reports/export?${q.toString()}`);
       if (!res.ok) {

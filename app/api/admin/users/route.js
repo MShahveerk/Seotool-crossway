@@ -2,6 +2,7 @@ import { requireSuperAdmin } from "../../../../lib/middleware/auth";
 import { getAllUsers, createUser, hashPassword, getUserByEmail, assignAccessibleSites } from "../../../../lib/auth";
 import { ROLES } from "../../../../lib/rbac";
 import { validateModulePermissionsInput } from "../../../../lib/modulePermissions";
+import { pickReportPreferencesFromBody } from "../../../../lib/reports/reportPreferences";
 import { logger } from "../../../../lib/logger";
 
 // GET /api/admin/users - Get all users (Super Admin only)
@@ -55,6 +56,10 @@ export async function POST(req) {
       isActive = true,
       accessibleSites = [],
       modulePermissions = null,
+      weeklyDigestEnabled,
+      receiveWebsiteReport,
+      receiveSmmReport,
+      receiveCombinedReport,
     } = body;
     
     if (!email || !password) {
@@ -124,6 +129,12 @@ export async function POST(req) {
         isActive: Boolean(isActive),
         skipVerification: true,
         modulePermissions: permCheck.value,
+        ...pickReportPreferencesFromBody({
+          weeklyDigestEnabled,
+          receiveWebsiteReport,
+          receiveSmmReport,
+          receiveCombinedReport,
+        }),
       }
     );
 
@@ -150,6 +161,10 @@ export async function POST(req) {
           facebookPageId: user.facebookPageId || null,
           instagramUserId: user.instagramUserId || null,
           modulePermissions: user.modulePermissions ?? null,
+          weeklyDigestEnabled: user.weeklyDigestEnabled === true,
+          receiveWebsiteReport: user.receiveWebsiteReport === true,
+          receiveSmmReport: user.receiveSmmReport === true,
+          receiveCombinedReport: user.receiveCombinedReport === true,
           emailVerified: user.emailVerified,
           status: user.status,
         },

@@ -4,9 +4,11 @@ import { useSession } from "next-auth/react";
 import { FiRefreshCw } from "react-icons/fi";
 import ExportReportButton from "./ExportReportButton";
 import SendReportsButton from "./SendReportsButton";
+import { sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";
 
 /**
  * Export + optional superadmin send + refresh controls for report sections.
+ * Tool-specific section IDs map to the website slide deck on the server.
  */
 export default function ReportSectionActions({
   section,
@@ -19,16 +21,35 @@ export default function ReportSectionActions({
 }) {
   const { data: session } = useSession();
   const isSuperAdmin = session?.user?.role === "super_admin";
+  const canPassUrl = sessionHasGlobalSiteAccess(session);
+
+  const exportSection =
+    section === "smm" ? "smm" : section === "combined" || section === "full" ? "combined" : "website";
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <ExportReportButton
-        section={section}
+        section={exportSection}
         activeSite={activeSite}
-        isSuperAdmin={isSuperAdmin}
-        label="Export report"
+        canPassUrl={canPassUrl}
+        label={
+          exportSection === "smm"
+            ? "Export SMM deck"
+            : exportSection === "combined"
+              ? "Export combined deck"
+              : "Export website deck"
+        }
         month={month}
       />
+      {exportSection === "website" ? (
+        <ExportReportButton
+          section="combined"
+          activeSite={activeSite}
+          canPassUrl={canPassUrl}
+          label="Export combined"
+          month={month}
+        />
+      ) : null}
       {isSuperAdmin && showSend ? <SendReportsButton activeSite={activeSite} /> : null}
       {onRefresh ? (
         <button

@@ -10,9 +10,8 @@ export default function ReportsManagementPanel() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [enabled, setEnabled] = useState(false);
-  const [targets, setTargets] = useState([]);
+  const [recipients, setRecipients] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
-  const [approverCount, setApproverCount] = useState(0);
   const [manualSiteKey, setManualSiteKey] = useState("");
 
   const load = useCallback(async () => {
@@ -23,9 +22,8 @@ export default function ReportsManagementPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load report settings");
       setEnabled(data.enabled === true || (data.enabled == null && data.effectiveEnabled));
-      setTargets(data.targets || []);
+      setRecipients(data.recipients || []);
       setRecentLogs(data.recentLogs || []);
-      setApproverCount(data.approverCount || 0);
     } catch (e) {
       setError(e.message || "Failed to load");
     } finally {
@@ -50,7 +48,7 @@ export default function ReportsManagementPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save");
       setEnabled(data.enabled === true);
-      setMessage(next ? "Weekly approver reports enabled." : "Weekly approver reports disabled.");
+      setMessage(next ? "Weekly client reports enabled." : "Weekly client reports disabled.");
     } catch (e) {
       setError(e.message || "Failed to save");
       setEnabled(!next);
@@ -72,7 +70,11 @@ export default function ReportsManagementPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Send failed");
       const sent = (data.results || []).filter((r) => r.ok).length;
-      setMessage(siteKey ? `Sent ${sent} report pack(s) for that site.` : `Sent ${sent} report pack(s) across all approvers.`);
+      setMessage(
+        siteKey
+          ? `Sent ${sent} client report email(s) for that site.`
+          : `Sent ${sent} client report email(s).`
+      );
       await load();
     } catch (e) {
       setError(e.message || "Send failed");
@@ -87,12 +89,11 @@ export default function ReportsManagementPanel() {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <FiFileText className="w-5 h-5 text-[#1d9c35]" />
-            <h2 className="text-xl font-bold text-gray-900">Client Reports (Approvers)</h2>
+            <h2 className="text-xl font-bold text-gray-900">Client reports</h2>
           </div>
           <p className="text-sm text-gray-600 mt-1 max-w-2xl">
-            Auto-email plain-language PDFs to <strong>approver</strong> users for sites assigned to them.
-            Clients receive <strong>social media + website performance only</strong> — never internal SEO tools.
-            Meta-only pages without website + GTM get SMM reports only.
+            Landscape slide-deck PDFs (website, social, or combined) emailed from each user&apos;s report
+            toggles. Super admins always receive all sites (one email per site).
           </p>
         </div>
         <button
@@ -120,10 +121,9 @@ export default function ReportsManagementPanel() {
           <>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50/80 px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-gray-900">Send weekly reports to approvers</p>
+                <p className="text-sm font-semibold text-gray-900">Send weekly client reports</p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Mondays 07:00 server time · {approverCount} approver(s) · {targets.length} site assignment(s) · requires
-                  SMTP
+                  Mondays 07:00 · {recipients.length} recipient(s) · requires SMTP
                 </p>
               </div>
               <button
@@ -151,11 +151,11 @@ export default function ReportsManagementPanel() {
             <div className="rounded-xl border border-gray-100 px-4 py-4 space-y-3">
               <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                 <FiSend className="w-4 h-4 text-[#1d9c35]" />
-                Send reports now
+                Send client reports now
               </p>
               <p className="text-xs text-gray-500">
-                Emails your latest PDF reports (Social Media Report + Website Performance when linked) to approvers
-                for the selected site, or everyone if no site is specified. Internal SEO reports are never emailed.
+                Builds Crossway landscape decks from live GSC / SE Ranking / Meta data and emails users who
+                opted in.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <input
@@ -177,14 +177,24 @@ export default function ReportsManagementPanel() {
               </div>
             </div>
 
-            {targets.length > 0 ? (
+            {recipients.length > 0 ? (
               <div>
-                <p className="text-sm font-semibold text-gray-900 mb-2">Approver assignments</p>
-                <ul className="max-h-48 overflow-y-auto divide-y divide-gray-100 rounded-lg border border-gray-200 text-xs">
-                  {targets.slice(0, 50).map((t, i) => (
-                    <li key={`${t.email}-${t.siteKey}-${i}`} className="px-3 py-2 flex justify-between gap-2">
-                      <span className="text-gray-700 truncate">{t.email}</span>
-                      <span className="text-gray-500 truncate max-w-[45%]">{t.siteKey}</span>
+                <p className="text-sm font-semibold text-gray-900 mb-2">Who gets what</p>
+                <ul className="max-h-56 overflow-y-auto divide-y divide-gray-100 rounded-lg border border-gray-200 text-xs">
+                  {recipients.slice(0, 80).map((t) => (
+                    <li key={`${t.email}-${t.role}`} className="px-3 py-2 flex flex-col sm:flex-row sm:justify-between gap-1">
+                      <span className="text-gray-700 truncate">
+                        {t.email} <span className="text-gray-400">({t.role})</span>
+                      </span>
+                      <span className="text-gray-500 shrink-0">
+                        {[
+                          t.receiveWebsiteReport ? "website" : null,
+                          t.receiveSmmReport ? "smm" : null,
+                          t.receiveCombinedReport ? "combined" : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -198,8 +208,8 @@ export default function ReportsManagementPanel() {
                   {recentLogs.slice(0, 15).map((log) => (
                     <li key={log.id} className="px-3 py-2">
                       <span className="font-medium text-gray-800">{log.recipientEmail}</span>
-                      <span className="text-gray-500"> · {log.trigger} · {log.status}</span>
-                      <span className="block text-gray-400 truncate">{log.siteKey}</span>
+                      <span className="text-gray-500"> · {log.status}</span>
+                      <span className="text-gray-400"> · {log.siteKey}</span>
                     </li>
                   ))}
                 </ul>

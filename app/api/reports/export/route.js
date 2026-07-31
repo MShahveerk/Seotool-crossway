@@ -2,27 +2,32 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { ROLES } from "../../../../lib/rbac";
 import prisma from "../../../../lib/prisma";
-import { sessionCanAccessSiteAsync } from "../../../../lib/siteAccess";
-import { resolveSiteReportContext, isInternalReportSection } from "../../../../lib/siteReportContext";
-import { buildSectionReportPdf, siteFileSlug } from "../../../../lib/clientReportBuilder";
+import { sessionCanAccessSiteAsync, isMetaPageId } from "../../../../lib/siteAccess";
+import { hasGlobalSiteAccess } from "../../../../lib/modulePermissions";
 import { logReportSend } from "../../../../lib/clientReportSettings";
+import { buildSlideDeckPdfBytes, slideDeckFilename } from "../../../../lib/reports/buildSlideDecks";
 
 export const runtime = "nodejs";
 
-const VALID_SECTIONS = new Set([
-  "smm",
-  "website",
-  "seo-opportunities",
-  "url-inspection",
-  "sitemap-health",
-  "device-appearance",
-  "query-page-matrix",
-  "full",
-]);
+/** Map legacy / tool section IDs into slide-deck kinds. */
+const SECTION_TO_KIND = {
+  smm: "smm",
+  website: "website",
+  full: "combined",
+  combined: "combined",
+  "seo-opportunities": "website",
+  "url-inspection": "website",
+  "sitemap-health": "website",
+  "device-appearance": "website",
+  "query-page-matrix": "website",
+  "keyword-research": "website",
+  "ai-keyword-research": "website",
+  "site-explorer": "website",
+  "link-index": "website",
+};
 
 /**
- * GET /api/reports/export?section=smm&url=&month=YYYY-MM
- * Download a section PDF for the current site.
+ * GET /api/reports/export?section=website|smm|combined&url=&month=YYYY-MM
  */
 export async function GET(req) {
   try {
@@ -36,7 +41,8 @@ export async function GET(req) {
 
     const role = session.user.role || ROLES.USER;
     const section = String(req.nextUrl.searchParams.get("section") || "smm").trim();
-    if (!VALID_SECTIONS.has(section)) {
+    const kind = SECTION_TO_KIND[section];
+    if (!kind) {
       return new Response(JSON.stringify({ error: "Invalid report section." }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
@@ -45,12 +51,13 @@ export async function GET(req) {
 
     const fallbackSite =
       session.user.siteLink ||
+      session.user.facebookPageId ||
       (Array.isArray(session.user.accessibleSites) && session.user.accessibleSites.length
         ? session.user.accessibleSites[0]
         : null);
 
-    const hasGlobalAccess = role === ROLES.SUPER_ADMIN || role === ROLES.SMM;
-    let siteKey = hasGlobalAccess
+    const canPickUrl = hasGlobalSiteAccess(session.user);
+    let siteKey = canPickUrl
       ? req.nextUrl.searchParams.get("url") || fallbackSite || ""
       : fallbackSite;
 
@@ -62,7 +69,7 @@ export async function GET(req) {
       });
     }
 
-    if (role === ROLES.VIEWER || role === ROLES.SMM || role === ROLES.APPROVER) {
+    if (role !== ROLES.SUPER_ADMIN) {
       const allowed = await sessionCanAccessSiteAsync(prisma, session.user, [siteKey]);
       if (!allowed) {
         return new Response(JSON.stringify({ error: "Access denied for this site." }), {
@@ -72,46 +79,35 @@ export async function GET(req) {
       }
     }
 
-    if (role === ROLES.USER) {
-      const own = session.user.siteLink || session.user.facebookPageId;
-      if (own !== siteKey) {
-        return new Response(JSON.stringify({ error: "Access denied." }), {
-          status: 403,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-    }
-
-    const reportMonth = String(req.nextUrl.searchParams.get("month") || "").trim() || undefined;
-    const context = await resolveSiteReportContext(prisma, siteKey);
-
-    const canExportInternal = role === ROLES.SUPER_ADMIN || role === ROLES.SMM;
-    if (isInternalReportSection(section) && !canExportInternal) {
-      return new Response(
-        JSON.stringify({ error: "This report type is for internal use only and is not available for your role." }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    if (section !== "smm" && !context.includeWebsiteReports) {
+    if ((kind === "website" || kind === "combined") && isMetaPageId(siteKey) && kind === "website") {
       return new Response(
         JSON.stringify({
-          error:
-            "Website reports require a linked website and GTM container. This Meta-only account can export SMM reports only.",
+          error: "Website reports require a website URL. Use the social or combined deck for Meta pages.",
         }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    const bytes = await buildSectionReportPdf(section, context, { reportMonth });
-    const slug = siteFileSlug(context.websiteUrl || context.smmSiteKey);
+    const reportMonth = String(req.nextUrl.searchParams.get("month") || "").trim() || undefined;
+    const includeInternal =
+      role === ROLES.SUPER_ADMIN || role === ROLES.SMM || role === ROLES.USER || role === ROLES.VIEWER;
+
+    const deckKind =
+      kind === "combined" && isMetaPageId(siteKey) ? "smm" : kind === "website" && isMetaPageId(siteKey) ? "smm" : kind;
+
+    const bytes = await buildSlideDeckPdfBytes(deckKind, siteKey, {
+      reportMonth,
+      preparedFor: session.user.name || session.user.email,
+      includeInternal: Boolean(includeInternal && deckKind === "website"),
+    });
+
     const month = reportMonth || new Date().toISOString().slice(0, 7);
-    const filename = `${section}-report-${slug}-${month}.pdf`;
+    const filename = slideDeckFilename(deckKind, siteKey, month);
 
     await logReportSend({
       siteKey,
       recipientEmail: session.user.email || "export",
-      reportTypes: [section],
+      reportTypes: [deckKind],
       trigger: "export",
       status: "sent",
     });

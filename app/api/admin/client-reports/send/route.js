@@ -1,24 +1,22 @@
 import { requireSuperAdmin } from "../../../../../lib/middleware/auth";
-import { runManualClientReports } from "../../../../../lib/clientReportJobs";
+import { sendClientReportsNow } from "../../../../../lib/reports/sendJobs";
 
 export const runtime = "nodejs";
 
 /**
  * POST /api/admin/client-reports/send
- * Body: { siteKey?: string, recipientEmail?: string }
- * - siteKey only → all approvers for that site
- * - neither → all approver/site pairs
+ * Body: { siteKey?: string, userId?: string }
  */
 export async function POST(req) {
   try {
     await requireSuperAdmin();
     const body = await req.json().catch(() => ({}));
     const siteKey = body.siteKey ? String(body.siteKey).trim() : "";
-    const recipientEmail = body.recipientEmail ? String(body.recipientEmail).trim() : "";
+    const userId = body.userId ? String(body.userId).trim() : "";
 
-    const result = await runManualClientReports({
+    const result = await sendClientReportsNow({
       siteKey: siteKey || undefined,
-      recipientEmail: recipientEmail || undefined,
+      userId: userId || undefined,
       trigger: "manual",
     });
 

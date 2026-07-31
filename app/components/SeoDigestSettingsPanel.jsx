@@ -1,21 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FiMail, FiPlus, FiTrash2, FiRefreshCw, FiGlobe } from "react-icons/fi";
+import { FiMail, FiRefreshCw, FiSend } from "react-icons/fi";
 
 export default function SeoDigestSettingsPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [enabled, setEnabled] = useState(false);
-  const [recipients, setRecipients] = useState([]);
-  const [sites, setSites] = useState([]);
-  const [recipientSource, setRecipientSource] = useState("");
-  const [resolvedRecipients, setResolvedRecipients] = useState([]);
-  const [newEmail, setNewEmail] = useState("");
-  const [newLabel, setNewLabel] = useState("");
-  const [showSites, setShowSites] = useState(false);
+  const [digestUsers, setDigestUsers] = useState([]);
+  const [manualSiteKey, setManualSiteKey] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -25,10 +21,7 @@ export default function SeoDigestSettingsPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load digest settings");
       setEnabled(data.enabled === true || (data.enabled == null && data.effectiveEnabled));
-      setRecipients(data.recipients || []);
-      setSites(data.sites || []);
-      setRecipientSource(data.recipientSource || "");
-      setResolvedRecipients(data.resolvedRecipients || []);
+      setDigestUsers(data.digestUsers || []);
     } catch (e) {
       setError(e.message || "Failed to load digest settings");
     } finally {
@@ -53,9 +46,7 @@ export default function SeoDigestSettingsPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save");
       setEnabled(data.enabled === true);
-      setMessage(next ? "Weekly SEO digest enabled." : "Weekly SEO digest disabled.");
-      setRecipientSource(data.recipientSource || "");
-      setResolvedRecipients(data.resolvedRecipients || []);
+      setMessage(next ? "Weekly staff digests enabled." : "Weekly staff digests disabled.");
     } catch (e) {
       setError(e.message || "Failed to save");
       setEnabled(!next);
@@ -64,58 +55,27 @@ export default function SeoDigestSettingsPanel() {
     }
   };
 
-  const addRecipient = async (e) => {
-    e.preventDefault();
-    if (!newEmail.trim()) return;
-    setSaving(true);
+  const sendNow = async () => {
+    setSending(true);
     setError("");
     setMessage("");
     try {
       const res = await fetch("/api/admin/seo-digest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: newEmail.trim(), label: newLabel.trim() || null }),
+        body: JSON.stringify(manualSiteKey.trim() ? { siteKey: manualSiteKey.trim() } : {}),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to add recipient");
-      setRecipients(data.recipients || []);
-      setNewEmail("");
-      setNewLabel("");
-      setMessage("Recipient added.");
+      if (!res.ok) throw new Error(data.error || "Send failed");
+      const sent = (data.results || []).filter((r) => r.ok).length;
+      setMessage(`Sent ${sent} digest email(s).`);
       await load();
-    } catch (err) {
-      setError(err.message || "Failed to add recipient");
+    } catch (e) {
+      setError(e.message || "Send failed");
     } finally {
-      setSaving(false);
+      setSending(false);
     }
   };
-
-  const removeRecipient = async (id) => {
-    setSaving(true);
-    setError("");
-    setMessage("");
-    try {
-      const res = await fetch(`/api/admin/seo-digest?id=${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to remove");
-      setRecipients(data.recipients || []);
-      setMessage("Recipient removed.");
-      await load();
-    } catch (err) {
-      setError(err.message || "Failed to remove");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const sourceLabel =
-    recipientSource === "database"
-      ? "Using the list below"
-      : recipientSource === "env"
-        ? "Using SEO_DIGEST_RECIPIENTS env (add emails below to override)"
-        : "Falling back to all super_admin emails (add people below to customize)";
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
@@ -123,12 +83,11 @@ export default function SeoDigestSettingsPanel() {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <FiMail className="w-5 h-5 text-[#1d9c35]" />
-            <h2 className="text-xl font-bold text-gray-900">Weekly SEO Digest</h2>
+            <h2 className="text-xl font-bold text-gray-900">Weekly staff digests</h2>
           </div>
           <p className="text-sm text-gray-600 mt-1 max-w-2xl">
-            One Monday email summarizing SEO opportunities for{" "}
-            <strong>all websites</strong> in the system (from Manage Sites &amp; Tracking — not Meta-only
-            pages). Recipients you add here override env / super_admin defaults.
+            Landscape PDF digests for users with <strong>Weekly staff digest</strong> enabled (per user in Admin).
+            Super admins always receive digests for every site. Global recipient lists have been removed.
           </p>
         </div>
         <button
@@ -153,13 +112,15 @@ export default function SeoDigestSettingsPanel() {
         ) : null}
 
         {loading ? (
-          <p className="text-sm text-gray-500">Loading digest settings…</p>
+          <p className="text-sm text-gray-500">Loading…</p>
         ) : (
           <>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50/80 px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-gray-900">Send weekly digest email</p>
-                <p className="text-xs text-gray-500 mt-0.5">Mondays 06:00 server time · requires SMTP</p>
+                <p className="text-sm font-semibold text-gray-900">Weekly digest sends</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Mondays 06:00 · {digestUsers.length} user(s) · global kill-switch
+                </p>
               </div>
               <button
                 type="button"
@@ -183,94 +144,48 @@ export default function SeoDigestSettingsPanel() {
               </button>
             </div>
 
-            <div className="rounded-xl border border-gray-100 px-4 py-3">
-              <button
-                type="button"
-                onClick={() => setShowSites((v) => !v)}
-                className="flex items-center gap-2 text-sm font-semibold text-gray-900"
-              >
-                <FiGlobe className="w-4 h-4 text-[#1d9c35]" />
-                Included websites ({sites.length})
-                <span className="text-xs font-medium text-gray-500">{showSites ? "Hide" : "Show"}</span>
-              </button>
-              {showSites ? (
-                sites.length === 0 ? (
-                  <p className="mt-2 text-sm text-gray-500">
-                    No websites found yet. Add them under Manage Sites &amp; Tracking.
-                  </p>
-                ) : (
-                  <ul className="mt-2 max-h-40 overflow-y-auto space-y-1">
-                    {sites.map((s) => (
-                      <li key={s} className="text-xs text-gray-600 break-all">
-                        {s}
-                      </li>
-                    ))}
-                  </ul>
-                )
-              ) : null}
-            </div>
-
-            <div>
-              <p className="text-sm font-semibold text-gray-900 mb-1">Digest recipients</p>
-              <p className="text-xs text-gray-500 mb-3">{sourceLabel}</p>
-
-              <form onSubmit={addRecipient} className="flex flex-col sm:flex-row gap-2 mb-3">
-                <input
-                  type="email"
-                  required
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="email@agency.com"
-                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#1d9c35]/40 focus:border-[#1d9c35]"
-                />
+            <div className="rounded-xl border border-gray-100 px-4 py-4 space-y-3">
+              <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <FiSend className="w-4 h-4 text-[#1d9c35]" />
+                Send digests now
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
-                  value={newLabel}
-                  onChange={(e) => setNewLabel(e.target.value)}
-                  placeholder="Label (optional)"
-                  className="sm:w-40 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#1d9c35]/40 focus:border-[#1d9c35]"
+                  value={manualSiteKey}
+                  onChange={(e) => setManualSiteKey(e.target.value)}
+                  placeholder="Optional site key filter"
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
                 />
                 <button
-                  type="submit"
-                  disabled={saving}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#1d9c35] text-white text-sm font-semibold hover:bg-[#178a2d] disabled:opacity-50"
+                  type="button"
+                  disabled={sending}
+                  onClick={sendNow}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
                 >
-                  <FiPlus className="w-4 h-4" />
-                  Add
+                  <FiMail className="w-4 h-4" />
+                  {sending ? "Sending…" : "Send digests"}
                 </button>
-              </form>
+              </div>
+            </div>
 
-              {recipients.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center">
-                  <p className="text-sm text-gray-500">No custom recipients yet.</p>
-                  {resolvedRecipients.length > 0 ? (
-                    <p className="text-xs text-gray-400 mt-2">
-                      Currently sending to: {resolvedRecipients.join(", ")}
-                    </p>
-                  ) : null}
-                </div>
-              ) : (
-                <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
-                  {recipients.map((r) => (
-                    <li key={r.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{r.email}</p>
-                        {r.label ? <p className="text-xs text-gray-500">{r.label}</p> : null}
-                      </div>
-                      <button
-                        type="button"
-                        disabled={saving}
-                        onClick={() => removeRecipient(r.id)}
-                        className="inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
-                      >
-                        <FiTrash2 className="w-3.5 h-3.5" />
-                        Remove
-                      </button>
+            {digestUsers.length > 0 ? (
+              <div>
+                <p className="text-sm font-semibold text-gray-900 mb-2">Digest recipients (from user prefs)</p>
+                <ul className="max-h-48 overflow-y-auto divide-y divide-gray-100 rounded-lg border border-gray-200 text-xs">
+                  {digestUsers.slice(0, 60).map((u) => (
+                    <li key={u.email} className="px-3 py-2 flex justify-between gap-2">
+                      <span className="text-gray-700 truncate">
+                        {u.email} <span className="text-gray-400">({u.role})</span>
+                      </span>
+                      <span className="text-gray-500 truncate max-w-[45%]">
+                        {u.sites?.length ? `${u.sites.length} site(s)` : "all / none"}
+                      </span>
                     </li>
                   ))}
                 </ul>
-              )}
-            </div>
+              </div>
+            ) : null}
           </>
         )}
       </div>

@@ -15,6 +15,12 @@ model User {
   role                 String                   @default("user") @db.VarChar(50)
   /// Granular module access: { gsc: string[], seo: string[], social: string[], blogs: string[] }
   modulePermissions    Json?                    @map("module_permissions")
+  /// Staff weekly digest (site-scoped website + SMM internal decks)
+  weeklyDigestEnabled  Boolean                  @default(false) @map("weekly_digest_enabled")
+  /// Client-facing report preferences (any role may enable)
+  receiveWebsiteReport Boolean                  @default(false) @map("receive_website_report")
+  receiveSmmReport     Boolean                  @default(false) @map("receive_smm_report")
+  receiveCombinedReport Boolean                 @default(false) @map("receive_combined_report")
   siteLink             String?                  @map("site_link") @db.VarChar(512)
   gtmContainerId       String?                  @map("gtm_container_id") @db.VarChar(64)
   facebookPageId       String?                  @map("facebook_page_id") @db.VarChar(191)

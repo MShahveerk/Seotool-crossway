@@ -1,49 +1,60 @@
 import { requireSuperAdmin } from "../../../../lib/middleware/auth";
-import {
-  getSeoDigestEnabled,
-  listSeoDigestRecipients,
-  replaceSeoDigestRecipients,
-  addSeoDigestRecipient,
-  removeSeoDigestRecipient,
-  setSeoDigestEnabled,
-} from "../../../../lib/seoDigestSettings";
-import {
-  listWebsiteUrls,
-  resolveSeoDigestRecipients,
-  isSeoDigestEnabled,
-  envFlag,
-} from "../../../../lib/seoJobs";
+import { getSeoDigestEnabled, setSeoDigestEnabled } from "../../../../lib/seoDigestSettings";
+import { isSeoDigestEnabled, envFlag } from "../../../../lib/seoJobs";
+import { sendStaffDigestsNow } from "../../../../lib/reports/sendJobs";
+import prisma from "../../../../lib/prisma";
+import { ROLES } from "../../../../lib/rbac";
 
 export const runtime = "nodejs";
 
 /**
  * GET /api/admin/seo-digest
- * Superadmin: digest toggle, recipients, and which websites are included.
+ * Kill-switch + preview of users with weeklyDigestEnabled.
  */
 export async function GET() {
   try {
     await requireSuperAdmin();
-    const [dbEnabled, recipients, sites, resolved, effectiveEnabled] = await Promise.all([
+    const [dbEnabled, effectiveEnabled, users] = await Promise.all([
       getSeoDigestEnabled(),
-      listSeoDigestRecipients(),
-      listWebsiteUrls(),
-      resolveSeoDigestRecipients(),
       isSeoDigestEnabled(),
+      prisma.user.findMany({
+        where: { isActive: true, deletedAt: null },
+        select: {
+          email: true,
+          name: true,
+          role: true,
+          weeklyDigestEnabled: true,
+          siteLink: true,
+          facebookPageId: true,
+          accessibleSites: { select: { siteLink: true } },
+        },
+        orderBy: { email: "asc" },
+      }),
     ]);
+
+    const digestUsers = users
+      .filter((u) => u.role === ROLES.SUPER_ADMIN || u.weeklyDigestEnabled)
+      .map((u) => ({
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        sites: [
+          u.siteLink,
+          u.facebookPageId,
+          ...(u.accessibleSites || []).map((s) => s.siteLink),
+        ].filter(Boolean),
+      }));
 
     return new Response(
       JSON.stringify({
         enabled: dbEnabled === true ? true : dbEnabled === false ? false : null,
         effectiveEnabled,
         envDigestFlag: envFlag("SEO_DIGEST_EMAIL"),
-        recipients,
-        resolvedRecipients: resolved.emails,
-        recipientSource: resolved.source,
-        sites,
-        siteCount: sites.length,
+        digestUsers,
+        digestUserCount: digestUsers.length,
         schedule: "Mondays 06:00 (server local time)",
         note:
-          "One digest email covers every website in Manage Sites & Tracking (plus any unique user website URLs). Meta-only pages are excluded.",
+          "Staff digests use per-user Weekly digest toggles (Admin → user). The global list of digest recipients has been removed. Super admins always receive digests for all sites.",
       }),
       {
         status: 200,
@@ -64,7 +75,7 @@ export async function GET() {
 
 /**
  * PUT /api/admin/seo-digest
- * Body: { enabled?: boolean, recipients?: string[] | {email,label?}[] }
+ * Body: { enabled?: boolean }
  */
 export async function PUT(req) {
   try {
@@ -76,30 +87,11 @@ export async function PUT(req) {
       enabled = await setSeoDigestEnabled(body.enabled);
     }
 
-    let recipients = await listSeoDigestRecipients();
-    if (Array.isArray(body.recipients)) {
-      recipients = await replaceSeoDigestRecipients(body.recipients);
-    }
-
-    const [sites, resolved, effectiveEnabled] = await Promise.all([
-      listWebsiteUrls(),
-      resolveSeoDigestRecipients(),
-      isSeoDigestEnabled(),
-    ]);
-
-    return new Response(
-      JSON.stringify({
-        ok: true,
-        enabled,
-        effectiveEnabled,
-        recipients,
-        resolvedRecipients: resolved.emails,
-        recipientSource: resolved.source,
-        sites,
-        siteCount: sites.length,
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
+    const effectiveEnabled = await isSeoDigestEnabled();
+    return new Response(JSON.stringify({ ok: true, enabled, effectiveEnabled }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     const status =
       error.status ||
@@ -114,17 +106,20 @@ export async function PUT(req) {
 }
 
 /**
- * POST /api/admin/seo-digest — add one recipient
- * Body: { email, label? }
+ * POST /api/admin/seo-digest — send staff digests now
+ * Body: { siteKey?, userId? }
  */
 export async function POST(req) {
   try {
     await requireSuperAdmin();
     const body = await req.json().catch(() => ({}));
-    const row = await addSeoDigestRecipient(body.email, body.label);
-    const recipients = await listSeoDigestRecipients();
-    return new Response(JSON.stringify({ ok: true, recipient: row, recipients }), {
-      status: 201,
+    const result = await sendStaffDigestsNow({
+      siteKey: body.siteKey ? String(body.siteKey).trim() : undefined,
+      userId: body.userId ? String(body.userId).trim() : undefined,
+      trigger: "manual",
+    });
+    return new Response(JSON.stringify({ ok: result.ok, ...result }), {
+      status: result.ok ? 200 : 400,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
@@ -133,34 +128,7 @@ export async function POST(req) {
       (error.message === "Unauthorized" || String(error.message || "").includes("Super admin")
         ? 403
         : 500);
-    return new Response(JSON.stringify({ error: error.message || "Failed to add recipient." }), {
-      status,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-}
-
-/**
- * DELETE /api/admin/seo-digest?id=... or ?email=...
- */
-export async function DELETE(req) {
-  try {
-    await requireSuperAdmin();
-    const id = req.nextUrl.searchParams.get("id");
-    const email = req.nextUrl.searchParams.get("email");
-    await removeSeoDigestRecipient(id || email);
-    const recipients = await listSeoDigestRecipients();
-    return new Response(JSON.stringify({ ok: true, recipients }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    const status =
-      error.status ||
-      (error.message === "Unauthorized" || String(error.message || "").includes("Super admin")
-        ? 403
-        : 500);
-    return new Response(JSON.stringify({ error: error.message || "Failed to remove recipient." }), {
+    return new Response(JSON.stringify({ error: error.message || "Failed to send digests." }), {
       status,
       headers: { "Content-Type": "application/json" },
     });

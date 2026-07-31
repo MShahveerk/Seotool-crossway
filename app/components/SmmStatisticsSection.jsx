@@ -6,6 +6,7 @@ import { Area, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAx
 import { FiDownload, FiRefreshCw } from "react-icons/fi";
 import { SiFacebook, SiInstagram, SiYoutube, SiTiktok } from "react-icons/si";
 import { isSmmRole } from "../../lib/rbac";
+import { sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";
 import SmmApprovalCardsGrid from "./SmmApprovalCardsGrid";
 import SmmDownloadReportModal from "./SmmDownloadReportModal";
 import ReportSectionActions from "./ReportSectionActions";
@@ -108,7 +109,7 @@ function AnalyticsTooltip({ active, payload, label, chartYear }) {
 export default function SmmStatisticsSection({ selectedSite = "" }) {
   const { data: session } = useSession();
   const isSuperAdmin = session?.user?.role === "super_admin";
-  const hasGlobalAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
+  const hasGlobalAccess = sessionHasGlobalSiteAccess(session);
   const ownSite =
     session?.user?.siteLink ||
     (Array.isArray(session?.user?.accessibleSites) && session?.user?.accessibleSites[0]) ||

@@ -50,6 +50,7 @@ import SeoDigestSettingsPanel from "./SeoDigestSettingsPanel";
 import ReportsManagementPanel from "./ReportsManagementPanel";
 import ModulePermissionPicker from "./ModulePermissionPicker";
 import { coerceModulePermissionsForForm, getDefaultModulePermissionsForRole } from "@/lib/modulePermissions";
+import { getDefaultReportPreferencesForRole } from "@/lib/reports/reportPreferences";
 
 const EMPTY_USER_FORM = {
   email: "",
@@ -63,6 +64,7 @@ const EMPTY_USER_FORM = {
   isActive: true,
   accessibleSites: [],
   modulePermissions: getDefaultModulePermissionsForRole("user"),
+  ...getDefaultReportPreferencesForRole("user"),
 };
 
 export default function AdminSection() {
@@ -193,6 +195,10 @@ export default function AdminSection() {
         facebookPageId: formData.facebookPageId || null,
         instagramUserId: formData.instagramUserId || null,
         accessibleSites: formData.accessibleSites || [],
+        weeklyDigestEnabled: Boolean(formData.weeklyDigestEnabled),
+        receiveWebsiteReport: Boolean(formData.receiveWebsiteReport),
+        receiveSmmReport: Boolean(formData.receiveSmmReport),
+        receiveCombinedReport: Boolean(formData.receiveCombinedReport),
       };
       if (editingUser?.role !== ROLES.SUPER_ADMIN) {
         payload.role = formData.role;
@@ -261,6 +267,7 @@ export default function AdminSection() {
     setFormData({
       ...EMPTY_USER_FORM,
       modulePermissions: getDefaultModulePermissionsForRole("user"),
+      ...getDefaultReportPreferencesForRole("user"),
     });
     setSiteIntegrationForm({
       userId: "",
@@ -285,6 +292,7 @@ export default function AdminSection() {
     setShowAdvancedSettings(false);
     setError("");
     setEditingUser(user);
+    const reportDefaults = getDefaultReportPreferencesForRole(user.role || "user");
     setFormData({
       email: user.email,
       password: "",
@@ -299,6 +307,18 @@ export default function AdminSection() {
         ? user.accessibleSites.map((s) => s.siteLink || s)
         : [],
       modulePermissions: coerceModulePermissionsForForm(user.modulePermissions, user.role || "user"),
+      weeklyDigestEnabled:
+        user.weeklyDigestEnabled != null ? Boolean(user.weeklyDigestEnabled) : reportDefaults.weeklyDigestEnabled,
+      receiveWebsiteReport:
+        user.receiveWebsiteReport != null
+          ? Boolean(user.receiveWebsiteReport)
+          : reportDefaults.receiveWebsiteReport,
+      receiveSmmReport:
+        user.receiveSmmReport != null ? Boolean(user.receiveSmmReport) : reportDefaults.receiveSmmReport,
+      receiveCombinedReport:
+        user.receiveCombinedReport != null
+          ? Boolean(user.receiveCombinedReport)
+          : reportDefaults.receiveCombinedReport,
     });
     setSiteIntegrationForm({
       userId: user.id,
@@ -625,6 +645,10 @@ export default function AdminSection() {
           instagramUserId: formData.instagramUserId || null,
           accessibleSites: formData.accessibleSites || [],
           modulePermissions: formData.modulePermissions,
+          weeklyDigestEnabled: Boolean(formData.weeklyDigestEnabled),
+          receiveWebsiteReport: Boolean(formData.receiveWebsiteReport),
+          receiveSmmReport: Boolean(formData.receiveSmmReport),
+          receiveCombinedReport: Boolean(formData.receiveCombinedReport),
         }),
       });
 
@@ -1169,6 +1193,7 @@ export default function AdminSection() {
                       ...formData,
                       role,
                       modulePermissions: coerceModulePermissionsForForm(null, role),
+                      ...getDefaultReportPreferencesForRole(role),
                     });
                   }}
                   disabled={editingUser?.role === ROLES.SUPER_ADMIN}
@@ -1191,6 +1216,68 @@ export default function AdminSection() {
                   role={formData.role}
                 />
               )}
+
+              <div className="col-span-1 md:col-span-2 rounded-xl border border-gray-200 p-4 space-y-3 bg-white/80">
+                <div>
+                  <p className="text-sm font-bold text-gray-900">Reports</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Weekly digests and client PDFs for this user&apos;s assigned sites. Super admins always
+                    receive all reports.
+                  </p>
+                </div>
+                <label className="flex items-start gap-2 text-sm text-gray-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formData.weeklyDigestEnabled)}
+                    onChange={(e) => setFormData({ ...formData, weeklyDigestEnabled: e.target.checked })}
+                    className="mt-0.5 w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                  />
+                  <span>
+                    <span className="font-medium">Weekly staff digest</span>
+                    <span className="block text-xs text-gray-500">
+                      Site-scoped website + social performance deck emailed Mondays
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm text-gray-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formData.receiveWebsiteReport)}
+                    onChange={(e) => setFormData({ ...formData, receiveWebsiteReport: e.target.checked })}
+                    className="mt-0.5 w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                  />
+                  <span>
+                    <span className="font-medium">Website client report</span>
+                    <span className="block text-xs text-gray-500">GSC, keywords, backlinks, audit, audience map</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm text-gray-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formData.receiveSmmReport)}
+                    onChange={(e) => setFormData({ ...formData, receiveSmmReport: e.target.checked })}
+                    className="mt-0.5 w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                  />
+                  <span>
+                    <span className="font-medium">Social media client report</span>
+                    <span className="block text-xs text-gray-500">Platform KPIs and content performance</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm text-gray-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formData.receiveCombinedReport)}
+                    onChange={(e) => setFormData({ ...formData, receiveCombinedReport: e.target.checked })}
+                    className="mt-0.5 w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                  />
+                  <span>
+                    <span className="font-medium">Combined deck</span>
+                    <span className="block text-xs text-gray-500">
+                      One PDF with website + social (instead of only separate attachments)
+                    </span>
+                  </span>
+                </label>
+              </div>
 
               {(!editingUser || (editingUser && editingUser.role !== ROLES.SUPER_ADMIN)) && (
                 <div className="col-span-1 md:col-span-2 rounded-lg border border-[#0EFF2A]/20 bg-[#0EFF2A]/5 p-4 dark:border-[#0EFF2A]/10 dark:bg-[#0EFF2A]/5">
