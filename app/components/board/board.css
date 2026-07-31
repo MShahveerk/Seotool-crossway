@@ -148,6 +148,11 @@
   animation: cw-board-pulse 1.8s ease-in-out infinite;
 }
 
+.cw-board__chip--muted {
+  color: rgba(250, 248, 243, 0.55);
+  border-color: rgba(250, 248, 243, 0.12);
+}
+
 .cw-board__scroller {
   position: relative;
   flex: 1 1 auto;

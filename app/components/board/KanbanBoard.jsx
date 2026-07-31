@@ -40,6 +40,7 @@ export default function KanbanBoard({
   error,
   siteLabel,
   playhtml = true,
+  liveConnected = null,
   itemKind = "post",
 }) {
   const [toast, setToast] = useState("");
@@ -145,7 +146,18 @@ export default function KanbanBoard({
             <p className="cw-board__sub">{subtitle}</p>
           </div>
           <div className="cw-board__meta">
-            <span className="cw-board__chip cw-board__chip--live">Live</span>
+            <span
+              className={`cw-board__chip ${
+                liveConnected === false ? "cw-board__chip--muted" : "cw-board__chip--live"
+              }`}
+              title={
+                liveConnected === false
+                  ? "Realtime sync offline — board still saves; other devices refresh every few seconds"
+                  : "Realtime sync on — moves show on other open boards"
+              }
+            >
+              {liveConnected === false ? "Local" : playhtml ? "Live" : "Local"}
+            </span>
             <span className="cw-board__chip cw-board__chip--site" title={siteLabel || "All accounts"}>
               {siteLabel || "All accounts"}
             </span>

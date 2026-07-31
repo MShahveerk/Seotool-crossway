@@ -7,7 +7,7 @@ import "./board.css";
 import { getBoardRoom, setBoardRoom } from "./boardRoom";
 
 /**
- * Isolates a playhtml room per board + site so teams can collaboratively drag cards.
+ * Isolates a playhtml room per board + site so teams can collaboratively sync.
  * Room is a function so SPA section switches update the singleton playhtml client.
  */
 export default function PlayBoardShell({ room, children }) {
@@ -26,8 +26,16 @@ export default function PlayBoardShell({ room, children }) {
         initOptions={{
           room: () => getBoardRoom(),
           cursors: { enabled: true, room: "page" },
+          events: {
+            boardRefresh: {
+              type: "crossway-board-refresh",
+              onEvent: () => {
+                /* per-board listeners in useBoardLiveSync also handle this */
+              },
+            },
+          },
           onError: () => {
-            console.warn("[Crossway Board] playhtml connection failed — drag still works locally.");
+            console.warn("[Crossway Board] playhtml connection failed — polling fallback active.");
           },
         }}
       >

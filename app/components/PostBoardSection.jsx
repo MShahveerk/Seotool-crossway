@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PlayBoardShell from "./board/PlayBoardShell";
 import BoardErrorBoundary from "./board/BoardErrorBoundary";
+import BoardLiveBody from "./board/BoardLiveBody";
 import KanbanBoard from "./board/KanbanBoard";
 import {
   POST_AUTO_MOVES,
@@ -15,44 +16,55 @@ function roomKey(site) {
   return `crossway-post-board-${raw}`;
 }
 
+function mapApprovals(approvals) {
+  return (approvals || []).map((a) => ({
+    ...a,
+    displayTitle: a.userEditedTitle || a.title,
+    imagePath: a.imagePath || a.mediaPath || "",
+  }));
+}
+
 export default function PostBoardSection({ selectedSite = "" }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const busyRef = useRef(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (busyRef.current && silent) return;
+    busyRef.current = true;
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
     try {
       const query = selectedSite ? `?site=${encodeURIComponent(selectedSite)}` : "";
-      const res = await fetch(`/api/admin/approvals${query}`);
+      const res = await fetch(`/api/admin/approvals${query}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load posts");
-      setItems(
-        (data.approvals || []).map((a) => ({
-          ...a,
-          displayTitle: a.userEditedTitle || a.title,
-          imagePath: a.imagePath || a.mediaPath || "",
-        }))
-      );
+      setItems(mapApprovals(data.approvals));
+      if (!silent) setError("");
     } catch (err) {
-      setError(err.message || "Failed to load posts");
-      setItems([]);
+      if (!silent) {
+        setError(err.message || "Failed to load posts");
+        setItems([]);
+      }
     } finally {
-      setLoading(false);
+      busyRef.current = false;
+      if (!silent) setLoading(false);
     }
   }, [selectedSite]);
 
+  const refreshSilent = useCallback(() => load({ silent: true }), [load]);
+
   useEffect(() => {
-    load();
-    const onRefresh = () => load();
+    load({ silent: false });
+    const onRefresh = () => load({ silent: true });
     window.addEventListener("approvals:admin-refresh", onRefresh);
     window.addEventListener("approvals:user-updated", onRefresh);
-    const poll = window.setInterval(load, 60_000);
     return () => {
       window.removeEventListener("approvals:admin-refresh", onRefresh);
       window.removeEventListener("approvals:user-updated", onRefresh);
-      window.clearInterval(poll);
     };
   }, [load]);
 
@@ -96,13 +108,11 @@ export default function PostBoardSection({ selectedSite = "" }) {
     boardId: `posts-${room}`,
     brand: "Post Board",
     subtitle:
-      "Drag to change status · double-click to preview & edit. Draft → Pending sends approval emails.",
+      "Drag to change status · double-click to preview & edit. Draft → Pending sends approval emails. Live sync across open boards.",
     columns: POST_BOARD_COLUMNS,
     autoMoves: POST_AUTO_MOVES,
     items,
     getColumn,
-    onMoveToColumn,
-    onItemSaved,
     loading,
     error,
     siteLabel: selectedSite || "All Meta / site accounts",
@@ -111,9 +121,25 @@ export default function PostBoardSection({ selectedSite = "" }) {
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col">
-      <BoardErrorBoundary fallback={() => <KanbanBoard {...boardProps} playhtml={false} />}>
+      <BoardErrorBoundary
+        fallback={() => (
+          <KanbanBoard
+            {...boardProps}
+            playhtml={false}
+            liveConnected={false}
+            onMoveToColumn={onMoveToColumn}
+            onItemSaved={onItemSaved}
+          />
+        )}
+      >
         <PlayBoardShell room={room}>
-          <KanbanBoard {...boardProps} playhtml />
+          <BoardLiveBody
+            room={room}
+            boardProps={boardProps}
+            refreshSilent={refreshSilent}
+            onMoveToColumn={onMoveToColumn}
+            onItemSaved={onItemSaved}
+          />
         </PlayBoardShell>
       </BoardErrorBoundary>
     </div>
