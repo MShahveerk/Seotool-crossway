@@ -195,7 +195,7 @@ export default function Home() {
         return <MyBlogApprovalsSection selectedSite={selectedSite} />;
       case "user-management":
         return sessionCanAccessSection(session, "user-management") ? (
-          <AdminSection />
+          <AdminSection onNavigate={setActiveSection} />
         ) : (
           fallback()
         );

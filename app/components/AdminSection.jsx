@@ -48,6 +48,7 @@ const SMM_BASELINE_PLATFORM_LABEL = {
 import SiteAssociationsModal from "./SiteAssociationsModal";
 import SeoDigestSettingsPanel from "./SeoDigestSettingsPanel";
 import ReportsManagementPanel from "./ReportsManagementPanel";
+import CronJobsPanel from "./CronJobsPanel";
 import ModulePermissionPicker from "./ModulePermissionPicker";
 import { coerceModulePermissionsForForm, getDefaultModulePermissionsForRole } from "@/lib/modulePermissions";
 import { getDefaultReportPreferencesForRole } from "@/lib/reports/reportPreferences";
@@ -67,7 +68,7 @@ const EMPTY_USER_FORM = {
   ...getDefaultReportPreferencesForRole("user"),
 };
 
-export default function AdminSection() {
+export default function AdminSection({ onNavigate } = {}) {
   const { data: session } = useSession();
   const [users, setUsers] = useState([]);
   const [availableIntegrations, setAvailableIntegrations] = useState([]);
@@ -850,6 +851,8 @@ export default function AdminSection() {
       <SeoDigestSettingsPanel />
 
       <ReportsManagementPanel />
+
+      <CronJobsPanel onNavigate={onNavigate} />
 
       {/* Users Table */}
       <div className="rounded-xl border border-gray-200 bg-[#ffffff] overflow-hidden">
