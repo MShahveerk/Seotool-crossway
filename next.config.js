@@ -32,12 +32,14 @@ const nextConfig = {
         value: [
           "default-src 'self'",
           "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-          "style-src 'self' 'unsafe-inline'",
+          // unpkg: playhtml may inject its CDN stylesheet even when we also import locally
+          "style-src 'self' 'unsafe-inline' https://unpkg.com",
           // http: needed for local/dev; https: for remote WP/CDN thumbs
           "img-src 'self' data: blob: http: https:",
           "media-src 'self' data: blob: http: https:",
           "font-src 'self' data:",
-          "connect-src 'self' https://www.googleapis.com https://www.google-analytics.com https://*.partykit.dev wss://*.partykit.dev https://playhtml.fun wss://playhtml.fun",
+          // playhtml realtime host is api.playhtml.fun (not bare playhtml.fun)
+          "connect-src 'self' https://www.googleapis.com https://www.google-analytics.com https://*.partykit.dev wss://*.partykit.dev https://playhtml.fun wss://playhtml.fun https://api.playhtml.fun wss://api.playhtml.fun https://*.playhtml.fun wss://*.playhtml.fun https://unpkg.com",
           "worker-src 'self' blob:",
           "frame-ancestors 'self'",
         ].join("; "),
