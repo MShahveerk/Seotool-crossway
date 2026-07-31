@@ -1273,7 +1273,8 @@ export default function AdminSection() {
                   <span>
                     <span className="font-medium">Combined deck</span>
                     <span className="block text-xs text-gray-500">
-                      One PDF with website + social (instead of only separate attachments)
+                      One PDF with website + social. If enabled, this is what gets emailed (separate website/SMM
+                      attachments are skipped).
                     </span>
                   </span>
                 </label>
