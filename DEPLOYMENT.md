@@ -51,6 +51,31 @@ npm run build
 
 Run the server from `.next/standalone` per [Next.js standalone output](https://nextjs.org/docs/app/building-your-application/deploying#docker-image).
 
+## Persistent media (`/var/data`)
+
+Post and blog images are **not** stored in the git/deploy tree. On production they go to:
+
+```text
+/var/data/uploads/approvals   # SMM posts
+/var/data/uploads/blogs       # blog featured images
+```
+
+Served via `/api/uploads/<filename>` (looks on the persistent disk first).
+
+1. Attach a persistent disk / volume and mount it at **`/var/data`** (or set `UPLOADS_ROOT` to that mount).
+2. Ensure the Node process user can write there, e.g.:
+   ```bash
+   sudo mkdir -p /var/data/uploads/approvals /var/data/uploads/blogs
+   sudo chown -R <app-user>:<app-group> /var/data
+   ```
+3. Optional env (recommended so the path is explicit):
+   ```bash
+   UPLOADS_ROOT=/var/data
+   ```
+4. Restart the app — startup creates the subdirs and **fails in production** if the disk is not writable (so you never silently fall back to wipeable `public/uploads`).
+
+Local/dev without `/var/data` still uses `public/uploads/` under the project.
+
 ## Health check
 
 `GET /api/health` — returns JSON with DB connectivity (intended for load balancers / uptime checks).

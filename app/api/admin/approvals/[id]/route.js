@@ -1,10 +1,9 @@
 import { unlink } from "fs/promises";
-import path from "path";
-import { existsSync } from "fs";
 import { Prisma } from "@prisma/client";
 import { requireAdminRoute } from "../../../../../lib/adminAuth";
 import prisma from "../../../../../lib/prisma";
 import { PERMISSIONS, ROLES } from "../../../../../lib/rbac";
+import { resolveUploadDiskPath } from "../../../../../lib/uploadPaths.js";
 
 export const runtime = "nodejs";
 
@@ -14,14 +13,7 @@ const APPROVAL_INCLUDE = {
 };
 
 function publicPathToDisk(publicPath) {
-  const rel = String(publicPath || "").replace(/^\/+/, "");
-  if (!rel || rel.includes("..")) return null;
-  const fileName = rel.replace(/^api\/uploads\//, "").replace(/^uploads\//, "");
-  if (!fileName || fileName.includes("..") || fileName.includes("/")) return null;
-  if (existsSync("/var/data")) {
-    return path.join("/var/data", "uploads", "approvals", fileName);
-  }
-  return path.join(process.cwd(), "public", "uploads", "approvals", fileName);
+  return resolveUploadDiskPath(publicPath);
 }
 
 /** PATCH — schedule / visibility / content edits from board or admin UI */
