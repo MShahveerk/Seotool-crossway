@@ -6,6 +6,8 @@ import { sessionCanAccessSiteAsync, isMetaPageId } from "../../../../lib/siteAcc
 import { hasGlobalSiteAccess } from "../../../../lib/modulePermissions";
 import { logReportSend } from "../../../../lib/clientReportSettings";
 import { buildSlideDeckPdfBytes, slideDeckFilename } from "../../../../lib/reports/buildSlideDecks";
+import { resolveReportDisplayName } from "../../../../lib/reports/resolveReportPacks";
+import { resolveSiteReportContext } from "../../../../lib/siteReportContext";
 
 export const runtime = "nodejs";
 
@@ -92,17 +94,26 @@ export async function GET(req) {
     const includeInternal =
       role === ROLES.SUPER_ADMIN || role === ROLES.SMM || role === ROLES.USER || role === ROLES.VIEWER;
 
+    const context = await resolveSiteReportContext(prisma, siteKey);
+    const buildKey = context.websiteUrl || siteKey;
     const deckKind =
-      kind === "combined" && isMetaPageId(siteKey) ? "smm" : kind === "website" && isMetaPageId(siteKey) ? "smm" : kind;
+      kind === "combined" && isMetaPageId(buildKey) && !context.websiteUrl
+        ? "smm"
+        : kind === "website" && isMetaPageId(buildKey) && !context.websiteUrl
+          ? "smm"
+          : kind;
 
-    const bytes = await buildSlideDeckPdfBytes(deckKind, siteKey, {
+    const displayName = await resolveReportDisplayName(buildKey, context);
+
+    const bytes = await buildSlideDeckPdfBytes(deckKind, buildKey, {
       reportMonth,
       preparedFor: session.user.name || session.user.email,
       includeInternal: Boolean(includeInternal && deckKind === "website"),
+      displayName,
     });
 
     const month = reportMonth || new Date().toISOString().slice(0, 7);
-    const filename = slideDeckFilename(deckKind, siteKey, month);
+    const filename = slideDeckFilename(deckKind, displayName || buildKey, month);
 
     await logReportSend({
       siteKey,
