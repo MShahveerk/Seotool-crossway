@@ -48,7 +48,7 @@ export default function ReportsManagementPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save");
       setEnabled(data.enabled === true);
-      setMessage(next ? "Weekly client reports enabled." : "Weekly client reports disabled.");
+      setMessage(next ? "Weekly report delivery enabled." : "Weekly report delivery disabled.");
     } catch (e) {
       setError(e.message || "Failed to save");
       setEnabled(!next);
@@ -72,8 +72,8 @@ export default function ReportsManagementPanel() {
       const sent = (data.results || []).filter((r) => r.ok).length;
       setMessage(
         siteKey
-          ? `Sent ${sent} client report email(s) for that site.`
-          : `Sent ${sent} client report email(s).`
+          ? `Sent ${sent} monthly report email(s) for that site.`
+          : `Sent ${sent} monthly report email(s).`
       );
       await load();
     } catch (e) {
@@ -89,7 +89,7 @@ export default function ReportsManagementPanel() {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <FiFileText className="w-5 h-5 text-[#1d9c35]" />
-            <h2 className="text-xl font-bold text-gray-900">Client reports</h2>
+            <h2 className="text-xl font-bold text-gray-900">Monthly reports</h2>
           </div>
           <p className="text-sm text-gray-600 mt-1 max-w-2xl">
             Landscape slide-deck PDFs (website, social, or combined) emailed from each user&apos;s report
@@ -121,7 +121,7 @@ export default function ReportsManagementPanel() {
           <>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50/80 px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-gray-900">Send weekly client reports</p>
+                <p className="text-sm font-semibold text-gray-900">Send weekly reports</p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Mondays 07:00 · {recipients.length} recipient(s) · requires SMTP
                 </p>
@@ -151,7 +151,7 @@ export default function ReportsManagementPanel() {
             <div className="rounded-xl border border-gray-100 px-4 py-4 space-y-3">
               <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
                 <FiSend className="w-4 h-4 text-[#1d9c35]" />
-                Send client reports now
+                Send monthly reports now
               </p>
               <p className="text-xs text-gray-500">
                 Builds Crossway landscape decks from live GSC / SE Ranking / Meta data and emails users who

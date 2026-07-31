@@ -1247,7 +1247,7 @@ export default function AdminSection() {
                     className="mt-0.5 w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
                   />
                   <span>
-                    <span className="font-medium">Website client report</span>
+                    <span className="font-medium">Website monthly report</span>
                     <span className="block text-xs text-gray-500">GSC, keywords, backlinks, audit, audience map</span>
                   </span>
                 </label>
@@ -1259,7 +1259,7 @@ export default function AdminSection() {
                     className="mt-0.5 w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
                   />
                   <span>
-                    <span className="font-medium">Social media client report</span>
+                    <span className="font-medium">Social media monthly report</span>
                     <span className="block text-xs text-gray-500">Platform KPIs and content performance</span>
                   </span>
                 </label>
