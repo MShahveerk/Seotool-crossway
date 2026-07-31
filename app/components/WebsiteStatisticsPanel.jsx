@@ -526,6 +526,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
           activeSite={selectedSite}
           onRefresh={fetchData}
           loading={loading}
+          month={new Date().toISOString().slice(0, 7)}
         />
         {RANGE_OPTIONS.map((option) => {
           const active =
