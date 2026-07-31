@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { usePlayContext } from "@playhtml/react";
 import { formatScheduleShort } from "@/lib/timezone";
 import { isBoardVideoPath, resolveBoardMedia } from "./resolveBoardMedia";
+import { useBoardDragPresence } from "./BoardDragPresence";
 
 /**
  * Physically draggable board card (pointer capture + translate).
- * Lives inside PlayProvider for live cursors/room; status changes on drop into a column.
+ * Broadcasts live drag position via playhtml presence; status changes on column drop.
  */
 export default function KanbanCard({
   item,
@@ -19,15 +20,21 @@ export default function KanbanCard({
   index = 0,
 }) {
   const { isLoading: playLoading } = usePlayContext();
+  const { broadcastDrag, clearDrag } = useBoardDragPresence();
   const [moving, setMoving] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const cardRef = useRef(null);
   const dragState = useRef(null);
   const didDragRef = useRef(false);
+  const lastBroadcast = useRef(0);
   const onMoveRef = useRef(onMoveToColumn);
   const onOpenRef = useRef(onOpenDetails);
+  const broadcastRef = useRef(broadcastDrag);
+  const clearDragRef = useRef(clearDrag);
   onMoveRef.current = onMoveToColumn;
   onOpenRef.current = onOpenDetails;
+  broadcastRef.current = broadcastDrag;
+  clearDragRef.current = clearDrag;
 
   const title = item.displayTitle || item.title || item.userEditedTitle || "Untitled";
   const media = resolveBoardMedia(item);
@@ -43,6 +50,25 @@ export default function KanbanCard({
     const el = cardRef.current;
     if (!el) return undefined;
 
+    const clearLiveDrag = () => {
+      clearDragRef.current?.();
+    };
+
+    const broadcastLiveDrag = (clientX, clientY) => {
+      const now = Date.now();
+      if (now - lastBroadcast.current < 40) return;
+      lastBroadcast.current = now;
+      const rect = el.getBoundingClientRect();
+      broadcastRef.current?.({
+        itemId: String(item.id),
+        title: String(item.displayTitle || item.title || item.userEditedTitle || "Card"),
+        x: Math.round(clientX - (dragState.current?.offsetX ?? rect.width / 2)),
+        y: Math.round(clientY - (dragState.current?.offsetY ?? 24)),
+        w: Math.round(rect.width),
+        h: Math.round(rect.height),
+      });
+    };
+
     const clearTransform = () => {
       el.style.transform = "";
       el.style.zIndex = "";
@@ -50,6 +76,7 @@ export default function KanbanCard({
       document.querySelectorAll("[data-board-id][data-drop-active='true']").forEach((lane) => {
         lane.setAttribute("data-drop-active", "false");
       });
+      clearLiveDrag();
     };
 
     const hitColumnAt = (clientX, clientY) => {
@@ -70,10 +97,13 @@ export default function KanbanCard({
       if (e.target?.closest?.("a,button,input,textarea,select")) return;
 
       didDragRef.current = false;
+      const rect = el.getBoundingClientRect();
       dragState.current = {
         pointerId: e.pointerId,
         startX: e.clientX,
         startY: e.clientY,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
         dragging: false,
       };
 
@@ -95,6 +125,7 @@ export default function KanbanCard({
           }
         }
         el.style.transform = `translate(${dx}px, ${dy}px)`;
+        broadcastLiveDrag(ev.clientX, ev.clientY);
         hitColumnAt(ev.clientX, ev.clientY);
         ev.preventDefault();
       };
@@ -136,6 +167,7 @@ export default function KanbanCard({
     el.addEventListener("pointerdown", onPointerDown);
     return () => {
       el.removeEventListener("pointerdown", onPointerDown);
+      clearLiveDrag();
     };
   }, [locked, moving, columnId, boardId, item]);
 

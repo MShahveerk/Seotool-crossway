@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
+import BoardDragPresence from "./BoardDragPresence";
 import KanbanBoard from "./KanbanBoard";
 import { useBoardLiveSync } from "./useBoardLiveSync";
 
@@ -54,12 +55,14 @@ export default function BoardLiveBody({
   );
 
   return (
-    <KanbanBoard
-      {...boardProps}
-      playhtml
-      liveConnected={connected}
-      onMoveToColumn={move}
-      onItemSaved={saved}
-    />
+    <BoardDragPresence boardId={boardProps?.boardId || room}>
+      <KanbanBoard
+        {...boardProps}
+        playhtml
+        liveConnected={connected}
+        onMoveToColumn={move}
+        onItemSaved={saved}
+      />
+    </BoardDragPresence>
   );
 }

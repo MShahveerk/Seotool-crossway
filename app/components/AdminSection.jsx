@@ -1276,8 +1276,7 @@ export default function AdminSection({ onNavigate } = {}) {
                   <span>
                     <span className="font-medium">Combined deck</span>
                     <span className="block text-xs text-gray-500">
-                      One PDF with website + social. If enabled, this is what gets emailed (separate website/SMM
-                      attachments are skipped).
+                      One PDF with website + social. Each checked report type is emailed as its own attachment.
                     </span>
                   </span>
                 </label>
