@@ -3,9 +3,8 @@ import prisma from "../../../../lib/prisma";
 import { buildBlogPayload, parseScheduledDate, parseSeoMetaInput } from "../../../../lib/blogPayload.js";
 import { findAssigneesForSite, notifyBlogApprovers, createBlogQuickActionToken } from "../../../../lib/blogAssignee.js";
 import { saveBlogFeaturedImage } from "../../../../lib/blogMedia.js";
-import { BLOG_INCLUDE } from "../../../../lib/blogAccess.js";
+import { BLOG_INCLUDE, buildBlogAdminSiteWhere } from "../../../../lib/blogAccess.js";
 import { recordBlogRevision } from "../../../../lib/blogRevisions.js";
-import { resolveSiteEquivalents } from "../../../../lib/siteAccess.js";
 
 export const runtime = "nodejs";
 
@@ -13,11 +12,7 @@ export async function GET(req) {
   try {
     await requireAdminRoute(req, "admin-blogs");
     const site = req.nextUrl.searchParams.get("site") || req.nextUrl.searchParams.get("url") || "";
-    let where = {};
-    if (site) {
-      const siteKeys = await resolveSiteEquivalents(prisma, site);
-      where = { siteLink: { in: siteKeys.length ? siteKeys : [site] } };
-    }
+    const where = await buildBlogAdminSiteWhere(prisma, site);
     const blogs = await prisma.blogPost.findMany({
       where,
       include: BLOG_INCLUDE,

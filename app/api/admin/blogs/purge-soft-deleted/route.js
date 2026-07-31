@@ -1,7 +1,7 @@
 import { requireAdminRoute } from "../../../../../lib/adminAuth";
 import prisma from "../../../../../lib/prisma";
 
-import { resolveSiteEquivalents } from "../../../../../lib/siteAccess.js";
+import { buildBlogAdminSiteWhere } from "../../../../../lib/blogAccess.js";
 
 export const runtime = "nodejs";
 
@@ -13,11 +13,10 @@ export async function POST(req) {
     const siteLink = String(body.siteLink || body.url || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
 
-    const siteKeys = await resolveSiteEquivalents(prisma, siteLink);
-    const sites = [...new Set([siteLink, ...siteKeys].filter(Boolean))];
+    const siteWhere = await buildBlogAdminSiteWhere(prisma, siteLink);
 
     const result = await prisma.blogPost.deleteMany({
-      where: { siteLink: { in: sites }, status: "deleted" },
+      where: { AND: [siteWhere, { status: "deleted" }] },
     });
 
     return Response.json({ ok: true, purged: result.count });
