@@ -68,7 +68,24 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
   const [cancellingRun, setCancellingRun] = useState(false);
   const [researching, setResearching] = useState(false);
   const [pitchBusyId, setPitchBusyId] = useState("");
+  const [hideLivePin, setHideLivePin] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem("seoAutopilot.hideLivePin") === "1";
+    } catch {
+      return false;
+    }
+  });
   const selectedRunIdRef = useRef(null);
+
+  const setLivePinHidden = (hidden) => {
+    setHideLivePin(hidden);
+    try {
+      window.localStorage.setItem("seoAutopilot.hideLivePin", hidden ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  };
 
   const fetchRunDetail = useCallback(async (runId) => {
     const id = String(runId || "").trim();
@@ -369,29 +386,63 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
           </div>
         ) : null}
 
-        {/* Always pin the live console while a run is in progress, even on other tabs */}
+        {/* Optional live pin on other tabs — can be hidden; preference is remembered */}
         {tab !== "runs" &&
         activeRun &&
         ["queued", "running"].includes(String(activeRun.status || "")) ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-                Live Autopilot run
+          hideLivePin ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2">
+              <p className="text-xs font-semibold text-emerald-900">
+                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse mr-1.5 align-middle" />
+                Autopilot running in background
               </p>
-              <button
-                type="button"
-                className="text-xs font-semibold text-emerald-800 hover:underline"
-                onClick={() => setTab("runs")}
-              >
-                Expand Run console →
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-emerald-900 hover:underline"
+                  onClick={() => setLivePinHidden(false)}
+                >
+                  Show live panel
+                </button>
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-emerald-900 hover:underline"
+                  onClick={() => setTab("runs")}
+                >
+                  Open Run console →
+                </button>
+              </div>
             </div>
-            <AutopilotRunConsole
-              run={activeRun}
-              onCancel={cancelActiveRun}
-              cancelling={cancellingRun}
-            />
-          </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                  Live Autopilot run
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-gray-600 hover:underline"
+                    onClick={() => setLivePinHidden(true)}
+                  >
+                    Hide on other tabs
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-emerald-800 hover:underline"
+                    onClick={() => setTab("runs")}
+                  >
+                    Expand Run console →
+                  </button>
+                </div>
+              </div>
+              <AutopilotRunConsole
+                run={activeRun}
+                onCancel={cancelActiveRun}
+                cancelling={cancellingRun}
+              />
+            </div>
+          )
         ) : null}
 
         {tab === "overview" && (
