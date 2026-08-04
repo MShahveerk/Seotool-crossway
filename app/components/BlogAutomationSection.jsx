@@ -41,7 +41,7 @@ const TABS = [
   { id: "seeds", label: "SEO Seeds" },
   { id: "excel", label: "Excel queue" },
   { id: "links", label: "Links" },
-  { id: "brand", label: "AI Brand kit" },
+  { id: "brand", label: "Brand kit" },
   { id: "assets", label: "Assets" },
   { id: "schedule", label: "Schedule" },
   { id: "external", label: "External n8n" },
