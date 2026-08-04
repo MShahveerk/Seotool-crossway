@@ -156,6 +156,11 @@ export default function AutopilotRunConsole({
                       {String(stage.error)}
                     </pre>
                   ) : null}
+                  {stage.warning ? (
+                    <p className="mt-2 text-[11px] text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                      {String(stage.warning)}
+                    </p>
+                  ) : null}
                   {stage.preview && !isOpen ? (
                     <p className="mt-2 text-[11px] text-gray-600 leading-relaxed whitespace-pre-wrap">
                       {String(stage.preview)}
