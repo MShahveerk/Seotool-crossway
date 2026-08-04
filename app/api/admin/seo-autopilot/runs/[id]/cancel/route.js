@@ -8,7 +8,7 @@ export async function POST(req, { params }) {
     await requireAdminRoute(req, "seo-autopilot");
     const { id: rawId } = await params;
     const id = String(rawId || "").trim();
-    const run = await cancelAutopilotRun(id, { hard: true });
+    const run = await cancelAutopilotRun(id);
     return Response.json({ run });
   } catch (error) {
     return Response.json(

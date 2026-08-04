@@ -27,7 +27,7 @@ export async function POST(req) {
       if (existing.siteLink !== siteLink) {
         return Response.json({ error: "Run does not belong to this site." }, { status: 403 });
       }
-      const run = await cancelAutopilotRun(existing.id, { hard: true });
+      const run = await cancelAutopilotRun(existing.id);
       return Response.json({ count: 1, runs: [run], run });
     }
 
