@@ -35,7 +35,13 @@ export default function StudioBrandKit({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Brand kit request failed");
       if (data.config) onConfig?.(data.config);
-      onMessage?.(busyKey === "figma" ? "Figma template pulled." : "Brand kit updated.");
+      onMessage?.(
+        busyKey === "figma"
+          ? "Figma template pulled."
+          : busyKey === "preview"
+            ? "Preview ready — scroll down to see it."
+            : "Brand kit updated."
+      );
     } catch (err) {
       onMessage?.(err.message || "Brand kit failed");
     } finally {

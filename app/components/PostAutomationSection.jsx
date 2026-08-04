@@ -39,6 +39,7 @@ const TABS = [
   { id: "agents", label: "Agents" },
   { id: "seeds", label: "Seeds" },
   { id: "excel", label: "Excel queue" },
+  { id: "brand", label: "Brand frame" },
   { id: "assets", label: "Assets" },
   { id: "schedule", label: "Schedule" },
   { id: "external", label: "External" },
@@ -366,6 +367,27 @@ export default function PostAutomationSection({ selectedSite = "" }) {
         </div>
       </div>
 
+      {!isInternal ? (
+        <div className="rounded-2xl border-2 border-emerald-400 bg-emerald-50 px-5 py-5">
+          <h3 className="text-base font-bold text-gray-900">Brand frame is here — but Internal Studio is off</h3>
+          <p className="mt-1 text-sm text-gray-700 max-w-2xl leading-relaxed">
+            Instagram matte + per-site logo lives under{" "}
+            <span className="font-semibold">Internal Studio → Brand frame</span>. You’re currently on
+            External mode, so those tabs are hidden.
+          </p>
+          <button
+            type="button"
+            className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#1d9c35] px-4 py-2.5 text-sm font-bold text-white"
+            onClick={async () => {
+              await saveEngine("internal");
+              setTab("brand");
+            }}
+          >
+            Switch to Internal Studio & open Brand frame
+          </button>
+        </div>
+      ) : null}
+
       {isInternal && siteConfig && (
         <>
           <AgentRoster config={siteConfig} onPatchSite={patchSite} />
@@ -657,13 +679,40 @@ export default function PostAutomationSection({ selectedSite = "" }) {
               </div>
             )}
 
+            {tab === "brand" && (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-950">
+                  Configure the Instagram-style matte + this site’s logo here. Enable → upload logo → Save →
+                  Preview. Every new Internal Studio image run will stamp this frame.
+                </div>
+                <StudioBrandKit
+                  brandKit={siteConfig.brandKitJson}
+                  apiUrl={selectedSite ? `/api/admin/post-automation/site/brand-kit${siteQ}` : ""}
+                  onConfig={setSiteConfig}
+                  onMessage={(msg) =>
+                    setSaveMessage(
+                      typeof msg === "string"
+                        ? { ok: !/fail|error/i.test(msg), text: msg }
+                        : msg
+                    )
+                  }
+                  onPatchLocal={(brandKitJson) => patchSite({ brandKitJson })}
+                />
+              </div>
+            )}
+
             {tab === "assets" && (
               <div className="space-y-4">
                 <p className="text-sm text-gray-600">
-                  Image system prompt (Agents), visual guidelines below, and the reference image apply
-                  on every manual and auto run (including Excel queue). Image is required — runs fail
-                  without a successful feed creative. Facebook-only posts use landscape 1536×1024 JPEG;
-                  Instagram / both use square 1024×1024 JPEG for smaller, platform-fit files.
+                  Style reference images + visual guidelines. For matte/logo branding, use the{" "}
+                  <button
+                    type="button"
+                    className="font-semibold text-[#1d9c35] hover:underline"
+                    onClick={() => setTab("brand")}
+                  >
+                    Brand frame
+                  </button>{" "}
+                  tab. Image is required — runs fail without a successful feed creative.
                 </p>
                 <label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50/80 px-4 py-3 cursor-pointer">
                   <input
@@ -694,13 +743,6 @@ export default function PostAutomationSection({ selectedSite = "" }) {
                   uploadUrl={selectedSite ? `/api/admin/post-automation/site/asset${siteQ}` : ""}
                   onConfig={setSiteConfig}
                   onMessage={setSaveMessage}
-                />
-                <StudioBrandKit
-                  brandKit={siteConfig.brandKitJson}
-                  apiUrl={selectedSite ? `/api/admin/post-automation/site/brand-kit${siteQ}` : ""}
-                  onConfig={setSiteConfig}
-                  onMessage={setSaveMessage}
-                  onPatchLocal={(brandKitJson) => patchSite({ brandKitJson })}
                 />
               </div>
             )}
