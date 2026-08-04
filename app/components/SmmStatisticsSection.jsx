@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Area, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { FiDownload, FiRefreshCw } from "react-icons/fi";
@@ -158,9 +158,30 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
     }
   }, [activeSite, hasGlobalAccess, platform]);
 
+  const autoRefreshedRef = useRef(false);
+
   useEffect(() => {
-    fetchStats();
+    autoRefreshedRef.current = false;
+    fetchStats(false);
   }, [fetchStats]);
+
+  // One automatic refresh when Meta follower cards are stuck at zero / missing.
+  useEffect(() => {
+    if (loading || error || !payload || autoRefreshedRef.current) return;
+    const cards = payload.platformCards || [];
+    const metaCards = cards.filter((c) =>
+      ["facebook", "instagram"].includes(String(c.platform || "").toLowerCase())
+    );
+    const allMetaZero =
+      metaCards.length > 0 && metaCards.every((c) => !(Number(c.followers) > 0));
+    const configuredButMissing =
+      metaCards.length === 0 &&
+      Boolean(payload.setup?.facebookPageId || payload.setup?.instagramUserId);
+    if (allMetaZero || configuredButMissing) {
+      autoRefreshedRef.current = true;
+      fetchStats(true);
+    }
+  }, [loading, error, payload, fetchStats]);
 
   const cards = payload?.platformCards || [];
   const timeSeries = payload?.timeSeries || [];

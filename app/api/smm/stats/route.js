@@ -4,6 +4,14 @@ import prisma from "../../../../lib/prisma";
 import { ROLES } from "../../../../lib/rbac";
 import { canAccessSection } from "../../../../lib/modulePermissions";
 import { loadMetaAccounts } from "../../../../lib/metaAccounts";
+import {
+  fetchFacebookInsightsDaily,
+  fetchFacebookPageLive,
+  fetchInstagramInsightsDaily,
+  fetchInstagramLive,
+  metaAccessTokens,
+  resolvePageAccessToken,
+} from "../../../../lib/metaGraph";
 import { normalizeSiteOrigin } from "../../../../lib/validation";
 import {
   isMetaPageId,
@@ -256,249 +264,253 @@ export async function GET(req) {
       }
     }
 
-    // Auto-fetch live Meta statistics and historical insights if meta token is configured
-    const metaToken = process.env.META_PAGE_ACCESS_TOKEN || process.env.META_APP_ACCESS_TOKEN;
-    if (metaToken) {
+    // Auto-fetch live Meta statistics — never persist Graph failures as zero forever.
+    if (metaAccessTokens().length) {
       try {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         const forceRefresh = req.nextUrl.searchParams.get("refresh") === "true";
-        // Check if we need to refresh
-        const existingToday = await prisma.socialMediaDailyStat.findFirst({
-          where: { siteLink: targetSiteNormalized, statDate: today }
+        const equivKeys = [...new Set((siteEquivalents || []).filter(Boolean))];
+        if (!equivKeys.includes(targetSiteNormalized)) equivKeys.push(targetSiteNormalized);
+
+        const existingMetaToday = await prisma.socialMediaDailyStat.findMany({
+          where: {
+            siteLink: { in: equivKeys },
+            statDate: today,
+            platform: { in: ["facebook", "instagram"] },
+          },
+          select: { followers: true, reach: true, engagements: true, platform: true },
         });
-        if (!existingToday || forceRefresh) {
+        const hasUsableMetaToday = existingMetaToday.some(
+          (r) => Number(r.followers || 0) > 0 || Number(r.reach || 0) > 0
+        );
+
+        if (!existingMetaToday.length || forceRefresh || !hasUsableMetaToday) {
           const since = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
           const until = Math.floor(Date.now() / 1000);
 
-          // Try to find a Site record for lookup of linked page IDs
           const siteRecord = await prisma.site.findFirst({
             where: {
-              OR: [
-                { siteUrl: targetSiteNormalized },
-                { facebookPageId: targetSiteNormalized },
-                { instagramUserId: targetSiteNormalized },
-              ]
-            }
+              OR: equivKeys.flatMap((key) => [
+                { siteUrl: key },
+                { facebookPageId: key },
+                { instagramUserId: key },
+              ]),
+            },
           });
 
-          // If targetSiteNormalized is itself a numeric Meta ID, use it directly
+          const linkedUsersForMeta = await prisma.user.findMany({
+            where: {
+              OR: [
+                { siteLink: { in: equivKeys } },
+                { facebookPageId: { in: equivKeys } },
+                { instagramUserId: { in: equivKeys } },
+              ],
+            },
+            select: {
+              id: true,
+              facebookPageId: true,
+              instagramUserId: true,
+              siteLink: true,
+              createdAt: true,
+            },
+            orderBy: { createdAt: "asc" },
+          });
+
+          // Stable owner so Dashboard (owner-scoped reads) and live pulls share the same rows.
+          let ownerUserId =
+            linkedUsersForMeta[0]?.id ||
+            (
+              await prisma.socialMediaDailyStat.findFirst({
+                where: { siteLink: { in: equivKeys } },
+                orderBy: { statDate: "desc" },
+                select: { userId: true },
+              })
+            )?.userId ||
+            session.user.id;
+
           const targetIsMetaId = /^\d+$/.test(String(targetSiteNormalized).trim());
 
           let fbPageId =
             siteRecord?.facebookPageId ||
+            linkedUsersForMeta.find((u) => u.facebookPageId)?.facebookPageId ||
             session.user.facebookPageId ||
             (targetIsMetaId ? targetSiteNormalized : null);
 
           let igUserId =
             siteRecord?.instagramUserId ||
-            session.user.instagramUserId;
+            linkedUsersForMeta.find((u) => u.instagramUserId)?.instagramUserId ||
+            session.user.instagramUserId ||
+            null;
 
-          // Auto-discovery from Meta Token if website is selected but has no linked page IDs in DB
+          // Only auto-link when website URL matches a Graph page website — never blind pages[0]
           if (!fbPageId && !igUserId && !targetIsMetaId) {
             try {
               const loaded = await loadMetaAccounts({ includeDatabase: true });
-              const pages = loaded.accounts || [];
-              const matchedPage = pages.find((page) => {
+              const matchedPage = (loaded.accounts || []).find((page) => {
                 if (!page.siteLink) return false;
                 const parsedWeb = normalizeSiteOrigin(page.siteLink);
                 return parsedWeb && parsedWeb === targetSiteNormalized;
               });
-              const pageToUse = matchedPage || pages[0];
-              if (pageToUse?.facebookPageId) {
-                fbPageId = pageToUse.facebookPageId;
-                igUserId = pageToUse.instagramUserId || null;
+              if (matchedPage?.facebookPageId) {
+                fbPageId = matchedPage.facebookPageId;
+                igUserId = matchedPage.instagramUserId || null;
                 if (siteRecord) {
                   await prisma.site.update({
                     where: { id: siteRecord.id },
-                    data: {
-                      facebookPageId: fbPageId,
-                      instagramUserId: igUserId,
-                    },
+                    data: { facebookPageId: fbPageId, instagramUserId: igUserId },
                   });
                 }
-                console.log(
-                  `[INFO] Auto-discovered Meta Page ID ${fbPageId} for website ${targetSiteNormalized}`
-                );
-              } else if (loaded.error) {
-                console.warn("Meta auto-discovery empty:", loaded.error);
               }
             } catch (discErr) {
               console.warn("Failed to auto-discover Meta accounts:", discErr.message);
             }
           }
-          // 1. Fetch Facebook Page Details & Insights
-          if (fbPageId && /^\d+$/.test(String(fbPageId).trim())) {
-            let currentFollowers = 0;
-            let fbPageName = "Facebook Page";
-            try {
-              const fbPageUrl = `https://graph.facebook.com/v20.0/${fbPageId}?fields=fan_count,name&access_token=${metaToken}`;
-              const fbPageRes = await axios.get(fbPageUrl);
-              currentFollowers = Number(fbPageRes.data?.fan_count || 0);
-              fbPageName = fbPageRes.data?.name || fbPageName;
-            } catch (err) {
-              console.warn(`Failed to fetch basic FB Page info for ${fbPageId}:`, err.message);
-            }
 
-            const mergedDaily = new Map();
-            try {
-              const fbInsightsUrl = `https://graph.facebook.com/v20.0/${fbPageId}/insights?metric=page_impressions_unique,page_post_engagements&period=day&since=${since}&until=${until}&access_token=${metaToken}`;
-              const fbInsightsRes = await axios.get(fbInsightsUrl);
-              
-              if (fbInsightsRes.data && fbInsightsRes.data.data) {
-                const reachData = fbInsightsRes.data.data.find(d => d.name === "page_impressions_unique")?.values || [];
-                const engagementData = fbInsightsRes.data.data.find(d => d.name === "page_post_engagements")?.values || [];
+          const writeKeys = [
+            ...new Set(
+              [
+                targetSiteNormalized,
+                siteRecord?.siteUrl ? normalizeSiteOrigin(siteRecord.siteUrl) : null,
+                fbPageId && /^\d+$/.test(String(fbPageId)) ? String(fbPageId) : null,
+                igUserId && /^\d+$/.test(String(igUserId)) ? String(igUserId) : null,
+              ].filter(Boolean)
+            ),
+          ];
 
-                reachData.forEach(item => {
-                  const dateStr = item.end_time.split("T")[0]; // YYYY-MM-DD
-                  mergedDaily.set(dateStr, { statDate: new Date(dateStr), reach: Number(item.value || 0), engagements: 0 });
-                });
+          async function upsertPlatformDays({
+            platform,
+            days,
+            followers,
+            accountName,
+            accountHandle,
+          }) {
+            if (!days?.size) return;
+            const followerCount = Number(followers);
+            const hasFollowers = Number.isFinite(followerCount) && followerCount > 0;
+            // Only persist when we have real followers or non-zero day metrics — never stamp a day of zeros.
+            const usableDays = [...days.entries()].filter(([, val]) => {
+              return hasFollowers || Number(val.reach || 0) > 0 || Number(val.engagements || 0) > 0;
+            });
+            if (!usableDays.length) return;
 
-                engagementData.forEach(item => {
-                  const dateStr = item.end_time.split("T")[0];
-                  const existing = mergedDaily.get(dateStr) || { statDate: new Date(dateStr), reach: 0, engagements: 0 };
-                  existing.engagements = Number(item.value || 0);
-                  mergedDaily.set(dateStr, existing);
-                });
-              }
-            } catch (fbErr) {
-              console.warn(`Failed to fetch FB Insights for ${fbPageId}:`, fbErr.response?.data || fbErr.message);
-            }
-
-            // Fallback: If insights list is empty or failed, seed today with basic metadata
-            if (mergedDaily.size === 0) {
-              const todayStr = new Date().toISOString().split("T")[0];
-              mergedDaily.set(todayStr, { statDate: new Date(todayStr), reach: 0, engagements: 0 });
-            }
-
-            // Upsert daily rows
-            try {
-              for (const [dateStr, val] of mergedDaily.entries()) {
-                const statDate = val.statDate;
-                statDate.setHours(0, 0, 0, 0);
-
+            for (const [, val] of usableDays) {
+              const statDate = new Date(val.statDate);
+              statDate.setHours(0, 0, 0, 0);
+              for (const siteLink of writeKeys) {
+                const update = {
+                  reach: val.reach,
+                  engagements: val.engagements,
+                  accountName,
+                  accountHandle,
+                  source: "meta_graph",
+                };
+                if (hasFollowers) update.followers = followerCount;
                 await prisma.socialMediaDailyStat.upsert({
                   where: {
                     userId_siteLink_platform_statDate: {
-                      userId: session.user.id,
-                      siteLink: targetSiteNormalized,
-                      platform: "facebook",
+                      userId: ownerUserId,
+                      siteLink,
+                      platform,
                       statDate,
-                    }
+                    },
                   },
-                  update: {
-                    reach: val.reach,
-                    engagements: val.engagements,
-                    accountName: fbPageName,
-                    accountHandle: fbPageId,
-                    followers: currentFollowers,
-                  },
+                  update,
                   create: {
-                    userId: session.user.id,
-                    siteLink: targetSiteNormalized,
-                    platform: "facebook",
+                    userId: ownerUserId,
+                    siteLink,
+                    platform,
                     statDate,
-                    followers: currentFollowers,
+                    followers: hasFollowers ? followerCount : 0,
                     reach: val.reach,
                     engagements: val.engagements,
-                    accountName: fbPageName,
-                    accountHandle: fbPageId,
+                    accountName,
+                    accountHandle,
                     queuedPosts: 0,
                     queuedReels: 0,
-                  }
-                });
-              }
-            } catch (dbErr) {
-              console.error(`Failed to write FB stats to DB for ${fbPageId}:`, dbErr.message);
-            }
-          }
-
-          // 2. Fetch Instagram Account Details & Insights
-          if (igUserId && /^\d+$/.test(String(igUserId).trim())) {
-            let currentFollowers = 0;
-            let igUsername = "Instagram Account";
-            try {
-              const igPageUrl = `https://graph.facebook.com/v20.0/${igUserId}?fields=followers_count,name,username&access_token=${metaToken}`;
-              const igPageRes = await axios.get(igPageUrl);
-              currentFollowers = Number(igPageRes.data?.followers_count || 0);
-              igUsername = igPageRes.data?.username || igUsername;
-            } catch (err) {
-              console.warn(`Failed to fetch basic IG info for ${igUserId}:`, err.message);
-            }
-
-            const mergedDaily = new Map();
-            try {
-              const igInsightsUrl = `https://graph.facebook.com/v20.0/${igUserId}/insights?metric=reach,impressions&period=day&since=${since}&until=${until}&access_token=${metaToken}`;
-              const igInsightsRes = await axios.get(igInsightsUrl);
-              
-              if (igInsightsRes.data && igInsightsRes.data.data) {
-                const reachData = igInsightsRes.data.data.find(d => d.name === "reach")?.values || [];
-                const impressionsData = igInsightsRes.data.data.find(d => d.name === "impressions")?.values || [];
-
-                reachData.forEach(item => {
-                  const dateStr = item.end_time.split("T")[0];
-                  mergedDaily.set(dateStr, { statDate: new Date(dateStr), reach: Number(item.value || 0), engagements: 0 });
-                });
-
-                impressionsData.forEach(item => {
-                  const dateStr = item.end_time.split("T")[0];
-                  const existing = mergedDaily.get(dateStr) || { statDate: new Date(dateStr), reach: 0, engagements: 0 };
-                  existing.engagements = Number(item.value || 0); // Map impressions to engagements
-                  mergedDaily.set(dateStr, existing);
-                });
-              }
-            } catch (igErr) {
-              console.warn(`Failed to fetch IG Insights for ${igUserId}:`, igErr.response?.data || igErr.message);
-            }
-
-            // Fallback: If insights list is empty or failed, seed today with basic metadata
-            if (mergedDaily.size === 0) {
-              const todayStr = new Date().toISOString().split("T")[0];
-              mergedDaily.set(todayStr, { statDate: new Date(todayStr), reach: 0, engagements: 0 });
-            }
-
-            try {
-              for (const [dateStr, val] of mergedDaily.entries()) {
-                const statDate = val.statDate;
-                statDate.setHours(0, 0, 0, 0);
-
-                await prisma.socialMediaDailyStat.upsert({
-                  where: {
-                    userId_siteLink_platform_statDate: {
-                      userId: session.user.id,
-                      siteLink: targetSiteNormalized,
-                      platform: "instagram",
-                      statDate,
-                    }
+                    source: "meta_graph",
                   },
-                  update: {
-                    reach: val.reach,
-                    engagements: val.engagements,
-                    accountName: igUsername,
-                    accountHandle: igUsername,
-                    followers: currentFollowers,
-                    },
-                    create: {
-                      userId: session.user.id,
-                      siteLink: targetSiteNormalized,
-                      platform: "instagram",
-                      statDate,
-                      followers: currentFollowers,
-                      reach: val.reach,
-                      engagements: val.engagements,
-                      accountName: igUsername,
-                      accountHandle: igUsername,
-                      queuedPosts: 0,
-                      queuedReels: 0,
-                    }
-                  });
-                }
-            } catch (dbErr) {
-              console.error(`Failed to write IG stats to DB for ${igUserId}:`, dbErr.message);
+                });
+              }
             }
           }
 
+          if (fbPageId && /^\d+$/.test(String(fbPageId).trim())) {
+            const pageToken = await resolvePageAccessToken(fbPageId);
+            const tokens = pageToken ? [pageToken] : [];
+            const live = await fetchFacebookPageLive(fbPageId, { tokens });
+            const insights = await fetchFacebookInsightsDaily(fbPageId, since, until, { tokens });
+            if (!live.ok && !insights.ok) {
+              console.warn(`Skipping FB write for ${fbPageId}: ${live.error || insights.error}`);
+            } else if (!(Number(live.followers) > 0) && !insights.ok) {
+              console.warn(
+                `Skipping FB write for ${fbPageId}: live followers unavailable (${live.error || "0"})`
+              );
+            } else {
+              const days =
+                insights.days?.size > 0
+                  ? insights.days
+                  : new Map([
+                      [
+                        today.toISOString().slice(0, 10),
+                        { statDate: today, reach: 0, engagements: 0 },
+                      ],
+                    ]);
+              try {
+                await upsertPlatformDays({
+                  platform: "facebook",
+                  days,
+                  followers: live.followers,
+                  accountName: live.name || "Facebook Page",
+                  accountHandle: String(fbPageId),
+                });
+                console.info(
+                  `[SMM] FB live ok page=${fbPageId} followers=${live.followers ?? "n/a"} days=${days.size}`
+                );
+              } catch (dbErr) {
+                console.error(`Failed to write FB stats for ${fbPageId}:`, dbErr.message);
+              }
+            }
+          }
+
+          if (igUserId && /^\d+$/.test(String(igUserId).trim())) {
+            const pageToken = fbPageId ? await resolvePageAccessToken(fbPageId) : null;
+            const tokens = pageToken ? [pageToken] : [];
+            const live = await fetchInstagramLive(igUserId, { tokens });
+            const insights = await fetchInstagramInsightsDaily(igUserId, since, until, { tokens });
+            if (!live.ok && !insights.ok) {
+              console.warn(`Skipping IG write for ${igUserId}: ${live.error || insights.error}`);
+            } else if (!(Number(live.followers) > 0) && !insights.ok) {
+              console.warn(
+                `Skipping IG write for ${igUserId}: live followers unavailable (${live.error || "0"})`
+              );
+            } else {
+              const days =
+                insights.days?.size > 0
+                  ? insights.days
+                  : new Map([
+                      [
+                        today.toISOString().slice(0, 10),
+                        { statDate: today, reach: 0, engagements: 0 },
+                      ],
+                    ]);
+              try {
+                await upsertPlatformDays({
+                  platform: "instagram",
+                  days,
+                  followers: live.followers,
+                  accountName: live.username || "Instagram Account",
+                  accountHandle: live.username || String(igUserId),
+                });
+                console.info(
+                  `[SMM] IG live ok id=${igUserId} followers=${live.followers ?? "n/a"} days=${days.size}`
+                );
+              } catch (dbErr) {
+                console.error(`Failed to write IG stats for ${igUserId}:`, dbErr.message);
+              }
+            }
+          }
         }
       } catch (err) {
         console.error("Auto-fetch error during SMM stats request:", err.message);
@@ -602,18 +614,32 @@ export async function GET(req) {
           { instagramUserId: { in: uniqueEquivalents } }
         ]
       },
-      select: { id: true, email: true, name: true, gtmContainerId: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        gtmContainerId: true,
+        facebookPageId: true,
+        instagramUserId: true,
+      },
       orderBy: { createdAt: "asc" },
     });
 
     const gtmContainerId = globalSite?.gtmContainerId || usersForSite[0]?.gtmContainerId || null;
+    const setupFacebookPageId =
+      globalSite?.facebookPageId ||
+      usersForSite.find((u) => u.facebookPageId)?.facebookPageId ||
+      null;
+    const setupInstagramUserId =
+      globalSite?.instagramUserId ||
+      usersForSite.find((u) => u.instagramUserId)?.instagramUserId ||
+      null;
 
     const monthlyBreakdown = buildMonthlyBreakdownFromRows(rows);
 
     const hasMetaConfig = Boolean(
-      globalSite?.facebookPageId || 
-      globalSite?.instagramUserId || 
-      usersForSite.some(u => u.facebookPageId || u.instagramUserId) ||
+      setupFacebookPageId ||
+      setupInstagramUserId ||
       /^\d+$/.test(String(targetSiteNormalized).trim())
     );
 
@@ -646,6 +672,8 @@ export async function GET(req) {
           setup: {
             message: setupMessage,
             gtmContainerId,
+            facebookPageId: setupFacebookPageId,
+            instagramUserId: setupInstagramUserId,
           },
           currentYearMonth: formatYearMonth(new Date()),
           reportMeta:
@@ -666,9 +694,18 @@ export async function GET(req) {
       const key = canonicalSmmPlatform(row.platform);
       const normalizedRow = { ...row, platform: key };
       const prev = latestByPlatform.get(key);
-      if (!prev || new Date(row.statDate) >= new Date(prev.statDate)) {
-        if (prev) previousByPlatform.set(key, prev);
+      const rowDate = new Date(row.statDate).getTime();
+      const prevDate = prev ? new Date(prev.statDate).getTime() : 0;
+      const better =
+        !prev ||
+        rowDate > prevDate ||
+        (rowDate === prevDate && Number(row.followers || 0) >= Number(prev.followers || 0));
+      if (better) {
+        if (prev && rowDate > prevDate) previousByPlatform.set(key, prev);
+        else if (prev && !previousByPlatform.has(key)) previousByPlatform.set(key, prev);
         latestByPlatform.set(key, normalizedRow);
+      } else if (prev && rowDate < prevDate && !previousByPlatform.has(key)) {
+        previousByPlatform.set(key, normalizedRow);
       }
     }
 
@@ -743,6 +780,8 @@ export async function GET(req) {
         accounts,
         setup: {
           gtmContainerId,
+          facebookPageId: setupFacebookPageId,
+          instagramUserId: setupInstagramUserId,
           users: usersForSite.map((u) => ({
             id: u.id,
             email: u.email,

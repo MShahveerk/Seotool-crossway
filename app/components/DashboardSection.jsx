@@ -736,7 +736,8 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
                 <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {["facebook", "instagram", "youtube", "tiktok"].map((key, i) => {
                     const row = orderedBaseline.find((c) => String(c.platform || "").toLowerCase() === key);
-                    const followers = row ? Number(row.followers || 0) : 0;
+                    const hasFollowers = row && Number(row.followers) > 0;
+                    const followers = hasFollowers ? Number(row.followers) : null;
                     const label = platformLabel(key);
                     return (
                       <StaggerItem key={key} index={i + 1}>
@@ -746,7 +747,7 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
                           </span>
                           <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{label}</p>
                           <p className="text-2xl sm:text-3xl font-bold text-gray-900 tabular-nums mt-1.5">
-                            {formatNum(followers)}
+                            {followers != null ? formatNum(followers) : "—"}
                           </p>
                         </div>
                       </StaggerItem>

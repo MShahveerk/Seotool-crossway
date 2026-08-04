@@ -157,7 +157,7 @@ export async function GET(req) {
       }).filter(Boolean)
     ));
 
-    let ownerUser = await prisma.user.findFirst({
+    const ownerUser = await prisma.user.findFirst({
       where: {
         OR: [
           { siteLink: { in: uniqueEquivalents } },
@@ -168,16 +168,17 @@ export async function GET(req) {
       orderBy: { createdAt: "asc" },
       select: { id: true },
     });
-    if (!ownerUser) {
-      const statOwner = await prisma.socialMediaDailyStat.findFirst({
-        where: { siteLink: { in: uniqueEquivalents } },
-        orderBy: { statDate: "desc" },
-        select: { userId: true },
-      });
-      ownerUser = statOwner?.userId ? { id: statOwner.userId } : null;
-    }
 
-    if (!ownerUser?.id) {
+    // Prefer site-scoped rows across all writers (admin refresh vs site owner).
+    const rawRows = await prisma.socialMediaDailyStat.findMany({
+      where: {
+        siteLink: { in: uniqueEquivalents },
+      },
+      orderBy: [{ statDate: "desc" }, { updatedAt: "desc" }],
+    });
+    const rows = rawRows.filter((r) => String(r.platform || "").toLowerCase() !== "linkedin");
+
+    if (!rows.length) {
       return new Response(
         JSON.stringify({
           siteUrl: targetSiteNormalized,
@@ -187,15 +188,6 @@ export async function GET(req) {
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
     }
-
-    const rawRows = await prisma.socialMediaDailyStat.findMany({
-      where: {
-        userId: ownerUser.id,
-        siteLink: { in: uniqueEquivalents },
-      },
-      orderBy: [{ statDate: "desc" }, { updatedAt: "desc" }],
-    });
-    const rows = rawRows.filter((r) => String(r.platform || "").toLowerCase() !== "linkedin");
 
     const latestByPlatform = new Map();
     for (const row of rows) {
@@ -225,7 +217,7 @@ export async function GET(req) {
     return new Response(
       JSON.stringify({
         siteUrl: targetSiteNormalized,
-        userId: ownerUser.id,
+        userId: ownerUser?.id || rows[0]?.userId || null,
         baselines,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
