@@ -78,13 +78,19 @@ export default function StudioBrandKit({
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-4">
+    <div
+      id="studio-ai-brand-kit"
+      className="rounded-2xl border-2 border-emerald-500 bg-white p-5 space-y-4 shadow-sm scroll-mt-24"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-bold text-gray-900">Brand frame</h3>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+            AI Brand kit
+          </p>
+          <h3 className="text-base font-bold text-gray-900 mt-0.5">Create or edit this site’s brand frame</h3>
           <p className="mt-1 text-sm text-gray-600 max-w-2xl leading-relaxed">
-            Instagram-style matte + this site’s logo applied after AI generation (deterministic). Or let
-            AI paint chrome, or pull a Figma node as an overlay template.
+            One click designs matte color, logo placement, and notes — and can generate a logo. Then
+            every Internal Studio image run stamps the frame.
           </p>
         </div>
         <label className="inline-flex items-center gap-2 text-sm font-semibold text-gray-800">
@@ -94,8 +100,59 @@ export default function StudioBrandKit({
             checked={Boolean(kit.enabled)}
             onChange={(e) => patch({ enabled: e.target.checked })}
           />
-          Enabled
+          Frame enabled
         </label>
+      </div>
+
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+        <div>
+          <label className={labelClass}>AI create full brand kit</label>
+          <p className="mt-1 text-xs text-gray-600">
+            Needs an API key on the Agents tab (OpenAI or OpenRouter image model). Takes ~15–40s.
+          </p>
+        </div>
+        <textarea
+          className={`${inputClass} min-h-[72px]`}
+          value={createBrief}
+          onChange={(e) => setCreateBrief(e.target.value)}
+          placeholder="Optional brief: brand name, vibe, colors to avoid, industry…"
+          disabled={Boolean(busy)}
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={Boolean(busy) || !apiUrl}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 text-white px-4 py-2.5 text-sm font-bold disabled:opacity-50"
+            onClick={() =>
+              postJson(
+                {
+                  action: "ai-create-kit",
+                  brief: createBrief,
+                  generateLogo: true,
+                  replaceLogo,
+                },
+                "create"
+              )
+            }
+          >
+            {busy === "create" ? (
+              <FiRefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <FiImage className="w-4 h-4" />
+            )}
+            {busy === "create" ? "Creating brand kit…" : "AI create full brand kit"}
+          </button>
+          <label className="inline-flex items-center gap-2 text-xs font-medium text-gray-700">
+            <input
+              type="checkbox"
+              className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+              checked={replaceLogo}
+              onChange={(e) => setReplaceLogo(e.target.checked)}
+              disabled={Boolean(busy)}
+            />
+            Replace existing logo
+          </label>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -173,56 +230,6 @@ export default function StudioBrandKit({
             onChange={(e) => patch({ logoPaddingPct: Number(e.target.value) })}
           />
         </div>
-      </div>
-
-      <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 space-y-2">
-        <label className={labelClass}>AI create full brand kit</label>
-        <textarea
-          className={`${inputClass} min-h-[64px]`}
-          value={createBrief}
-          onChange={(e) => setCreateBrief(e.target.value)}
-          placeholder="Optional brief: brand name, vibe, colors to avoid, industry…"
-          disabled={Boolean(busy)}
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            disabled={Boolean(busy)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 text-white px-3 py-2 text-xs font-semibold disabled:opacity-50"
-            onClick={() =>
-              postJson(
-                {
-                  action: "ai-create-kit",
-                  brief: createBrief,
-                  generateLogo: true,
-                  replaceLogo,
-                },
-                "create"
-              )
-            }
-          >
-            {busy === "create" ? (
-              <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <FiImage className="w-3.5 h-3.5" />
-            )}
-            {busy === "create" ? "Creating…" : "AI create full brand kit"}
-          </button>
-          <label className="inline-flex items-center gap-2 text-xs font-medium text-gray-700">
-            <input
-              type="checkbox"
-              className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-              checked={replaceLogo}
-              onChange={(e) => setReplaceLogo(e.target.checked)}
-              disabled={Boolean(busy)}
-            />
-            Replace existing logo
-          </label>
-        </div>
-        <p className="text-[11px] text-gray-600 leading-relaxed">
-          Designs matte color, padding, logo corner/scale, and brand notes. Generates a logo if none
-          is uploaded (uses your Agents API key + image model).
-        </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

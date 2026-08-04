@@ -39,7 +39,7 @@ const TABS = [
   { id: "agents", label: "Agents" },
   { id: "seeds", label: "Seeds" },
   { id: "excel", label: "Excel queue" },
-  { id: "brand", label: "Brand frame" },
+  { id: "brand", label: "AI Brand kit" },
   { id: "assets", label: "Assets" },
   { id: "schedule", label: "Schedule" },
   { id: "external", label: "External" },
@@ -367,24 +367,32 @@ export default function PostAutomationSection({ selectedSite = "" }) {
         </div>
       </div>
 
-      {!isInternal ? (
-        <div className="rounded-2xl border-2 border-emerald-400 bg-emerald-50 px-5 py-5">
-          <h3 className="text-base font-bold text-gray-900">Brand frame is here — but Internal Studio is off</h3>
-          <p className="mt-1 text-sm text-gray-700 max-w-2xl leading-relaxed">
-            Instagram matte + per-site logo lives under{" "}
-            <span className="font-semibold">Internal Studio → Brand frame</span>. You’re currently on
-            External mode, so those tabs are hidden.
+      {siteConfig && selectedSite && !isInternal ? (
+        <div className="space-y-2">
+          <p className="text-sm text-gray-600">
+            AI Brand kit is available here even in External mode. Switch to{" "}
+            <button
+              type="button"
+              className="font-semibold text-[#1d9c35] hover:underline"
+              onClick={() => saveEngine("internal")}
+            >
+              Internal Studio
+            </button>{" "}
+            when you want image runs to apply this frame.
           </p>
-          <button
-            type="button"
-            className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#1d9c35] px-4 py-2.5 text-sm font-bold text-white"
-            onClick={async () => {
-              await saveEngine("internal");
-              setTab("brand");
-            }}
-          >
-            Switch to Internal Studio & open Brand frame
-          </button>
+          <StudioBrandKit
+            brandKit={siteConfig.brandKitJson}
+            apiUrl={`/api/admin/post-automation/site/brand-kit${siteQ}`}
+            onConfig={setSiteConfig}
+            onMessage={(msg) =>
+              setSaveMessage(
+                typeof msg === "string"
+                  ? { ok: !/fail|error|missing/i.test(msg), text: msg }
+                  : msg
+              )
+            }
+            onPatchLocal={(brandKitJson) => patchSite({ brandKitJson })}
+          />
         </div>
       ) : null}
 
@@ -680,25 +688,19 @@ export default function PostAutomationSection({ selectedSite = "" }) {
             )}
 
             {tab === "brand" && (
-              <div className="space-y-4">
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-950">
-                  Configure the Instagram-style matte + this site’s logo here. Enable → upload logo → Save →
-                  Preview. Every new Internal Studio image run will stamp this frame.
-                </div>
-                <StudioBrandKit
-                  brandKit={siteConfig.brandKitJson}
-                  apiUrl={selectedSite ? `/api/admin/post-automation/site/brand-kit${siteQ}` : ""}
-                  onConfig={setSiteConfig}
-                  onMessage={(msg) =>
-                    setSaveMessage(
-                      typeof msg === "string"
-                        ? { ok: !/fail|error/i.test(msg), text: msg }
-                        : msg
-                    )
-                  }
-                  onPatchLocal={(brandKitJson) => patchSite({ brandKitJson })}
-                />
-              </div>
+              <StudioBrandKit
+                brandKit={siteConfig.brandKitJson}
+                apiUrl={`/api/admin/post-automation/site/brand-kit${siteQ}`}
+                onConfig={setSiteConfig}
+                onMessage={(msg) =>
+                  setSaveMessage(
+                    typeof msg === "string"
+                      ? { ok: !/fail|error|missing/i.test(msg), text: msg }
+                      : msg
+                  )
+                }
+                onPatchLocal={(brandKitJson) => patchSite({ brandKitJson })}
+              />
             )}
 
             {tab === "assets" && (
@@ -710,7 +712,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
                     className="font-semibold text-[#1d9c35] hover:underline"
                     onClick={() => setTab("brand")}
                   >
-                    Brand frame
+                    AI Brand kit
                   </button>{" "}
                   tab. Image is required — runs fail without a successful feed creative.
                 </p>
