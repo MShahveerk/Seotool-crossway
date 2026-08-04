@@ -18,7 +18,6 @@ import {
   resolveSiteEquivalents,
   sessionCanAccessSiteAsync,
 } from "../../../../lib/siteAccess";
-import axios from "axios";
 import {
   describeReportPeriod,
   formatYearMonth,
@@ -643,13 +642,17 @@ export async function GET(req) {
       /^\d+$/.test(String(targetSiteNormalized).trim())
     );
 
+    const hasMetaToken = metaAccessTokens().length > 0;
     let setupMessage = "No SMM stats received yet. Configure GTM and push daily platform metrics to /api/smm/collect.";
-    if (metaToken) {
+    if (hasMetaToken) {
       if (!hasMetaConfig) {
         setupMessage = "No Facebook Page or Instagram Account is linked to this website. Link a Facebook Page ID or Instagram User ID in User Management or Site Settings to view live SMM analytics.";
       } else {
         setupMessage = "No SMM statistics found in the database. Click the Refresh button in the top right to pull the latest live data from Meta.";
       }
+    } else {
+      setupMessage =
+        "META_PAGE_ACCESS_TOKEN is not set on the server. Add it in Render env (Page or System User token), redeploy, then Refresh.";
     }
 
     if (!rows.length) {
