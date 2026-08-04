@@ -23,6 +23,7 @@ import {
 } from "./seoAutopilot/ResultDashboards";
 import BlogSeedsPanel from "./seoAutopilot/BlogSeedsPanel";
 import PitchesPanel from "./seoAutopilot/PitchesPanel";
+import AutopilotRunConsole from "./seoAutopilot/AutopilotRunConsole";
 
 const TABS = [
   { id: "overview", label: "Scorecard" },
@@ -62,7 +63,8 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [activeRunId, setActiveRunId] = useState(null);
+  const [activeRun, setActiveRun] = useState(null);
+  const [cancellingRun, setCancellingRun] = useState(false);
   const [researching, setResearching] = useState(false);
   const [pitchBusyId, setPitchBusyId] = useState("");
 
@@ -127,10 +129,19 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
       const wData = await wRes.json();
       if (!cRes.ok) throw new Error(cData.error || "Failed to load config");
       setConfig(cData.config);
-      setRuns(rData.runs || []);
+      const nextRuns = rData.runs || [];
+      setRuns(nextRuns);
       setArtifacts(aData.artifacts || []);
       setPitches(pData.pitches || []);
       setWriterSends(wRes.ok ? wData.sends || [] : []);
+      setActiveRun((prev) => {
+        if (prev?.id) {
+          const match = nextRuns.find((r) => r.id === prev.id);
+          if (match) return match;
+        }
+        const live = nextRuns.find((r) => ["queued", "running"].includes(r.status));
+        return live || prev || nextRuns[0] || null;
+      });
     } catch (err) {
       setError(err.message || "Failed to load Autopilot");
     } finally {
@@ -143,19 +154,25 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
   }, [loadAll]);
 
   useEffect(() => {
-    if (!activeRunId) return undefined;
+    if (!activeRun?.id) return undefined;
+    const live = ["queued", "running"].includes(String(activeRun.status || ""));
+    if (!live) return undefined;
     const t = setInterval(async () => {
-      const res = await fetch(`/api/admin/seo-autopilot/runs/${activeRunId}`);
-      const data = await res.json();
-      if (!res.ok) return;
-      if (["completed", "failed", "cancelled"].includes(data.run?.status)) {
-        setActiveRunId(null);
-        setRunning(false);
-        loadAll();
+      try {
+        const res = await fetch(`/api/admin/seo-autopilot/runs/${activeRun.id}`);
+        const data = await res.json();
+        if (!res.ok || !data.run) return;
+        setActiveRun(data.run);
+        if (["completed", "failed", "cancelled"].includes(data.run.status)) {
+          setRunning(false);
+          loadAll();
+        }
+      } catch {
+        /* keep polling */
       }
-    }, 2500);
+    }, 1500);
     return () => clearInterval(t);
-  }, [activeRunId, loadAll]);
+  }, [activeRun?.id, activeRun?.status, loadAll]);
 
   const saveConfig = async () => {
     if (!siteLink || !config) return;
@@ -198,12 +215,31 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Run failed");
-      setActiveRunId(data.run?.id || null);
-      setNotice("Autopilot run started.");
+      setActiveRun(data.run || null);
+      setNotice("Autopilot run started — watch stages in the Run console.");
       setTab("runs");
+      // Immediate refresh so pending stages show up quickly
+      if (data.run?.id) {
+        const rRes = await fetch(`/api/admin/seo-autopilot/runs/${data.run.id}`);
+        const rData = await rRes.json();
+        if (rRes.ok && rData.run) setActiveRun(rData.run);
+      }
     } catch (err) {
       setRunning(false);
       setError(err.message || "Run failed");
+    }
+  };
+
+  const cancelActiveRun = async () => {
+    if (!activeRun?.id) return;
+    setCancellingRun(true);
+    try {
+      await fetch(`/api/admin/seo-autopilot/runs/${activeRun.id}/cancel`, { method: "POST" });
+      setNotice("Cancel requested…");
+    } catch (err) {
+      setError(err.message || "Cancel failed");
+    } finally {
+      setCancellingRun(false);
     }
   };
 
@@ -637,39 +673,67 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
         )}
 
         {tab === "runs" && (
-          <div className="space-y-2">
-            {!runs.length ? (
-              <p className="text-sm text-gray-500">No runs yet.</p>
-            ) : (
-              runs.map((r) => (
-                <div
-                  key={r.id}
-                  className="rounded-xl border border-gray-100 bg-white px-4 py-3 flex flex-wrap items-center justify-between gap-2"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {r.status} · {r.trigger}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(r.createdAt).toLocaleString()}
-                      {r.totalCostUsd != null ? ` · ~$${Number(r.totalCostUsd).toFixed(4)}` : ""}
-                      {r.errorMessage ? ` · ${r.errorMessage}` : ""}
-                    </p>
-                  </div>
-                  {["queued", "running"].includes(r.status) ? (
-                    <button
-                      type="button"
-                      className="text-xs font-semibold text-red-700"
-                      onClick={() =>
-                        fetch(`/api/admin/seo-autopilot/runs/${r.id}/cancel`, { method: "POST" })
-                      }
-                    >
-                      Cancel
-                    </button>
-                  ) : null}
+          <div className="space-y-4">
+            <AutopilotRunConsole
+              run={activeRun}
+              onCancel={cancelActiveRun}
+              cancelling={cancellingRun}
+            />
+
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+                Recent runs
+              </p>
+              {!runs.length ? (
+                <p className="text-sm text-gray-500">No runs yet. Click Run Autopilot to start.</p>
+              ) : (
+                <div className="space-y-2">
+                  {runs.map((r) => {
+                    const selected = activeRun?.id === r.id;
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={async () => {
+                          setActiveRun(r);
+                          try {
+                            const res = await fetch(`/api/admin/seo-autopilot/runs/${r.id}`);
+                            const data = await res.json();
+                            if (res.ok && data.run) setActiveRun(data.run);
+                          } catch {
+                            /* keep list row */
+                          }
+                        }}
+                        className={`w-full rounded-xl border px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-left transition ${
+                          selected
+                            ? "border-emerald-500 bg-emerald-50/50"
+                            : "border-gray-100 bg-white hover:border-gray-200"
+                        }`}
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {r.status} · {r.trigger}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(r.createdAt).toLocaleString()}
+                            {r.totalCostUsd != null
+                              ? ` · ~$${Number(r.totalCostUsd).toFixed(4)}`
+                              : ""}
+                            {Array.isArray(r.stagesJson)
+                              ? ` · ${r.stagesJson.length} stage(s)`
+                              : ""}
+                            {r.errorMessage ? ` · ${r.errorMessage}` : ""}
+                          </p>
+                        </div>
+                        <span className="text-[11px] font-semibold text-emerald-800">
+                          {selected ? "Viewing" : "Open console"}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-              ))
-            )}
+              )}
+            </div>
           </div>
         )}
       </div>
