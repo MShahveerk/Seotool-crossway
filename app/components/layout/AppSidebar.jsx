@@ -18,14 +18,15 @@ import {
   Columns3,
   LogOut,
   Megaphone,
+  Newspaper,
   Search,
   Settings,
   Shield,
-  Sparkles,
   Users,
   Activity,
   Link2,
   Presentation,
+  Workflow,
 } from "lucide-react";
 import { isMetaPageId } from "@/lib/siteAccess";
 import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";
@@ -86,7 +87,7 @@ const smmMenuItems = [
   { id: "my-approvals", label: "SMM Post Approvals", icon: CheckSquare },
   { id: "admin-approvals", label: "Create Post", icon: ClipboardList },
   { id: "post-board", label: "Post Board", icon: Columns3 },
-  { id: "post-automation", label: "Post Automation Studio", icon: Sparkles },
+  { id: "post-automation", label: "Post Automation Studio", icon: Workflow },
   { id: "post-autoschedule", label: "Post Autoscheduler", icon: CalendarClock },
 ];
 
@@ -94,7 +95,7 @@ const blogsMenuItems = [
   { id: "my-blog-approvals", label: "Blog Approvals", icon: FileText },
   { id: "admin-blogs", label: "Create Blog", icon: FileText },
   { id: "blog-board", label: "Blog Board", icon: Columns3 },
-  { id: "blog-automation", label: "Blog Automation Studio", icon: Sparkles },
+  { id: "blog-automation", label: "Blog Automation Studio", icon: Newspaper },
   { id: "blog-autoschedule", label: "Blog Autoscheduler", icon: CalendarClock },
 ];
 
