@@ -25,6 +25,7 @@ import UnifiedKeywordResearchSection from "./components/seo/UnifiedKeywordResear
 import UnifiedSiteExplorerSection from "./components/seo/UnifiedSiteExplorerSection";
 import SerankingBacklinksSection from "./components/seranking/SerankingBacklinksSection";
 import ReportsStudioSection from "./components/ReportsStudioSection";
+import SeoAutopilotSection from "./components/SeoAutopilotSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { sessionCanAccessSection } from "../lib/clientPermissions";
@@ -227,6 +228,12 @@ export default function Home() {
       case "blog-board":
         return sessionCanAccessSection(session, "blog-board") ? (
           <BlogBoardSection selectedSite={selectedSite} />
+        ) : (
+          fallback()
+        );
+      case "seo-autopilot":
+        return sessionCanAccessSection(session, "seo-autopilot") ? (
+          <SeoAutopilotSection selectedSite={selectedSite} />
         ) : (
           fallback()
         );

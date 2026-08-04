@@ -12,12 +12,14 @@ import {
   FiCpu,
   FiUpload,
   FiXCircle,
+  FiRotateCcw,
 } from "react-icons/fi";
 import AgentRoster from "./blogStudio/AgentRoster";
 import RunConsole from "./blogStudio/RunConsole";
 import ExcelQueuePanel from "./blogStudio/ExcelQueuePanel";
 import ModelCombobox from "./studioShared/ModelCombobox";
 import StudioReferenceImages from "./studioShared/StudioReferenceImages";
+import { BLOG_STUDIO_DEFAULT_PROMPTS } from "../../lib/blogStudio/defaults";
 import {
   INTERVAL_OPTIONS,
   AUTO_SOURCE_OPTIONS,
@@ -422,15 +424,15 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
               <div className="inline-flex items-center gap-2 text-[#1d9c35]">
                 <FiZap className="h-5 w-5" />
                 <span className="text-xs font-bold uppercase tracking-[0.18em]">Blog Automation Studio</span>
-              </div>
+          </div>
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
                 Crossway content pipeline
               </h1>
               <p className="mt-1 text-sm text-gray-600 max-w-2xl">
                 Configure three SEO agents, seed keywords, or an Excel campaign queue — then generate pending
                 drafts in-app. Or keep External n8n. Only one engine can be active.
-              </p>
-            </div>
+            </p>
+          </div>
             <div className="flex flex-col items-end gap-2">
               <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
                 <button
@@ -450,12 +452,12 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                   }`}
                 >
                   Internal Studio
-                </button>
-              </div>
+            </button>
+          </div>
               <p className="text-[11px] text-gray-500">
                 Site: <span className="font-semibold text-gray-800">{selectedSite || "None selected"}</span>
               </p>
-            </div>
+      </div>
           </div>
 
           {loadError && (
@@ -473,7 +475,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
             </p>
           )}
         </div>
-      </div>
+          </div>
 
       {isInternal && siteConfig && (
         <>
@@ -601,9 +603,22 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                   });
                   return (
                   <div key={id} className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <FiCpu className="text-[#1d9c35]" />
-                      <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <FiCpu className="text-[#1d9c35]" />
+                        <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+                      </div>
+                      {BLOG_STUDIO_DEFAULT_PROMPTS[promptKey] ? (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700"
+                          onClick={() =>
+                            patchSite({ [promptKey]: BLOG_STUDIO_DEFAULT_PROMPTS[promptKey] })
+                          }
+                        >
+                          <FiRotateCcw className="w-3.5 h-3.5" /> Revert prompt
+                        </button>
+                      ) : null}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                       <div>
@@ -760,7 +775,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                       Uses extra image API cost when enabled.
                     </span>
                   </span>
-                </label>
+            </label>
                 <div>
                   <label className={labelClass}>Image visual guidelines</label>
                   <textarea
@@ -917,16 +932,16 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Recent runs</p>
                 {hasLiveAutomation && (
-                  <button
+            <button
                     type="button"
                     onClick={cancelAllLive}
                     disabled={cancelling}
                     className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 hover:underline disabled:opacity-50"
                   >
                     <FiXCircle /> Cancel running automation
-                  </button>
-                )}
-              </div>
+            </button>
+            )}
+          </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -1010,7 +1025,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                 placeholder="https://n8n.example.com/webhook/…"
               />
             </div>
-            <div>
+          <div>
               <label className={labelClass}>Webhook secret</label>
               <input
                 type="password"
@@ -1089,14 +1104,14 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                   <li key={i} className="flex justify-between gap-2 border-b border-gray-50 py-1">
                     <span>
                       {formatWhen(h.at)} · {h.source} · {h.ok ? "OK" : "Fail"}
-                    </span>
+                      </span>
                     <span className="font-mono">{h.status || h.error || ""}</span>
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
       )}
     </div>
   );

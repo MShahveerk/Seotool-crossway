@@ -45,6 +45,7 @@ model User {
   blogRevisions      BlogPostRevision[]     @relation("BlogRevisionActor")
   blogStudioRuns     BlogAutomationRun[]    @relation("BlogStudioRunTriggeredBy")
   postStudioRuns     PostAutomationRun[]    @relation("PostStudioRunTriggeredBy")
+  seoAutopilotRuns   SeoAutopilotRun[]      @relation("SeoAutopilotRunTriggeredBy")
 
   @@index([role])
   @@index([isActive], map: "users_is_active_idx")
@@ -891,4 +892,123 @@ model ContentAutoscheduleConfig {
   @@unique([kind, siteLink], map: "content_autoschedule_kind_site_unique")
   @@index([enabled], map: "content_autoschedule_enabled_idx")
   @@map("content_autoschedule_configs")
+}
+
+/// Per-site SEO Autopilot studio (GEO + backlink outreach loop).
+model SeoAutopilotSiteConfig {
+  id                  String    @id @default(cuid()) @db.VarChar(191)
+  siteLink            String    @unique @map("site_link") @db.VarChar(512)
+  autoEnabled         Boolean   @default(false) @map("auto_enabled")
+  /// Default weekly (10080 minutes).
+  autoIntervalMinutes Int       @default(10080) @map("auto_interval_minutes")
+  lastAutoAt          DateTime? @map("last_auto_at")
+  brandName           String?   @map("brand_name") @db.VarChar(256)
+  category            String?   @db.VarChar(512)
+  buyingQuestions     String?   @map("buying_questions") @db.Text
+  competitors         String?   @db.Text
+  proofPoint          String?   @map("proof_point") @db.Text
+  brandNotes          String?   @map("brand_notes") @db.Text
+  /// Comma-separated agent ids to run on schedule/manual full run.
+  enabledAgents       String?   @map("enabled_agents") @db.Text
+  openaiApiKey        String?   @map("openai_api_key") @db.Text
+  anthropicApiKey     String?   @map("anthropic_api_key") @db.Text
+  openrouterApiKey    String?   @map("openrouter_api_key") @db.Text
+  smtpHost            String?   @map("smtp_host") @db.VarChar(256)
+  smtpPort            Int?      @map("smtp_port")
+  smtpUser            String?   @map("smtp_user") @db.VarChar(256)
+  smtpPass            String?   @map("smtp_pass") @db.Text
+  smtpFrom            String?   @map("smtp_from") @db.VarChar(256)
+  auditorProvider     String    @default("openai") @map("auditor_provider") @db.VarChar(32)
+  auditorModel        String    @default("gpt-5.4-mini") @map("auditor_model") @db.VarChar(128)
+  auditorPrompt       String?   @map("auditor_prompt") @db.Text
+  geoSpyProvider      String    @default("openai") @map("geo_spy_provider") @db.VarChar(32)
+  geoSpyModel         String    @default("gpt-5.4-mini") @map("geo_spy_model") @db.VarChar(128)
+  geoSpyPrompt        String?   @map("geo_spy_prompt") @db.Text
+  diagnoserProvider   String    @default("openai") @map("diagnoser_provider") @db.VarChar(32)
+  diagnoserModel      String    @default("gpt-5.4-mini") @map("diagnoser_model") @db.VarChar(128)
+  diagnoserPrompt     String?   @map("diagnoser_prompt") @db.Text
+  fixerProvider       String    @default("anthropic") @map("fixer_provider") @db.VarChar(32)
+  fixerModel          String    @default("claude-sonnet-4-6") @map("fixer_model") @db.VarChar(128)
+  fixerPrompt         String?   @map("fixer_prompt") @db.Text
+  foundationProvider  String    @default("openai") @map("foundation_provider") @db.VarChar(32)
+  foundationModel     String    @default("gpt-5.4-mini") @map("foundation_model") @db.VarChar(128)
+  foundationPrompt    String?   @map("foundation_prompt") @db.Text
+  pitcherProvider     String    @default("anthropic") @map("pitcher_provider") @db.VarChar(32)
+  pitcherModel        String    @default("claude-sonnet-4-6") @map("pitcher_model") @db.VarChar(128)
+  pitcherPrompt       String?   @map("pitcher_prompt") @db.Text
+  trackerProvider     String    @default("openai") @map("tracker_provider") @db.VarChar(32)
+  trackerModel        String    @default("gpt-5.4-mini") @map("tracker_model") @db.VarChar(128)
+  trackerPrompt       String?   @map("tracker_prompt") @db.Text
+  latestScorecardJson Json?     @map("latest_scorecard_json")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@map("seo_autopilot_site_configs")
+}
+
+model SeoAutopilotRun {
+  id              String    @id @default(cuid()) @db.VarChar(191)
+  siteLink        String    @map("site_link") @db.VarChar(512)
+  trigger         String    @default("manual") @db.VarChar(32)
+  status          String    @default("queued") @db.VarChar(32)
+  agentsJson      Json?     @map("agents_json")
+  stagesJson      Json?     @map("stages_json")
+  scorecardJson   Json?     @map("scorecard_json")
+  artifactsJson   Json?     @map("artifacts_json")
+  totalCostUsd    Float?    @map("total_cost_usd")
+  errorMessage    String?   @map("error_message") @db.Text
+  cancelRequested Boolean   @default(false) @map("cancel_requested")
+  triggeredById   String?   @map("triggered_by_id") @db.VarChar(191)
+  startedAt       DateTime? @map("started_at")
+  finishedAt      DateTime? @map("finished_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  triggeredBy User? @relation("SeoAutopilotRunTriggeredBy", fields: [triggeredById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([siteLink, createdAt], map: "seo_autopilot_runs_site_created_idx")
+  @@index([status], map: "seo_autopilot_runs_status_idx")
+  @@map("seo_autopilot_runs")
+}
+
+model SeoAutopilotArtifact {
+  id          String   @id @default(cuid()) @db.VarChar(191)
+  siteLink    String   @map("site_link") @db.VarChar(512)
+  runId       String?  @map("run_id") @db.VarChar(191)
+  kind        String   @db.VarChar(64)
+  title       String?  @db.VarChar(512)
+  pageUrl     String?  @map("page_url") @db.VarChar(2048)
+  contentText String?  @map("content_text") @db.Text
+  contentJson Json?    @map("content_json")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([siteLink, kind, createdAt], map: "seo_autopilot_artifacts_site_kind_idx")
+  @@map("seo_autopilot_artifacts")
+}
+
+model SeoAutopilotPitch {
+  id             String    @id @default(cuid()) @db.VarChar(191)
+  siteLink       String    @map("site_link") @db.VarChar(512)
+  runId          String?   @map("run_id") @db.VarChar(191)
+  source         String    @default("editorial") @db.VarChar(64)
+  title          String?   @db.VarChar(512)
+  targetName     String?   @map("target_name") @db.VarChar(256)
+  targetUrl      String?   @map("target_url") @db.VarChar(2048)
+  targetEmail    String?   @map("target_email") @db.VarChar(256)
+  subject        String?   @db.VarChar(512)
+  bodyText       String?   @map("body_text") @db.Text
+  bodyHtml       String?   @map("body_html") @db.Text
+  doFollow       Boolean?  @map("do_follow")
+  domainAuthority Int?     @map("domain_authority")
+  status         String    @default("draft") @db.VarChar(32)
+  errorMessage   String?   @map("error_message") @db.Text
+  metaJson       Json?     @map("meta_json")
+  sentAt         DateTime? @map("sent_at")
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([siteLink, status, createdAt], map: "seo_autopilot_pitches_site_status_idx")
+  @@map("seo_autopilot_pitches")
 }

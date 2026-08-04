@@ -12,12 +12,14 @@ import {
   FiUpload,
   FiXCircle,
   FiInfo,
+  FiRotateCcw,
 } from "react-icons/fi";
 import AgentRoster from "./postsStudio/AgentRoster";
 import RunConsole from "./postsStudio/RunConsole";
 import ExcelQueuePanel from "./postsStudio/ExcelQueuePanel";
 import ModelCombobox from "./studioShared/ModelCombobox";
 import StudioReferenceImages from "./studioShared/StudioReferenceImages";
+import { POST_STUDIO_DEFAULT_PROMPTS } from "../../lib/postsStudio/defaults";
 import {
   INTERVAL_OPTIONS,
   AUTO_SOURCE_OPTIONS,
@@ -489,9 +491,22 @@ export default function PostAutomationSection({ selectedSite = "" }) {
                   });
                   return (
                     <div key={id} className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <FiCpu className="text-[#1d9c35]" />
-                        <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-2">
+                          <FiCpu className="text-[#1d9c35]" />
+                          <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+                        </div>
+                        {POST_STUDIO_DEFAULT_PROMPTS[promptKey] ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700"
+                            onClick={() =>
+                              patchSite({ [promptKey]: POST_STUDIO_DEFAULT_PROMPTS[promptKey] })
+                            }
+                          >
+                            <FiRotateCcw className="w-3.5 h-3.5" /> Revert prompt
+                          </button>
+                        ) : null}
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                         <div>
