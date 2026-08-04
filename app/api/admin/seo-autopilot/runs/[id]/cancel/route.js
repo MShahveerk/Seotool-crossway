@@ -1,5 +1,5 @@
 import { requireAdminRoute } from "../../../../../../../lib/adminAuth";
-import prisma from "../../../../../../../lib/prisma";
+import { cancelAutopilotRun } from "@/lib/seoAutopilot/runner.js";
 
 export const runtime = "nodejs";
 
@@ -8,10 +8,7 @@ export async function POST(req, { params }) {
     await requireAdminRoute(req, "seo-autopilot");
     const { id: rawId } = await params;
     const id = String(rawId || "").trim();
-    const run = await prisma.seoAutopilotRun.update({
-      where: { id },
-      data: { cancelRequested: true },
-    });
+    const run = await cancelAutopilotRun(id, { hard: true });
     return Response.json({ run });
   } catch (error) {
     return Response.json(

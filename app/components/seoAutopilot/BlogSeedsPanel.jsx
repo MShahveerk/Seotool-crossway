@@ -122,7 +122,7 @@ export default function BlogSeedsPanel({
     return <p className="text-sm text-gray-500">Select a site to view blog seeds.</p>;
   }
 
-  if (isLoading) {
+  if (isLoading && !sends.length) {
     return <p className="text-sm text-gray-500">Loading blog seeds…</p>;
   }
 
@@ -165,14 +165,14 @@ export default function BlogSeedsPanel({
         </div>
       </div>
 
-      {err ? (
+      {err && String(err).trim() ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {err}
+          {String(err).trim()}
         </div>
       ) : null}
-      {notice ? (
+      {notice && String(notice).trim() ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          {notice}
+          {String(notice).trim()}
         </div>
       ) : null}
 

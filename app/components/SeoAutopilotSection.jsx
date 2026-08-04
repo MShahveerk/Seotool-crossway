@@ -7,6 +7,7 @@ import {
   FiRefreshCw,
   FiRotateCcw,
   FiSave,
+  FiXCircle,
 } from "react-icons/fi";
 import { Bot, Sparkles } from "lucide-react";
 import ModelCombobox from "./studioShared/ModelCombobox";
@@ -279,18 +280,68 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
     }
   };
 
+  const cancelRunById = async (runId) => {
+    const id = String(runId || "").trim();
+    if (!id) return null;
+    setCancellingRun(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/seo-autopilot/runs/${id}/cancel`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Cancel failed");
+      const cancelled = data.run || null;
+      if (cancelled) {
+        setActiveRun(cancelled);
+        setRuns((prev) => prev.map((r) => (r.id === cancelled.id ? { ...r, ...cancelled } : r)));
+      }
+      setRunning(false);
+      setNotice("Autopilot run cancelled.");
+      await loadAll();
+      return cancelled;
+    } catch (err) {
+      setError(err.message || "Cancel failed");
+      return null;
+    } finally {
+      setCancellingRun(false);
+    }
+  };
+
   const cancelActiveRun = async () => {
     if (!activeRun?.id) return;
+    await cancelRunById(activeRun.id);
+  };
+
+  const cancelAllLiveRuns = async () => {
+    if (!siteLink) return;
     setCancellingRun(true);
+    setError("");
     try {
-      await fetch(`/api/admin/seo-autopilot/runs/${activeRun.id}/cancel`, { method: "POST" });
-      setNotice("Cancel requested…");
+      const res = await fetch(
+        `/api/admin/seo-autopilot/site/cancel?siteLink=${encodeURIComponent(siteLink)}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Cancel failed");
+      const count = Number(data.count || 0);
+      setRunning(false);
+      setNotice(
+        count > 0
+          ? `Cancelled ${count} Autopilot run${count === 1 ? "" : "s"}.`
+          : "No live Autopilot runs to cancel."
+      );
+      if (data.runs?.[0]) setActiveRun(data.runs[0]);
+      await loadAll();
     } catch (err) {
       setError(err.message || "Cancel failed");
     } finally {
       setCancellingRun(false);
     }
   };
+
+  const liveRuns = runs.filter((r) => ["queued", "running"].includes(String(r.status || "")));
+  const hasLiveAutopilot =
+    liveRuns.length > 0 ||
+    ["queued", "running"].includes(String(activeRun?.status || ""));
 
   const scorecard = config?.latestScorecardJson || runs[0]?.scorecardJson || null;
 
@@ -339,14 +390,33 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
               <FiSave className="w-4 h-4" />
               {saving ? "Saving…" : "Save"}
             </button>
+            {hasLiveAutopilot ? (
+              <button
+                type="button"
+                onClick={cancelAllLiveRuns}
+                disabled={cancellingRun}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-500/90 border border-red-300/40 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-500 disabled:opacity-60"
+              >
+                {cancellingRun ? (
+                  <FiRefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FiXCircle className="w-4 h-4" />
+                )}
+                Cancel run{liveRuns.length > 1 ? "s" : ""}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => runNow()}
-              disabled={running}
+              disabled={running || hasLiveAutopilot}
               className="inline-flex items-center gap-2 rounded-xl bg-[#0EFF2A] text-gray-900 px-4 py-2.5 text-sm font-bold hover:brightness-105 disabled:opacity-60"
             >
-              {running ? <FiRefreshCw className="w-4 h-4 animate-spin" /> : <FiPlay className="w-4 h-4" />}
-              {running ? "Running…" : "Run Autopilot"}
+              {running || hasLiveAutopilot ? (
+                <FiRefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <FiPlay className="w-4 h-4" />
+              )}
+              {running || hasLiveAutopilot ? "Running…" : "Run Autopilot"}
             </button>
           </div>
         </div>
@@ -420,6 +490,15 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
                   Live Autopilot run
                 </p>
                 <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 hover:underline disabled:opacity-50"
+                    onClick={cancelActiveRun}
+                    disabled={cancellingRun}
+                  >
+                    <FiXCircle className="h-3.5 w-3.5" />
+                    {cancellingRun ? "Cancelling…" : "Cancel"}
+                  </button>
                   <button
                     type="button"
                     className="text-xs font-semibold text-gray-600 hover:underline"
@@ -809,9 +888,22 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
                     Open any past run to see full agent JSON, scorecard, and artifacts for that run.
                   </p>
                 </div>
-                <p className="text-[11px] font-semibold text-gray-500">
-                  {runs.length} run{runs.length === 1 ? "" : "s"}
-                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  {hasLiveAutopilot ? (
+                    <button
+                      type="button"
+                      onClick={cancelAllLiveRuns}
+                      disabled={cancellingRun}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 hover:underline disabled:opacity-50"
+                    >
+                      <FiXCircle className="h-3.5 w-3.5" />
+                      Cancel all live
+                    </button>
+                  ) : null}
+                  <p className="text-[11px] font-semibold text-gray-500">
+                    {runs.length} run{runs.length === 1 ? "" : "s"}
+                  </p>
+                </div>
               </div>
               {!runs.length ? (
                 <p className="text-sm text-gray-500">No runs yet. Click Run Autopilot to start.</p>
@@ -829,18 +921,20 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
                         ).length
                       : 0;
                     return (
-                      <button
+                      <div
                         key={r.id}
-                        type="button"
-                        disabled={loadingRunDetail && selected}
-                        onClick={() => fetchRunDetail(r.id)}
                         className={`w-full rounded-xl border px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-left transition ${
                           selected
                             ? "border-emerald-500 bg-emerald-50/50"
                             : "border-gray-100 bg-white hover:border-gray-200"
                         }`}
                       >
-                        <div className="min-w-0">
+                        <button
+                          type="button"
+                          disabled={loadingRunDetail && selected}
+                          onClick={() => fetchRunDetail(r.id)}
+                          className="min-w-0 flex-1 text-left"
+                        >
                           <p className="text-sm font-semibold text-gray-900">
                             <span className="capitalize">{r.status}</span>
                             {" · "}
@@ -860,15 +954,28 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
                           {r.errorMessage ? (
                             <p className="text-xs text-red-700 mt-1 line-clamp-2">{r.errorMessage}</p>
                           ) : null}
+                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {liveRow ? (
+                            <button
+                              type="button"
+                              disabled={cancellingRun}
+                              onClick={() => cancelRunById(r.id)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                            >
+                              <FiXCircle className="h-3.5 w-3.5" />
+                              Cancel
+                            </button>
+                          ) : null}
+                          <span className="text-[11px] font-semibold text-emerald-800">
+                            {selected
+                              ? loadingRunDetail
+                                ? "Loading…"
+                                : "Viewing full run"
+                              : "View full run"}
+                          </span>
                         </div>
-                        <span className="text-[11px] font-semibold text-emerald-800 shrink-0">
-                          {selected
-                            ? loadingRunDetail
-                              ? "Loading…"
-                              : "Viewing full run"
-                            : "View full run"}
-                        </span>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>

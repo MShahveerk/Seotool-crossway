@@ -96,7 +96,7 @@ export default function AutopilotRunConsole({
               className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 border border-red-200 bg-red-50 rounded-lg px-2.5 py-1.5 hover:bg-red-100 disabled:opacity-50"
             >
               <FiXCircle className="h-3.5 w-3.5" />
-              Cancel
+              {cancelling ? "Cancelling…" : "Cancel fully"}
             </button>
           ) : null}
         </div>

@@ -9,14 +9,16 @@ export default function WriterSendsPanel({ siteLink, onRan }) {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ soft = false } = {}) => {
     if (!siteLink) {
       setSends([]);
       setLoading(false);
       return;
     }
-    setLoading(true);
-    setError("");
+    if (!soft) {
+      setLoading(true);
+      setError("");
+    }
     try {
       const res = await fetch(
         `/api/admin/blog-automation/writer-sends?siteLink=${encodeURIComponent(siteLink)}`
@@ -24,10 +26,11 @@ export default function WriterSendsPanel({ siteLink, onRan }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load Autopilot seeds");
       setSends(data.sends || []);
+      if (soft) setError("");
     } catch (err) {
       setError(err.message || "Failed to load Autopilot seeds");
     } finally {
-      setLoading(false);
+      if (!soft) setLoading(false);
     }
   }, [siteLink]);
 
@@ -44,8 +47,9 @@ export default function WriterSendsPanel({ siteLink, onRan }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Run failed");
-      await load();
+      // Hand off to Run console immediately; refresh seeds in background without unmount flash.
       onRan?.(data.run);
+      load({ soft: true });
     } catch (err) {
       setError(err.message || "Run failed");
     } finally {
@@ -64,7 +68,7 @@ export default function WriterSendsPanel({ siteLink, onRan }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Update failed");
-      await load();
+      await load({ soft: true });
     } catch (err) {
       setError(err.message || "Update failed");
     } finally {

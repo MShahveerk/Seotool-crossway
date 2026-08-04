@@ -467,7 +467,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
           {loadError && (
             <p className="mt-3 text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{loadError}</p>
           )}
-          {saveMessage && (
+          {saveMessage && String(saveMessage.text || "").trim() ? (
             <p
               className={`mt-3 text-sm rounded-lg px-3 py-2 border ${
                 saveMessage.ok
@@ -475,9 +475,9 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                   : "text-red-700 bg-red-50 border-red-100"
               }`}
             >
-              {saveMessage.text}
+              {String(saveMessage.text).trim()}
             </p>
-          )}
+          ) : null}
         </div>
           </div>
 
@@ -869,13 +869,16 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
               <WriterSendsPanel
                 siteLink={selectedSite}
                 onRan={async (run) => {
-                  setSaveMessage(
-                    run?.id
-                      ? `Queued Blog Studio run ${run.id} from Autopilot seed.`
-                      : "Queued Blog Studio run from Autopilot seed."
-                  );
+                  // Keep Autopilot seeds mounted — Run console sits below every tab, so
+                  // switching to "Run" only unmounts the seeds panel and feels jittery.
+                  if (run?.id) setActiveRun(run);
+                  setSaveMessage({
+                    ok: true,
+                    text: run?.id
+                      ? `Studio run queued — watch stages in the Run console below.`
+                      : "Studio run queued — watch stages in the Run console below.",
+                  });
                   await loadRuns();
-                  setTab("run");
                 }}
               />
             )}
