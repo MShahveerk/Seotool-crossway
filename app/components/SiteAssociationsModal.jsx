@@ -28,11 +28,16 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
   const fetchMetaAccounts = async () => {
     try {
       const res = await fetch("/api/admin/meta-accounts");
-      if (!res.ok) return;
-      const data = await res.json();
-      setMetaAccounts(data.accounts || []);
+      const data = await res.json().catch(() => ({}));
+      const accounts = Array.isArray(data.accounts) ? data.accounts : [];
+      setMetaAccounts(accounts);
+      if (!res.ok || (accounts.length === 0 && data.error)) {
+        console.warn("Meta accounts:", data.error || `HTTP ${res.status}`);
+        if (!res.ok) setError(data.error || `Failed to load Meta accounts (${res.status})`);
+      }
     } catch (err) {
       console.error("Failed to load Meta accounts in modal", err);
+      setMetaAccounts([]);
     }
   };
 

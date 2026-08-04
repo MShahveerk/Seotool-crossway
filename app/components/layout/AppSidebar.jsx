@@ -155,20 +155,37 @@ export default function AppSidebar({
   useEffect(() => {
     if (!hasGlobalSiteAccess) return;
     fetch("/api/admin/meta-accounts")
-      .then((res) => (res.ok ? res.json() : { accounts: [] }))
-      .then((data) => setMetaAccounts(data.accounts || []))
-      .catch(() => setMetaAccounts([]));
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          console.warn("Meta accounts request failed:", data.error || res.status);
+        } else if (data.error || data.warning) {
+          console.warn("Meta accounts:", data.error || data.warning);
+        }
+        setMetaAccounts(Array.isArray(data.accounts) ? data.accounts : []);
+      })
+      .catch((err) => {
+        console.warn("Meta accounts fetch error:", err?.message || err);
+        setMetaAccounts([]);
+      });
   }, [hasGlobalSiteAccess]);
 
   useEffect(() => {
     if (!hasGlobalSiteAccess) return;
     fetch("/api/admin/site-integrations")
-      .then((res) => (res.ok ? res.json() : { sites: [] }))
-      .then((data) => {
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          console.warn("Site integrations request failed:", data.error || res.status);
+          setAvailableSites([]);
+          setSuperAdminPrimarySite("");
+          return;
+        }
         setAvailableSites(mergeClientAccountEntries(data.sites || []));
         setSuperAdminPrimarySite(data.superAdminSite || "");
       })
-      .catch(() => {
+      .catch((err) => {
+        console.warn("Site integrations fetch error:", err?.message || err);
         setAvailableSites([]);
         setSuperAdminPrimarySite("");
       });

@@ -6,8 +6,8 @@ import { normalizeSiteOrigin } from "../../../../lib/validation";
 import { PERMISSIONS, ROLES } from "../../../../lib/rbac";
 import { isMetaPageId, pickClientDisplayName, canonicalizeSiteKey } from "../../../../lib/siteAccess";
 import { mergeClientAccountEntries } from "../../../../lib/clientAccountList";
+import { loadMetaAccounts } from "../../../../lib/metaAccounts";
 import prisma from "../../../../lib/prisma";
-import axios from "axios";
 
 function resolveSiteProperty(siteUrl, propertyId) {
   const rawProperty = String(propertyId || "").trim();
@@ -93,53 +93,24 @@ export async function GET() {
     // Fetch Global Sites
     const globalSites = await prisma.site.findMany();
 
-    // Fetch Meta accounts from token
-    const metaToken = process.env.META_PAGE_ACCESS_TOKEN || process.env.META_APP_ACCESS_TOKEN;
+    // Shared Meta loader: page-token /me fallback, IG field retry, DB merge
     let metaAccounts = [];
-
-    const extractFirstUrl = (text) => {
-      if (!text) return "";
-      const match = String(text).match(/https?:\/\/[^\s,;]+/i);
-      if (match) return match[0];
-      const domainMatch = String(text).match(/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/[^\s,;]*)?/i);
-      if (domainMatch) return `https://${domainMatch[0]}`;
-      return text;
-    };
-
-    if (metaToken) {
-      try {
-        const url = `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,website,instagram_business_account&access_token=${metaToken}`;
-        const res = await axios.get(url);
-        if (res.data?.data) {
-          metaAccounts = res.data.data.map(page => ({
-            userId: null,
-            userName: page.name,
-            userEmail: "",
-            siteLink: page.website ? extractFirstUrl(page.website) : "",
-            facebookPageId: page.id,
-            instagramUserId: page.instagram_business_account?.id || "",
-            isSuperAdminSite: false,
-          }));
-        }
-      } catch (err) {
-        try {
-          const url = `https://graph.facebook.com/v20.0/me?fields=id,name,website,instagram_business_account&access_token=${metaToken}`;
-          const res = await axios.get(url);
-          if (res.data?.id) {
-            metaAccounts = [{
-              userId: null,
-              userName: res.data.name || "Configured Page",
-              userEmail: "",
-              siteLink: res.data.website ? extractFirstUrl(res.data.website) : "",
-              facebookPageId: res.data.id,
-              instagramUserId: res.data.instagram_business_account?.id || "",
-              isSuperAdminSite: false,
-            }];
-          }
-        } catch (innerErr) {
-          console.error("Failed to fetch meta accounts for site integrations", innerErr.message);
-        }
+    try {
+      const loaded = await loadMetaAccounts({ includeDatabase: true });
+      metaAccounts = (loaded.accounts || []).map((page) => ({
+        userId: null,
+        userName: page.name,
+        userEmail: "",
+        siteLink: page.siteLink || "",
+        facebookPageId: page.facebookPageId,
+        instagramUserId: page.instagramUserId || "",
+        isSuperAdminSite: false,
+      }));
+      if (loaded.error && metaAccounts.length === 0) {
+        console.warn("Meta accounts unavailable for site-integrations:", loaded.error);
       }
+    } catch (err) {
+      console.error("Failed to load Meta accounts for site integrations", err?.message || err);
     }
 
     // 1. Build Websites List
