@@ -26,7 +26,6 @@ import PitchesPanel from "./seoAutopilot/PitchesPanel";
 import AutopilotRunConsole from "./seoAutopilot/AutopilotRunConsole";
 
 const TABS = [
-  { id: "runs", label: "Run console" },
   { id: "overview", label: "Scorecard" },
   { id: "fixes", label: "Fixes" },
   { id: "gaps", label: "Gaps" },
@@ -35,6 +34,7 @@ const TABS = [
   { id: "agents", label: "Agents" },
   { id: "smtp", label: "SMTP" },
   { id: "schedule", label: "Schedule" },
+  { id: "runs", label: "Run console" },
 ];
 
 const inputClass =
@@ -52,7 +52,7 @@ async function copyText(text) {
 
 export default function SeoAutopilotSection({ selectedSite = "" }) {
   const siteLink = String(selectedSite || "").trim();
-  const [tab, setTab] = useState("runs");
+  const [tab, setTab] = useState("overview");
   const [config, setConfig] = useState(null);
   const [runs, setRuns] = useState([]);
   const [artifacts, setArtifacts] = useState([]);

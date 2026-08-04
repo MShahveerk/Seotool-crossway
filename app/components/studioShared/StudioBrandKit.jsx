@@ -16,6 +16,7 @@ export default function StudioBrandKit({
   onPatchLocal,
 }) {
   const kit = { ...DEFAULT_BRAND_KIT, ...(brandKit || {}) };
+  const source = kit.source === "ai" ? "ai" : "manual";
   const [busy, setBusy] = useState("");
   const [createBrief, setCreateBrief] = useState("");
   const [replaceLogo, setReplaceLogo] = useState(false);
@@ -23,6 +24,10 @@ export default function StudioBrandKit({
   const patch = (partial) => {
     const next = { ...kit, ...partial };
     onPatchLocal?.(next);
+  };
+
+  const setSource = (nextSource) => {
+    patch({ source: nextSource });
   };
 
   const postJson = async (body, busyKey) => {
@@ -69,7 +74,7 @@ export default function StudioBrandKit({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Logo upload failed");
       if (data.config) onConfig?.(data.config);
-      onMessage?.("Site logo uploaded.");
+      onMessage?.("Site logo uploaded — using your own brand kit.");
     } catch (err) {
       onMessage?.(err.message || "Logo upload failed");
     } finally {
@@ -85,12 +90,14 @@ export default function StudioBrandKit({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
-            AI Brand kit
+            Brand kit
           </p>
-          <h3 className="text-base font-bold text-gray-900 mt-0.5">Create or edit this site’s brand frame</h3>
+          <h3 className="text-base font-bold text-gray-900 mt-0.5">
+            Choose AI-generated or your own
+          </h3>
           <p className="mt-1 text-sm text-gray-600 max-w-2xl leading-relaxed">
-            One click designs matte color, logo placement, and notes — and can generate a logo. Then
-            every Internal Studio image run stamps the frame.
+            Pick how this site’s Instagram frame is built. Either upload your logo and set colors,
+            or let AI design the full kit. Internal Studio image runs stamp the saved frame.
           </p>
         </div>
         <label className="inline-flex items-center gap-2 text-sm font-semibold text-gray-800">
@@ -104,56 +111,139 @@ export default function StudioBrandKit({
         </label>
       </div>
 
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
-        <div>
-          <label className={labelClass}>AI create full brand kit</label>
-          <p className="mt-1 text-xs text-gray-600">
-            Needs an API key on the Agents tab (OpenAI or OpenRouter image model). Takes ~15–40s.
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => setSource("manual")}
+          className={`rounded-xl border-2 px-4 py-3 text-left transition ${
+            source === "manual"
+              ? "border-emerald-600 bg-emerald-50 shadow-sm"
+              : "border-gray-200 bg-white hover:border-gray-300"
+          }`}
+        >
+          <p className="text-sm font-bold text-gray-900">Your own brand kit</p>
+          <p className="mt-1 text-xs text-gray-600 leading-relaxed">
+            Upload your logo, pick matte color and corner placement yourself.
           </p>
-        </div>
-        <textarea
-          className={`${inputClass} min-h-[72px]`}
-          value={createBrief}
-          onChange={(e) => setCreateBrief(e.target.value)}
-          placeholder="Optional brief: brand name, vibe, colors to avoid, industry…"
-          disabled={Boolean(busy)}
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            disabled={Boolean(busy) || !apiUrl}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 text-white px-4 py-2.5 text-sm font-bold disabled:opacity-50"
-            onClick={() =>
-              postJson(
-                {
-                  action: "ai-create-kit",
-                  brief: createBrief,
-                  generateLogo: true,
-                  replaceLogo,
-                },
-                "create"
-              )
-            }
-          >
-            {busy === "create" ? (
-              <FiRefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <FiImage className="w-4 h-4" />
-            )}
-            {busy === "create" ? "Creating brand kit…" : "AI create full brand kit"}
-          </button>
-          <label className="inline-flex items-center gap-2 text-xs font-medium text-gray-700">
-            <input
-              type="checkbox"
-              className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-              checked={replaceLogo}
-              onChange={(e) => setReplaceLogo(e.target.checked)}
-              disabled={Boolean(busy)}
-            />
-            Replace existing logo
-          </label>
-        </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSource("ai")}
+          className={`rounded-xl border-2 px-4 py-3 text-left transition ${
+            source === "ai"
+              ? "border-emerald-600 bg-emerald-50 shadow-sm"
+              : "border-gray-200 bg-white hover:border-gray-300"
+          }`}
+        >
+          <p className="text-sm font-bold text-gray-900">AI brand kit</p>
+          <p className="mt-1 text-xs text-gray-600 leading-relaxed">
+            AI designs matte, layout, notes, and can generate a logo from a short brief.
+          </p>
+        </button>
       </div>
+
+      {source === "ai" ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+          <div>
+            <label className={labelClass}>AI create full brand kit</label>
+            <p className="mt-1 text-xs text-gray-600">
+              Needs an API key on the Agents tab (OpenAI or OpenRouter image model). Takes ~15–40s.
+            </p>
+          </div>
+          <textarea
+            className={`${inputClass} min-h-[72px]`}
+            value={createBrief}
+            onChange={(e) => setCreateBrief(e.target.value)}
+            placeholder="Optional brief: brand name, vibe, colors to avoid, industry…"
+            disabled={Boolean(busy)}
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={Boolean(busy) || !apiUrl}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 text-white px-4 py-2.5 text-sm font-bold disabled:opacity-50"
+              onClick={() =>
+                postJson(
+                  {
+                    action: "ai-create-kit",
+                    brief: createBrief,
+                    generateLogo: true,
+                    replaceLogo,
+                  },
+                  "create"
+                )
+              }
+            >
+              {busy === "create" ? (
+                <FiRefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <FiImage className="w-4 h-4" />
+              )}
+              {busy === "create" ? "Creating brand kit…" : "AI create full brand kit"}
+            </button>
+            <label className="inline-flex items-center gap-2 text-xs font-medium text-gray-700">
+              <input
+                type="checkbox"
+                className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                checked={replaceLogo}
+                onChange={(e) => setReplaceLogo(e.target.checked)}
+                disabled={Boolean(busy)}
+              />
+              Replace existing logo
+            </label>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+          <div>
+            <label className={labelClass}>Your logo & settings</label>
+            <p className="mt-1 text-xs text-gray-600">
+              Upload the real brand mark, then tune matte/logo below and Save.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-800">
+              <FiUpload className="w-3.5 h-3.5" />
+              {busy === "logo" ? "Uploading…" : "Upload site logo"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                disabled={Boolean(busy)}
+                onChange={(e) => uploadLogo(e.target.files?.[0])}
+              />
+            </label>
+            <button
+              type="button"
+              disabled={Boolean(busy) || !kit.logoPath}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-800 disabled:opacity-50"
+              onClick={() => postJson({ action: "suggest" }, "suggest")}
+            >
+              {busy === "suggest" ? (
+                <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FiImage className="w-3.5 h-3.5" />
+              )}
+              Auto suggest colors from logo
+            </button>
+            {kit.logoPath ? (
+              <span className="text-[11px] text-gray-500 truncate max-w-[220px]">
+                Logo: {kit.logoPath}
+              </span>
+            ) : (
+              <span className="text-[11px] text-amber-700">No logo uploaded yet</span>
+            )}
+          </div>
+          {kit.logoPath ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={kit.logoPath}
+              alt="Site logo"
+              className="h-16 w-auto object-contain rounded-lg border border-gray-100 bg-white p-2"
+            />
+          ) : null}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
@@ -175,12 +265,12 @@ export default function StudioBrandKit({
               type="color"
               className="h-10 w-12 rounded border border-gray-200"
               value={kit.matteColor || "#0a0a0a"}
-              onChange={(e) => patch({ matteColor: e.target.value })}
+              onChange={(e) => patch({ matteColor: e.target.value, source: "manual" })}
             />
             <input
               className={inputClass}
               value={kit.matteColor || "#0a0a0a"}
-              onChange={(e) => patch({ matteColor: e.target.value })}
+              onChange={(e) => patch({ matteColor: e.target.value, source: "manual" })}
             />
           </div>
         </div>
@@ -232,36 +322,23 @@ export default function StudioBrandKit({
         </div>
       </div>
 
+      {source === "ai" && kit.logoPath ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={kit.logoPath}
+          alt="Brand logo"
+          className="h-16 w-auto object-contain rounded-lg border border-gray-100 bg-gray-50 p-2"
+        />
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-3">
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-800">
-          <FiUpload className="w-3.5 h-3.5" />
-          {busy === "logo" ? "Uploading…" : "Upload site logo"}
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            className="sr-only"
-            disabled={Boolean(busy)}
-            onChange={(e) => uploadLogo(e.target.files?.[0])}
-          />
-        </label>
-        <button
-          type="button"
-          disabled={Boolean(busy) || !kit.logoPath}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-800 disabled:opacity-50"
-          onClick={() => postJson({ action: "suggest" }, "suggest")}
-        >
-          {busy === "suggest" ? (
-            <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <FiImage className="w-3.5 h-3.5" />
-          )}
-          Auto suggest from logo
-        </button>
         <button
           type="button"
           disabled={Boolean(busy)}
           className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 text-white px-3 py-2 text-xs font-semibold disabled:opacity-50"
-          onClick={() => postJson({ action: "save", brandKitJson: kit }, "save")}
+          onClick={() =>
+            postJson({ action: "save", brandKitJson: { ...kit, source } }, "save")
+          }
         >
           {busy === "save" ? "Saving…" : "Save brand kit"}
         </button>
@@ -269,7 +346,12 @@ export default function StudioBrandKit({
           type="button"
           disabled={Boolean(busy) || !kit.enabled}
           className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 disabled:opacity-50"
-          onClick={() => postJson({ action: "preview", brandKitJson: { ...kit, enabled: true } }, "preview")}
+          onClick={() =>
+            postJson(
+              { action: "preview", brandKitJson: { ...kit, source, enabled: true } },
+              "preview"
+            )
+          }
         >
           {busy === "preview" ? (
             <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -278,27 +360,10 @@ export default function StudioBrandKit({
           )}
           Preview frame now
         </button>
-        {kit.logoPath ? (
-          <span className="text-[11px] text-gray-500 truncate max-w-[220px]">Logo: {kit.logoPath}</span>
-        ) : (
-          <span className="text-[11px] text-amber-700">No logo uploaded yet</span>
-        )}
+        <span className="text-[11px] font-semibold text-gray-500">
+          Active path: {source === "ai" ? "AI brand kit" : "Your own brand kit"}
+        </span>
       </div>
-
-      <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
-        <li>Use AI create full brand kit (or upload a logo + auto suggest)</li>
-        <li>Turn Enabled on if needed, tweak matte/logo, Save</li>
-        <li>Preview frame now — or run Studio so every new image gets the matte</li>
-      </ol>
-
-      {kit.logoPath ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={kit.logoPath}
-          alt="Site logo"
-          className="h-16 w-auto object-contain rounded-lg border border-gray-100 bg-gray-50 p-2"
-        />
-      ) : null}
 
       {kit.previewPath ? (
         <div>
@@ -315,7 +380,7 @@ export default function StudioBrandKit({
       ) : null}
 
       <div>
-        <label className={labelClass}>AI brand notes (used in AI chrome mode)</label>
+        <label className={labelClass}>Brand notes (used in AI chrome mode)</label>
         <textarea
           className={`${inputClass} mt-1 min-h-[70px]`}
           value={kit.aiBrandNotes || ""}
