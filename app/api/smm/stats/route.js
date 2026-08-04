@@ -281,9 +281,8 @@ export async function GET(req) {
           },
           select: { followers: true, reach: true, engagements: true, platform: true },
         });
-        const hasUsableMetaToday = existingMetaToday.some(
-          (r) => Number(r.followers || 0) > 0 || Number(r.reach || 0) > 0
-        );
+        // Reach-only days must not block a follower refresh — Meta often writes reach with followers=0.
+        const hasUsableMetaToday = existingMetaToday.some((r) => Number(r.followers || 0) > 0);
 
         if (!existingMetaToday.length || forceRefresh || !hasUsableMetaToday) {
           const since = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
@@ -378,6 +377,27 @@ export async function GET(req) {
             ),
           ];
 
+          const lastKnownFollowerCache = new Map();
+          async function resolveFollowersForWrite(platform, siteLink, liveFollowers) {
+            const live = Number(liveFollowers);
+            if (Number.isFinite(live) && live > 0) return live;
+            const cacheKey = `${platform}::${siteLink}`;
+            if (lastKnownFollowerCache.has(cacheKey)) return lastKnownFollowerCache.get(cacheKey);
+            const prior = await prisma.socialMediaDailyStat.findFirst({
+              where: {
+                userId: ownerUserId,
+                siteLink,
+                platform,
+                followers: { gt: 0 },
+              },
+              orderBy: { statDate: "desc" },
+              select: { followers: true },
+            });
+            const known = Number(prior?.followers || 0);
+            lastKnownFollowerCache.set(cacheKey, known);
+            return known;
+          }
+
           async function upsertPlatformDays({
             platform,
             days,
@@ -386,11 +406,15 @@ export async function GET(req) {
             accountHandle,
           }) {
             if (!days?.size) return;
-            const followerCount = Number(followers);
-            const hasFollowers = Number.isFinite(followerCount) && followerCount > 0;
+            const liveFollowers = Number(followers);
+            const hasLiveFollowers = Number.isFinite(liveFollowers) && liveFollowers > 0;
             // Only persist when we have real followers or non-zero day metrics — never stamp a day of zeros.
             const usableDays = [...days.entries()].filter(([, val]) => {
-              return hasFollowers || Number(val.reach || 0) > 0 || Number(val.engagements || 0) > 0;
+              return (
+                hasLiveFollowers ||
+                Number(val.reach || 0) > 0 ||
+                Number(val.engagements || 0) > 0
+              );
             });
             if (!usableDays.length) return;
 
@@ -398,6 +422,8 @@ export async function GET(req) {
               const statDate = new Date(val.statDate);
               statDate.setHours(0, 0, 0, 0);
               for (const siteLink of writeKeys) {
+                const followerCount = await resolveFollowersForWrite(platform, siteLink, followers);
+                const hasFollowers = followerCount > 0;
                 const update = {
                   reach: val.reach,
                   engagements: val.engagements,
@@ -546,16 +572,16 @@ export async function GET(req) {
           ? { platform: { in: ["tiktok", "x"] } }
           : { platform }
         : {};
-    // Resolve equivalents (both website URLs and Meta IDs)
-    const equivalentSites = [targetSiteNormalized];
+    // Same equivalent key set as live Meta writes + reports (resolveSiteEquivalents).
+    const equivalentSites = [...(siteEquivalents || []), targetSiteNormalized];
     const linkedSite = await prisma.site.findFirst({
       where: {
         OR: [
           { siteUrl: targetSiteNormalized },
           { facebookPageId: targetSiteNormalized },
-          { instagramUserId: targetSiteNormalized }
-        ]
-      }
+          { instagramUserId: targetSiteNormalized },
+        ],
+      },
     });
     if (linkedSite) {
       if (linkedSite.siteUrl) equivalentSites.push(linkedSite.siteUrl);
@@ -567,21 +593,25 @@ export async function GET(req) {
         OR: [
           { siteLink: targetSiteNormalized },
           { facebookPageId: targetSiteNormalized },
-          { instagramUserId: targetSiteNormalized }
-        ]
-      }
+          { instagramUserId: targetSiteNormalized },
+        ],
+      },
     });
     for (const u of linkedUsers) {
       if (u.siteLink) equivalentSites.push(u.siteLink);
       if (u.facebookPageId) equivalentSites.push(u.facebookPageId);
       if (u.instagramUserId) equivalentSites.push(u.instagramUserId);
     }
-    const uniqueEquivalents = Array.from(new Set(
-      equivalentSites.map(s => {
-        if (/^\d+$/.test(String(s).trim())) return String(s).trim();
-        return normalizeSiteOrigin(s);
-      }).filter(Boolean)
-    ));
+    const uniqueEquivalents = Array.from(
+      new Set(
+        equivalentSites
+          .map((s) => {
+            if (/^\d+$/.test(String(s).trim())) return String(s).trim();
+            return normalizeSiteOrigin(s);
+          })
+          .filter(Boolean)
+      )
+    );
 
     const filter = {
       siteLink: { in: uniqueEquivalents },
@@ -589,11 +619,37 @@ export async function GET(req) {
       ...platformWhere,
     };
 
-    const rawRows = await prisma.socialMediaDailyStat.findMany({
-      where: filter,
-      orderBy: [{ statDate: "asc" }, { platform: "asc" }],
-    });
+    const [rawRows, knownFollowerRows] = await Promise.all([
+      prisma.socialMediaDailyStat.findMany({
+        where: filter,
+        orderBy: [{ statDate: "asc" }, { platform: "asc" }],
+      }),
+      // Forward-fill: reports often show historical baselines while newest Meta days have followers=0.
+      prisma.socialMediaDailyStat.findMany({
+        where: {
+          siteLink: { in: uniqueEquivalents },
+          followers: { gt: 0 },
+          ...platformWhere,
+        },
+        orderBy: [{ statDate: "desc" }],
+        select: {
+          platform: true,
+          followers: true,
+          accountName: true,
+          accountHandle: true,
+          statDate: true,
+          reach: true,
+          engagements: true,
+        },
+      }),
+    ]);
     const rows = rawRows.filter((r) => String(r.platform || "").toLowerCase() !== "linkedin");
+    const lastKnownByPlatform = new Map();
+    for (const row of knownFollowerRows) {
+      const key = canonicalSmmPlatform(row.platform);
+      if (!key || key === "linkedin" || lastKnownByPlatform.has(key)) continue;
+      lastKnownByPlatform.set(key, { ...row, platform: key });
+    }
 
     const globalSite = await prisma.site.findFirst({
       where: {
@@ -655,7 +711,62 @@ export async function GET(req) {
         "META_PAGE_ACCESS_TOKEN is not set on the server. Add it in Render env (Page or System User token), redeploy, then Refresh.";
     }
 
-    if (!rows.length) {
+    const latestByPlatform = new Map();
+    const previousByPlatform = new Map();
+    for (const row of rows) {
+      const key = canonicalSmmPlatform(row.platform);
+      const normalizedRow = { ...row, platform: key };
+      const prev = latestByPlatform.get(key);
+      const rowDate = new Date(row.statDate).getTime();
+      const prevDate = prev ? new Date(prev.statDate).getTime() : 0;
+      const better =
+        !prev ||
+        rowDate > prevDate ||
+        (rowDate === prevDate && Number(row.followers || 0) >= Number(prev.followers || 0));
+      if (better) {
+        if (prev && rowDate > prevDate) previousByPlatform.set(key, prev);
+        else if (prev && !previousByPlatform.has(key)) previousByPlatform.set(key, prev);
+        latestByPlatform.set(key, normalizedRow);
+      } else if (prev && rowDate < prevDate && !previousByPlatform.has(key)) {
+        previousByPlatform.set(key, normalizedRow);
+      }
+    }
+
+    // If the window has no rows, still surface last-known follower baselines (same as reports).
+    if (!latestByPlatform.size && lastKnownByPlatform.size) {
+      for (const [key, row] of lastKnownByPlatform.entries()) {
+        latestByPlatform.set(key, row);
+      }
+    }
+
+    function resolvedFollowers(platform, row) {
+      const current = Number(row?.followers || 0);
+      if (current > 0) return current;
+      return Number(lastKnownByPlatform.get(platform)?.followers || 0);
+    }
+
+    const platformCards = Array.from(latestByPlatform.values()).map((row) => {
+      const prev = previousByPlatform.get(row.platform);
+      const followers = resolvedFollowers(row.platform, row);
+      const prevFollowers = resolvedFollowers(row.platform, prev) || Number(prev?.followers || 0);
+      const deltaFollowers = followers - prevFollowers;
+      const known = lastKnownByPlatform.get(row.platform);
+      return {
+        platform: row.platform,
+        accountName: extractAccountName(
+          row.accountHandle || known?.accountHandle,
+          row.accountName || known?.accountName,
+          row.platform
+        ),
+        accountHandle: row.accountHandle || known?.accountHandle || "",
+        followers,
+        deltaFollowers,
+        reach: row.reach,
+        engagements: row.engagements,
+      };
+    });
+
+    if (!rows.length && !platformCards.length) {
       return new Response(
         JSON.stringify({
           siteUrl: targetSiteNormalized,
@@ -691,42 +802,6 @@ export async function GET(req) {
       );
     }
 
-    const latestByPlatform = new Map();
-    const previousByPlatform = new Map();
-    for (const row of rows) {
-      const key = canonicalSmmPlatform(row.platform);
-      const normalizedRow = { ...row, platform: key };
-      const prev = latestByPlatform.get(key);
-      const rowDate = new Date(row.statDate).getTime();
-      const prevDate = prev ? new Date(prev.statDate).getTime() : 0;
-      const better =
-        !prev ||
-        rowDate > prevDate ||
-        (rowDate === prevDate && Number(row.followers || 0) >= Number(prev.followers || 0));
-      if (better) {
-        if (prev && rowDate > prevDate) previousByPlatform.set(key, prev);
-        else if (prev && !previousByPlatform.has(key)) previousByPlatform.set(key, prev);
-        latestByPlatform.set(key, normalizedRow);
-      } else if (prev && rowDate < prevDate && !previousByPlatform.has(key)) {
-        previousByPlatform.set(key, normalizedRow);
-      }
-    }
-
-    const platformCards = Array.from(latestByPlatform.values()).map((row) => {
-      const prev = previousByPlatform.get(row.platform);
-      const prevFollowers = prev?.followers || 0;
-      const deltaFollowers = row.followers - prevFollowers;
-      return {
-        platform: row.platform,
-        accountName: extractAccountName(row.accountHandle, row.accountName, row.platform),
-        accountHandle: row.accountHandle || "",
-        followers: row.followers,
-        deltaFollowers,
-        reach: row.reach,
-        engagements: row.engagements,
-      };
-    });
-
     const byDate = new Map();
     rows.forEach((row) => {
       const key = fmtDate(row.statDate);
@@ -739,31 +814,33 @@ export async function GET(req) {
 
     const accounts = Array.from(latestByPlatform.values()).map((row) => {
       const prev = previousByPlatform.get(row.platform);
+      const known = lastKnownByPlatform.get(row.platform);
+      const followers = resolvedFollowers(row.platform, row);
       return {
         platform: row.platform,
-        accountName: extractAccountName(row.accountHandle, row.accountName, row.platform),
-        accountHandle: row.accountHandle || "",
+        accountName: extractAccountName(
+          row.accountHandle || known?.accountHandle,
+          row.accountName || known?.accountName,
+          row.platform
+        ),
+        accountHandle: row.accountHandle || known?.accountHandle || "",
         reach: row.reach || 0,
         engagements: row.engagements || 0,
         queuedPosts: row.queuedPosts || 0,
         queuedReels: row.queuedReels || 0,
-        followers: row.followers || 0,
+        followers,
         reachChangePct: pctChange(row.reach || 0, prev?.reach || 0),
         engagementsChangePct: pctChange(row.engagements || 0, prev?.engagements || 0),
       };
     });
 
-    const summary = accounts.reduce(
-      (acc, row) => {
-        acc.totalReach += row.reach;
-        acc.totalEngagements += row.engagements;
-        acc.followers += row.followers;
-        acc.queuedPosts += row.queuedPosts;
-        acc.queuedReels += row.queuedReels;
-        return acc;
-      },
-      { totalReach: 0, totalEngagements: 0, followers: 0, queuedPosts: 0, queuedReels: 0 }
-    );
+    const summary = {
+      totalReach: accounts.reduce((s, r) => s + (r.reach || 0), 0),
+      totalEngagements: accounts.reduce((s, r) => s + (r.engagements || 0), 0),
+      followers: platformCards.reduce((s, r) => s + Number(r.followers || 0), 0),
+      queuedPosts: accounts.reduce((s, r) => s + (r.queuedPosts || 0), 0),
+      queuedReels: accounts.reduce((s, r) => s + (r.queuedReels || 0), 0),
+    };
 
     return new Response(
       JSON.stringify({

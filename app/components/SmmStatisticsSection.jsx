@@ -12,9 +12,6 @@ import SmmDownloadReportModal from "./SmmDownloadReportModal";
 import ReportSectionActions from "./ReportSectionActions";
 import { formatYearMonth } from "../../lib/smmReportMonthRange";
 
-/** Fixed window for `/api/smm/stats` (range controls removed from UI). */
-const SMM_STATS_RANGE = "3m";
-
 const PLATFORM_OPTIONS = [
   { id: "all", label: "All platforms" },
   { id: "facebook", label: "Facebook" },
@@ -68,7 +65,7 @@ function platformMark(platform) {
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function buildMonthlySeries(timeSeries = []) {
-  const base = MONTH_LABELS.map((month) => ({ month, reels: 0, posts: 0 }));
+  const totals = MONTH_LABELS.map((month) => ({ month, reels: 0, posts: 0, hasData: false }));
   for (const row of timeSeries) {
     const value = String(row.date || "");
     let monthIndex = -1;
@@ -78,10 +75,13 @@ function buildMonthlySeries(timeSeries = []) {
       monthIndex = Number(value.slice(0, 2)) - 1;
     }
     if (monthIndex < 0 || monthIndex > 11) continue;
-    base[monthIndex].reels += Number(row.reach || 0);
-    base[monthIndex].posts += Number(row.engagements || 0);
+    totals[monthIndex].reels += Number(row.reach || 0);
+    totals[monthIndex].posts += Number(row.engagements || 0);
+    totals[monthIndex].hasData = true;
   }
-  return base;
+  // Only plot months that actually have series points — avoid a full year of fake zeros.
+  const withData = totals.filter((m) => m.hasData);
+  return withData.length ? withData.map(({ month, reels, posts }) => ({ month, reels, posts })) : totals.map(({ month, reels, posts }) => ({ month, reels, posts }));
 }
 
 function AnalyticsTooltip({ active, payload, label, chartYear }) {
@@ -116,7 +116,6 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
     "";
   const showSmmChartOnly = isSmmRole(session?.user?.role);
 
-  const [range, setRange] = useState("3m");
   const [platform, setPlatform] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -140,7 +139,9 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
     setError("");
     try {
       const query = new URLSearchParams({
-        range: SMM_STATS_RANGE,
+        // Align with the Report month control (same calendar window reports use).
+        endMonth: viewMonth || formatYearMonth(new Date()),
+        monthSpan: "3",
         platform,
         ...(hasGlobalAccess ? { url: activeSite } : {}),
         ...(forceRefresh ? { refresh: "true" } : {}),
@@ -156,7 +157,7 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
     } finally {
       setLoading(false);
     }
-  }, [activeSite, hasGlobalAccess, platform]);
+  }, [activeSite, hasGlobalAccess, platform, viewMonth]);
 
   const autoRefreshedRef = useRef(false);
 
