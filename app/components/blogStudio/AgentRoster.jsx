@@ -31,9 +31,7 @@ export default function AgentRoster({ config, onPatchSite }) {
           const ok = Boolean(ready[role.readyKey]);
           const isImage = role.id === "image";
           const providerList = isImage ? IMAGE_PROVIDERS : PROVIDERS;
-          const providerValue = isImage
-            ? "openai"
-            : config?.[role.providerKey] || "openai";
+          const providerValue = config?.[role.providerKey] || "openai";
           const modelList = modelsForProvider(providerValue, {
             kind: isImage ? "image" : "chat",
             current: config?.[role.modelKey] || "",

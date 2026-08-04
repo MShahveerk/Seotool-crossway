@@ -36,7 +36,11 @@ export const PROVIDERS = [
 ];
 
 /** Image agent only supports OpenAI image models in Studio v1. */
-export const IMAGE_PROVIDERS = [{ value: "openai", label: "OpenAI" }];
+/** Image agent: OpenAI direct, or OpenRouter (Flux / Gemini Image / GPT Image / etc.). Claude has no image gen API. */
+export const IMAGE_PROVIDERS = [
+  { value: "openai", label: "OpenAI" },
+  { value: "openrouter", label: "OpenRouter" },
+];
 
 /** Viable chat models per provider (API ids verified for Studio pipeline). */
 export const CHAT_MODELS = {
@@ -68,9 +72,25 @@ export const CHAT_MODELS = {
 
 export const IMAGE_MODELS = {
   openai: [
-    { value: "gpt-image-1", label: "GPT Image 1 (recommended)" },
-    { value: "gpt-image-1.5", label: "GPT Image 1.5" },
-    { value: "chatgpt-image-latest", label: "ChatGPT Image Latest" },
+    { value: "gpt-image-2", label: "GPT Image 2 — best quality (recommended)" },
+    { value: "gpt-image-1.5", label: "GPT Image 1.5 — strong / cheaper" },
+    { value: "gpt-image-1", label: "GPT Image 1 — legacy stable" },
+    { value: "gpt-image-1-mini", label: "GPT Image 1 Mini — budget / volume" },
+    { value: "chatgpt-image-latest", label: "ChatGPT Image Latest (moving)" },
+  ],
+  openrouter: [
+    { value: "openai/gpt-image-2", label: "OpenAI GPT Image 2 (recommended)" },
+    { value: "openai/gpt-image-1", label: "OpenAI GPT Image 1" },
+    { value: "openai/gpt-image-1-mini", label: "OpenAI GPT Image 1 Mini" },
+    { value: "google/gemini-3.1-flash-image", label: "Google Gemini 3.1 Flash Image" },
+    { value: "google/gemini-3-pro-image", label: "Google Gemini 3 Pro Image" },
+    { value: "google/gemini-2.5-flash-image", label: "Google Gemini 2.5 Flash Image" },
+    { value: "black-forest-labs/flux.2-pro", label: "FLUX.2 Pro" },
+    { value: "black-forest-labs/flux.2-flex", label: "FLUX.2 Flex" },
+    { value: "black-forest-labs/flux.2-max", label: "FLUX.2 Max" },
+    { value: "bytedance-seed/seedream-4.5", label: "Seedream 4.5" },
+    { value: "x-ai/grok-imagine-image-quality", label: "xAI Grok Imagine" },
+    { value: "recraft/recraft-v4", label: "Recraft V4" },
   ],
 };
 

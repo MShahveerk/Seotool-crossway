@@ -607,8 +607,8 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
             {tab === "agents" && (
               <div className="space-y-6">
                 <p className="text-sm text-gray-600">
-                  Pick a provider, then choose from the verified model list for that provider. Image
-                  generation uses OpenAI image models only.
+                  Pick a provider and model per agent. Image: OpenAI or OpenRouter (Flux, Gemini
+                  Image, GPT Image…). Claude cannot generate images — use OpenRouter instead.
                 </p>
                 {[
                   ["interpreter", "Interpreter", "interpreterProvider", "interpreterModel", "interpreterPrompt", "chat"],
@@ -618,10 +618,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                   ["image", "Image", "imageProvider", "imageModel", "imagePromptSystem", "image"],
                 ].map(([id, title, pKey, mKey, promptKey, kind]) => {
                   const providerList = kind === "image" ? IMAGE_PROVIDERS : PROVIDERS;
-                  const providerValue =
-                    kind === "image"
-                      ? "openai"
-                      : siteConfig[pKey] || "openai";
+                  const providerValue = siteConfig[pKey] || "openai";
                   const modelList = modelsForProvider(providerValue, {
                     kind,
                     current: siteConfig[mKey] || "",

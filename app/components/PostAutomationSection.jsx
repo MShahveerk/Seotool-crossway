@@ -498,8 +498,8 @@ export default function PostAutomationSection({ selectedSite = "" }) {
             {tab === "agents" && (
               <div className="space-y-6">
                 <p className="text-sm text-gray-600">
-                  Strategist → Copywriter → required Image. Pick provider and model for each; image uses
-                  OpenAI image models only.
+                  Strategist → Copywriter → required Image. Image provider: OpenAI or OpenRouter
+                  (Flux, Gemini Image, GPT Image…). Claude cannot generate images.
                 </p>
                 {[
                   ["agent1", "Strategist", "agent1Provider", "agent1Model", "agent1Prompt", "chat"],
@@ -507,7 +507,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
                   ["image", "Image", "imageProvider", "imageModel", "imagePromptSystem", "image"],
                 ].map(([id, title, pKey, mKey, promptKey, kind]) => {
                   const providerList = kind === "image" ? IMAGE_PROVIDERS : PROVIDERS;
-                  const providerValue = kind === "image" ? "openai" : siteConfig[pKey] || "openai";
+                  const providerValue = siteConfig[pKey] || "openai";
                   const modelList = modelsForProvider(providerValue, {
                     kind,
                     current: siteConfig[mKey] || "",

@@ -316,6 +316,11 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
             }`}
           >
             {t.label}
+            {t.id === "runs" &&
+            activeRun &&
+            ["queued", "running"].includes(String(activeRun.status || "")) ? (
+              <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            ) : null}
           </button>
         ))}
       </div>
@@ -329,6 +334,31 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
         {notice ? (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
             {notice}
+          </div>
+        ) : null}
+
+        {/* Always pin the live console while a run is in progress, even on other tabs */}
+        {tab !== "runs" &&
+        activeRun &&
+        ["queued", "running"].includes(String(activeRun.status || "")) ? (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                Live Autopilot run
+              </p>
+              <button
+                type="button"
+                className="text-xs font-semibold text-emerald-800 hover:underline"
+                onClick={() => setTab("runs")}
+              >
+                Expand Run console →
+              </button>
+            </div>
+            <AutopilotRunConsole
+              run={activeRun}
+              onCancel={cancelActiveRun}
+              cancelling={cancellingRun}
+            />
           </div>
         ) : null}
 
