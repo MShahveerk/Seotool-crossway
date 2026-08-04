@@ -78,6 +78,7 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [activeRunId, setActiveRunId] = useState(null);
+  const [researching, setResearching] = useState(false);
 
   const agents = config?.agents || [];
   const defaultPrompts = config?.defaultPrompts || {};
@@ -85,6 +86,36 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
   const patchConfig = useCallback((patch) => {
     setConfig((prev) => (prev ? { ...prev, ...patch } : prev));
   }, []);
+
+  const autoResearchSite = async () => {
+    if (!siteLink) return;
+    setResearching(true);
+    setError("");
+    setNotice("");
+    try {
+      const res = await fetch(
+        `/api/admin/seo-autopilot/site/research?siteLink=${encodeURIComponent(siteLink)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ persist: true }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Site research failed");
+      if (data.config) setConfig(data.config);
+      else if (data.profile) patchConfig(data.profile);
+      setNotice(
+        data.meta?.model
+          ? `Auto-filled from site data via Diagnoser (${data.meta.model}). Review and tweak if needed.`
+          : "Auto-filled from site data. Review and tweak if needed."
+      );
+    } catch (err) {
+      setError(err.message || "Site research failed");
+    } finally {
+      setResearching(false);
+    }
+  };
 
   const loadAll = useCallback(async () => {
     if (!siteLink) {
@@ -333,43 +364,67 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {[
-                ["brandName", "Brand name"],
-                ["category", "Category / niche"],
-              ].map(([key, label]) => (
-                <div key={key}>
-                  <label className={labelClass}>{label}</label>
-                  <input
-                    className={`${inputClass} mt-1`}
-                    value={config?.[key] || ""}
-                    onChange={(e) => patchConfig({ [key]: e.target.value })}
+            <div className="rounded-2xl border border-gray-100 bg-white p-5 space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">Brand & niche profile</h3>
+                  <p className="text-xs text-gray-500 mt-1 max-w-xl">
+                    Auto-research uses your existing GSC / audit / opportunity data via the Diagnoser
+                    agent keys. You can still edit anything after.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={researching || !siteLink}
+                  onClick={autoResearchSite}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 text-white px-3.5 py-2 text-xs font-bold disabled:opacity-55"
+                >
+                  {researching ? (
+                    <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5" />
+                  )}
+                  {researching ? "Researching…" : "Auto-research site"}
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[
+                  ["brandName", "Brand name"],
+                  ["category", "Category / niche"],
+                ].map(([key, label]) => (
+                  <div key={key}>
+                    <label className={labelClass}>{label}</label>
+                    <input
+                      className={`${inputClass} mt-1`}
+                      value={config?.[key] || ""}
+                      onChange={(e) => patchConfig({ [key]: e.target.value })}
+                    />
+                  </div>
+                ))}
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Buying questions (one per line)</label>
+                  <textarea
+                    className={`${inputClass} mt-1 min-h-[90px]`}
+                    value={config?.buyingQuestions || ""}
+                    onChange={(e) => patchConfig({ buyingQuestions: e.target.value })}
                   />
                 </div>
-              ))}
-              <div className="md:col-span-2">
-                <label className={labelClass}>Buying questions (one per line)</label>
-                <textarea
-                  className={`${inputClass} mt-1 min-h-[90px]`}
-                  value={config?.buyingQuestions || ""}
-                  onChange={(e) => patchConfig({ buyingQuestions: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Competitors</label>
-                <textarea
-                  className={`${inputClass} mt-1 min-h-[70px]`}
-                  value={config?.competitors || ""}
-                  onChange={(e) => patchConfig({ competitors: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Best proof point (for pitches)</label>
-                <textarea
-                  className={`${inputClass} mt-1 min-h-[70px]`}
-                  value={config?.proofPoint || ""}
-                  onChange={(e) => patchConfig({ proofPoint: e.target.value })}
-                />
+                <div>
+                  <label className={labelClass}>Competitors</label>
+                  <textarea
+                    className={`${inputClass} mt-1 min-h-[70px]`}
+                    value={config?.competitors || ""}
+                    onChange={(e) => patchConfig({ competitors: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Best proof point (for pitches)</label>
+                  <textarea
+                    className={`${inputClass} mt-1 min-h-[70px]`}
+                    value={config?.proofPoint || ""}
+                    onChange={(e) => patchConfig({ proofPoint: e.target.value })}
+                  />
+                </div>
               </div>
             </div>
           </div>
