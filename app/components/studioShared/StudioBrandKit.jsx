@@ -49,12 +49,10 @@ export default function StudioBrandKit({
             ? "Preview ready — scroll down to see it."
             : busyKey === "create"
               ? data.brandSummary
-                ? `Full brand kit created — ${data.brandSummary}${
-                    data.logoGenerated ? " (logo generated)" : ""
-                  }`
-                : data.logoGenerated
-                  ? "Full brand kit created (logo generated)."
-                  : "Full brand kit created."
+                ? `AI brand frame ready — ${data.brandSummary}${
+                    data.frameGenerated ? " · frame overlay saved" : ""
+                  }${data.logoGenerated ? " · logo generated" : ""}. Preview updated below.`
+                : "AI brand frame ready. Preview updated below."
               : "Brand kit updated."
       );
     } catch (err) {
@@ -137,7 +135,8 @@ export default function StudioBrandKit({
         >
           <p className="text-sm font-bold text-gray-900">AI brand kit</p>
           <p className="mt-1 text-xs text-gray-600 leading-relaxed">
-            AI designs matte, layout, notes, and can generate a logo from a short brief.
+            AI invents a real border/frame overlay from scratch (with a transparent photo window) plus
+            optional logo — not just a color tweak.
           </p>
         </button>
       </div>
@@ -145,9 +144,10 @@ export default function StudioBrandKit({
       {source === "ai" ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
           <div>
-            <label className={labelClass}>AI create full brand kit</label>
+            <label className={labelClass}>AI create full brand frame</label>
             <p className="mt-1 text-xs text-gray-600">
-              Needs an API key on the Agents tab (OpenAI or OpenRouter image model). Takes ~15–40s.
+              Generates a production frame PNG (designed chrome + cut-out window), optional logo, and a
+              real preview. Needs Agents image API key. ~30–90s.
             </p>
           </div>
           <textarea
@@ -179,7 +179,7 @@ export default function StudioBrandKit({
               ) : (
                 <FiImage className="w-4 h-4" />
               )}
-              {busy === "create" ? "Creating brand kit…" : "AI create full brand kit"}
+              {busy === "create" ? "Creating AI frame…" : "AI create brand frame"}
             </button>
             <label className="inline-flex items-center gap-2 text-xs font-medium text-gray-700">
               <input
@@ -254,8 +254,9 @@ export default function StudioBrandKit({
             onChange={(e) => patch({ mode: e.target.value })}
           >
             <option value="matte">Matte + logo (Sharp)</option>
-            <option value="ai">AI paints brand chrome</option>
-            <option value="figma">Matte + Figma overlay</option>
+            <option value="frame">Designed frame overlay (AI)</option>
+            <option value="ai">Prompt paints brand chrome</option>
+            <option value="figma">Figma overlay</option>
           </select>
         </div>
         <div>
@@ -322,13 +323,35 @@ export default function StudioBrandKit({
         </div>
       </div>
 
-      {source === "ai" && kit.logoPath ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={kit.logoPath}
-          alt="Brand logo"
-          className="h-16 w-auto object-contain rounded-lg border border-gray-100 bg-gray-50 p-2"
-        />
+      {source === "ai" && (kit.frameTemplatePath || kit.logoPath) ? (
+        <div className="flex flex-wrap items-end gap-4">
+          {kit.frameTemplatePath ? (
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                AI frame overlay
+              </p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={kit.frameTemplatePath}
+                alt="AI brand frame overlay"
+                className="max-h-40 w-auto object-contain rounded-lg border border-gray-200 bg-gray-100 p-1"
+              />
+            </div>
+          ) : null}
+          {kit.logoPath ? (
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                Logo mark
+              </p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={kit.logoPath}
+                alt="Brand logo"
+                className="h-16 w-auto object-contain rounded-lg border border-gray-100 bg-gray-50 p-2"
+              />
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
