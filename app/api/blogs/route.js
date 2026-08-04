@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import prisma from "../../../lib/prisma";
 import { ROLES } from "../../../lib/rbac";
+import { canAccessSection } from "../../../lib/modulePermissions";
 import { buildBlogSiteFilter, BLOG_INCLUDE } from "../../../lib/blogAccess.js";
 
 export const runtime = "nodejs";
@@ -10,6 +11,9 @@ export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (!canAccessSection(session.user, "my-blog-approvals")) {
+      return Response.json({ error: "Forbidden: Blog Approvals access not granted." }, { status: 403 });
+    }
 
     const siteParam = req.nextUrl.searchParams.get("site") || req.nextUrl.searchParams.get("url") || "";
     const whereClause = await buildBlogSiteFilter(prisma, siteParam, session.user, session.user.role);

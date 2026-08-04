@@ -113,7 +113,7 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
           <Kpi
             icon={Award}
-            label="Authority (InLink)"
+            label="Authority rank"
             value={backlinks?.domainInlinkRank ?? "—"}
             sub="Authority 0–100"
             accent="violet"

@@ -12,6 +12,7 @@ import {
   buildSiteApproverApprovalWhere,
   resolveSiteEquivalents,
 } from "../../../lib/siteAccess";
+import { canAccessSection } from "../../../lib/modulePermissions";
 
 export const runtime = "nodejs";
 
@@ -52,6 +53,13 @@ export async function GET(req) {
     if (!session?.user?.id) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (!canAccessSection(session.user, "my-approvals")) {
+      return new Response(JSON.stringify({ error: "Forbidden: Approvals access not granted." }), {
+        status: 403,
         headers: { "Content-Type": "application/json" },
       });
     }

@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { testGoogleAdsConnection } from "../../../../lib/googleAds.js";
-import { ROLES, hasPermission, PERMISSIONS } from "../../../../lib/rbac";
+import { canAccessSection } from "../../../../lib/modulePermissions";
 
 export const runtime = "nodejs";
 
@@ -21,9 +21,8 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session?.user) return json({ error: "Unauthorized" }, 401);
 
-    const userRole = session.user.role || ROLES.USER;
-    if (!hasPermission(userRole, PERMISSIONS.ACCESS_SEARCH_CONSOLE)) {
-      return json({ error: "Access denied." }, 403);
+    if (!canAccessSection(session.user, "keyword-research")) {
+      return json({ error: "Forbidden: Keyword Research access not granted." }, 403);
     }
 
     const result = await testGoogleAdsConnection();

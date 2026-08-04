@@ -26,7 +26,7 @@ export default function UnifiedSiteAuditSection({ selectedSite = "", onNavigateS
             }`}
           >
             <Shield className="size-4" aria-hidden />
-            SE audit
+            Full audit
           </button>
           <button
             type="button"
@@ -37,7 +37,7 @@ export default function UnifiedSiteAuditSection({ selectedSite = "", onNavigateS
           >
             Internal crawl
           </button>
-          <span className="self-center text-xs text-gray-500">Live site audit is primary when available; internal crawl is the fallback.</span>
+          <span className="self-center text-xs text-gray-500">Full audit is primary when available; internal crawl is the fallback.</span>
         </div>
       ) : null}
 

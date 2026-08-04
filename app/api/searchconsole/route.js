@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { getSearchConsoleReport } from "../../../lib/searchconsole";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { ROLES } from "../../../lib/rbac";
+import { canAccessSection } from "../../../lib/modulePermissions";
 import { isValidUrl, normalizeSiteOrigin } from "../../../lib/validation";
 
 // Ensure this route runs in the Node.js runtime
@@ -18,6 +19,13 @@ export async function POST(req) {
         headers: { "Content-Type": "application/json" },
       }
     );
+  }
+
+  if (!canAccessSection(session.user, "website-statistics")) {
+    return new Response(JSON.stringify({ error: "Forbidden: Website Statistics access not granted." }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   let body;

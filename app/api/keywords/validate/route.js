@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { validateFocusKeyword, isKeywordResearchConfigured, GEO_TARGETS } from "../../../../lib/keywordResearch.js";
-import { ROLES, hasPermission, PERMISSIONS } from "../../../../lib/rbac";
+import { canAccessAnySection } from "../../../../lib/modulePermissions";
 
 export const runtime = "nodejs";
 
@@ -21,9 +21,8 @@ export async function GET(req) {
     const session = await getServerSession(authOptions);
     if (!session?.user) return json({ error: "Unauthorized" }, 401);
 
-    const userRole = session.user.role || ROLES.USER;
-    if (!hasPermission(userRole, PERMISSIONS.ACCESS_SEARCH_CONSOLE)) {
-      return json({ error: "Access denied." }, 403);
+    if (!canAccessAnySection(session.user, ["keyword-research", "admin-blogs", "my-blog-approvals"])) {
+      return json({ error: "Forbidden: Keyword access not granted." }, 403);
     }
 
     const keyword = String(req.nextUrl.searchParams.get("keyword") || "").trim();

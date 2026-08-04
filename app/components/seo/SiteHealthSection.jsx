@@ -244,7 +244,7 @@ export default function SiteHealthSection({ selectedSite = "" }) {
               icon={Award}
               label="Authority"
               value={authorityScore != null ? `${Math.round(authorityScore)}/100` : "—"}
-              sub={hasSeAuthority ? "InLink rank" : openPageRankScore != null ? "Open PageRank" : authTone.label}
+              sub={hasSeAuthority ? "Authority rank" : openPageRankScore != null ? "Open PageRank" : authTone.label}
               toneClass={authTone.text}
               accent="emerald"
             />

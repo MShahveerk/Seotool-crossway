@@ -8,7 +8,7 @@ import {
   coerceModulePermissionsForForm,
 } from "@/lib/modulePermissions";
 
-const MODULE_ORDER = [MODULES.GSC, MODULES.SEO, MODULES.SOCIAL, MODULES.BLOGS];
+const MODULE_ORDER = [MODULES.GSC, MODULES.SEO, MODULES.SOCIAL, MODULES.BLOGS, MODULES.REPORTS];
 
 function IndeterminateCheckbox({ checked, indeterminate, onChange, disabled, className }) {
   const ref = useRef(null);
@@ -64,7 +64,7 @@ export default function ModulePermissionPicker({ value, onChange, role, disabled
         <div>
           <p className="text-sm font-bold text-gray-900 dark:text-gray-900">Module permissions</p>
           <p className="text-xs text-gray-600 mt-1">
-            Choose Search Console, SEO, Social, and Blog access. Admin settings remain super admin only.
+            Choose Search Console, SEO, Social, Blog, and Report Studio access. Admin settings remain super admin only.
           </p>
         </div>
         <button

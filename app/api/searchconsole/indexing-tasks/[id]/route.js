@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../auth/[...nextauth]/route";
 import { ROLES } from "../../../../../lib/rbac";
+import { canAccessSection } from "../../../../../lib/modulePermissions";
 import prisma from "../../../../../lib/prisma";
 import { updateIndexingTaskStatus } from "../../../../../lib/indexingTasks";
 import { sessionCanAccessSiteAsync, resolveSiteEquivalents } from "../../../../../lib/siteAccess";
@@ -18,6 +19,13 @@ export async function PATCH(req, { params }) {
     if (!session?.user?.id) {
       return new Response(JSON.stringify({ error: "Unauthorized." }), {
         status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (!canAccessSection(session.user, "url-inspection")) {
+      return new Response(JSON.stringify({ error: "Forbidden: URL Inspection access not granted." }), {
+        status: 403,
         headers: { "Content-Type": "application/json" },
       });
     }

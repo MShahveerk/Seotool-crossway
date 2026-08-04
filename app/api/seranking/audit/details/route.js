@@ -12,7 +12,7 @@ export async function GET(req) {
     if (!isSerankingConfigured()) {
       return Response.json({ error: SEO_DATA_NOT_CONFIGURED }, { status: 503 });
     }
-    await requireSession();
+    await requireSession({ section: "site-audit" });
 
     const auditId = req.nextUrl.searchParams.get("auditId");
     if (!auditId) {

@@ -1,7 +1,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { getPageSpeedSnapshot } from "../../../lib/pagespeedJobs";
-import { ROLES, hasPermission, PERMISSIONS } from "../../../lib/rbac";
+import { ROLES } from "../../../lib/rbac";
+import { canAccessSection } from "../../../lib/modulePermissions";
 import { isValidUrl, normalizeSiteOrigin } from "../../../lib/validation";
 import prisma from "../../../lib/prisma";
 import { resolveSiteEquivalents, sessionCanAccessSiteAsync } from "../../../lib/siteAccess";
@@ -108,8 +109,7 @@ export async function GET(req) {
       });
     }
 
-    const userRole = session.user.role || ROLES.USER;
-    if (!hasPermission(userRole, PERMISSIONS.ACCESS_PAGESPEED)) {
+    if (!canAccessSection(session.user, "site-health")) {
       return new Response(JSON.stringify({ error: "Access denied. Insufficient permissions." }), {
         status: 403,
         headers: { "Content-Type": "application/json" },

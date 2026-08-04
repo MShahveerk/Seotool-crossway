@@ -428,13 +428,19 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
                 <HealthTile
                   icon={Shield}
                   label="Site audit"
-                  value={health.audit?.score != null ? `${health.audit.score}` : "—"}
+                  value={
+                    health.audit?.score != null && Number.isFinite(Number(health.audit.score))
+                      ? `${Math.round(Number(health.audit.score))}`
+                      : "—"
+                  }
                   sub={
                     health.audit?.running
                       ? "Audit running…"
-                      : health.audit?.critical != null
+                      : health.audit?.score != null && health.audit?.critical != null
                         ? `${health.audit.critical} critical · ${health.audit.warning ?? 0} warnings`
-                        : "No audit yet"
+                        : health.audit?.score != null
+                          ? "Latest audit score"
+                          : "No audit yet"
                   }
                   tone={auditTone(health.audit?.score)}
                   onClick={() => go("site-audit")}
@@ -462,9 +468,11 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
                 <HealthTile
                   icon={Activity}
                   label="Indexed URLs"
-                  value={health.indexedUrls != null ? formatCompact(health.indexedUrls) : "—"}
-                  sub="Site Explorer estimate"
-                  tone={health.indexedUrls != null ? "sky" : "gray"}
+                  value={
+                    Number(health.indexedUrls) > 0 ? formatCompact(health.indexedUrls) : "—"
+                  }
+                  sub={Number(health.indexedUrls) > 0 ? "Search / crawl coverage" : "No indexed count yet"}
+                  tone={Number(health.indexedUrls) > 0 ? "sky" : "gray"}
                   onClick={() => go("site-explorer")}
                 />
                 <HealthTile

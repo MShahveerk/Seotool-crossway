@@ -156,7 +156,7 @@ export default function ReportsManagementPanel() {
                 Send monthly reports now
               </p>
               <p className="text-xs text-gray-500">
-                Builds Crossway landscape decks from live GSC / SE Ranking / Meta data using each site&apos;s
+                Builds Crossway landscape decks from live GSC / organic SEO / Meta data using each site&apos;s
                 Report Studio template, then emails users who opted in.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">

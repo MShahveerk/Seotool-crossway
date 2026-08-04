@@ -11,6 +11,7 @@ import {
   findAssigneesForSite,
   notifyBlogApprovers,
 } from "../../../../lib/blogAssignee.js";
+import { canAccessSection } from "../../../../lib/modulePermissions";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,9 @@ export async function PATCH(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (!canAccessSection(session.user, "my-blog-approvals")) {
+      return Response.json({ error: "Forbidden: Blog Approvals access not granted." }, { status: 403 });
+    }
 
     const { id } = await params;
     const { body, featuredFile } = await parseBlogActionRequest(req);
@@ -318,6 +322,9 @@ export async function DELETE(_req, { params }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (!canAccessSection(session.user, "my-blog-approvals")) {
+      return Response.json({ error: "Forbidden: Blog Approvals access not granted." }, { status: 403 });
+    }
 
     const { id } = await params;
     const blog = await prisma.blogPost.findUnique({ where: { id } });

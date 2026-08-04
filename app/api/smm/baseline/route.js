@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import prisma from "../../../../lib/prisma";
 import { ROLES } from "../../../../lib/rbac";
+import { canAccessSection } from "../../../../lib/modulePermissions";
 import { normalizeSiteOrigin } from "../../../../lib/validation";
 import {
   isMetaPageId,
@@ -28,6 +29,13 @@ export async function GET(req) {
     if (!session?.user?.id) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (!canAccessSection(session.user, "smm-statistics")) {
+      return new Response(JSON.stringify({ error: "Forbidden: SMM Statistics access not granted." }), {
+        status: 403,
         headers: { "Content-Type": "application/json" },
       });
     }

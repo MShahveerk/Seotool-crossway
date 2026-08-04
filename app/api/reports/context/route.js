@@ -3,6 +3,7 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { ROLES } from "../../../../lib/rbac";
 import prisma from "../../../../lib/prisma";
 import { sessionCanAccessSiteAsync } from "../../../../lib/siteAccess";
+import { canAccessAnySection, hasGlobalSiteAccess } from "../../../../lib/modulePermissions";
 import { resolveSiteReportContext, INTERNAL_REPORT_SECTIONS, CLIENT_REPORT_SECTIONS } from "../../../../lib/siteReportContext";
 
 export const runtime = "nodejs";
@@ -21,6 +22,19 @@ export async function GET(req) {
       });
     }
 
+    if (
+      !canAccessAnySection(session.user, [
+        "reports-studio",
+        "smm-statistics",
+        "website-statistics",
+      ])
+    ) {
+      return new Response(JSON.stringify({ error: "Forbidden: Report access not granted." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const role = session.user.role || ROLES.USER;
     const fallbackSite =
       session.user.siteLink ||
@@ -28,7 +42,7 @@ export async function GET(req) {
         ? session.user.accessibleSites[0]
         : null);
 
-    const hasGlobalAccess = role === ROLES.SUPER_ADMIN || role === ROLES.SMM;
+    const hasGlobalAccess = hasGlobalSiteAccess(session.user);
     let siteKey = hasGlobalAccess
       ? req.nextUrl.searchParams.get("url") || fallbackSite || ""
       : fallbackSite;

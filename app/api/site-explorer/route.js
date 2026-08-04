@@ -10,7 +10,7 @@ import {
   prepareSiteExplorerRefresh,
   snapshotToApiPayload,
 } from "../../../lib/siteExplorerJobs";
-import { ROLES, hasPermission, PERMISSIONS } from "../../../lib/rbac";
+import { canAccessSection } from "../../../lib/modulePermissions";
 import { resolveWebsiteAccess } from "../../../lib/resolveWebsiteAccess";
 import { normalizeSiteOrigin } from "../../../lib/validation";
 import { enrichSiteExplorerWithGsc } from "../../../lib/siteExplorerGsc";
@@ -18,16 +18,15 @@ import { enrichSiteExplorerWithGsc } from "../../../lib/siteExplorerGsc";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-async function requireSession(req) {
+async function requireSession(_req) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     const err = new Error("Unauthorized. Please log in.");
     err.status = 401;
     throw err;
   }
-  const userRole = session.user.role || ROLES.USER;
-  if (!hasPermission(userRole, PERMISSIONS.ACCESS_SEARCH_CONSOLE)) {
-    const err = new Error("Access denied. Insufficient permissions.");
+  if (!canAccessSection(session.user, "site-explorer")) {
+    const err = new Error("Forbidden: Site Explorer access not granted.");
     err.status = 403;
     throw err;
   }

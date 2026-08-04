@@ -14,7 +14,7 @@ export async function GET(req) {
     const credits = await getCreditStatus();
 
     if (globalOnly) {
-      await requireSession();
+      await requireSession({ anySeo: true });
       return Response.json({
         configured: isSerankingConfigured(),
         credits,
@@ -22,7 +22,7 @@ export async function GET(req) {
       });
     }
 
-    const { siteUrl } = await resolveWebsiteAccess(req);
+    const { siteUrl } = await resolveWebsiteAccess(req, { section: null });
 
     if (!isSerankingConfigured()) {
       return Response.json({

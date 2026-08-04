@@ -43,7 +43,7 @@ export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return deny(401, "Unauthorized");
-    if (!canAccessReportsStudio(session.user)) return deny(403, "Reports studio is for admin and SMM only.");
+    if (!canAccessReportsStudio(session.user)) return deny(403, "Report Studio access not granted.");
 
     const resolved = await resolveSiteKey(session, req.nextUrl.searchParams.get("url"));
     if (resolved.error) return deny(resolved.status, resolved.error);
@@ -72,7 +72,7 @@ export async function PUT(req) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return deny(401, "Unauthorized");
-    if (!canAccessReportsStudio(session.user)) return deny(403, "Reports studio is for admin and SMM only.");
+    if (!canAccessReportsStudio(session.user)) return deny(403, "Report Studio access not granted.");
 
     const body = await req.json().catch(() => ({}));
     const resolved = await resolveSiteKey(session, body.url || body.siteKey);

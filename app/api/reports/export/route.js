@@ -3,7 +3,7 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import { ROLES } from "../../../../lib/rbac";
 import prisma from "../../../../lib/prisma";
 import { sessionCanAccessSiteAsync, isMetaPageId } from "../../../../lib/siteAccess";
-import { hasGlobalSiteAccess } from "../../../../lib/modulePermissions";
+import { canAccessAnySection, hasGlobalSiteAccess } from "../../../../lib/modulePermissions";
 import { logReportSend } from "../../../../lib/clientReportSettings";
 import { buildSlideDeckPdfBytes, slideDeckFilename } from "../../../../lib/reports/buildSlideDecks";
 import { resolveReportDisplayName } from "../../../../lib/reports/resolveReportPacks";
@@ -47,6 +47,19 @@ export async function GET(req) {
     if (!kind) {
       return new Response(JSON.stringify({ error: "Invalid report section." }), {
         status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const exportSections =
+      kind === "smm"
+        ? ["smm-statistics", "reports-studio"]
+        : kind === "combined"
+          ? ["reports-studio", "website-statistics", "smm-statistics"]
+          : ["reports-studio", "website-statistics", "site-health", "site-audit", "keyword-research"];
+    if (!canAccessAnySection(session.user, exportSections)) {
+      return new Response(JSON.stringify({ error: "Forbidden: Report download not granted." }), {
+        status: 403,
         headers: { "Content-Type": "application/json" },
       });
     }
