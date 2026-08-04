@@ -149,6 +149,10 @@ export default function AdminSection({ onNavigate } = {}) {
           data.error ||
             "No Meta accounts found. Set META_PAGE_ACCESS_TOKEN on the server (Render env), then redeploy/restart."
         );
+      } else if (data.warning) {
+        setMetaAccountsError(data.warning);
+      } else {
+        setMetaAccountsError("");
       }
     } catch (err) {
       console.error("Failed to load Meta accounts", err);
@@ -1299,27 +1303,36 @@ export default function AdminSection({ onNavigate } = {}) {
                   {loadingMetaAccounts ? (
                     <div className="text-xs text-gray-500 animate-pulse">Loading connected Meta accounts...</div>
                   ) : metaAccounts.length > 0 ? (
-                    <select
-                      value={formData.facebookPageId || ""}
-                      onChange={(e) => {
-                        const selectedPageId = e.target.value;
-                        const account = metaAccounts.find(a => a.facebookPageId === selectedPageId);
+                    <div className="space-y-2">
+                      {metaAccountsError ? (
+                        <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                          {metaAccountsError}
+                        </div>
+                      ) : null}
+                      <select
+                        value={formData.facebookPageId || ""}
+                        onChange={(e) => {
+                          const selectedPageId = e.target.value;
+                          const account = metaAccounts.find(a => a.facebookPageId === selectedPageId);
 
-                        setFormData({
-                          ...formData,
-                          facebookPageId: selectedPageId,
-                          instagramUserId: account ? account.instagramUserId : ""
-                        });
-                      }}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white text-gray-900 shadow-sm"
-                    >
-                      <option value="">-- Select a Meta Account --</option>
-                      {metaAccounts.map((acc) => (
-                        <option key={acc.facebookPageId} value={acc.facebookPageId}>
-                          {acc.name} {acc.instagramUserId ? "(Includes Instagram)" : "(Facebook Only)"}
-                        </option>
-                      ))}
-                    </select>
+                          setFormData({
+                            ...formData,
+                            facebookPageId: selectedPageId,
+                            instagramUserId: account ? account.instagramUserId : ""
+                          });
+                        }}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white text-gray-900 shadow-sm"
+                      >
+                        <option value="">-- Select a Meta Account --</option>
+                        {metaAccounts.map((acc) => (
+                          <option key={acc.facebookPageId} value={acc.facebookPageId}>
+                            {acc.name}{" "}
+                            {acc.instagramUserId ? "(Includes Instagram)" : "(Facebook Only)"}
+                            {acc.source === "database" ? " · saved" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   ) : (
                     <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200 space-y-1">
                       <p>{metaAccountsError || "No Meta accounts found."}</p>

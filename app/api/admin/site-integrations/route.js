@@ -93,21 +93,28 @@ export async function GET() {
     // Fetch Global Sites
     const globalSites = await prisma.site.findMany();
 
-    // Shared Meta loader: page-token /me fallback, IG field retry, DB merge
+    // Shared Meta loader: page-token /me fallback, per-page Graph enrich, DB merge
     let metaAccounts = [];
+    let metaWarning = null;
     try {
       const loaded = await loadMetaAccounts({ includeDatabase: true });
       metaAccounts = (loaded.accounts || []).map((page) => ({
         userId: null,
         userName: page.name,
+        name: page.name,
         userEmail: "",
         siteLink: page.siteLink || "",
         facebookPageId: page.facebookPageId,
         instagramUserId: page.instagramUserId || "",
         isSuperAdminSite: false,
+        source: page.source || "graph",
       }));
-      if (loaded.error && metaAccounts.length === 0) {
-        console.warn("Meta accounts unavailable for site-integrations:", loaded.error);
+      metaWarning = loaded.warning || (loaded.error && metaAccounts.length === 0 ? loaded.error : null);
+      if (metaWarning) console.warn("Meta accounts for site-integrations:", metaWarning);
+      if (loaded.stats) {
+        console.info(
+          `Meta accounts loaded: total=${loaded.stats.total} graph=${loaded.stats.graph} db=${loaded.stats.database}`
+        );
       }
     } catch (err) {
       console.error("Failed to load Meta accounts for site integrations", err?.message || err);
@@ -306,6 +313,7 @@ export async function GET() {
       JSON.stringify({
         sites: dedupedEntries,
         superAdminSite: currentSuperAdmin?.facebookPageId || currentSuperAdmin?.siteLink || null,
+        ...(metaWarning ? { metaWarning } : {}),
       }),
       {
         status: 200,

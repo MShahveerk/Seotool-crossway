@@ -3,6 +3,7 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import prisma from "../../../../lib/prisma";
 import { ROLES } from "../../../../lib/rbac";
 import { canAccessSection } from "../../../../lib/modulePermissions";
+import { loadMetaAccounts } from "../../../../lib/metaAccounts";
 import { normalizeSiteOrigin } from "../../../../lib/validation";
 import {
   isMetaPageId,
@@ -297,66 +298,31 @@ export async function GET(req) {
           // Auto-discovery from Meta Token if website is selected but has no linked page IDs in DB
           if (!fbPageId && !igUserId && !targetIsMetaId) {
             try {
-              const accountsUrl = `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,website,instagram_business_account&access_token=${metaToken}`;
-              const accountsRes = await axios.get(accountsUrl);
-              
-              const extractFirstUrl = (text) => {
-                if (!text) return "";
-                const match = String(text).match(/https?:\/\/[^\s,;]+/i);
-                if (match) return match[0];
-                const domainMatch = String(text).match(/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/[^\s,;]*)?/i);
-                if (domainMatch) return `https://${domainMatch[0]}`;
-                return text;
-              };
-
-              if (accountsRes.data && accountsRes.data.data && accountsRes.data.data.length > 0) {
-                // 1. Try to find a match by website URL
-                const matchedPage = accountsRes.data.data.find(page => {
-                  if (!page.website) return false;
-                  const parsedWeb = normalizeSiteOrigin(extractFirstUrl(page.website));
-                  return parsedWeb && parsedWeb === targetSiteNormalized;
-                });
-
-                // 2. Fallback to the first available page if no match was found
-                const pageToUse = matchedPage || accountsRes.data.data[0];
-
-                if (pageToUse) {
-                  fbPageId = pageToUse.id;
-                  igUserId = pageToUse.instagram_business_account?.id || null;
-                  
-                  // Only update existing Site record in DB, do not auto-add new ones
-                  if (siteRecord) {
-                    await prisma.site.update({
-                      where: { id: siteRecord.id },
-                      data: {
-                        facebookPageId: fbPageId,
-                        instagramUserId: igUserId
-                      }
-                    });
-                  }
-                  console.log(`[INFO] Auto-discovered Meta Page ID ${fbPageId} for website ${targetSiteNormalized}`);
+              const loaded = await loadMetaAccounts({ includeDatabase: true });
+              const pages = loaded.accounts || [];
+              const matchedPage = pages.find((page) => {
+                if (!page.siteLink) return false;
+                const parsedWeb = normalizeSiteOrigin(page.siteLink);
+                return parsedWeb && parsedWeb === targetSiteNormalized;
+              });
+              const pageToUse = matchedPage || pages[0];
+              if (pageToUse?.facebookPageId) {
+                fbPageId = pageToUse.facebookPageId;
+                igUserId = pageToUse.instagramUserId || null;
+                if (siteRecord) {
+                  await prisma.site.update({
+                    where: { id: siteRecord.id },
+                    data: {
+                      facebookPageId: fbPageId,
+                      instagramUserId: igUserId,
+                    },
+                  });
                 }
-              }
-
-              // Fallback to /me (single page token) if accounts was empty or failed
-              if (!fbPageId) {
-                const meUrl = `https://graph.facebook.com/v20.0/me?fields=id,name,website,instagram_business_account&access_token=${metaToken}`;
-                const meRes = await axios.get(meUrl);
-                if (meRes.data && meRes.data.id) {
-                  fbPageId = meRes.data.id;
-                  igUserId = meRes.data.instagram_business_account?.id || null;
-                  
-                  if (siteRecord) {
-                    await prisma.site.update({
-                      where: { id: siteRecord.id },
-                      data: {
-                        facebookPageId: fbPageId,
-                        instagramUserId: igUserId
-                      }
-                    });
-                  }
-                  console.log(`[INFO] Auto-discovered Meta /me ID ${fbPageId} for website ${targetSiteNormalized}`);
-                }
+                console.log(
+                  `[INFO] Auto-discovered Meta Page ID ${fbPageId} for website ${targetSiteNormalized}`
+                );
+              } else if (loaded.error) {
+                console.warn("Meta auto-discovery empty:", loaded.error);
               }
             } catch (discErr) {
               console.warn("Failed to auto-discover Meta accounts:", discErr.message);

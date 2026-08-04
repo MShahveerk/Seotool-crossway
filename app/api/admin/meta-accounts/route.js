@@ -7,15 +7,24 @@ export async function GET() {
   try {
     await requireGlobalSiteAccess();
 
-    const { accounts, error } = await loadMetaAccounts({ includeDatabase: true });
+    const { accounts, error, warning, stats, graphErrors, tokensConfigured } = await loadMetaAccounts({
+      includeDatabase: true,
+    });
 
     if (error && accounts.length === 0) {
-      return Response.json({ accounts: [], error }, { status: 200 });
+      return Response.json(
+        { accounts: [], error, stats, graphErrors, tokensConfigured },
+        { status: 200 }
+      );
     }
 
     return Response.json({
       accounts,
-      ...(error ? { warning: error } : {}),
+      stats,
+      tokensConfigured,
+      graphErrors,
+      ...(warning ? { warning } : {}),
+      ...(error ? { error } : {}),
     });
   } catch (error) {
     const msg = error.message || "Failed to fetch Meta accounts";
