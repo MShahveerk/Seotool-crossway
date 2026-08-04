@@ -3,11 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   FiCpu,
-  FiCopy,
-  FiMail,
   FiPlay,
   FiRefreshCw,
-  FiCheck,
   FiRotateCcw,
   FiSave,
 } from "react-icons/fi";
@@ -24,12 +21,14 @@ import {
   FixesDashboard,
   GapsDashboard,
 } from "./seoAutopilot/ResultDashboards";
+import BlogSeedsPanel from "./seoAutopilot/BlogSeedsPanel";
+import PitchesPanel from "./seoAutopilot/PitchesPanel";
 
 const TABS = [
   { id: "overview", label: "Scorecard" },
   { id: "fixes", label: "Fixes" },
   { id: "gaps", label: "Gaps" },
-  { id: "writer", label: "Writer sends" },
+  { id: "writer", label: "Blog seeds" },
   { id: "pitches", label: "Pitches" },
   { id: "agents", label: "Agents" },
   { id: "smtp", label: "SMTP" },
@@ -57,6 +56,7 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
   const [runs, setRuns] = useState([]);
   const [artifacts, setArtifacts] = useState([]);
   const [pitches, setPitches] = useState([]);
+  const [writerSends, setWriterSends] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
@@ -64,6 +64,7 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
   const [notice, setNotice] = useState("");
   const [activeRunId, setActiveRunId] = useState(null);
   const [researching, setResearching] = useState(false);
+  const [pitchBusyId, setPitchBusyId] = useState("");
 
   const agents = config?.agents || [];
   const defaultPrompts = config?.defaultPrompts || {};
@@ -112,21 +113,24 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
     setError("");
     try {
       const q = encodeURIComponent(siteLink);
-      const [cRes, rRes, aRes, pRes] = await Promise.all([
+      const [cRes, rRes, aRes, pRes, wRes] = await Promise.all([
         fetch(`/api/admin/seo-autopilot/site?siteLink=${q}`),
         fetch(`/api/admin/seo-autopilot/runs?siteLink=${q}`),
         fetch(`/api/admin/seo-autopilot/artifacts?siteLink=${q}`),
         fetch(`/api/admin/seo-autopilot/pitches?siteLink=${q}`),
+        fetch(`/api/admin/seo-autopilot/writer-sends?siteLink=${q}`),
       ]);
       const cData = await cRes.json();
       const rData = await rRes.json();
       const aData = await aRes.json();
       const pData = await pRes.json();
+      const wData = await wRes.json();
       if (!cRes.ok) throw new Error(cData.error || "Failed to load config");
       setConfig(cData.config);
       setRuns(rData.runs || []);
       setArtifacts(aData.artifacts || []);
       setPitches(pData.pitches || []);
+      setWriterSends(wRes.ok ? wData.sends || [] : []);
     } catch (err) {
       setError(err.message || "Failed to load Autopilot");
     } finally {
@@ -374,94 +378,58 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
         {tab === "gaps" && <GapsDashboard artifacts={artifacts} />}
 
         {tab === "writer" && (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-600">
-              Writer payloads are stored here and also appear in{" "}
-              <span className="font-semibold">Blog Automation Studio → Writer sends</span>, where you
-              can run each one through Blog Studio.
-            </p>
-            {artifacts.filter((a) => a.kind === "writer_sends").length === 0 ? (
-              <p className="text-sm text-gray-500">
-                No Writer output yet. Run Diagnoser then Writer (or a full Autopilot run).
-              </p>
-            ) : (
-              artifacts
-                .filter((a) => a.kind === "writer_sends")
-                .map((a) => (
-                  <div key={a.id} className="rounded-2xl border border-gray-100 bg-white p-4">
-                    <h3 className="text-sm font-bold text-gray-900">{a.title || "Writer sends"}</h3>
-                    <pre className="mt-3 max-h-72 overflow-auto rounded-xl bg-gray-50 border border-gray-100 p-3 text-xs text-gray-800 whitespace-pre-wrap">
-                      {a.contentText || JSON.stringify(a.contentJson, null, 2)}
-                    </pre>
-                  </div>
-                ))
-            )}
-          </div>
+          <BlogSeedsPanel
+            siteLink={siteLink}
+            mode="autopilot"
+            sends={writerSends}
+            loading={loading}
+            onReload={loadAll}
+          />
         )}
 
         {tab === "pitches" && (
-          <div className="space-y-3">
-            {!pitches.length ? (
-              <p className="text-sm text-gray-500">
-                No pitches yet. Run Foundation + Pitch agents, configure SMTP, then send.
-              </p>
-            ) : (
-              pitches.map((p) => (
-                <div key={p.id} className="rounded-2xl border border-gray-100 bg-white p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-sm font-bold text-gray-900">{p.title}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {p.targetName || "—"} · {p.targetEmail || "no email"} ·{" "}
-                        <span className="uppercase font-semibold">{p.status}</span>
-                        {p.domainAuthority != null ? ` · DA ${p.domainAuthority}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-semibold"
-                        onClick={async () => {
-                          const res = await fetch(`/api/admin/seo-autopilot/pitches/${p.id}`, {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ status: "completed" }),
-                          });
-                          const data = await res.json();
-                          if (!res.ok) setError(data.error || "Update failed");
-                          else loadAll();
-                        }}
-                      >
-                        <FiCheck className="w-3.5 h-3.5" /> Mark completed
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 rounded-lg bg-gray-900 text-white px-2.5 py-1.5 text-xs font-semibold"
-                        onClick={async () => {
-                          const res = await fetch(
-                            `/api/admin/seo-autopilot/pitches/${p.id}/send?siteLink=${encodeURIComponent(siteLink)}`,
-                            { method: "POST" }
-                          );
-                          const data = await res.json();
-                          if (!res.ok) setError(data.error || "Send failed");
-                          else {
-                            setNotice(`Sent to ${data.pitch?.targetEmail}`);
-                            loadAll();
-                          }
-                        }}
-                      >
-                        <FiMail className="w-3.5 h-3.5" /> Send email
-                      </button>
-                    </div>
-                  </div>
-                  <p className="mt-2 text-xs font-semibold text-gray-700">{p.subject}</p>
-                  <pre className="mt-2 max-h-48 overflow-auto rounded-xl bg-gray-50 border border-gray-100 p-3 text-xs text-gray-800 whitespace-pre-wrap">
-                    {p.bodyText}
-                  </pre>
-                </div>
-              ))
-            )}
-          </div>
+          <PitchesPanel
+            pitches={pitches}
+            siteLink={siteLink}
+            busyId={pitchBusyId}
+            onReload={loadAll}
+            onMarkCompleted={async (id) => {
+              setPitchBusyId(id);
+              setError("");
+              try {
+                const res = await fetch(`/api/admin/seo-autopilot/pitches/${id}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ status: "completed" }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Update failed");
+                await loadAll();
+              } catch (err) {
+                setError(err.message || "Update failed");
+              } finally {
+                setPitchBusyId("");
+              }
+            }}
+            onSend={async (id) => {
+              setPitchBusyId(id);
+              setError("");
+              try {
+                const res = await fetch(
+                  `/api/admin/seo-autopilot/pitches/${id}/send?siteLink=${encodeURIComponent(siteLink)}`,
+                  { method: "POST" }
+                );
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Send failed");
+                setNotice(`Sent to ${data.pitch?.targetEmail}`);
+                await loadAll();
+              } catch (err) {
+                setError(err.message || "Send failed");
+              } finally {
+                setPitchBusyId("");
+              }
+            }}
+          />
         )}
 
         {tab === "agents" && (

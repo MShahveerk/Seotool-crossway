@@ -35,7 +35,7 @@ import {
 
 const TABS = [
   { id: "run", label: "Run" },
-  { id: "writer-sends", label: "Writer sends" },
+  { id: "writer-sends", label: "Autopilot seeds" },
   { id: "agents", label: "Agents" },
   { id: "seeds", label: "SEO Seeds" },
   { id: "excel", label: "Excel queue" },
@@ -821,8 +821,8 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                 onRan={async (run) => {
                   setSaveMessage(
                     run?.id
-                      ? `Queued Blog Studio run ${run.id} from Writer send.`
-                      : "Queued Blog Studio run from Writer send."
+                      ? `Queued Blog Studio run ${run.id} from Autopilot seed.`
+                      : "Queued Blog Studio run from Autopilot seed."
                   );
                   await loadRuns();
                   setTab("run");
