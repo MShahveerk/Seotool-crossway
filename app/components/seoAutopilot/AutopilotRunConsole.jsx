@@ -1,6 +1,7 @@
 "use client";
 
-import { FiLoader, FiXCircle } from "react-icons/fi";
+import { useState } from "react";
+import { FiChevronDown, FiChevronRight, FiLoader, FiXCircle } from "react-icons/fi";
 import { Radar } from "lucide-react";
 import { formatMoney, formatWhen, statusTone } from "../blogStudio/studioConstants";
 
@@ -13,15 +14,43 @@ function stageTone(status) {
   return "border-dashed border-gray-200 bg-gray-50/60";
 }
 
-export default function AutopilotRunConsole({ run, onCancel, cancelling }) {
+function stageStatusOf(stage) {
+  return (
+    stage?.status ||
+    (stage?.ok === true ? "succeeded" : stage?.ok === false ? "failed" : "pending")
+  );
+}
+
+function formatStageBody(stage) {
+  if (stage?.data && typeof stage.data === "object") {
+    try {
+      return JSON.stringify(stage.data, null, 2);
+    } catch {
+      /* fall through */
+    }
+  }
+  if (stage?.rawText) return String(stage.rawText);
+  if (stage?.preview) return String(stage.preview);
+  return "";
+}
+
+export default function AutopilotRunConsole({
+  run,
+  onCancel,
+  cancelling,
+  runArtifacts = [],
+  loadingDetail = false,
+}) {
+  const [expanded, setExpanded] = useState({});
+
   if (!run) {
     return (
       <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-10 text-center">
         <Radar className="mx-auto h-8 w-8 text-emerald-700/70" />
-        <p className="mt-3 text-sm font-semibold text-gray-900">No live run selected</p>
+        <p className="mt-3 text-sm font-semibold text-gray-900">No run selected</p>
         <p className="mt-1 text-sm text-gray-500 max-w-md mx-auto">
-          Click <span className="font-semibold">Run Autopilot</span> to open the live console — each
-          agent stage appears here as it starts, with cost and a short result preview.
+          Click <span className="font-semibold">Run Autopilot</span> for a live console, or open any
+          past run below to inspect every agent stage and full JSON output.
         </p>
       </div>
     );
@@ -29,17 +58,24 @@ export default function AutopilotRunConsole({ run, onCancel, cancelling }) {
 
   const stages = Array.isArray(run.stagesJson) ? run.stagesJson : [];
   const live = ["queued", "running"].includes(String(run.status || ""));
-  const scorecard = run.scorecardJson && typeof run.scorecardJson === "object" ? run.scorecardJson : null;
+  const scorecard =
+    run.scorecardJson && typeof run.scorecardJson === "object" ? run.scorecardJson : null;
+  const artifacts = Array.isArray(runArtifacts) ? runArtifacts : [];
+
+  const toggle = (idx) => {
+    setExpanded((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  };
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gradient-to-r from-[#f4fbf4] to-white px-4 py-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Autopilot run console
+            {live ? "Live Autopilot run" : "Past Autopilot run"}
+            {loadingDetail ? " · loading full output…" : ""}
           </p>
           <p className="text-sm font-semibold text-gray-900 mt-0.5">
-            {run.trigger || "manual"} · {run.id?.slice(0, 10)}…
+            {run.trigger || "manual"} · {run.id}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -69,7 +105,7 @@ export default function AutopilotRunConsole({ run, onCancel, cancelling }) {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-0">
         <div className="p-4 border-b xl:border-b-0 xl:border-r border-gray-100">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">
-            Agent stages
+            Agent stages {stages.length ? `(${stages.length})` : ""}
           </p>
           <ol className="space-y-2">
             {!stages.length ? (
@@ -78,7 +114,10 @@ export default function AutopilotRunConsole({ run, onCancel, cancelling }) {
               </li>
             ) : null}
             {stages.map((stage, idx) => {
-              const status = stage.status || (stage.ok === true ? "succeeded" : stage.ok === false ? "failed" : "pending");
+              const status = stageStatusOf(stage);
+              const isOpen = Boolean(expanded[idx]);
+              const body = formatStageBody(stage);
+              const hasDetail = Boolean(stage?.data || stage?.rawText || stage?.preview);
               return (
                 <li
                   key={`${stage.agentId || stage.title}-${idx}`}
@@ -113,14 +152,33 @@ export default function AutopilotRunConsole({ run, onCancel, cancelling }) {
                     </div>
                   </div>
                   {stage.error ? (
-                    <pre className="mt-2 max-h-32 overflow-auto rounded-lg bg-red-50 border border-red-100 p-2 text-[11px] text-red-700 whitespace-pre-wrap break-words">
+                    <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-red-50 border border-red-100 p-2 text-[11px] text-red-700 whitespace-pre-wrap break-words">
                       {String(stage.error)}
                     </pre>
                   ) : null}
-                  {stage.preview && status === "succeeded" ? (
-                    <p className="mt-2 text-[11px] text-gray-600 leading-relaxed whitespace-pre-wrap line-clamp-4">
+                  {stage.preview && !isOpen ? (
+                    <p className="mt-2 text-[11px] text-gray-600 leading-relaxed whitespace-pre-wrap">
                       {String(stage.preview)}
                     </p>
+                  ) : null}
+                  {hasDetail ? (
+                    <button
+                      type="button"
+                      onClick={() => toggle(idx)}
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 hover:underline"
+                    >
+                      {isOpen ? (
+                        <FiChevronDown className="h-3.5 w-3.5" />
+                      ) : (
+                        <FiChevronRight className="h-3.5 w-3.5" />
+                      )}
+                      {isOpen ? "Hide full output" : "Show full output"}
+                    </button>
+                  ) : null}
+                  {isOpen && body ? (
+                    <pre className="mt-2 max-h-[28rem] overflow-auto rounded-lg bg-gray-950 text-gray-100 border border-gray-800 p-3 text-[11px] leading-relaxed whitespace-pre-wrap break-words font-mono">
+                      {body}
+                    </pre>
                   ) : null}
                 </li>
               );
@@ -142,7 +200,7 @@ export default function AutopilotRunConsole({ run, onCancel, cancelling }) {
 
         <div className="p-4 bg-[#fafcfa] space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Live scorecard snapshot
+            {live ? "Live scorecard snapshot" : "Scorecard for this run"}
           </p>
           {scorecard ? (
             <div className="space-y-3">
@@ -169,11 +227,11 @@ export default function AutopilotRunConsole({ run, onCancel, cancelling }) {
                   {scorecard.summary}
                 </p>
               ) : (
-                <p className="text-sm text-gray-500">Summary fills in after Auditor / GEO stages.</p>
+                <p className="text-sm text-gray-500">No summary on this scorecard.</p>
               )}
               {Array.isArray(scorecard.topProblems) && scorecard.topProblems.length ? (
                 <ul className="space-y-1.5">
-                  {scorecard.topProblems.slice(0, 4).map((p, i) => (
+                  {scorecard.topProblems.slice(0, 8).map((p, i) => (
                     <li
                       key={`${p.title}-${i}`}
                       className="rounded-lg border border-gray-100 bg-white px-3 py-2 text-sm text-gray-800"
@@ -191,12 +249,33 @@ export default function AutopilotRunConsole({ run, onCancel, cancelling }) {
             <p className="text-sm text-gray-500 leading-relaxed">
               {live
                 ? "Scorecard updates as Auditor and AI-Search Spy finish…"
-                : "No scorecard on this run."}
+                : "No scorecard stored on this run."}
             </p>
           )}
+
+          {artifacts.length ? (
+            <div className="pt-2 border-t border-gray-100">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                Artifacts from this run ({artifacts.length})
+              </p>
+              <ul className="space-y-1.5 max-h-48 overflow-auto">
+                {artifacts.map((a) => (
+                  <li
+                    key={a.id}
+                    className="rounded-lg border border-gray-100 bg-white px-3 py-2 text-xs text-gray-800"
+                  >
+                    <span className="font-semibold text-gray-900">{a.kind}</span>
+                    {a.title ? <span className="text-gray-600"> · {a.title}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <p className="text-[11px] text-gray-500 leading-relaxed">
-            Finished artifacts land in Scorecard, Fixes, Gaps, Blog seeds, and Pitches tabs after the
-            run completes.
+            {live
+              ? "Finished artifacts also land in Scorecard, Fixes, Gaps, Blog seeds, and Pitches."
+              : "Expand any stage for the full JSON the agent returned. Latest site-wide tabs may show newer runs."}
           </p>
         </div>
       </div>

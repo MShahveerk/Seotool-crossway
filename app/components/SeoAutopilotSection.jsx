@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FiCpu,
   FiPlay,
@@ -64,9 +64,29 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [activeRun, setActiveRun] = useState(null);
+  const [loadingRunDetail, setLoadingRunDetail] = useState(false);
   const [cancellingRun, setCancellingRun] = useState(false);
   const [researching, setResearching] = useState(false);
   const [pitchBusyId, setPitchBusyId] = useState("");
+  const selectedRunIdRef = useRef(null);
+
+  const fetchRunDetail = useCallback(async (runId) => {
+    const id = String(runId || "").trim();
+    if (!id) return null;
+    selectedRunIdRef.current = id;
+    setLoadingRunDetail(true);
+    try {
+      const res = await fetch(`/api/admin/seo-autopilot/runs/${id}`);
+      const data = await res.json();
+      if (!res.ok || !data.run) throw new Error(data.error || "Failed to load run");
+      setActiveRun(data.run);
+      return data.run;
+    } catch {
+      return null;
+    } finally {
+      setLoadingRunDetail(false);
+    }
+  }, []);
 
   const agents = config?.agents || [];
   const defaultPrompts = config?.defaultPrompts || {};
@@ -134,19 +154,33 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
       setArtifacts(aData.artifacts || []);
       setPitches(pData.pitches || []);
       setWriterSends(wRes.ok ? wData.sends || [] : []);
-      setActiveRun((prev) => {
-        if (prev?.id) {
-          const match = nextRuns.find((r) => r.id === prev.id);
-          if (match) return match;
+
+      const live = nextRuns.find((r) => ["queued", "running"].includes(r.status));
+      const preferredId = live?.id || selectedRunIdRef.current || nextRuns[0]?.id || null;
+      if (preferredId) {
+        selectedRunIdRef.current = preferredId;
+        // List is summarized — load full stage JSON for the selected / past run.
+        const detailRes = await fetch(`/api/admin/seo-autopilot/runs/${preferredId}`);
+        const detailData = await detailRes.json();
+        if (detailRes.ok && detailData.run) {
+          setActiveRun(detailData.run);
+        } else {
+          setActiveRun(live || nextRuns.find((r) => r.id === preferredId) || nextRuns[0] || null);
         }
-        const live = nextRuns.find((r) => ["queued", "running"].includes(r.status));
-        return live || prev || nextRuns[0] || null;
-      });
+      } else {
+        selectedRunIdRef.current = null;
+        setActiveRun(null);
+      }
     } catch (err) {
       setError(err.message || "Failed to load Autopilot");
     } finally {
       setLoading(false);
     }
+  }, [siteLink]);
+
+  useEffect(() => {
+    selectedRunIdRef.current = null;
+    setActiveRun(null);
   }, [siteLink]);
 
   useEffect(() => {
@@ -215,14 +249,12 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Run failed");
-      setActiveRun(data.run || null);
       setNotice("Autopilot run started — watch stages in the Run console.");
       setTab("runs");
-      // Immediate refresh so pending stages show up quickly
       if (data.run?.id) {
-        const rRes = await fetch(`/api/admin/seo-autopilot/runs/${data.run.id}`);
-        const rData = await rRes.json();
-        if (rRes.ok && rData.run) setActiveRun(rData.run);
+        await fetchRunDetail(data.run.id);
+      } else {
+        setActiveRun(data.run || null);
       }
     } catch (err) {
       setRunning(false);
@@ -708,55 +740,82 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
               run={activeRun}
               onCancel={cancelActiveRun}
               cancelling={cancellingRun}
+              loadingDetail={loadingRunDetail}
+              runArtifacts={
+                activeRun?.id
+                  ? artifacts.filter((a) => a.runId === activeRun.id)
+                  : []
+              }
             />
 
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">
-                Recent runs
-              </p>
+              <div className="flex flex-wrap items-end justify-between gap-2 mb-2">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                    Run history
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Open any past run to see full agent JSON, scorecard, and artifacts for that run.
+                  </p>
+                </div>
+                <p className="text-[11px] font-semibold text-gray-500">
+                  {runs.length} run{runs.length === 1 ? "" : "s"}
+                </p>
+              </div>
               {!runs.length ? (
                 <p className="text-sm text-gray-500">No runs yet. Click Run Autopilot to start.</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[28rem] overflow-auto pr-1">
                   {runs.map((r) => {
                     const selected = activeRun?.id === r.id;
+                    const liveRow = ["queued", "running"].includes(String(r.status || ""));
+                    const stageCount = Array.isArray(r.stagesJson) ? r.stagesJson.length : 0;
+                    const doneCount = Array.isArray(r.stagesJson)
+                      ? r.stagesJson.filter((s) =>
+                          ["succeeded", "completed", "failed", "cancelled"].includes(
+                            String(s.status || "")
+                          )
+                        ).length
+                      : 0;
                     return (
                       <button
                         key={r.id}
                         type="button"
-                        onClick={async () => {
-                          setActiveRun(r);
-                          try {
-                            const res = await fetch(`/api/admin/seo-autopilot/runs/${r.id}`);
-                            const data = await res.json();
-                            if (res.ok && data.run) setActiveRun(data.run);
-                          } catch {
-                            /* keep list row */
-                          }
-                        }}
+                        disabled={loadingRunDetail && selected}
+                        onClick={() => fetchRunDetail(r.id)}
                         className={`w-full rounded-xl border px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-left transition ${
                           selected
                             ? "border-emerald-500 bg-emerald-50/50"
                             : "border-gray-100 bg-white hover:border-gray-200"
                         }`}
                       >
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-sm font-semibold text-gray-900">
-                            {r.status} · {r.trigger}
+                            <span className="capitalize">{r.status}</span>
+                            {" · "}
+                            {r.trigger || "manual"}
+                            {liveRow ? " · live" : ""}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 truncate">
                             {new Date(r.createdAt).toLocaleString()}
+                            {r.finishedAt
+                              ? ` → ${new Date(r.finishedAt).toLocaleString()}`
+                              : ""}
                             {r.totalCostUsd != null
                               ? ` · ~$${Number(r.totalCostUsd).toFixed(4)}`
                               : ""}
-                            {Array.isArray(r.stagesJson)
-                              ? ` · ${r.stagesJson.length} stage(s)`
-                              : ""}
-                            {r.errorMessage ? ` · ${r.errorMessage}` : ""}
+                            {stageCount ? ` · ${doneCount}/${stageCount} stages` : ""}
                           </p>
+                          {r.errorMessage ? (
+                            <p className="text-xs text-red-700 mt-1 line-clamp-2">{r.errorMessage}</p>
+                          ) : null}
                         </div>
-                        <span className="text-[11px] font-semibold text-emerald-800">
-                          {selected ? "Viewing" : "Open console"}
+                        <span className="text-[11px] font-semibold text-emerald-800 shrink-0">
+                          {selected
+                            ? loadingRunDetail
+                              ? "Loading…"
+                              : "Viewing full run"
+                            : "View full run"}
                         </span>
                       </button>
                     );
