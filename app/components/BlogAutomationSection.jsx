@@ -20,6 +20,7 @@ import ExcelQueuePanel from "./blogStudio/ExcelQueuePanel";
 import WriterSendsPanel from "./blogStudio/WriterSendsPanel";
 import ModelCombobox from "./studioShared/ModelCombobox";
 import StudioReferenceImages from "./studioShared/StudioReferenceImages";
+import StudioBrandKit from "./studioShared/StudioBrandKit";
 import { BLOG_STUDIO_DEFAULT_PROMPTS } from "../../lib/blogStudio/defaults";
 import {
   INTERVAL_OPTIONS,
@@ -796,6 +797,13 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                   uploadUrl={selectedSite ? `/api/admin/blog-automation/site/asset${siteQ}` : ""}
                   onConfig={setSiteConfig}
                   onMessage={setSaveMessage}
+                />
+                <StudioBrandKit
+                  brandKit={siteConfig.brandKitJson}
+                  apiUrl={selectedSite ? `/api/admin/blog-automation/site/brand-kit${siteQ}` : ""}
+                  onConfig={setSiteConfig}
+                  onMessage={setSaveMessage}
+                  onPatchLocal={(brandKitJson) => patchSite({ brandKitJson })}
                 />
                 <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center">
                   <FiUpload className="mx-auto h-6 w-6 text-[#1d9c35]" />

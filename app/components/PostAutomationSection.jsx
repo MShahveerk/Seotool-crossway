@@ -19,6 +19,7 @@ import RunConsole from "./postsStudio/RunConsole";
 import ExcelQueuePanel from "./postsStudio/ExcelQueuePanel";
 import ModelCombobox from "./studioShared/ModelCombobox";
 import StudioReferenceImages from "./studioShared/StudioReferenceImages";
+import StudioBrandKit from "./studioShared/StudioBrandKit";
 import { POST_STUDIO_DEFAULT_PROMPTS } from "../../lib/postsStudio/defaults";
 import {
   INTERVAL_OPTIONS,
@@ -693,6 +694,13 @@ export default function PostAutomationSection({ selectedSite = "" }) {
                   uploadUrl={selectedSite ? `/api/admin/post-automation/site/asset${siteQ}` : ""}
                   onConfig={setSiteConfig}
                   onMessage={setSaveMessage}
+                />
+                <StudioBrandKit
+                  brandKit={siteConfig.brandKitJson}
+                  apiUrl={selectedSite ? `/api/admin/post-automation/site/brand-kit${siteQ}` : ""}
+                  onConfig={setSiteConfig}
+                  onMessage={setSaveMessage}
+                  onPatchLocal={(brandKitJson) => patchSite({ brandKitJson })}
                 />
               </div>
             )}

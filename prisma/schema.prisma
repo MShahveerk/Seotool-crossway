@@ -651,6 +651,8 @@ model BlogAutomationSiteConfig {
   imagePrompt          String?   @map("image_prompt") @db.Text
   /// When true, generate up to 3 alternate featured images alongside the primary.
   generateBackupImages Boolean   @default(false) @map("generate_backup_images")
+  /// Instagram matte + logo / AI chrome / Figma template settings for featured images.
+  brandKitJson         Json?     @map("brand_kit_json")
   agent1Prompt         String?   @map("agent1_prompt") @db.Text
   agent2Prompt         String?   @map("agent2_prompt") @db.Text
   agent3Prompt         String?   @map("agent3_prompt") @db.Text
@@ -777,6 +779,8 @@ model PostAutomationSiteConfig {
   imagePrompt          String?   @map("image_prompt") @db.Text
   /// When true, generate up to 3 alternate feed creatives alongside the primary.
   generateBackupImages Boolean   @default(false) @map("generate_backup_images")
+  /// Instagram matte + logo / AI chrome / Figma template settings for feed images.
+  brandKitJson         Json?     @map("brand_kit_json")
   agent1Prompt         String?   @map("agent1_prompt") @db.Text
   agent2Prompt         String?   @map("agent2_prompt") @db.Text
   interpreterPrompt    String?   @map("interpreter_prompt") @db.Text

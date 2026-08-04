@@ -57,17 +57,14 @@ function pitchWhy(p) {
 
 function draftFromPitch(p) {
   if (!p) return null;
-  const meta = p.metaJson && typeof p.metaJson === "object" ? p.metaJson : {};
   return {
-    title: p.title || "",
-    targetName: p.targetName || "",
-    targetUrl: p.targetUrl || "",
-    targetEmail: p.targetEmail || "",
     subject: p.subject || "",
     bodyText: p.bodyText || "",
-    why: meta.why || pitchWhy(p),
-    domainAuthority: p.domainAuthority != null ? String(p.domainAuthority) : "",
   };
+}
+
+function isListingPitch(p) {
+  return String(p?.source || "").toLowerCase() === "foundation";
 }
 
 async function copyText(text) {
@@ -135,20 +132,13 @@ export default function PitchesPanel({
   }, [active?.id, active?.updatedAt]);
 
   const meta = sourceMeta(active?.source);
-  const isFoundation = String(active?.source || "").toLowerCase() === "foundation";
-  const submitUrl = ensureHttp(draft?.targetUrl || active?.targetUrl || "");
+  const isFoundation = isListingPitch(active);
+  const submitUrl = ensureHttp(active?.targetUrl || "");
+  const why = active ? pitchWhy(active) : "";
   const dirty =
     active &&
     draft &&
-    (draft.title !== (active.title || "") ||
-      draft.targetName !== (active.targetName || "") ||
-      draft.targetUrl !== (active.targetUrl || "") ||
-      draft.targetEmail !== (active.targetEmail || "") ||
-      draft.subject !== (active.subject || "") ||
-      draft.bodyText !== (active.bodyText || "") ||
-      draft.why !== ((active.metaJson && active.metaJson.why) || pitchWhy(active)) ||
-      draft.domainAuthority !==
-        (active.domainAuthority != null ? String(active.domainAuthority) : ""));
+    (draft.subject !== (active.subject || "") || draft.bodyText !== (active.bodyText || ""));
 
   const patchDraft = (key, value) => setDraft((d) => (d ? { ...d, [key]: value } : d));
 
@@ -158,16 +148,10 @@ export default function PitchesPanel({
     setNotice("");
     try {
       await onSave(active.id, {
-        title: draft.title,
-        targetName: draft.targetName,
-        targetUrl: draft.targetUrl,
-        targetEmail: draft.targetEmail,
         subject: draft.subject,
         bodyText: draft.bodyText,
-        why: draft.why,
-        domainAuthority: draft.domainAuthority === "" ? null : Number(draft.domainAuthority),
       });
-      setNotice("Pitch saved.");
+      setNotice("Draft saved.");
     } catch (err) {
       setNotice(err.message || "Save failed.");
     } finally {
@@ -199,11 +183,9 @@ export default function PitchesPanel({
           <div>
             <h3 className="text-sm font-bold text-gray-900">Outreach pitches</h3>
             <p className="mt-1 text-sm text-gray-600 max-w-3xl leading-relaxed">
-              Grouped by Autopilot run time.{" "}
-              <span className="font-semibold">Send email</span> only works with Autopilot SMTP (or{" "}
-              <code className="text-xs">SMTP_*</code> env) and a real target inbox — it does{" "}
-              <span className="font-semibold">not</span> fill directory web forms. For foundation
-              listings, open the submission link and paste your draft.
+              Grouped by Autopilot run time. Listings use the submission link (no email send). Editorial
+              pitches can email via SMTP. Only subject and draft body are editable — target facts stay
+              locked.
             </p>
           </div>
         </div>
@@ -304,7 +286,7 @@ export default function PitchesPanel({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h4 className="text-base font-bold text-gray-900">
-                    {draft.title || draft.targetName || "Pitch"}
+                    {active.title || active.targetName || "Pitch"}
                   </h4>
                   <span
                     className={`text-[10px] font-bold uppercase tracking-wide rounded-full border px-2 py-0.5 ${statusTone(active.status)}`}
@@ -330,7 +312,7 @@ export default function PitchesPanel({
                   onClick={saveDraft}
                 >
                   <FiSave className="w-3.5 h-3.5" />
-                  {saving ? "Saving…" : "Save edits"}
+                  {saving ? "Saving…" : "Save draft"}
                 </button>
                 <button
                   type="button"
@@ -339,7 +321,7 @@ export default function PitchesPanel({
                     const ok = await copyText(
                       [`Subject: ${draft.subject}`, "", draft.bodyText].join("\n")
                     );
-                    setNotice(ok ? "Pitch copied." : "Could not copy.");
+                    setNotice(ok ? "Draft copied." : "Could not copy.");
                   }}
                 >
                   <FiCopy className="w-3.5 h-3.5" /> Copy
@@ -365,46 +347,58 @@ export default function PitchesPanel({
                     <FiCheck className="w-3.5 h-3.5" /> Mark completed
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  disabled={busyId === active.id || saving || !String(draft.targetEmail || "").trim()}
-                  className="inline-flex items-center gap-1 rounded-lg bg-gray-900 text-white px-2.5 py-1.5 text-xs font-semibold disabled:opacity-50"
-                  onClick={async () => {
-                    if (dirty) {
-                      try {
-                        await saveDraft();
-                      } catch {
-                        return;
-                      }
+                {!isFoundation ? (
+                  <button
+                    type="button"
+                    disabled={
+                      busyId === active.id ||
+                      saving ||
+                      !String(active.targetEmail || "").trim()
                     }
-                    onSend?.(active.id);
-                  }}
-                  title={
-                    !draft.targetEmail
-                      ? "Add a target email first"
-                      : "Sends via Autopilot SMTP — does not submit web forms"
-                  }
-                >
-                  <FiMail className="w-3.5 h-3.5" /> Send email
-                </button>
+                    className="inline-flex items-center gap-1 rounded-lg bg-gray-900 text-white px-2.5 py-1.5 text-xs font-semibold disabled:opacity-50"
+                    onClick={async () => {
+                      if (dirty) {
+                        try {
+                          await saveDraft();
+                        } catch {
+                          return;
+                        }
+                      }
+                      onSend?.(active.id);
+                    }}
+                    title={
+                      !active.targetEmail
+                        ? "No target email on this pitch"
+                        : "Sends via Autopilot SMTP"
+                    }
+                  >
+                    <FiMail className="w-3.5 h-3.5" /> Send email
+                  </button>
+                ) : null}
               </div>
             </div>
 
             <div className="rounded-xl border border-amber-100 bg-amber-50/70 px-4 py-3 text-sm text-amber-950 leading-relaxed">
               {isFoundation ? (
                 <>
-                  <span className="font-semibold">Directory tip: </span>
-                  “Send email” will not create a listing on {draft.targetName || "this site"}. Use{" "}
-                  <span className="font-semibold">Open submission page</span>, paste the draft, then
-                  mark completed. Email is only for real editorial inboxes.
+                  <span className="font-semibold">Listing: </span>
+                  Open the submission page, paste the draft into their form, then mark completed.
+                  Email send is hidden for directory listings.
                 </>
               ) : (
                 <>
-                  <span className="font-semibold">Email tip: </span>
-                  Send works only if SMTP is set under Autopilot → SMTP and the target email is real.
-                  You can still open the page link and copy the draft into your own mail client.
+                  <span className="font-semibold">Editorial: </span>
+                  Send email needs Autopilot SMTP and a real inbox. Target details below are facts from
+                  Autopilot — only subject and body are editable.
                 </>
               )}
+            </div>
+
+            <div className="rounded-xl border border-sky-100 bg-sky-50/50 px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-sky-800">
+                Why this pitch
+              </p>
+              <p className="mt-1 text-sm text-gray-800 leading-relaxed">{why}</p>
             </div>
 
             <div className="rounded-xl border border-gray-100 bg-gray-50/70 px-4 py-3">
@@ -418,73 +412,49 @@ export default function PitchesPanel({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2">
-                <label className={labelClass}>Title</label>
-                <input
-                  className={inputClass}
-                  value={draft.title}
-                  onChange={(e) => patchDraft("title", e.target.value)}
-                />
+              <div className="rounded-xl border border-gray-100 px-3 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Target</p>
+                <p className="mt-1 text-sm font-semibold text-gray-900">{active.targetName || "—"}</p>
+                {submitUrl ? (
+                  <a
+                    href={submitUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 hover:underline break-all"
+                  >
+                    {active.targetUrl}
+                    <FiExternalLink className="w-3 h-3 shrink-0" />
+                  </a>
+                ) : (
+                  <p className="mt-1 text-xs text-gray-500">No URL on file</p>
+                )}
+                {!isFoundation ? (
+                  <p className="mt-1 text-xs text-gray-600">{active.targetEmail || "No email"}</p>
+                ) : null}
               </div>
-              <div>
-                <label className={labelClass}>Target name</label>
-                <input
-                  className={inputClass}
-                  value={draft.targetName}
-                  onChange={(e) => patchDraft("targetName", e.target.value)}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Est. DA</label>
-                <input
-                  className={inputClass}
-                  inputMode="numeric"
-                  value={draft.domainAuthority}
-                  onChange={(e) => patchDraft("domainAuthority", e.target.value)}
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass}>
-                  {isFoundation ? "Submission / profile URL" : "Target page URL"}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    className={inputClass}
-                    value={draft.targetUrl}
-                    onChange={(e) => patchDraft("targetUrl", e.target.value)}
-                    placeholder="https://example.com/submit"
-                  />
-                  {submitUrl ? (
-                    <a
-                      href={submitUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-900"
-                    >
-                      <Link2 className="w-3.5 h-3.5" /> Open
-                    </a>
+              <div className="rounded-xl border border-gray-100 px-3 py-3 space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                  Link signals
+                </p>
+                <div className="flex flex-wrap gap-2 text-xs font-semibold text-gray-700">
+                  {active.domainAuthority != null ? (
+                    <span className="rounded-full border border-gray-200 bg-white px-2.5 py-1">
+                      DA {active.domainAuthority}
+                    </span>
                   ) : null}
+                  <span className="rounded-full border border-gray-200 bg-white px-2.5 py-1 inline-flex items-center gap-1">
+                    <Link2 className="w-3 h-3" />
+                    {active.doFollow === false ? "nofollow" : "dofollow (expected)"}
+                  </span>
+                  <span className="rounded-full border border-gray-200 bg-white px-2.5 py-1 capitalize">
+                    {active.source || "outreach"}
+                  </span>
                 </div>
               </div>
               <div className="sm:col-span-2">
-                <label className={labelClass}>Target email (optional for directories)</label>
-                <input
-                  className={inputClass}
-                  value={draft.targetEmail}
-                  onChange={(e) => patchDraft("targetEmail", e.target.value)}
-                  placeholder="editor@example.com"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass}>Why this pitch</label>
-                <textarea
-                  className={`${inputClass} min-h-[72px]`}
-                  value={draft.why}
-                  onChange={(e) => patchDraft("why", e.target.value)}
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass}>Subject</label>
+                <label className={labelClass}>
+                  {isFoundation ? "Subject / listing label (editable)" : "Subject (editable)"}
+                </label>
                 <input
                   className={inputClass}
                   value={draft.subject}
@@ -493,7 +463,7 @@ export default function PitchesPanel({
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass}>
-                  {isFoundation ? "Submission draft (paste into their form)" : "Email body"}
+                  {isFoundation ? "Submission draft (editable)" : "Email body (editable)"}
                 </label>
                 <textarea
                   className={`${inputClass} min-h-[180px] font-sans`}
