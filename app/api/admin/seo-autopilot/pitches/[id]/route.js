@@ -9,6 +9,11 @@ export async function PATCH(req, { params }) {
     const { id: rawId } = await params;
     const id = String(rawId || "").trim();
     const body = await req.json().catch(() => ({}));
+    const existing = await prisma.seoAutopilotPitch.findUnique({ where: { id } });
+    if (!existing) {
+      return Response.json({ error: "Pitch not found." }, { status: 404 });
+    }
+
     const data = {};
     if (body.status !== undefined) {
       const status = String(body.status || "").toLowerCase();
@@ -19,8 +24,33 @@ export async function PATCH(req, { params }) {
       if (status === "completed") data.completedAt = new Date();
     }
     for (const key of ["subject", "bodyText", "bodyHtml", "targetEmail", "targetName", "targetUrl", "title"]) {
-      if (body[key] !== undefined) data[key] = body[key];
+      if (body[key] !== undefined) {
+        data[key] = body[key] == null ? null : String(body[key]);
+      }
     }
+    if (body.domainAuthority !== undefined) {
+      const n = Number(body.domainAuthority);
+      data.domainAuthority = Number.isFinite(n) ? Math.round(n) : null;
+    }
+    if (body.doFollow !== undefined) {
+      data.doFollow = body.doFollow === null ? null : Boolean(body.doFollow);
+    }
+    if (body.why !== undefined || (body.metaJson && typeof body.metaJson === "object")) {
+      const prev =
+        existing.metaJson && typeof existing.metaJson === "object" ? existing.metaJson : {};
+      const next = {
+        ...prev,
+        ...(body.metaJson && typeof body.metaJson === "object" ? body.metaJson : {}),
+      };
+      if (body.why !== undefined) next.why = String(body.why || "");
+      data.metaJson = next;
+    }
+    if (data.bodyText !== undefined && body.bodyHtml === undefined) {
+      data.bodyHtml = data.bodyText
+        ? `<p>${String(data.bodyText).replace(/\n/g, "<br/>")}</p>`
+        : null;
+    }
+
     const pitch = await prisma.seoAutopilotPitch.update({ where: { id }, data });
     return Response.json({ pitch });
   } catch (error) {

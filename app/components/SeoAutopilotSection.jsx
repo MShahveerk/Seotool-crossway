@@ -393,6 +393,17 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
             siteLink={siteLink}
             busyId={pitchBusyId}
             onReload={loadAll}
+            onSave={async (id, patch) => {
+              const res = await fetch(`/api/admin/seo-autopilot/pitches/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(patch),
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error || "Save failed");
+              await loadAll();
+              return data.pitch;
+            }}
             onMarkCompleted={async (id) => {
               setPitchBusyId(id);
               setError("");

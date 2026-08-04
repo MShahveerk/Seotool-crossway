@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FadeIn } from "../ui-shared/Motion";
+import CrosswayLogo from "../ui-shared/CrosswayLogo";
 
 export default function AuthLayout({ title, description, children, footer }) {
   return (
@@ -19,12 +20,10 @@ export default function AuthLayout({ title, description, children, footer }) {
             href="/login"
             className="mb-4 inline-flex items-center gap-3 transition-smooth hover:scale-[1.03] active:scale-[0.98]"
           >
-            <img
-              src="/crossway-logo.png"
-              alt="Crossway"
-              width={56}
-              height={56}
-              className="rounded-xl object-contain shadow-md ring-1 ring-border transition-smooth hover:shadow-lg"
+            <CrosswayLogo
+              variant="light"
+              size={56}
+              className="rounded-xl shadow-md ring-1 ring-border transition-smooth hover:shadow-lg"
             />
           </Link>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Crossway Suite</p>

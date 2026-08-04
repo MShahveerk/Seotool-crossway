@@ -37,6 +37,7 @@ import {
   mergeClientAccountEntries,
 } from "@/lib/clientAccountList";
 import ClientAccountLogo from "@/app/components/ui-shared/ClientAccountLogo";
+import CrosswayLogo from "@/app/components/ui-shared/CrosswayLogo";
 import {
   Sidebar,
   SidebarContent,
@@ -374,7 +375,8 @@ export default function AppSidebar({
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader className="border-b border-sidebar-border/80">
         <div className="flex items-center gap-3 px-1 py-1">
-          <img src="/crossway-logo.png" alt="Crossway" width={36} height={36} className="rounded-lg object-contain" />
+          <CrosswayLogo variant="light" size={36} className="dark:hidden" />
+          <CrosswayLogo variant="dark" size={36} className="hidden dark:inline-flex" />
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
             <p className="truncate text-sm font-bold text-sidebar-foreground">Crossway</p>
             <p className="truncate text-xs text-muted-foreground">SEO & Marketing Suite</p>
