@@ -25,6 +25,7 @@ import {
   Users,
   Activity,
   Link2,
+  Presentation,
 } from "lucide-react";
 import { isMetaPageId } from "@/lib/siteAccess";
 import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";
@@ -97,6 +98,10 @@ const blogsMenuItems = [
   { id: "blog-autoschedule", label: "Blog Autoscheduler", icon: CalendarClock },
 ];
 
+const reportsMenuItems = [
+  { id: "reports-studio", label: "Report Studio", icon: Presentation },
+];
+
 function groupContainsSection(items, sectionId) {
   return items.some((item) => item.id === sectionId);
 }
@@ -137,6 +142,7 @@ export default function AppSidebar({
   const [seoOpen, setSeoOpen] = useState(true);
   const [smmOpen, setSmmOpen] = useState(true);
   const [blogsOpen, setBlogsOpen] = useState(true);
+  const [reportsOpen, setReportsOpen] = useState(true);
 
   const userRole = session?.user?.role;
 
@@ -266,6 +272,7 @@ export default function AppSidebar({
     if (groupContainsSection(seoMenuItems, activeSection)) setSeoOpen(true);
     if (groupContainsSection(smmMenuItems, activeSection)) setSmmOpen(true);
     if (groupContainsSection(blogsMenuItems, activeSection)) setBlogsOpen(true);
+    if (groupContainsSection(reportsMenuItems, activeSection)) setReportsOpen(true);
   }, [activeSection]);
 
   const menuContext = { session, hasGlobalSiteAccess, isWebsiteSelected };
@@ -276,6 +283,7 @@ export default function AppSidebar({
   const visibleSeoItems = seoMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleSmmItems = smmMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleBlogItems = blogsMenuItems.filter((item) => filterMenuItem(item, menuContext));
+  const visibleReportsItems = reportsMenuItems.filter((item) => filterMenuItem(item, menuContext));
 
   const seoItemsForMenu = isWebsiteSelected
     ? visibleSeoItems
@@ -285,6 +293,7 @@ export default function AppSidebar({
   const showSeoGroup = seoItemsForMenu.length > 0;
   const showSmmGroup = visibleSmmItems.length > 0;
   const showBlogsGroup = visibleBlogItems.length > 0;
+  const showReportsGroup = visibleReportsItems.length > 0;
 
   const getItemBadge = (item) => {
     if (item.id === "my-approvals" && approvalUserUnread > 0) {
@@ -412,6 +421,10 @@ export default function AppSidebar({
         {showSmmGroup ? renderMenuGroup("Social Media", Megaphone, visibleSmmItems, smmOpen, setSmmOpen, "smm") : null}
 
         {showBlogsGroup ? renderMenuGroup("Blogs", FileText, visibleBlogItems, blogsOpen, setBlogsOpen, "blogs") : null}
+
+        {showReportsGroup
+          ? renderMenuGroup("Reports", Presentation, visibleReportsItems, reportsOpen, setReportsOpen, "reports")
+          : null}
 
         {canManageUsers ? (
           <SidebarGroup>

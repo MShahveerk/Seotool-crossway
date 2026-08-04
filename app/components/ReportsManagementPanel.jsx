@@ -93,7 +93,9 @@ export default function ReportsManagementPanel() {
           </div>
           <p className="text-sm text-gray-600 mt-1 max-w-2xl">
             Landscape slide-deck PDFs (website, social, or combined) emailed from each user&apos;s report
-            toggles. Super admins always receive all sites (one email per site).
+            toggles. Each client&apos;s slide/stat template from{" "}
+            <span className="font-semibold text-gray-800">Reports → Report Studio</span> is applied to
+            Send all and the Monday cron. Super admins receive all sites (one email per site).
           </p>
         </div>
         <button
@@ -154,8 +156,8 @@ export default function ReportsManagementPanel() {
                 Send monthly reports now
               </p>
               <p className="text-xs text-gray-500">
-                Builds Crossway landscape decks from live GSC / SE Ranking / Meta data and emails users who
-                opted in.
+                Builds Crossway landscape decks from live GSC / SE Ranking / Meta data using each site&apos;s
+                Report Studio template, then emails users who opted in.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <input

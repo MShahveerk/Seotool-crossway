@@ -850,6 +850,11 @@ export default function AdminSection({ onNavigate } = {}) {
 
       <SeoDigestSettingsPanel />
 
+      <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-sm text-emerald-900 mb-4">
+        Deck filters (hide slides/stats) and downloads live under{" "}
+        <span className="font-semibold">Reports → Report Studio</span>. Delivery controls below still work;
+        they send each site using that site&apos;s saved studio template.
+      </div>
       <ReportsManagementPanel />
 
       <CronJobsPanel onNavigate={onNavigate} />

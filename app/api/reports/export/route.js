@@ -105,6 +105,7 @@ export async function GET(req) {
 
     const displayName = await resolveReportDisplayName(buildKey, context);
 
+    // Always honor per-site Report Studio template (slides/stats) when building PDFs.
     const bytes = await buildSlideDeckPdfBytes(deckKind, buildKey, {
       reportMonth,
       preparedFor: session.user.name || session.user.email,

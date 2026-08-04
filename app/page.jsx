@@ -24,6 +24,7 @@ import UnifiedSiteAuditSection from "./components/seo/UnifiedSiteAuditSection";
 import UnifiedKeywordResearchSection from "./components/seo/UnifiedKeywordResearchSection";
 import UnifiedSiteExplorerSection from "./components/seo/UnifiedSiteExplorerSection";
 import SerankingBacklinksSection from "./components/seranking/SerankingBacklinksSection";
+import ReportsStudioSection from "./components/ReportsStudioSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { sessionCanAccessSection } from "../lib/clientPermissions";
@@ -193,6 +194,12 @@ export default function Home() {
         return <MyApprovalsSection selectedSite={selectedSite} />;
       case "my-blog-approvals":
         return <MyBlogApprovalsSection selectedSite={selectedSite} />;
+      case "reports-studio":
+        return sessionCanAccessSection(session, "reports-studio") ? (
+          <ReportsStudioSection selectedSite={selectedSite} />
+        ) : (
+          fallback()
+        );
       case "user-management":
         return sessionCanAccessSection(session, "user-management") ? (
           <AdminSection onNavigate={setActiveSection} />
