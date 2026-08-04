@@ -1,4 +1,4 @@
-import { requireAdminRoute } from "../../../../../../../lib/adminAuth";
+import { requireAdminRoute } from "@/lib/adminAuth";
 import {
   getSiteStudioConfig,
   saveSiteStudioConfig,

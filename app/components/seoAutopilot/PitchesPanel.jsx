@@ -64,7 +64,18 @@ function draftFromPitch(p) {
 }
 
 function isListingPitch(p) {
-  return String(p?.source || "").toLowerCase() === "foundation";
+  if (!p) return false;
+  const source = String(p.source || "").toLowerCase();
+  if (source === "foundation" || source === "directory" || source === "listing") return true;
+  const blob = `${p.title || ""} ${p.subject || ""}`.toLowerCase();
+  if (blob.includes("listing submission") || blob.includes("directory submission")) return true;
+  // Directory-style: has a submit URL, no real outreach email
+  const url = String(p.targetUrl || "").toLowerCase();
+  const email = String(p.targetEmail || "").trim();
+  if (url && !email && (url.includes("/submit") || url.includes("claim") || url.includes("listing"))) {
+    return true;
+  }
+  return false;
 }
 
 async function copyText(text) {

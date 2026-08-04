@@ -192,12 +192,32 @@ export default function StudioBrandKit({
         >
           {busy === "save" ? "Saving…" : "Save brand kit"}
         </button>
+        <button
+          type="button"
+          disabled={Boolean(busy) || !kit.enabled}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900 disabled:opacity-50"
+          onClick={() => postJson({ action: "preview", brandKitJson: { ...kit, enabled: true } }, "preview")}
+        >
+          {busy === "preview" ? (
+            <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <FiImage className="w-3.5 h-3.5" />
+          )}
+          Preview frame now
+        </button>
         {kit.logoPath ? (
           <span className="text-[11px] text-gray-500 truncate max-w-[220px]">Logo: {kit.logoPath}</span>
         ) : (
           <span className="text-[11px] text-amber-700">No logo uploaded yet</span>
         )}
       </div>
+
+      <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+        <li>Turn Enabled on</li>
+        <li>Upload this site’s logo</li>
+        <li>Save brand kit</li>
+        <li>Click Preview frame now (or run Studio — every new image gets the matte)</li>
+      </ol>
 
       {kit.logoPath ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -206,6 +226,20 @@ export default function StudioBrandKit({
           alt="Site logo"
           className="h-16 w-auto object-contain rounded-lg border border-gray-100 bg-gray-50 p-2"
         />
+      ) : null}
+
+      {kit.previewPath ? (
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+            Latest preview
+          </p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={kit.previewPath}
+            alt="Brand frame preview"
+            className="max-h-72 w-auto rounded-xl border border-gray-200 shadow-sm"
+          />
+        </div>
       ) : null}
 
       <div>
