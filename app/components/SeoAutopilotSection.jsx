@@ -24,6 +24,7 @@ const TABS = [
   { id: "overview", label: "Scorecard" },
   { id: "fixes", label: "Fixes" },
   { id: "gaps", label: "Gaps" },
+  { id: "writer", label: "Writer sends" },
   { id: "pitches", label: "Pitches" },
   { id: "agents", label: "Agents" },
   { id: "smtp", label: "SMTP" },
@@ -430,6 +431,32 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
           </div>
         )}
 
+        {tab === "writer" && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">
+              Writer payloads are stored here and also appear in{" "}
+              <span className="font-semibold">Blog Automation Studio → Writer sends</span>, where you
+              can run each one through Blog Studio.
+            </p>
+            {artifacts.filter((a) => a.kind === "writer_sends").length === 0 ? (
+              <p className="text-sm text-gray-500">
+                No Writer output yet. Run Diagnoser then Writer (or a full Autopilot run).
+              </p>
+            ) : (
+              artifacts
+                .filter((a) => a.kind === "writer_sends")
+                .map((a) => (
+                  <div key={a.id} className="rounded-2xl border border-gray-100 bg-white p-4">
+                    <h3 className="text-sm font-bold text-gray-900">{a.title || "Writer sends"}</h3>
+                    <pre className="mt-3 max-h-72 overflow-auto rounded-xl bg-gray-50 border border-gray-100 p-3 text-xs text-gray-800 whitespace-pre-wrap">
+                      {a.contentText || JSON.stringify(a.contentJson, null, 2)}
+                    </pre>
+                  </div>
+                ))
+            )}
+          </div>
+        )}
+
         {tab === "pitches" && (
           <div className="space-y-3">
             {!pitches.length ? (
@@ -678,7 +705,7 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
                 className={`${inputClass} mt-1 font-mono text-xs`}
                 value={config?.enabledAgents || ""}
                 onChange={(e) => patchConfig({ enabledAgents: e.target.value })}
-                placeholder="auditor,geoSpy,diagnoser,fixer,foundation,pitcher,tracker"
+                placeholder="auditor,geoSpy,diagnoser,writer,fixer,foundation,pitcher,tracker"
               />
             </div>
             <p className="text-xs text-gray-500">

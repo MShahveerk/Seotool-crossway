@@ -939,11 +939,35 @@ model SeoAutopilotSiteConfig {
   trackerProvider     String    @default("openai") @map("tracker_provider") @db.VarChar(32)
   trackerModel        String    @default("gpt-5.4-mini") @map("tracker_model") @db.VarChar(128)
   trackerPrompt       String?   @map("tracker_prompt") @db.Text
+  writerProvider      String    @default("anthropic") @map("writer_provider") @db.VarChar(32)
+  writerModel         String    @default("claude-sonnet-4-6") @map("writer_model") @db.VarChar(128)
+  writerPrompt        String?   @map("writer_prompt") @db.Text
   latestScorecardJson Json?     @map("latest_scorecard_json")
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
   @@map("seo_autopilot_site_configs")
+}
+
+/// One Blog Automation Studio seed payload produced by the Autopilot Writer agent.
+model SeoAutopilotWriterSend {
+  id           String    @id @default(cuid()) @db.VarChar(191)
+  siteLink     String    @map("site_link") @db.VarChar(512)
+  runId        String?   @map("run_id") @db.VarChar(191)
+  title        String?   @db.VarChar(512)
+  topic        String?   @db.VarChar(512)
+  /// Full Blog Studio override payload (seedPrompt, mustFollowKeywords, etc.).
+  payloadJson  Json      @map("payload_json")
+  status       String    @default("ready") @db.VarChar(32)
+  blogRunId    String?   @map("blog_run_id") @db.VarChar(191)
+  lastRunAt    DateTime? @map("last_run_at")
+  completedAt  DateTime? @map("completed_at")
+  errorMessage String?   @map("error_message") @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([siteLink, status, createdAt], map: "seo_autopilot_writer_sends_site_status_idx")
+  @@map("seo_autopilot_writer_sends")
 }
 
 model SeoAutopilotRun {

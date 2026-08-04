@@ -17,6 +17,7 @@ import {
 import AgentRoster from "./blogStudio/AgentRoster";
 import RunConsole from "./blogStudio/RunConsole";
 import ExcelQueuePanel from "./blogStudio/ExcelQueuePanel";
+import WriterSendsPanel from "./blogStudio/WriterSendsPanel";
 import ModelCombobox from "./studioShared/ModelCombobox";
 import StudioReferenceImages from "./studioShared/StudioReferenceImages";
 import { BLOG_STUDIO_DEFAULT_PROMPTS } from "../../lib/blogStudio/defaults";
@@ -34,6 +35,7 @@ import {
 
 const TABS = [
   { id: "run", label: "Run" },
+  { id: "writer-sends", label: "Writer sends" },
   { id: "agents", label: "Agents" },
   { id: "seeds", label: "SEO Seeds" },
   { id: "excel", label: "Excel queue" },
@@ -811,6 +813,21 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                   </label>
                 </div>
               </div>
+            )}
+
+            {tab === "writer-sends" && (
+              <WriterSendsPanel
+                siteLink={selectedSite}
+                onRan={async (run) => {
+                  setSaveMessage(
+                    run?.id
+                      ? `Queued Blog Studio run ${run.id} from Writer send.`
+                      : "Queued Blog Studio run from Writer send."
+                  );
+                  await loadRuns();
+                  setTab("run");
+                }}
+              />
             )}
 
             {tab === "excel" && (
