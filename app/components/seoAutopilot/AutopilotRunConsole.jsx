@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { FiChevronDown, FiChevronRight, FiLoader, FiXCircle } from "react-icons/fi";
-import { Radar } from "lucide-react";
 import { formatMoney, formatWhen, statusTone } from "../blogStudio/studioConstants";
+import SeoAutopilotMark from "./SeoAutopilotMark";
 
 function stageTone(status) {
   const s = String(status || "").toLowerCase();
@@ -46,7 +46,7 @@ export default function AutopilotRunConsole({
   if (!run) {
     return (
       <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-10 text-center">
-        <Radar className="mx-auto h-8 w-8 text-emerald-700/70" />
+        <SeoAutopilotMark className="mx-auto h-9 w-9 text-emerald-700/80" strokeWidth={1.75} />
         <p className="mt-3 text-sm font-semibold text-gray-900">No run selected</p>
         <p className="mt-1 text-sm text-gray-500 max-w-md mx-auto">
           Click <span className="font-semibold">Run Autopilot</span> for a live console, or open any

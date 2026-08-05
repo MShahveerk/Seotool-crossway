@@ -1,7 +1,8 @@
 "use client";
 
 import { FiCopy, FiExternalLink, FiMapPin, FiCheckCircle } from "react-icons/fi";
-import { Link2, Radar, Search, Sparkles, Target } from "lucide-react";
+import { Link2, Radar, Search, Target } from "lucide-react";
+import SeoAutopilotMark from "./SeoAutopilotMark";
 
 /** Client-side fallback when older Fixer artifacts lack guide JSON */
 const CLIENT_GUIDES = {
@@ -173,7 +174,7 @@ export function ScorecardDashboard({ scorecard, siteLink }) {
 
       <div className="rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-emerald-50/40 p-5">
         <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="w-4 h-4 text-emerald-700" />
+          <SeoAutopilotMark className="w-4 h-4 text-emerald-700" />
           <h3 className="text-sm font-bold text-gray-900">Executive briefing</h3>
           {scorecard.at ? (
             <span className="text-[10px] text-gray-500 ml-auto">
@@ -595,7 +596,7 @@ export function GapsDashboard({ artifacts }) {
       </SectionCard>
 
       <SectionCard
-        icon={Sparkles}
+        icon={Radar}
         title="AI-Search Spy — citation readiness"
         purpose="Estimates whether major AI engines would cite you for your buying questions, and the single reason they skip you."
         when="After brand profile is set; re-check after shipping Fixer files"

@@ -9,7 +9,7 @@ import {
   FiSave,
   FiXCircle,
 } from "react-icons/fi";
-import { Bot, Sparkles } from "lucide-react";
+import { Bot } from "lucide-react";
 import ModelCombobox from "./studioShared/ModelCombobox";
 import {
   INTERVAL_OPTIONS,
@@ -25,6 +25,7 @@ import {
 import BlogSeedsPanel from "./seoAutopilot/BlogSeedsPanel";
 import PitchesPanel from "./seoAutopilot/PitchesPanel";
 import AutopilotRunConsole from "./seoAutopilot/AutopilotRunConsole";
+import SeoAutopilotMark from "./seoAutopilot/SeoAutopilotMark";
 
 const TABS = [
   { id: "overview", label: "Scorecard" },
@@ -368,12 +369,17 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
         <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold tracking-wide uppercase">
-              <Sparkles className="w-3.5 h-3.5 text-lime-300" />
+              <SeoAutopilotMark className="w-3.5 h-3.5 text-lime-300" />
               SEO Autopilot Studio
             </div>
-            <h2 className="mt-3 text-2xl sm:text-3xl font-semibold tracking-tight">
-              Audit → Diagnose → Fix → Pitch → Track
-            </h2>
+            <div className="mt-3 flex items-start gap-3">
+              <span className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-[#0EFF2A]">
+                <SeoAutopilotMark className="h-6 w-6" strokeWidth={1.75} />
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                Audit → Diagnose → Fix → Pitch → Track
+              </h2>
+            </div>
             <p className="mt-2 text-sm text-white/70 max-w-2xl">
               Google + AI-search loop for{" "}
               <span className="text-white font-medium">{siteLink}</span>. Configure each agent like
@@ -545,7 +551,7 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
                   {researching ? (
                     <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <SeoAutopilotMark className="w-3.5 h-3.5" />
                   )}
                   {researching ? "Researching…" : "Auto-research site"}
                 </button>

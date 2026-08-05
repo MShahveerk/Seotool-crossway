@@ -26,7 +26,6 @@ import {
   Activity,
   Link2,
   Presentation,
-  Sparkles,
   Workflow,
 } from "lucide-react";
 import { isMetaPageId } from "@/lib/siteAccess";
@@ -38,6 +37,7 @@ import {
 } from "@/lib/clientAccountList";
 import ClientAccountLogo from "@/app/components/ui-shared/ClientAccountLogo";
 import CrosswayLogo from "@/app/components/ui-shared/CrosswayLogo";
+import SeoAutopilotMark from "@/app/components/seoAutopilot/SeoAutopilotMark";
 import {
   Sidebar,
   SidebarContent,
@@ -81,7 +81,7 @@ const seoMenuItems = [
   { id: "keyword-research", label: "Keyword Research", icon: Search },
   { id: "site-explorer", label: "Site Explorer", icon: Compass },
   { id: "backlink-profile", label: "Backlink Profile", icon: Link2 },
-  { id: "seo-autopilot", label: "SEO Autopilot", icon: Sparkles },
+  { id: "seo-autopilot", label: "SEO Autopilot", icon: SeoAutopilotMark },
 ];
 
 const smmMenuItems = [
