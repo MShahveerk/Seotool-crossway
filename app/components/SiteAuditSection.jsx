@@ -626,7 +626,7 @@ export default function SiteAuditSection({ selectedSite = "", onNavigateSection 
           className="inline-flex shrink-0 items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
         >
           <FiRefreshCw className={`w-4 h-4 ${auditing || data?.running ? "animate-spin" : ""}`} aria-hidden />
-          {auditing || data?.running ? "Crawling…" : "Run audit now"}
+          {auditing || data?.running ? "Crawling…" : "Force new audit"}
         </button>
       </div>
 

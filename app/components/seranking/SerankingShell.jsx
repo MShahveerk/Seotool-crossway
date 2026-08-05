@@ -151,7 +151,8 @@ export default function SerankingShell({
       </div>
 
       <p className="text-xs text-muted-foreground -mt-2">
-        Nightly refresh 04:45 · empty cache fetches live on page load (uses manual credit reserve)
+        Nightly refresh 04:45 · empty/expired cache fetches live on page load · use Force new audit
+        anytime to bypass a valid cache (uses credits)
       </p>
 
       {error ? (

@@ -5,7 +5,14 @@ import {
   resolveDomainFromSite,
   getAuditPages,
 } from "../../../../lib/seranking/api.js";
-import { getCachedSnapshot, getLatestAuditJob, createAuditJob, updateAuditJob } from "../../../../lib/seranking/cache.js";
+import {
+  getCachedSnapshot,
+  getLatestAuditJob,
+  createAuditJob,
+  updateAuditJob,
+  abandonInFlightAuditJobs,
+  isAuditJobStale,
+} from "../../../../lib/seranking/cache.js";
 import { DATA_TYPES, isSerankingConfigured } from "../../../../lib/seranking/config.js";
 import { getAuditStatus } from "../../../../lib/seranking/api.js";
 import { SerankingApiError } from "../../../../lib/seranking/client.js";
@@ -33,11 +40,16 @@ export async function GET(req) {
     const domain = resolveDomainFromSite(siteUrl);
 
     await pollPendingAudits(console);
+    // Clear stuck pending/running jobs so the UI is not stuck on an old "running" lock.
+    await abandonInFlightAuditJobs(siteUrl, {
+      force: false,
+      reason: "Abandoned — audit job timed out (stale).",
+    });
 
     const cached = await getCachedSnapshot(siteUrl, DATA_TYPES.AUDIT_REPORT);
-    const job = await getLatestAuditJob(siteUrl);
+    let job = await getLatestAuditJob(siteUrl);
 
-    if (job?.auditId && ["pending", "running"].includes(job.status)) {
+    if (job?.auditId && ["pending", "running"].includes(job.status) && !isAuditJobStale(job)) {
       try {
         const status = await getAuditStatus(job.auditId);
         const state = String(status?.status || status?.state || "").toLowerCase();
@@ -68,9 +80,10 @@ export async function GET(req) {
           progress: status?.progress ?? null,
           auditId: job.auditId,
           data: cached?.payload || null,
+          fromCache: Boolean(cached?.payload),
         });
       } catch {
-        /* fall through */
+        /* fall through — serve cache / allow force restart */
       }
     }
 
@@ -150,10 +163,27 @@ export async function POST(req) {
     }
     const { siteUrl } = await resolveWebsiteAccess(req);
     const domain = resolveDomainFromSite(siteUrl);
+    const body = await req.json().catch(() => ({}));
+    const forceRestart = body?.force !== false; // default true — this endpoint is always a force re-run
 
     const running = await getLatestAuditJob(siteUrl);
-    if (running && ["pending", "running"].includes(running.status)) {
-      return Response.json({ error: "An audit is already running for this site.", auditId: running.auditId }, { status: 409 });
+    if (running && ["pending", "running"].includes(running.status) && !isAuditJobStale(running)) {
+      if (!forceRestart) {
+        return Response.json(
+          { error: "An audit is already running for this site.", auditId: running.auditId },
+          { status: 409 }
+        );
+      }
+      // User explicitly asked for a new audit — abandon the in-flight job and start fresh.
+      await abandonInFlightAuditJobs(siteUrl, {
+        force: true,
+        reason: "Abandoned — user forced a new audit.",
+      });
+    } else if (running && isAuditJobStale(running)) {
+      await abandonInFlightAuditJobs(siteUrl, {
+        force: true,
+        reason: "Abandoned — audit job timed out (stale).",
+      });
     }
 
     const jobRow = await createAuditJob({ siteUrl, domain });
@@ -170,10 +200,12 @@ export async function POST(req) {
         auditId: result.auditId,
         status: "running",
         creditsSpent: result.creditsSpent,
+        forced: true,
+        message: "New audit started — previous cache stays visible until this run finishes.",
       });
     }
 
-    return Response.json({ siteUrl, domain, data: result.data, status: "success" });
+    return Response.json({ siteUrl, domain, data: result.data, status: "success", forced: true });
   } catch (err) {
     const status = err instanceof SerankingApiError ? err.status : err.status || 500;
     return Response.json({ error: err.message || "Audit start failed." }, { status });

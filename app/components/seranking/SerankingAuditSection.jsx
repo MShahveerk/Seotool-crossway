@@ -24,12 +24,19 @@ export default function SerankingAuditSection({
   const [pages, setPages] = useState([]);
   const [runStatus, setRunStatus] = useState("");
   const [progress, setProgress] = useState(null);
+  const [fromCache, setFromCache] = useState(false);
+  const [cacheFetchedAt, setCacheFetchedAt] = useState(null);
+  const [cacheExpiresAt, setCacheExpiresAt] = useState(null);
 
   const auditMaxPages = 20;
   const auditCost = auditMaxPages * 2;
   const shellDescription =
     description ||
     `Technical site crawl (max ${auditMaxPages} pages ≈ ${auditCost} credits). Each issue includes full details and step-by-step fix guidance.`;
+
+  const creditsKnown = credits != null && credits.remaining != null;
+  const creditsTooLow = creditsKnown && Number(credits.remaining) < auditCost;
+  const isRunning = runStatus === "running";
 
   const load = useCallback(async () => {
     const site = hasGlobalAccess ? selectedSite : session?.user?.siteLink;
@@ -50,6 +57,9 @@ export default function SerankingAuditSection({
         setPages(Array.isArray(data.pages) ? data.pages : []);
         setRunStatus(data.status || "");
         setProgress(data.progress ?? null);
+        setFromCache(Boolean(data.fromCache));
+        setCacheFetchedAt(data.fetchedAt || null);
+        setCacheExpiresAt(data.expiresAt || null);
       }
     } catch {
       setError("Network error.");
@@ -76,11 +86,16 @@ export default function SerankingAuditSection({
     const q = new URLSearchParams();
     if (hasGlobalAccess) q.set("url", site);
     try {
-      const res = await fetch(`/api/seranking/audit?${q}`, { method: "POST" });
+      const res = await fetch(`/api/seranking/audit?${q}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: true }),
+      });
       const data = await res.json();
       if (!res.ok) setError(data.error || "Could not start audit.");
       else {
         setRunStatus(data.status || "running");
+        setFromCache(false);
         reloadMeta();
       }
     } catch {
@@ -98,6 +113,11 @@ export default function SerankingAuditSection({
     return null;
   }, [normalized, payload]);
 
+  const fetchedAt =
+    cacheFetchedAt || metaStatus?.snapshots?.audit_report?.fetchedAt || null;
+  const expiresAt =
+    cacheExpiresAt || metaStatus?.snapshots?.audit_report?.expiresAt || null;
+
   return (
     <SerankingShell
       title={title}
@@ -107,17 +127,50 @@ export default function SerankingAuditSection({
       error={error}
       credits={credits}
       configured={metaStatus?.configured !== false}
-      fetchedAt={metaStatus?.snapshots?.audit_report?.fetchedAt}
-      expiresAt={metaStatus?.snapshots?.audit_report?.expiresAt}
+      fetchedAt={fetchedAt}
+      expiresAt={expiresAt}
       onRefresh={startAudit}
       refreshing={refreshing}
-      refreshDisabled={(credits?.remaining ?? 0) < auditCost || runStatus === "running"}
-      refreshLabel={runStatus === "running" ? "Audit running…" : `Run audit (~${auditCost} cr)`}
+      refreshDisabled={creditsTooLow}
+      refreshLabel={
+        isRunning
+          ? `Force new audit (~${auditCost} cr)`
+          : fromCache
+            ? `Force new audit (~${auditCost} cr)`
+            : `Run audit (~${auditCost} cr)`
+      }
     >
-      {runStatus === "running" ? (
+      {creditsTooLow ? (
+        <Card className="border-amber-200 bg-amber-50/50 shadow-sm mb-4">
+          <CardContent className="p-4">
+            <p className="text-sm text-amber-950">
+              Not enough SE Ranking credits to force a new audit (need ~{auditCost}). Showing the
+              cached report until credits are available.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {fromCache && !isRunning && report?.score != null ? (
+        <Card className="border-violet-200 bg-violet-50/40 shadow-sm mb-4">
+          <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-violet-950">
+              Showing cached audit
+              {fetchedAt ? ` from ${new Date(fetchedAt).toLocaleString()}` : ""}. Use{" "}
+              <span className="font-semibold">Force new audit</span> above to crawl again (~
+              {auditCost} credits).
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {isRunning ? (
         <Card className="border-amber-200 bg-amber-50/50 shadow-sm mb-4">
           <CardContent className="p-4 space-y-2">
-            <p className="text-sm font-medium text-amber-950">Crawl in progress — this page auto-refreshes every 30s.</p>
+            <p className="text-sm font-medium text-amber-950">
+              Crawl in progress — this page auto-refreshes every 30s. Previous results stay visible
+              until the new run finishes. You can force another start if this looks stuck.
+            </p>
             {progress != null ? (
               <div className="h-2 w-full rounded-full bg-amber-200/80 overflow-hidden">
                 <div
@@ -134,9 +187,9 @@ export default function SerankingAuditSection({
         <SerankingAuditReport report={report} auditId={auditId} pages={pages} />
       ) : (
         <p className="text-sm text-muted-foreground">
-          {runStatus === "running"
+          {isRunning
             ? "Waiting for crawl to finish…"
-            : "No audit report yet — one starts automatically when you open this page, or run manually above."}
+            : "No audit report yet — use Force new audit above, or one starts automatically when the cache is empty."}
         </p>
       )}
     </SerankingShell>
