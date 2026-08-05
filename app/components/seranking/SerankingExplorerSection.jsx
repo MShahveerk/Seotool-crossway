@@ -209,11 +209,11 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
         ) : null}
 
         {payload ? (
-          <Tabs defaultValue="overview" className="w-full">
+          <Tabs defaultValue="audit" className="w-full">
             <TabsList className="flex flex-wrap h-auto gap-1">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="pages">Top pages ({pages.length})</TabsTrigger>
               <TabsTrigger value="audit">Site audit</TabsTrigger>
+              <TabsTrigger value="pages">Top pages ({pages.length})</TabsTrigger>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6 mt-4">
