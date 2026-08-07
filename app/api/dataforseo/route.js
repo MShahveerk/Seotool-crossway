@@ -26,6 +26,7 @@ export async function GET(req) {
     const domain = searchParams.get("domain") || searchParams.get("target") || "";
     const locationCode = searchParams.get("locationCode") || "2840";
     const languageCode = searchParams.get("languageCode") || "en";
+    const forceRefresh = searchParams.get("forceRefresh") === "1" || searchParams.get("refresh") === "true";
 
     const creds = await getDataForSeoCredentials();
 
@@ -37,7 +38,7 @@ export async function GET(req) {
     }
 
     if (mode === "serp") {
-      const serpResult = await fetchSerpData(keyword, locationCode, languageCode);
+      const serpResult = await fetchSerpData(keyword, locationCode, languageCode, forceRefresh);
       return NextResponse.json({
         success: true,
         data: serpResult,
@@ -48,7 +49,7 @@ export async function GET(req) {
       if (!domain) {
         return NextResponse.json({ error: "Domain parameter is required for backlinks summary" }, { status: 400 });
       }
-      const backlinksResult = await fetchBacklinksSummary(domain);
+      const backlinksResult = await fetchBacklinksSummary(domain, forceRefresh);
       return NextResponse.json({
         success: true,
         data: backlinksResult,
@@ -56,7 +57,7 @@ export async function GET(req) {
     }
 
     // Default mode: keywords
-    const keywordsResult = await fetchKeywordVolumeData(keyword, locationCode, languageCode);
+    const keywordsResult = await fetchKeywordVolumeData(keyword, locationCode, languageCode, forceRefresh);
     return NextResponse.json({
       success: true,
       data: keywordsResult,

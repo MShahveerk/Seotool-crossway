@@ -53,7 +53,7 @@ export default function DataForSeoExplorerSection({ selectedSite = "" }) {
     }
   }, [selectedSite]);
 
-  const fetchData = async (overrideMode, overrideQuery) => {
+  const fetchData = async (overrideMode, overrideQuery, forceRefresh = false) => {
     const mode = overrideMode || activeTab;
     const q = overrideQuery || (mode === "backlinks" ? domainQuery || selectedSite : query);
     if (!q) {
@@ -68,6 +68,10 @@ export default function DataForSeoExplorerSection({ selectedSite = "" }) {
         mode,
         locationCode: String(locationCode),
       });
+
+      if (forceRefresh) {
+        params.set("forceRefresh", "1");
+      }
 
       if (mode === "backlinks") {
         params.set("domain", q);
@@ -171,6 +175,25 @@ export default function DataForSeoExplorerSection({ selectedSite = "" }) {
           </div>
         )}
       </div>
+
+      {/* Cache Status Bar */}
+      {data?._cached && (
+        <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-2.5 text-xs font-semibold text-emerald-950">
+          <span className="flex items-center gap-2">
+            <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+            Cached DataForSEO Results (Saved on {new Date(data._cachedAt).toLocaleDateString()}). Stored for 7 days.
+          </span>
+          <button
+            type="button"
+            onClick={() => fetchData(null, null, true)}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-300 shadow-sm hover:bg-emerald-100 transition-colors"
+          >
+            <FiRefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
+            Refresh Live
+          </button>
+        </div>
+      )}
 
       {/* Search Bar Input */}
       <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
