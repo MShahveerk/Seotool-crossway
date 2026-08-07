@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { authOptions } from "../../auth/[...nextauth]/route";
 import { getDataForSeoCredentials, setLeaveDataForSeoCredentials } from "@/lib/dataforseo";
 
 export async function GET(req) {
