@@ -104,19 +104,19 @@ export default function SeoPanelShell({
   }
 
   return (
-    <div className="min-h-[calc(100vh-2rem)] space-y-6 rounded-2xl border border-border/60 bg-card/60 p-4 sm:p-5 shadow-[0_8px_48px_rgba(0,0,0,0.55)] backdrop-blur-sm">
-      {/* Dark Hero Header Banner — deep black-to-emerald with gold accent */}
-      <header className="relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-[#050908] via-[#0A120F] to-[#061410] p-6 text-white shadow-[0_8px_40px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(16,185,129,0.1)] sm:p-8">
+    <div className="min-h-[calc(100vh-2rem)] space-y-6 rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
+      {/* Hero Header — deep green-charcoal with emerald depth */}
+      <header className="relative overflow-hidden rounded-2xl border border-white/6 bg-gradient-to-br from-[#0E1A14] via-[#111F18] to-[#0A1810] p-6 text-white shadow-[0_4px_24px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(34,197,94,0.12)] sm:p-8">
         {/* Ambient glow orbs */}
-        <div className="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-emerald-500/10 blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-emerald-500/12 blur-3xl" aria-hidden />
         <div className="pointer-events-none absolute -bottom-24 -left-12 size-56 rounded-full bg-emerald-600/8 blur-3xl" aria-hidden />
-        <div className="pointer-events-none absolute right-1/3 -top-8 size-40 rounded-full bg-amber-500/6 blur-2xl" aria-hidden />
+        <div className="pointer-events-none absolute right-1/3 -top-8 size-40 rounded-full bg-amber-500/5 blur-2xl" aria-hidden />
         {/* Subtle grid texture */}
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.025]"
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
           style={{
-            backgroundImage: "linear-gradient(oklch(0.695 0.17 165) 1px, transparent 1px), linear-gradient(90deg, oklch(0.695 0.17 165) 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
+            backgroundImage: "linear-gradient(oklch(0.74 0.18 155) 1px, transparent 1px), linear-gradient(90deg, oklch(0.74 0.18 155) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
           }}
           aria-hidden
         />
@@ -128,7 +128,7 @@ export default function SeoPanelShell({
             </p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">{title}</h1>
             {description ? (
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-emerald-100/50">{description}</p>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/55">{description}</p>
             ) : null}
             {siteUrl ? (
               <p className="mt-2 text-sm font-medium" style={{ color: "oklch(0.695 0.17 165)" }}>
