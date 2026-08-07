@@ -303,12 +303,16 @@ export default function KeywordResearchSection({ selectedSite = "", embedded = f
             <li>
               Get a developer token from{" "}
               <a
-                href="https://ads.google.com/aw/apicenter"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="#help-google-ads-api"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.dispatchEvent(new CustomEvent("navigate-section", {
+                    detail: { section: "help", article: "google-ads-api" }
+                  }));
+                }}
                 className="text-[#1d9c35] hover:underline inline-flex items-center gap-0.5"
               >
-                Google Ads API Center <FiExternalLink className="h-3 w-3" aria-hidden />
+                our developer guide
               </a>
             </li>
             <li>

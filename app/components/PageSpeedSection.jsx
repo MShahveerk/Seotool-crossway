@@ -85,13 +85,29 @@ function MarkdownText({ text, className = "" }) {
     while ((m = re.exec(src)) !== null) {
       if (m.index > last) out.push(<span key={i++}>{src.slice(last, m.index)}</span>);
       if (m[1] && m[2]) {
+        const urlStr = String(m[2]);
+        let slug = "general-seo";
+        try {
+          const pathParts = new URL(urlStr).pathname.split("/").filter(Boolean);
+          slug = pathParts[pathParts.length - 1] || "general-seo";
+        } catch {
+          const parts = urlStr.split("/").filter(Boolean);
+          slug = parts[parts.length - 1] || "general-seo";
+        }
+
+        const handleClick = (e) => {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent("navigate-section", {
+            detail: { section: "help", article: slug }
+          }));
+        };
+
         out.push(
           <a
             key={i++}
-            href={m[2]}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#1d9c35] hover:underline font-medium"
+            href={`#help-${slug}`}
+            onClick={handleClick}
+            className="text-[#1d9c35] hover:underline font-medium cursor-pointer"
           >
             {m[1]}
           </a>

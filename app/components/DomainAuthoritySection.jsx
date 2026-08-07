@@ -263,12 +263,16 @@ export default function DomainAuthoritySection({ selectedSite = "", embedded = f
                 <>
                   Sign in at{" "}
                   <a
-                    href="https://openpagerank.keywordseverywhere.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href="#help-openpagerank"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.dispatchEvent(new CustomEvent("navigate-section", {
+                        detail: { section: "help", article: "openpagerank" }
+                      }));
+                    }}
                     className="font-semibold text-[#1d9c35] hover:underline inline-flex items-center gap-1"
                   >
-                    openpagerank.keywordseverywhere.com <FiExternalLink className="h-3 w-3" aria-hidden />
+                    our help center guide
                   </a>{" "}
                   (Keywords Everywhere account) and copy your API key — it starts with{" "}
                   <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] border border-amber-200">

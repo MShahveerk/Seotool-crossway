@@ -26,6 +26,7 @@ import UnifiedSiteExplorerSection from "./components/seo/UnifiedSiteExplorerSect
 import SerankingBacklinksSection from "./components/seranking/SerankingBacklinksSection";
 import ReportsStudioSection from "./components/ReportsStudioSection";
 import SeoAutopilotSection from "./components/SeoAutopilotSection";
+import HelpCenterSection from "./components/seo/HelpCenterSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { sessionCanAccessSection } from "../lib/clientPermissions";
@@ -95,6 +96,25 @@ export default function Home() {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState(() => resolveSection(readSectionFromUrl() || "dashboard"));
   const [selectedSite, setSelectedSite] = useState(() => readSiteFromUrl() || "");
+  const [previousSection, setPreviousSection] = useState("dashboard");
+  const [selectedHelpArticle, setSelectedHelpArticle] = useState("general-seo");
+
+  useEffect(() => {
+    const handleNavigate = (e) => {
+      const { section, article } = e.detail;
+      setActiveSection((prev) => {
+        if (section === "help" && prev !== "help") {
+          setPreviousSection(prev);
+        }
+        return section;
+      });
+      if (article) {
+        setSelectedHelpArticle(article);
+      }
+    };
+    window.addEventListener("navigate-section", handleNavigate);
+    return () => window.removeEventListener("navigate-section", handleNavigate);
+  }, []);
 
   useEffect(() => {
     writeDashboardUrl(activeSection, selectedSite);
@@ -195,6 +215,14 @@ export default function Home() {
         return <MyApprovalsSection selectedSite={selectedSite} />;
       case "my-blog-approvals":
         return <MyBlogApprovalsSection selectedSite={selectedSite} />;
+      case "help":
+        return (
+          <HelpCenterSection
+            selectedArticle={selectedHelpArticle}
+            onSelectArticle={setSelectedHelpArticle}
+            onBack={() => setActiveSection(previousSection)}
+          />
+        );
       case "reports-studio":
         return sessionCanAccessSection(session, "reports-studio") ? (
           <ReportsStudioSection selectedSite={selectedSite} />
