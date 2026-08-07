@@ -282,13 +282,19 @@ export default function SiteExplorerSection({ selectedSite = "" }) {
                   accent="border-amber-100 bg-amber-50/40"
                 />
                 <StatCard
-                  label="Indexed URLs"
+                  label={
+                    overview.source === "gsc"
+                      ? gsc?.sitemapUrlCount
+                        ? "Submitted URLs (Sitemaps)"
+                        : "Indexed URLs (Sample)"
+                      : "Indexed URLs"
+                  }
                   value={formatNum(overview.indexedUrls)}
                   sub={
                     overview.source === "gsc"
                       ? gsc?.sitemapUrlCount
-                        ? `GSC sitemaps · ${formatNum(gsc.sitemapUrlCount)} discovered`
-                        : "Google Search Console"
+                        ? `Discovered in GSC sitemaps`
+                        : "Monitored GSC sample set"
                       : "Common Crawl · nightly cron"
                   }
                   accent="border-sky-100 bg-sky-50/40"

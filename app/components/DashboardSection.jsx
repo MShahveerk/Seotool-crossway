@@ -467,11 +467,11 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
                 />
                 <HealthTile
                   icon={Activity}
-                  label="Indexed URLs"
+                  label="Indexed/Sitemap URLs"
                   value={
                     Number(health.indexedUrls) > 0 ? formatCompact(health.indexedUrls) : "—"
                   }
-                  sub={Number(health.indexedUrls) > 0 ? "Search / crawl coverage" : "No indexed count yet"}
+                  sub={Number(health.indexedUrls) > 0 ? "Sitemap or inspection coverage" : "No indexed count yet"}
                   tone={Number(health.indexedUrls) > 0 ? "sky" : "gray"}
                   onClick={() => go("site-explorer")}
                 />

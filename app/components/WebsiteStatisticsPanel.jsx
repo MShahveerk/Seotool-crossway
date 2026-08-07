@@ -17,7 +17,7 @@ import {
   FiSliders,
 } from "react-icons/fi";
 import ApprovalsUserPanel from "./ApprovalsUserPanel";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Legend } from "recharts";
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Legend } from "recharts";
 import { mergeCompareTimeSeries } from "../../lib/searchConsoleDateRanges";
 import WebsiteStatisticsDateRangeModal, {
   formatDisplayRange,
@@ -184,6 +184,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
     position: false,
   });
   const [mainTab, setMainTab] = useState("overview");
+  const [graphMode, setGraphMode] = useState("combined");
   const [approvalOpenCount, setApprovalOpenCount] = useState(0);
   const [approvalCountNonce, setApprovalCountNonce] = useState(0);
   const showApprovalsTab = !isSuperAdmin;
@@ -292,6 +293,26 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
       position: item.position || 0,
     }));
   }, [payload, timeSelection.type]);
+
+  const clicksChange = useMemo(() => {
+    if (!payload?.totals?.clicks || !payload?.compareTotals?.clicks) return 0;
+    return ((payload.totals.clicks - payload.compareTotals.clicks) / payload.compareTotals.clicks) * 100;
+  }, [payload]);
+
+  const impressionsChange = useMemo(() => {
+    if (!payload?.totals?.impressions || !payload?.compareTotals?.impressions) return 0;
+    return ((payload.totals.impressions - payload.compareTotals.impressions) / payload.compareTotals.impressions) * 100;
+  }, [payload]);
+
+  const ctrChange = useMemo(() => {
+    if (!payload?.totals?.averageCtr || !payload?.compareTotals?.averageCtr) return 0;
+    return ((payload.totals.averageCtr - payload.compareTotals.averageCtr) / payload.compareTotals.averageCtr) * 100;
+  }, [payload]);
+
+  const positionChange = useMemo(() => {
+    if (!payload?.totals?.averagePosition || !payload?.compareTotals?.averagePosition) return 0;
+    return ((payload.totals.averagePosition - payload.compareTotals.averagePosition) / payload.compareTotals.averagePosition) * 100;
+  }, [payload]);
 
   const maxCountryClicks = useMemo(() => {
     const values = (payload?.topCountries?.countries || []).map((c) => c.clicks || 0);
@@ -628,185 +649,329 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
         />
       </div>
 
-      <div className="mb-5">
-        <div className="text-xs text-gray-500 mb-2 space-y-0.5">
-          <p>Last Updated: {getTimeAgo(payload?.lastUpdated)}</p>
-          <p className="text-[10px] text-gray-400 leading-snug max-w-3xl">
-            Search Console usually finishes a calendar day after a ~2–3 day delay. Date ranges here end on the latest
-            complete day so filters match API results.
-          </p>
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div className="text-xs text-gray-500 space-y-0.5">
+            <p className="font-medium text-gray-600">Last Updated: {getTimeAgo(payload?.lastUpdated)}</p>
+            <p className="text-[10px] text-gray-400 leading-snug max-w-xl">
+              Search Console usually finishes a calendar day after a ~2–3 day delay. Date ranges here end on the latest complete day.
+            </p>
+          </div>
+          <div className="flex items-center gap-1 bg-slate-100/80 border border-slate-200/50 rounded-xl p-1 self-start sm:self-auto shadow-inner">
+            <button
+              type="button"
+              onClick={() => setGraphMode("combined")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                graphMode === "combined"
+                  ? "bg-white text-gray-900 shadow-sm border border-slate-200/20"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Combined Chart
+            </button>
+            <button
+              type="button"
+              onClick={() => setGraphMode("separate")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                graphMode === "separate"
+                  ? "bg-white text-gray-900 shadow-sm border border-slate-200/20"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Separate Graphs
+            </button>
+          </div>
         </div>
-        <div className="h-[290px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid stroke="#efefef" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#777" }} />
-              <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "#777" }} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "#777" }} />
-              <Tooltip
-                content={({ active, payload, label }) => {
-                  if (!active || !payload?.length) return null;
-                  const row = payload[0]?.payload;
-                  if (!row) return null;
-                  const hasAny =
-                    activeMetrics.clicks ||
-                    activeMetrics.impressions ||
-                    activeMetrics.ctr ||
-                    activeMetrics.position;
-                  return (
-                    <div className="bg-white/95 border border-gray-200 rounded-md shadow-sm px-2.5 py-1.5 text-xs">
-                      <p className="text-gray-500 font-medium mb-0.5">{row.fullDate || label}</p>
-                      {hasAny && (
-                        <>
-                          {activeMetrics.clicks && (
-                            <p className="text-gray-800">
-                              Clicks: {formatNum(row.clicks)}
-                              {hasCompare && (
-                                <span className="text-gray-500"> / compare {formatNum(row.compareClicks)}</span>
-                              )}
-                            </p>
-                          )}
-                          {activeMetrics.impressions && (
-                            <p className="text-gray-800">
-                              Impr.: {formatNum(row.impressions)}
-                              {hasCompare && (
-                                <span className="text-gray-500"> / {formatNum(row.compareImpressions)}</span>
-                              )}
-                            </p>
-                          )}
-                          {activeMetrics.ctr && (
-                            <p className="text-gray-800">
-                              CTR: {Number(row.ctr ?? 0).toFixed(1)}%
-                              {hasCompare && (
-                                <span className="text-gray-500">
-                                  {" "}
-                                  / {Number(row.compareCtr ?? 0).toFixed(1)}%
-                                </span>
-                              )}
-                            </p>
-                          )}
-                          {activeMetrics.position && (
-                            <p className="text-gray-800">
-                              Position: {Number(row.position ?? 0).toFixed(1)}
-                              {hasCompare && (
-                                <span className="text-gray-500">
-                                  {" "}
-                                  / {Number(row.comparePosition ?? 0).toFixed(1)}
-                                </span>
-                              )}
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  );
-                }}
-              />
-              {hasCompare && (
-                <Legend
-                  wrapperStyle={{ fontSize: 12, paddingTop: 4 }}
-                  formatter={(value) => <span className="text-gray-600">{value}</span>}
-                />
-              )}
-              {activeMetrics.clicks && (
-                <Line
-                  yAxisId="left"
-                  name={hasCompare ? "Clicks" : undefined}
-                  type="monotone"
-                  dataKey="clicks"
-                  stroke="#34a853"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              )}
-              {activeMetrics.clicks && hasCompare && (
-                <Line
-                  yAxisId="left"
-                  name="Clicks (compare)"
-                  type="monotone"
-                  dataKey="compareClicks"
-                  stroke="#34a853"
-                  strokeWidth={2}
-                  strokeOpacity={0.45}
-                  strokeDasharray="6 4"
-                  dot={false}
-                />
-              )}
-              {activeMetrics.impressions && (
-                <Line
-                  yAxisId="right"
-                  name={hasCompare ? "Impressions" : undefined}
-                  type="monotone"
-                  dataKey="impressions"
-                  stroke="#7c7abc"
-                  strokeWidth={1.8}
-                  dot={false}
-                />
-              )}
-              {activeMetrics.impressions && hasCompare && (
-                <Line
-                  yAxisId="right"
-                  name="Impr. (compare)"
-                  type="monotone"
-                  dataKey="compareImpressions"
-                  stroke="#7c7abc"
-                  strokeWidth={1.8}
-                  strokeOpacity={0.45}
-                  strokeDasharray="6 4"
-                  dot={false}
-                />
-              )}
-              {activeMetrics.ctr && (
-                <Line
-                  yAxisId="left"
-                  name={hasCompare ? "CTR" : undefined}
-                  type="monotone"
-                  dataKey="ctr"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              )}
-              {activeMetrics.ctr && hasCompare && (
-                <Line
-                  yAxisId="left"
-                  name="CTR (compare)"
-                  type="monotone"
-                  dataKey="compareCtr"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  strokeOpacity={0.45}
-                  strokeDasharray="6 4"
-                  dot={false}
-                />
-              )}
-              {activeMetrics.position && (
-                <Line
-                  yAxisId="left"
-                  name={hasCompare ? "Position" : undefined}
-                  type="monotone"
-                  dataKey="position"
-                  stroke="#6b7280"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              )}
-              {activeMetrics.position && hasCompare && (
-                <Line
-                  yAxisId="left"
-                  name="Pos. (compare)"
-                  type="monotone"
-                  dataKey="comparePosition"
-                  stroke="#6b7280"
-                  strokeWidth={2}
-                  strokeOpacity={0.45}
-                  strokeDasharray="6 4"
-                  dot={false}
-                />
-              )}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+
+        {graphMode === "combined" ? (
+          <div className="h-[320px] bg-slate-50/30 border border-slate-100 rounded-2xl p-4 sm:p-5">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 10, right: 5, left: -10, bottom: 0 }}>
+                <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                <Tooltip content={<CustomTooltip activeMetrics={activeMetrics} hasCompare={hasCompare} />} />
+                {hasCompare && (
+                  <Legend
+                    wrapperStyle={{ fontSize: 11, paddingTop: 10 }}
+                    formatter={(value) => <span className="text-gray-500 font-medium">{value}</span>}
+                  />
+                )}
+                {activeMetrics.clicks && (
+                  <Line
+                    yAxisId="left"
+                    name={hasCompare ? "Clicks" : undefined}
+                    type="monotone"
+                    dataKey="clicks"
+                    stroke="#34a853"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                )}
+                {activeMetrics.clicks && hasCompare && (
+                  <Line
+                    yAxisId="left"
+                    name="Clicks (compare)"
+                    type="monotone"
+                    dataKey="compareClicks"
+                    stroke="#34a853"
+                    strokeWidth={2}
+                    strokeOpacity={0.4}
+                    strokeDasharray="5 4"
+                    dot={false}
+                  />
+                )}
+                {activeMetrics.impressions && (
+                  <Line
+                    yAxisId="right"
+                    name={hasCompare ? "Impressions" : undefined}
+                    type="monotone"
+                    dataKey="impressions"
+                    stroke="#7c7abc"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                )}
+                {activeMetrics.impressions && hasCompare && (
+                  <Line
+                    yAxisId="right"
+                    name="Impr. (compare)"
+                    type="monotone"
+                    dataKey="compareImpressions"
+                    stroke="#7c7abc"
+                    strokeWidth={2}
+                    strokeOpacity={0.4}
+                    strokeDasharray="5 4"
+                    dot={false}
+                  />
+                )}
+                {activeMetrics.ctr && (
+                  <Line
+                    yAxisId="left"
+                    name={hasCompare ? "CTR" : undefined}
+                    type="monotone"
+                    dataKey="ctr"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                )}
+                {activeMetrics.ctr && hasCompare && (
+                  <Line
+                    yAxisId="left"
+                    name="CTR (compare)"
+                    type="monotone"
+                    dataKey="compareCtr"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    strokeOpacity={0.4}
+                    strokeDasharray="5 4"
+                    dot={false}
+                  />
+                )}
+                {activeMetrics.position && (
+                  <Line
+                    yAxisId="left"
+                    name={hasCompare ? "Position" : undefined}
+                    type="monotone"
+                    dataKey="position"
+                    stroke="#6b7280"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                )}
+                {activeMetrics.position && hasCompare && (
+                  <Line
+                    yAxisId="left"
+                    name="Pos. (compare)"
+                    type="monotone"
+                    dataKey="comparePosition"
+                    stroke="#6b7280"
+                    strokeWidth={2}
+                    strokeOpacity={0.4}
+                    strokeDasharray="5 4"
+                    dot={false}
+                  />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Area Chart 1: Clicks */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 sm:p-5 flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.015)]">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Clicks</span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-2xl font-bold text-slate-900 tabular-nums">
+                      {formatNum(payload?.totals?.clicks)}
+                    </span>
+                    {hasCompare && (
+                      <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        clicksChange >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                      }`}>
+                        {clicksChange >= 0 ? <FiTrendingUp className="w-3 h-3" /> : <FiTrendingDown className="w-3 h-3" />}
+                        {Math.abs(clicksChange).toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#34a853] shadow-[0_0_8px_rgba(52,168,83,0.3)]" />
+              </div>
+              <div className="h-[180px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#34a853" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#34a853" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="#f8fafc" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                    <Tooltip content={<SeparateTooltip type="clicks" />} />
+                    <Area type="monotone" dataKey="clicks" stroke="#34a853" strokeWidth={2} fillOpacity={1} fill="url(#colorClicks)" />
+                    {hasCompare && (
+                      <Area type="monotone" dataKey="compareClicks" stroke="#34a853" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
+                    )}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Area Chart 2: Impressions */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 sm:p-5 flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.015)]">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Impressions</span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-2xl font-bold text-slate-900 tabular-nums">
+                      {formatNum(payload?.totals?.impressions)}
+                    </span>
+                    {hasCompare && (
+                      <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        impressionsChange >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                      }`}>
+                        {impressionsChange >= 0 ? <FiTrendingUp className="w-3 h-3" /> : <FiTrendingDown className="w-3 h-3" />}
+                        {Math.abs(impressionsChange).toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#7c7abc] shadow-[0_0_8px_rgba(124,122,188,0.3)]" />
+              </div>
+              <div className="h-[180px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorImpressions" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#7c7abc" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#7c7abc" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="#f8fafc" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                    <Tooltip content={<SeparateTooltip type="impressions" />} />
+                    <Area type="monotone" dataKey="impressions" stroke="#7c7abc" strokeWidth={2} fillOpacity={1} fill="url(#colorImpressions)" />
+                    {hasCompare && (
+                      <Area type="monotone" dataKey="compareImpressions" stroke="#7c7abc" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
+                    )}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Area Chart 3: Average CTR */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 sm:p-5 flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.015)]">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Average CTR</span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-2xl font-bold text-slate-900 tabular-nums">
+                      {formatPct(payload?.totals?.averageCtr)}
+                    </span>
+                    {hasCompare && (
+                      <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        ctrChange >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                      }`}>
+                        {ctrChange >= 0 ? <FiTrendingUp className="w-3 h-3" /> : <FiTrendingDown className="w-3 h-3" />}
+                        {Math.abs(ctrChange).toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+              </div>
+              <div className="h-[180px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorCtr" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="#f8fafc" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                    <Tooltip content={<SeparateTooltip type="ctr" />} />
+                    <Area type="monotone" dataKey="ctr" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorCtr)" />
+                    {hasCompare && (
+                      <Area type="monotone" dataKey="compareCtr" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
+                    )}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Area Chart 4: Average Position */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 sm:p-5 flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.015)]">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Average Position</span>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-2xl font-bold text-slate-900 tabular-nums">
+                      {formatPos(payload?.totals?.averagePosition)}
+                    </span>
+                    {hasCompare && (
+                      <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        positionChange <= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                      }`}>
+                        {positionChange <= 0 ? <FiTrendingUp className="w-3 h-3" /> : <FiTrendingDown className="w-3 h-3" />}
+                        {Math.abs(positionChange).toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#6b7280] shadow-[0_0_8px_rgba(107,114,128,0.3)]" />
+              </div>
+              <div className="h-[180px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorPosition" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6b7280" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#6b7280" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="#f8fafc" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                    <YAxis reversed={true} tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                    <Tooltip content={<SeparateTooltip type="position" />} />
+                    <Area type="monotone" dataKey="position" stroke="#6b7280" strokeWidth={2} fillOpacity={1} fill="url(#colorPosition)" />
+                    {hasCompare && (
+                      <Area type="monotone" dataKey="comparePosition" stroke="#6b7280" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
+                    )}
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -1019,6 +1184,110 @@ function MetricCard({
       </div>
       <FiInfo className="w-3.5 h-3.5 text-gray-400 absolute bottom-2.5 right-2.5" />
     </button>
+  );
+}
+
+function CustomTooltip({ active, payload, label, activeMetrics, hasCompare }) {
+  if (!active || !payload || !payload.length) return null;
+  const data = payload[0].payload;
+  
+  const getFormat = (val, type) => {
+    if (type === "clicks") return formatNum(val);
+    if (type === "impressions") return formatNum(val);
+    if (type === "ctr") return `${Number(val ?? 0).toFixed(1)}%`;
+    if (type === "position") return Number(val ?? 0).toFixed(1);
+    return val;
+  };
+
+  const getMetricLabel = (type) => {
+    if (type === "clicks") return "Clicks";
+    if (type === "impressions") return "Impressions";
+    if (type === "ctr") return "CTR";
+    if (type === "position") return "Position";
+    return type;
+  };
+
+  const getColor = (type) => {
+    if (type === "clicks") return "text-[#34a853]";
+    if (type === "impressions") return "text-[#7c7abc]";
+    if (type === "ctr") return "text-[#f59e0b]";
+    if (type === "position") return "text-[#6b7280]";
+    return "text-gray-800";
+  };
+
+  return (
+    <div className="bg-white/95 backdrop-blur-md border border-slate-100 rounded-xl shadow-xl p-3 text-xs min-w-[160px] transition-all">
+      <p className="text-slate-400 font-semibold mb-2">{data.fullDate || label}</p>
+      <div className="space-y-1.5">
+        {payload.map((item, idx) => {
+          const isCompare = item.dataKey.startsWith("compare") || item.name?.includes("compare") || item.name?.includes("compare");
+          const rawKey = item.dataKey.toLowerCase();
+          const type = rawKey.includes("click") ? "clicks" : rawKey.includes("impress") ? "impressions" : rawKey.includes("ctr") ? "ctr" : "position";
+          
+          if (!isCompare && !activeMetrics[type]) return null;
+          
+          return (
+            <div key={idx} className="flex items-center justify-between gap-4">
+              <span className="flex items-center gap-1.5 text-slate-600 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.stroke || item.fill }} />
+                {getMetricLabel(type)}{isCompare ? " (Compare)" : ""}
+              </span>
+              <span className={`font-bold tabular-nums ${getColor(type)}`}>
+                {getFormat(item.value, type)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SeparateTooltip({ active, payload, label, type }) {
+  if (!active || !payload || !payload.length) return null;
+  const data = payload[0].payload;
+  const val = payload[0].value;
+  
+  const getFormat = (val, type) => {
+    if (type === "clicks") return formatNum(val);
+    if (type === "impressions") return formatNum(val);
+    if (type === "ctr") return `${Number(val ?? 0).toFixed(1)}%`;
+    if (type === "position") return Number(val ?? 0).toFixed(1);
+    return val;
+  };
+
+  const getColor = (type) => {
+    if (type === "clicks") return "text-[#34a853]";
+    if (type === "impressions") return "text-[#7c7abc]";
+    if (type === "ctr") return "text-[#f59e0b]";
+    if (type === "position") return "text-[#6b7280]";
+    return "text-gray-800";
+  };
+
+  return (
+    <div className="bg-white/95 backdrop-blur-md border border-slate-100 rounded-xl shadow-xl p-2.5 text-xs min-w-[140px] transition-all">
+      <p className="text-slate-400 font-semibold mb-1.5">{data.fullDate || label}</p>
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex items-center gap-1.5 text-slate-600 font-medium">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: payload[0].stroke || payload[0].fill }} />
+          {type === "clicks" ? "Clicks" : type === "impressions" ? "Impressions" : type === "ctr" ? "CTR" : "Position"}
+        </span>
+        <span className={`font-bold tabular-nums ${getColor(type)}`}>
+          {getFormat(val, type)}
+        </span>
+      </div>
+      {payload[1] && (
+        <div className="flex items-center justify-between gap-3 mt-1 pt-1 border-t border-slate-100">
+          <span className="flex items-center gap-1.5 text-slate-400 font-medium">
+            <span className="w-2.5 h-2.5 rounded-full bg-slate-200" style={{ backgroundColor: payload[1].stroke || payload[1].fill, opacity: 0.5 }} />
+            Compare
+          </span>
+          <span className="font-semibold tabular-nums text-slate-400">
+            {getFormat(payload[1].value, type)}
+          </span>
+        </div>
+      )}
+    </div>
   );
 }
 
