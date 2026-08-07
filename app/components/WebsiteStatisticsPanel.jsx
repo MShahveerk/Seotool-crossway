@@ -184,7 +184,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
     position: false,
   });
   const [mainTab, setMainTab] = useState("overview");
-  const [graphMode, setGraphMode] = useState("separate");
+  const [graphMode, setGraphMode] = useState("combined");
   const [approvalOpenCount, setApprovalOpenCount] = useState(0);
   const [approvalCountNonce, setApprovalCountNonce] = useState(0);
   const showApprovalsTab = !isSuperAdmin;

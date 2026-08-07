@@ -47,7 +47,6 @@ const SMM_BASELINE_PLATFORM_LABEL = {
 };
 import SiteAssociationsModal from "./SiteAssociationsModal";
 import SeoDigestSettingsPanel from "./SeoDigestSettingsPanel";
-import SerperSettingsPanel from "./SerperSettingsPanel";
 import ReportsManagementPanel from "./ReportsManagementPanel";
 import CronJobsPanel from "./CronJobsPanel";
 import ModulePermissionPicker from "./ModulePermissionPicker";
@@ -854,7 +853,6 @@ export default function AdminSection({ onNavigate } = {}) {
       )}
 
       <SeoDigestSettingsPanel />
-      <SerperSettingsPanel />
 
       <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-sm text-emerald-900 mb-4">
         Deck filters (hide slides/stats) and downloads live under{" "}
