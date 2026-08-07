@@ -26,6 +26,7 @@ import UnifiedSiteExplorerSection from "./components/seo/UnifiedSiteExplorerSect
 import SerankingBacklinksSection from "./components/seranking/SerankingBacklinksSection";
 import ReportsStudioSection from "./components/ReportsStudioSection";
 import SeoAutopilotSection from "./components/SeoAutopilotSection";
+import SerperExplorerSection from "./components/seo/SerperExplorerSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { sessionCanAccessSection } from "../lib/clientPermissions";
@@ -198,6 +199,12 @@ export default function Home() {
       case "reports-studio":
         return sessionCanAccessSection(session, "reports-studio") ? (
           <ReportsStudioSection selectedSite={selectedSite} />
+        ) : (
+          fallback()
+        );
+      case "serper-explorer":
+        return sessionCanAccessSection(session, "serper-explorer") ? (
+          <SerperExplorerSection />
         ) : (
           fallback()
         );

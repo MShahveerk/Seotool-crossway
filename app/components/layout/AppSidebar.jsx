@@ -27,6 +27,7 @@ import {
   Link2,
   Presentation,
   Workflow,
+  Cpu,
 } from "lucide-react";
 import { isMetaPageId } from "@/lib/siteAccess";
 import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";
@@ -106,6 +107,10 @@ const reportsMenuItems = [
   { id: "reports-studio", label: "Report Studio", icon: Presentation },
 ];
 
+const serperMenuItems = [
+  { id: "serper-explorer", label: "Serper Explorer", icon: Cpu },
+];
+
 function groupContainsSection(items, sectionId) {
   return items.some((item) => item.id === sectionId);
 }
@@ -147,6 +152,7 @@ export default function AppSidebar({
   const [smmOpen, setSmmOpen] = useState(true);
   const [blogsOpen, setBlogsOpen] = useState(true);
   const [reportsOpen, setReportsOpen] = useState(true);
+  const [serperOpen, setSerperOpen] = useState(true);
 
   const userRole = session?.user?.role;
 
@@ -294,6 +300,7 @@ export default function AppSidebar({
     if (groupContainsSection(smmMenuItems, activeSection)) setSmmOpen(true);
     if (groupContainsSection(blogsMenuItems, activeSection)) setBlogsOpen(true);
     if (groupContainsSection(reportsMenuItems, activeSection)) setReportsOpen(true);
+    if (groupContainsSection(serperMenuItems, activeSection)) setSerperOpen(true);
   }, [activeSection]);
 
   const menuContext = { session, hasGlobalSiteAccess, isWebsiteSelected };
@@ -305,6 +312,7 @@ export default function AppSidebar({
   const visibleSmmItems = smmMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleBlogItems = blogsMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleReportsItems = reportsMenuItems.filter((item) => filterMenuItem(item, menuContext));
+  const visibleSerperItems = serperMenuItems.filter((item) => filterMenuItem(item, menuContext));
 
   const seoItemsForMenu = isWebsiteSelected
     ? visibleSeoItems
@@ -315,6 +323,7 @@ export default function AppSidebar({
   const showSmmGroup = visibleSmmItems.length > 0;
   const showBlogsGroup = visibleBlogItems.length > 0;
   const showReportsGroup = visibleReportsItems.length > 0;
+  const showSerperGroup = visibleSerperItems.length > 0;
 
   const getItemBadge = (item) => {
     if (item.id === "my-approvals" && approvalUserUnread > 0) {
@@ -446,6 +455,10 @@ export default function AppSidebar({
 
         {showReportsGroup
           ? renderMenuGroup("Reports", Presentation, visibleReportsItems, reportsOpen, setReportsOpen, "reports")
+          : null}
+
+        {showSerperGroup
+          ? renderMenuGroup("Serper.dev", Cpu, visibleSerperItems, serperOpen, setSerperOpen, "serper")
           : null}
 
         {canManageUsers ? (
