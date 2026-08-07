@@ -27,6 +27,7 @@ import {
   Link2,
   Presentation,
   Workflow,
+  Database,
 } from "lucide-react";
 import { isMetaPageId } from "@/lib/siteAccess";
 import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";
@@ -82,6 +83,10 @@ const seoMenuItems = [
   { id: "site-explorer", label: "Site Explorer", icon: Compass },
   { id: "backlink-profile", label: "Backlink Profile", icon: Link2 },
   { id: "seo-autopilot", label: "SEO Autopilot", icon: SeoAutopilotMark },
+];
+
+const dataforseoMenuItems = [
+  { id: "dataforseo-explorer", label: "DataForSEO Explorer", icon: Database },
 ];
 
 const smmMenuItems = [
@@ -144,6 +149,7 @@ export default function AppSidebar({
   const [approvalUserUnread, setApprovalUserUnread] = useState(0);
   const [gscOpen, setGscOpen] = useState(true);
   const [seoOpen, setSeoOpen] = useState(true);
+  const [dataforseoOpen, setDataforseoOpen] = useState(true);
   const [smmOpen, setSmmOpen] = useState(true);
   const [blogsOpen, setBlogsOpen] = useState(true);
   const [reportsOpen, setReportsOpen] = useState(true);
@@ -291,6 +297,7 @@ export default function AppSidebar({
   useEffect(() => {
     if (groupContainsSection(gscMenuItems, activeSection)) setGscOpen(true);
     if (groupContainsSection(seoMenuItems, activeSection)) setSeoOpen(true);
+    if (groupContainsSection(dataforseoMenuItems, activeSection)) setDataforseoOpen(true);
     if (groupContainsSection(smmMenuItems, activeSection)) setSmmOpen(true);
     if (groupContainsSection(blogsMenuItems, activeSection)) setBlogsOpen(true);
     if (groupContainsSection(reportsMenuItems, activeSection)) setReportsOpen(true);
@@ -302,6 +309,7 @@ export default function AppSidebar({
     sessionCanAccessSection(session, "dashboard") && userRole !== "approver";
   const visibleGscItems = gscMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleSeoItems = seoMenuItems.filter((item) => filterMenuItem(item, menuContext));
+  const visibleDataForSeoItems = dataforseoMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleSmmItems = smmMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleBlogItems = blogsMenuItems.filter((item) => filterMenuItem(item, menuContext));
   const visibleReportsItems = reportsMenuItems.filter((item) => filterMenuItem(item, menuContext));
@@ -312,6 +320,7 @@ export default function AppSidebar({
 
   const showGscGroup = isWebsiteSelected && visibleGscItems.length > 0;
   const showSeoGroup = seoItemsForMenu.length > 0;
+  const showDataForSeoGroup = visibleDataForSeoItems.length > 0;
   const showSmmGroup = visibleSmmItems.length > 0;
   const showBlogsGroup = visibleBlogItems.length > 0;
   const showReportsGroup = visibleReportsItems.length > 0;
@@ -438,6 +447,10 @@ export default function AppSidebar({
 
         {showSeoGroup
           ? renderMenuGroup("SEO Tools", Search, seoItemsForMenu, seoOpen, setSeoOpen, "seo")
+          : null}
+
+        {showDataForSeoGroup
+          ? renderMenuGroup("DataForSEO", Database, visibleDataForSeoItems, dataforseoOpen, setDataforseoOpen, "dataforseo")
           : null}
 
         {showSmmGroup ? renderMenuGroup("Social Media", Megaphone, visibleSmmItems, smmOpen, setSmmOpen, "smm") : null}

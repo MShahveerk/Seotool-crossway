@@ -47,6 +47,7 @@ const SMM_BASELINE_PLATFORM_LABEL = {
 };
 import SiteAssociationsModal from "./SiteAssociationsModal";
 import SeoDigestSettingsPanel from "./SeoDigestSettingsPanel";
+import DataForSeoSettingsPanel from "./DataForSeoSettingsPanel";
 import ReportsManagementPanel from "./ReportsManagementPanel";
 import CronJobsPanel from "./CronJobsPanel";
 import ModulePermissionPicker from "./ModulePermissionPicker";
@@ -851,6 +852,8 @@ export default function AdminSection({ onNavigate } = {}) {
           {successMessage}
         </div>
       )}
+
+      <DataForSeoSettingsPanel />
 
       <SeoDigestSettingsPanel />
 
