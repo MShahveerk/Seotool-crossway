@@ -382,12 +382,13 @@ export default function AppSidebar({
 
   return (
     <Sidebar collapsible="icon" variant="inset">
-      <SidebarHeader className="border-b border-sidebar-border/60 pb-3">
+      <SidebarHeader className="border-b border-sidebar-border/80">
         <div className="flex items-center gap-3 px-1 py-1">
-          <CrosswayLogo variant="dark" size={36} />
+          <CrosswayLogo variant="light" size={36} className="dark:hidden" />
+          <CrosswayLogo variant="dark" size={36} className="hidden dark:inline-flex" />
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
             <p className="truncate text-sm font-bold text-sidebar-foreground">Crossway</p>
-            <p className="truncate text-[10px] font-medium tracking-wide" style={{ color: "oklch(0.72 0.17 80)" }}>SEO &amp; Marketing Suite</p>
+            <p className="truncate text-xs text-muted-foreground">SEO & Marketing Suite</p>
           </div>
         </div>
 
@@ -395,18 +396,18 @@ export default function AppSidebar({
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(
-                "mt-2 flex w-full items-center justify-between gap-2 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/50 px-3 py-2 text-left text-sm transition-all hover:border-primary/30 hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden"
+                "mt-2 flex w-full items-center justify-between gap-2 rounded-lg border border-sidebar-border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden"
               )}
             >
               <span className="flex min-w-0 items-center gap-2">
                 <ClientAccountLogo entry={selectedSiteEntry} size="sm" />
-                <span className="truncate font-medium text-sidebar-foreground">
+                <span className="truncate font-medium">
                   {selectedSite ? getPageDisplayName(selectedSite) : "Select client"}
                 </span>
               </span>
               <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64 max-h-72 overflow-y-auto border-border/60 bg-popover shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
+            <DropdownMenuContent align="start" className="w-64 max-h-72 overflow-y-auto">
               {availableSites.map((siteEntry, index) => {
                 const val = getClientAccountSelectValue(siteEntry);
                 const isSelected = entryMatchesSelectValue(siteEntry, selectedSite);
@@ -414,7 +415,7 @@ export default function AppSidebar({
                   <DropdownMenuItem
                     key={`${val}-${index}`}
                     onClick={() => onSelectedSiteChange?.(val)}
-                    className={cn(isSelected && "bg-primary/10 text-primary border-l-2 border-primary")}
+                    className={cn(isSelected && "bg-emerald-50 text-emerald-900")}
                   >
                     <ClientAccountLogo entry={siteEntry} size="sm" />
                     {getPageDisplayName(siteEntry)}
@@ -424,9 +425,9 @@ export default function AppSidebar({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <div className="mt-2 rounded-xl border border-sidebar-border/60 bg-sidebar-accent/50 px-3 py-2 group-data-[collapsible=icon]:hidden">
+          <div className="mt-2 rounded-lg border border-sidebar-border bg-background px-3 py-2 group-data-[collapsible=icon]:hidden">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Current Site</p>
-            <p className="mt-1 truncate text-sm font-medium text-sidebar-foreground">{getSiteHostName(userSiteLink)}</p>
+            <p className="mt-1 truncate text-sm font-medium">{getSiteHostName(userSiteLink)}</p>
           </div>
         )}
       </SidebarHeader>
@@ -513,27 +514,27 @@ export default function AppSidebar({
         )}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border/60 pt-2">
+      <SidebarFooter className="border-t border-sidebar-border/80">
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-all hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center">
-            <Avatar className="size-8 ring-1 ring-primary/20">
-              <AvatarFallback className="text-xs font-bold" style={{ background: "oklch(0.115 0.012 160)", color: "oklch(0.695 0.17 165)" }}>
+          <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center">
+            <Avatar className="size-8">
+              <AvatarFallback className="bg-emerald-100 text-emerald-800 text-xs font-semibold">
                 {userInitials}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-              <p className="truncate text-sm font-semibold text-sidebar-foreground">{session?.user?.name || session?.user?.email}</p>
-              <span className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide" style={{ background: "oklch(0.72 0.17 80 / 0.15)", color: "oklch(0.72 0.17 80)" }}>
+              <p className="truncate text-sm font-medium">{session?.user?.name || session?.user?.email}</p>
+              <Badge variant="secondary" className="mt-0.5 text-[10px] capitalize">
                 {session?.user?.role?.replace("_", " ") || "user"}
-              </span>
+              </Badge>
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52 border-border/60 bg-popover shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
-            <DropdownMenuItem disabled className="text-muted-foreground">
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem disabled>
               <Settings className="size-4" />
               Account settings
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-border/50" />
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
               onClick={async () => {

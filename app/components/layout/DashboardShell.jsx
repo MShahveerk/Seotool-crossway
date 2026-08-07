@@ -28,10 +28,9 @@ export default function DashboardLayout({
         onSelectedSiteChange={onSelectedSiteChange}
       />
       <SidebarInset className="mesh-bg flex min-h-svh flex-col">
-        {/* Top header bar — dark glass */}
-        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border/50 bg-background/80 backdrop-blur-xl px-4 shadow-[0_1px_0_0_oklch(0.695_0.17_165/0.08)]">
-          <SidebarTrigger className="-ml-1 text-muted-foreground transition-smooth hover:text-foreground hover:bg-accent rounded-md" />
-          <Separator orientation="vertical" className="hidden h-5 sm:block opacity-30" />
+        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border/60 surface-glass px-4">
+          <SidebarTrigger className="-ml-1 transition-smooth hover:bg-emerald-50" />
+          <Separator orientation="vertical" className="hidden h-5 sm:block" />
           <div className="min-w-0 flex-1" key={activeSection}>
             <FadeIn delay={0}>
               <p className="truncate text-sm font-semibold text-foreground">{sectionLabel}</p>
@@ -48,7 +47,7 @@ export default function DashboardLayout({
           </div>
           <Badge
             variant="outline"
-            className="hidden capitalize transition-smooth sm:inline-flex border-border/60 text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-primary/5"
+            className="hidden capitalize transition-smooth sm:inline-flex hover:border-emerald-300 hover:bg-emerald-50/80"
           >
             {activeSection.replace(/-/g, " ")}
           </Badge>
@@ -59,11 +58,11 @@ export default function DashboardLayout({
           className={cn(
             "flex min-h-0 flex-1 flex-col",
             isBoard ? "p-2 sm:p-2.5 lg:p-3" : "p-3 pt-4 sm:p-4 lg:p-5",
-            isDashboard ? "bg-muted/10" : "bg-transparent"
+            isDashboard ? "bg-muted/20" : "bg-transparent"
           )}
         >
           {isDashboard ? (
-            <div className="mx-auto max-w-6xl rounded-2xl border border-border/60 bg-card/90 p-4 shadow-[0_4px_32px_rgba(0,0,0,0.4)] backdrop-blur-sm transition-smooth sm:p-6 hover:border-border hover:shadow-[0_8px_40px_rgba(0,0,0,0.5)]">
+            <div className="mx-auto max-w-6xl rounded-2xl border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-sm transition-smooth sm:p-6 hover:shadow-md">
               {children}
             </div>
           ) : isBoard ? (
