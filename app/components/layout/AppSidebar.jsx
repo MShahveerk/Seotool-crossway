@@ -82,6 +82,7 @@ const seoMenuItems = [
   { id: "site-audit", label: "Site Audit", icon: Shield },
   { id: "keyword-research", label: "Keyword Research", icon: Search },
   { id: "google-ads-planner", label: "Google Ads Planner", icon: Target },
+  { id: "competitor-matrix", label: "Competitor Matrix", icon: Crosshair },
   { id: "site-explorer", label: "Site Explorer", icon: Compass },
   { id: "backlink-profile", label: "Backlink Profile", icon: Link2 },
   { id: "seo-autopilot", label: "SEO Autopilot", icon: SeoAutopilotMark },
