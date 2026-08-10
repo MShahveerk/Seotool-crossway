@@ -28,6 +28,7 @@ import ReportsStudioSection from "./components/ReportsStudioSection";
 import SeoAutopilotSection from "./components/SeoAutopilotSection";
 import HelpCenterSection from "./components/seo/HelpCenterSection";
 import DataForSeoExplorerSection from "./components/seo/DataForSeoExplorerSection";
+import GoogleAdsKeywordPlannerSection from "./components/seo/GoogleAdsKeywordPlannerSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { sessionCanAccessSection } from "../lib/clientPermissions";
@@ -210,6 +211,8 @@ export default function Home() {
         return <SerankingBacklinksSection selectedSite={seoSite} />;
       case "dataforseo-explorer":
         return <DataForSeoExplorerSection selectedSite={seoSite} />;
+      case "google-ads-planner":
+        return <GoogleAdsKeywordPlannerSection selectedSite={seoSite} />;
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
       case "calendar":
