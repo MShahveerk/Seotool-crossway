@@ -28,6 +28,7 @@ import {
   Presentation,
   Workflow,
   Database,
+  Target,
 } from "lucide-react";
 import { isMetaPageId } from "@/lib/siteAccess";
 import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";

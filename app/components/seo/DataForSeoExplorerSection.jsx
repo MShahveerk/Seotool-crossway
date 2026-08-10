@@ -14,7 +14,7 @@ import {
   FiAward,
   FiShield,
   FiRefreshCw,
-  FiSparkles,
+  FiZap,
 } from "react-icons/fi";
 
 const LOCATIONS = [
@@ -301,7 +301,7 @@ export default function DataForSeoExplorerSection({ selectedSite = "" }) {
           {data?.suggestions?.length > 0 && (
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-4 flex items-center gap-2">
-                <FiSparkles className="text-amber-500" />
+                <FiZap className="text-amber-500" />
                 Related Keyword Opportunities
               </h3>
               <div className="overflow-x-auto">
