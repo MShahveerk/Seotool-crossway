@@ -18,6 +18,8 @@ import {
   FiShield,
   FiChevronDown,
   FiChevronRight,
+  FiTarget,
+  FiCheckSquare,
 } from "react-icons/fi";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
 
@@ -35,7 +37,7 @@ function HeadingTree({ headings }) {
         className="flex items-center gap-1 font-bold text-gray-700 hover:text-emerald-600 transition-colors"
       >
         {expanded ? <FiChevronDown className="size-3.5" /> : <FiChevronRight className="size-3.5" />}
-        <span>Heading Tree ({headings.length} headings)</span>
+        <span>Heading Outline ({headings.length} headings)</span>
       </button>
 
       <div className="pl-2 border-l-2 border-emerald-100 space-y-1 my-1">
@@ -78,7 +80,201 @@ function SchemaChips({ schemas }) {
   );
 }
 
-function CompetitorCard({ item, rankLabel, isLeader }) {
+function BlueprintTable({ yourPage, topLeaders, summary }) {
+  const leaderAvgWords = summary.avgLeaderWordCount || 0;
+  const leaderAvgH2 = summary.avgLeaderH2Count || 0;
+  const leaderAvgSpeed = summary.avgLeaderSpeedScore || 0;
+  const leaderSchemas = summary.commonLeaderSchemas || [];
+
+  return (
+    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/20 p-5 space-y-4 shadow-sm">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FiTarget className="size-5 text-emerald-600" />
+          <h3 className="font-bold text-base text-gray-900">SERP Winner Blueprint &amp; Gap Recipe</h3>
+        </div>
+        <span className="text-xs font-semibold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full">
+          100% Empirical &amp; Verifiable Data
+        </span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-xs text-gray-700">
+          <thead className="bg-white/80 text-[11px] font-bold uppercase tracking-wider text-gray-500 border-b border-emerald-100">
+            <tr>
+              <th className="px-4 py-3">Metric</th>
+              <th className="px-4 py-3 text-center">Your Page</th>
+              <th className="px-4 py-3 text-center">Top 3 Winners Avg</th>
+              <th className="px-4 py-3">Gap &amp; Required Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-emerald-100 bg-white/60 font-medium">
+            <tr>
+              <td className="px-4 py-3 font-semibold text-gray-900">Content Depth (Words)</td>
+              <td className="px-4 py-3 text-center font-bold text-gray-900">
+                {yourPage ? `${formatNum(yourPage.wordCount)} w` : "Targeting"}
+              </td>
+              <td className="px-4 py-3 text-center font-bold text-amber-900">
+                {formatNum(leaderAvgWords)} words
+              </td>
+              <td className="px-4 py-3">
+                {yourPage ? (
+                  yourPage.wordCount >= leaderAvgWords * 0.9 ? (
+                    <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                      <FiCheckCircle className="size-3.5" /> Optimal Depth Matched
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-red-700 font-bold">
+                      <FiAlertCircle className="size-3.5" /> -{formatNum(leaderAvgWords - yourPage.wordCount)} words deficit
+                    </span>
+                  )
+                ) : (
+                  <span className="text-gray-600">Aim for at least {formatNum(leaderAvgWords)} words</span>
+                )}
+              </td>
+            </tr>
+
+            <tr>
+              <td className="px-4 py-3 font-semibold text-gray-900">H2 Sub-Sections</td>
+              <td className="px-4 py-3 text-center font-bold text-gray-900">
+                {yourPage ? `${yourPage.h2Count} H2s` : "Targeting"}
+              </td>
+              <td className="px-4 py-3 text-center font-bold text-amber-900">
+                {leaderAvgH2} H2 sub-sections
+              </td>
+              <td className="px-4 py-3">
+                {yourPage ? (
+                  yourPage.h2Count >= leaderAvgH2 ? (
+                    <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                      <FiCheckCircle className="size-3.5" /> Heading Structure Matched
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-amber-700 font-bold">
+                      <FiAlertCircle className="size-3.5" /> Add +{leaderAvgH2 - yourPage.h2Count} H2 sub-sections
+                    </span>
+                  )
+                ) : (
+                  <span className="text-gray-600">Structure page with ~{leaderAvgH2} H2 sub-topics</span>
+                )}
+              </td>
+            </tr>
+
+            <tr>
+              <td className="px-4 py-3 font-semibold text-gray-900">Schema.org Microdata</td>
+              <td className="px-4 py-3 text-center">
+                {yourPage?.schemas?.length ? (
+                  <SchemaChips schemas={yourPage.schemas} />
+                ) : (
+                  <span className="text-gray-400">None</span>
+                )}
+              </td>
+              <td className="px-4 py-3 text-center">
+                <SchemaChips schemas={leaderSchemas} />
+              </td>
+              <td className="px-4 py-3">
+                {leaderSchemas.length > 0 ? (
+                  <span className="text-amber-800 font-bold">
+                    Implement {leaderSchemas.join(", ")} JSON-LD
+                  </span>
+                ) : (
+                  <span className="text-gray-500">No schema required</span>
+                )}
+              </td>
+            </tr>
+
+            <tr>
+              <td className="px-4 py-3 font-semibold text-gray-900">PageSpeed Performance</td>
+              <td className="px-4 py-3 text-center font-bold text-gray-900">
+                {yourPage?.speed?.score != null ? `${yourPage.speed.score}/100` : "—"}
+              </td>
+              <td className="px-4 py-3 text-center font-bold text-amber-900">
+                {leaderAvgSpeed > 0 ? `${leaderAvgSpeed}/100` : "N/A"}
+              </td>
+              <td className="px-4 py-3">
+                {yourPage?.speed?.score != null && leaderAvgSpeed > 0 ? (
+                  yourPage.speed.score >= leaderAvgSpeed ? (
+                    <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                      <FiCheckCircle className="size-3.5" /> Fast Performance Matched
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-red-700 font-bold">
+                      <FiAlertCircle className="size-3.5" /> -{leaderAvgSpeed - yourPage.speed.score} pts behind leaders
+                    </span>
+                  )
+                ) : (
+                  <span className="text-gray-600">Aim for PageSpeed score &gt; 85/100</span>
+                )}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ActionChecklist({ items }) {
+  if (!items?.length) return null;
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-3 shadow-sm">
+      <div className="flex items-center gap-2">
+        <FiCheckSquare className="size-5 text-emerald-600" />
+        <h3 className="font-bold text-sm text-gray-900">Deterministic Action Plan to Outrank #1</h3>
+      </div>
+      <div className="space-y-2">
+        {items.map((action, idx) => (
+          <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
+            <span
+              className={`mt-0.5 inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                action.priority === "HIGH" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              {action.priority}
+            </span>
+            <div>
+              <h4 className="font-bold text-xs text-gray-900">{action.title}</h4>
+              <p className="text-xs text-gray-600 mt-0.5">{action.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SideBySideInspector({ leaders }) {
+  if (!leaders?.length) return null;
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-3 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div className="flex items-center gap-2">
+          <FiLayers className="size-5 text-purple-600" />
+          <h3 className="font-bold text-sm text-gray-900">Side-by-Side Content Outline Inspector</h3>
+        </div>
+        <span className="text-xs text-gray-500 font-medium">Compare H1 / H2 / H3 heading trees</span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 overflow-x-auto">
+        {leaders.slice(0, 3).map((item, idx) => (
+          <div key={idx} className="rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 space-y-2 text-xs">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+              <span className="font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded text-[10px]">
+                Rank #{item.rank}
+              </span>
+              <span className="font-semibold text-gray-600 truncate max-w-[140px]">{item.domain}</span>
+            </div>
+            <p className="font-bold text-gray-900 text-xs line-clamp-1">{item.title}</p>
+            <HeadingTree headings={item.headings} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CompetitorCard({ item, isLeader }) {
   return (
     <div className={`rounded-2xl border p-5 space-y-4 transition-all shadow-sm ${
       isLeader ? "border-amber-200 bg-amber-50/20" : "border-gray-200 bg-white"
@@ -224,15 +420,17 @@ export default function CompetitorMatrixSection({ selectedSite }) {
     }
   };
 
+  const yourPage = data?.yourPage || null;
   const topLeaders = data?.topLeaders || [];
   const closeCompetitors = data?.closeCompetitors || [];
   const lowerPages = data?.lowerPages || [];
   const summary = data?.summary || {};
+  const actionChecklist = data?.actionChecklist || [];
 
   return (
     <SeoPanelShell
-      title="Empirical Competitor Matrix"
-      description="Side-by-side competitor benchmarking powered by real-time HTML heading extraction, Google PageSpeed Insights, Open PageRank authority, and Schema.org microdata parsing. Zero AI hallucinations."
+      title="Empirical Competitor Intelligence Matrix"
+      description="Groundbreaking side-by-side competitor benchmarking. Inspect heading outlines, Schema microdata, word counts, and Core Web Vitals across top ranking pages. 100% empirical & verifiable."
       selectedSite={selectedSite}
       loading={false}
       error={error}
@@ -281,49 +479,22 @@ export default function CompetitorMatrixSection({ selectedSite }) {
         </div>
       </form>
 
-      {/* Summary KPI Cards */}
+      {/* 1. SERP Winner Blueprint Table */}
       {data && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-amber-900">Leader Avg Word Count</span>
-              <FiAward className="size-5 text-amber-600" />
-            </div>
-            <p className="mt-2 text-2xl font-bold text-amber-950">{formatNum(summary.avgLeaderWordCount)} words</p>
-            <span className="text-[11px] text-amber-800">Target depth for Top 3 rankings</span>
-          </div>
-
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-emerald-900">Common Leader Schema</span>
-              <FiCode className="size-5 text-emerald-600" />
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {summary.commonLeaderSchemas?.length ? (
-                summary.commonLeaderSchemas.map((s, i) => (
-                  <span key={i} className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                    {s}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-gray-500">None detected</span>
-              )}
-            </div>
-            <span className="text-[11px] text-emerald-800 mt-1 block">Structured data used by leaders</span>
-          </div>
-
-          <div className="rounded-2xl border border-blue-200 bg-blue-50/40 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-blue-900">Competitors Audited</span>
-              <FiGlobe className="size-5 text-blue-600" />
-            </div>
-            <p className="mt-2 text-2xl font-bold text-blue-950">{summary.competitorsAudited} pages</p>
-            <span className="text-[11px] text-blue-800">HTML &amp; Speed empirical checks</span>
-          </div>
-        </div>
+        <BlueprintTable yourPage={yourPage} topLeaders={topLeaders} summary={summary} />
       )}
 
-      {/* Competitors List by Tiers */}
+      {/* 2. Action Plan Checklist */}
+      {data && actionChecklist.length > 0 && (
+        <ActionChecklist items={actionChecklist} />
+      )}
+
+      {/* 3. Side-by-Side Outline Inspector */}
+      {data && topLeaders.length > 0 && (
+        <SideBySideInspector leaders={topLeaders} />
+      )}
+
+      {/* 4. Competitors List by Tiers */}
       {data && (
         <div className="space-y-6">
           {/* Top Leaders Tier */}
