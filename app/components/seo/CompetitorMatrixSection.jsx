@@ -20,6 +20,7 @@ import {
   FiChevronRight,
   FiTarget,
   FiCheckSquare,
+  FiUser,
 } from "react-icons/fi";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
 
@@ -103,7 +104,7 @@ function BlueprintTable({ yourPage, topLeaders, summary }) {
           <thead className="bg-white/80 text-[11px] font-bold uppercase tracking-wider text-gray-500 border-b border-emerald-100">
             <tr>
               <th className="px-4 py-3">Metric</th>
-              <th className="px-4 py-3 text-center">Your Page</th>
+              <th className="px-4 py-3 text-center">Your Site</th>
               <th className="px-4 py-3 text-center">Top 3 Winners Avg</th>
               <th className="px-4 py-3">Gap &amp; Required Action</th>
             </tr>
@@ -243,8 +244,10 @@ function ActionChecklist({ items }) {
   );
 }
 
-function SideBySideInspector({ leaders }) {
+function SideBySideInspector({ yourPage, leaders }) {
   if (!leaders?.length) return null;
+
+  const itemsToShow = yourPage ? [yourPage, ...leaders.slice(0, 2)] : leaders.slice(0, 3);
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-3 shadow-sm overflow-hidden">
@@ -257,11 +260,22 @@ function SideBySideInspector({ leaders }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 overflow-x-auto">
-        {leaders.slice(0, 3).map((item, idx) => (
-          <div key={idx} className="rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 space-y-2 text-xs">
+        {itemsToShow.map((item, idx) => (
+          <div
+            key={idx}
+            className={`rounded-xl border p-3.5 space-y-2 text-xs ${
+              item.isYourSite ? "border-emerald-300 bg-emerald-50/30" : "border-gray-200 bg-gray-50/50"
+            }`}
+          >
             <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-              <span className="font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded text-[10px]">
-                Rank #{item.rank}
+              <span
+                className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                  item.isYourSite
+                    ? "bg-emerald-600 text-white"
+                    : "bg-amber-100 text-amber-900"
+                }`}
+              >
+                {item.isYourSite ? "Your Site" : `Rank #${item.rank}`}
               </span>
               <span className="font-semibold text-gray-600 truncate max-w-[140px]">{item.domain}</span>
             </div>
@@ -275,17 +289,27 @@ function SideBySideInspector({ leaders }) {
 }
 
 function CompetitorCard({ item, isLeader }) {
+  const isYourSite = Boolean(item.isYourSite);
+
   return (
     <div className={`rounded-2xl border p-5 space-y-4 transition-all shadow-sm ${
-      isLeader ? "border-amber-200 bg-amber-50/20" : "border-gray-200 bg-white"
+      isYourSite
+        ? "border-emerald-300 bg-emerald-50/20 ring-2 ring-emerald-500/20"
+        : isLeader
+        ? "border-amber-200 bg-amber-50/20"
+        : "border-gray-200 bg-white"
     }`}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <span className={`inline-flex items-center justify-center rounded-xl font-bold text-xs px-3 py-1 ${
-            isLeader ? "bg-amber-500 text-white shadow-sm" : "bg-emerald-100 text-emerald-800"
+            isYourSite
+              ? "bg-emerald-600 text-white shadow-sm"
+              : isLeader
+              ? "bg-amber-500 text-white shadow-sm"
+              : "bg-emerald-100 text-emerald-800"
           }`}>
-            Rank #{item.rank}
+            {isYourSite ? "Your Site" : `Rank #${item.rank}`}
           </span>
           <div>
             <h4 className="font-bold text-sm text-gray-900 line-clamp-1">{item.title}</h4>
@@ -377,10 +401,8 @@ function CompetitorCard({ item, isLeader }) {
 }
 
 export default function CompetitorMatrixSection({ selectedSite }) {
-  const [keyword, setKeyword] = useState("seo audit tool");
-  const [urlsInput, setUrlsInput] = useState(
-    "https://ahrefs.com/seo-checker\nhttps://semrush.com/features/site-audit/\nhttps://moz.com/free-seo-tools"
-  );
+  const [keyword, setKeyword] = useState("");
+  const [urlsInput, setUrlsInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
@@ -391,10 +413,10 @@ export default function CompetitorMatrixSection({ selectedSite }) {
     setError("");
 
     try {
-      const urls = urlsInput.split(/[\n,]/).map((s) => s.trim()).filter((s) => s.startsWith("http"));
-      if (!urls.length) {
-        throw new Error("Please enter at least one valid competitor HTTP/HTTPS URL to analyze.");
-      }
+      const urls = urlsInput
+        .split(/[\n,]/)
+        .map((s) => s.trim())
+        .filter((s) => s.startsWith("http"));
 
       const res = await fetch("/api/seo/competitor-matrix", {
         method: "POST",
@@ -420,6 +442,13 @@ export default function CompetitorMatrixSection({ selectedSite }) {
     }
   };
 
+  // Auto-run analysis when selectedSite changes if no data exists yet
+  useEffect(() => {
+    if (selectedSite && !data && !loading) {
+      handleAnalyze();
+    }
+  }, [selectedSite]);
+
   const yourPage = data?.yourPage || null;
   const topLeaders = data?.topLeaders || [];
   const closeCompetitors = data?.closeCompetitors || [];
@@ -430,7 +459,7 @@ export default function CompetitorMatrixSection({ selectedSite }) {
   return (
     <SeoPanelShell
       title="Empirical Competitor Intelligence Matrix"
-      description="Groundbreaking side-by-side competitor benchmarking. Inspect heading outlines, Schema microdata, word counts, and Core Web Vitals across top ranking pages. 100% empirical & verifiable."
+      description="Groundbreaking side-by-side competitor benchmarking. Type any keyword or topic to dynamically discover live ranking competitors and compare them directly against your site."
       selectedSite={selectedSite}
       loading={false}
       error={error}
@@ -441,40 +470,51 @@ export default function CompetitorMatrixSection({ selectedSite }) {
           <div className="space-y-1.5 md:col-span-1">
             <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
               <FiSearch className="size-4 text-emerald-600" />
-              Target Keyword / Topic:
+              Target Keyword or Phrase:
             </label>
             <input
               type="text"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="e.g. seo audit tool"
+              placeholder="e.g. digital marketing, best crm"
               className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none"
             />
           </div>
 
           <div className="space-y-1.5 md:col-span-2">
-            <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-              <FiGlobe className="size-4 text-emerald-600" />
-              Competitor URLs to Benchmark (one per line):
+            <label className="text-xs font-bold text-gray-700 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <FiGlobe className="size-4 text-emerald-600" />
+                Custom Competitor URLs (Optional):
+              </span>
+              <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                ⚡ Auto-discovers ranking competitors for keyword or site
+              </span>
             </label>
             <textarea
               rows={3}
               value={urlsInput}
               onChange={(e) => setUrlsInput(e.target.value)}
-              placeholder="https://competitor.com/page1&#10;https://competitor2.com/page2"
+              placeholder="Leave blank to auto-discover competitors automatically, or paste specific URLs to compare..."
               className="w-full rounded-xl border border-gray-200 bg-white p-3 text-xs text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none font-mono"
             />
           </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between pt-2">
+          {selectedSite && (
+            <span className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+              <FiUser className="size-4 text-emerald-600" />
+              Benchmarking for your site: <strong className="text-gray-900">{selectedSite}</strong>
+            </span>
+          )}
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition-all disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition-all disabled:opacity-50 ml-auto"
           >
-            {loading ? <FiRefreshCw className="size-4 animate-spin" /> : <FiLayers className="size-4" />}
-            Analyze Competitors
+            {loading ? <FiRefreshCw className="size-4 animate-spin" /> : <FiZap className="size-4" />}
+            Auto-Discover &amp; Analyze Competitors
           </button>
         </div>
       </form>
@@ -490,11 +530,22 @@ export default function CompetitorMatrixSection({ selectedSite }) {
       )}
 
       {/* 3. Side-by-Side Outline Inspector */}
-      {data && topLeaders.length > 0 && (
-        <SideBySideInspector leaders={topLeaders} />
+      {data && (topLeaders.length > 0 || yourPage) && (
+        <SideBySideInspector yourPage={yourPage} leaders={topLeaders} />
       )}
 
-      {/* 4. Competitors List by Tiers */}
+      {/* 4. Your Site Card (If Audited) */}
+      {yourPage && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+            <FiUser className="size-4 text-emerald-600" />
+            Your Site Performance
+          </h3>
+          <CompetitorCard item={yourPage} isLeader={false} />
+        </div>
+      )}
+
+      {/* 5. Competitors List by Tiers */}
       {data && (
         <div className="space-y-6">
           {/* Top Leaders Tier */}
