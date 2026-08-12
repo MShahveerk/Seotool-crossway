@@ -121,14 +121,22 @@ function KeywordProfile({ profile, domain }) {
     return <p className="text-[11px] text-gray-400 italic">SE Ranking has no organic keywords indexed for {domain}.</p>;
   }
   const list = showAll ? profile.keywords : profile.keywords.slice(0, 8);
+  const noneRelevant = profile.relevantCount === 0;
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1.5">
           <FiList className="size-3.5 text-emerald-600" /> Keywords {domain} ranks for
         </span>
-        <span className="text-[10px] text-gray-400">{formatNum(profile.total)} total{profile.fromCache ? " · cached" : ""}</span>
+        <span className="text-[10px] text-gray-400">
+          {profile.relevantCount != null ? `${formatNum(profile.relevantCount)} on-topic · ` : ""}{formatNum(profile.total)} total{profile.fromCache ? " · cached" : ""}
+        </span>
       </div>
+      {noneRelevant && (
+        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+          ⚠ Ranks for none of your target terms — likely a broad publisher/directory that happens to appear, not a direct competitor.
+        </p>
+      )}
       <div className="overflow-x-auto rounded-lg border border-gray-100">
         <table className="w-full text-left text-[11px]">
           <thead className="bg-gray-50 text-[10px] font-bold uppercase tracking-wider text-gray-500">
@@ -141,8 +149,11 @@ function KeywordProfile({ profile, domain }) {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {list.map((k, i) => (
-              <tr key={i} className="hover:bg-gray-50">
-                <td className="px-2.5 py-1.5 font-medium text-gray-800 max-w-[200px] truncate" title={k.keyword}>{k.keyword}</td>
+              <tr key={i} className={k.relevant ? "bg-emerald-50/60" : "hover:bg-gray-50"}>
+                <td className="px-2.5 py-1.5 font-medium text-gray-800 max-w-[200px] truncate" title={k.keyword}>
+                  {k.relevant && <span className="inline-block size-1.5 rounded-full bg-emerald-500 mr-1.5 align-middle" title="on-topic" />}
+                  {k.keyword}
+                </td>
                 <td className="px-2.5 py-1.5 text-center">
                   <span className={`font-bold ${k.position <= 3 ? "text-emerald-700" : k.position <= 10 ? "text-amber-700" : "text-gray-500"}`}>#{k.position}</span>
                 </td>
@@ -202,6 +213,9 @@ function RankRow({ item, tone }) {
             <div className="flex items-center gap-2">
               <h4 className="font-bold text-sm text-gray-900 truncate">{item.title}</h4>
               {isYou && <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full shrink-0">YOU</span>}
+              {!isYou && item.keywordProfile?.keywords?.length > 3 && item.keywordProfile.relevantCount === 0 && (
+                <span className="text-[9px] font-bold bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full shrink-0" title="Ranks for none of your target terms — not a direct competitor">BROAD SITE</span>
+              )}
             </div>
             <a href={item.link} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 hover:underline inline-flex items-center gap-1 font-medium">
               {item.domain}
@@ -323,7 +337,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
 
-  const handleAnalyze = async (e) => {
+  const handleAnalyze = async (e, force = false) => {
     if (e) e.preventDefault();
     if (!keyword.trim()) {
       setError("Enter a keyword or phrase to analyze.");
@@ -335,7 +349,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
       const res = await fetch("/api/seo/serp-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: keyword.trim(), siteUrl: selectedSite, location: location.trim(), device, geo }),
+        body: JSON.stringify({ keyword: keyword.trim(), siteUrl: selectedSite, location: location.trim(), device, geo, refresh: force }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Failed to analyze SERP");
@@ -423,7 +437,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
       {loading && (
         <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
           <FiRefreshCw className="size-6 animate-spin mx-auto mb-3 text-emerald-500" />
-          Pulling the live SERP and auditing ranking pages… this can take 20–40s.
+          Paging through the live SERP (up to 100 results) and auditing ranking pages… this can take 30–60s.
         </div>
       )}
 
@@ -451,9 +465,24 @@ export default function SerpAnalysisSection({ selectedSite }) {
                   )}
                 </div>
               </div>
-              <div className="text-right text-xs text-gray-500">
+              <div className="text-right text-xs text-gray-500 space-y-1">
                 <p className="font-medium capitalize">{data.device} · {data.location || "default location"}</p>
                 {data.totalResults ? <p>{formatNum(data.totalResults)} total Google results</p> : null}
+                {data.serpPagesFetched ? <p className="text-gray-400">{data.serpPagesFetched} SERP page{data.serpPagesFetched > 1 ? "s" : ""} fetched</p> : null}
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${data.cached ? "bg-gray-100 text-gray-600" : "bg-emerald-100 text-emerald-700"}`}>
+                    {data.cached ? "Cached" : "Fresh"}{data.fetchedAt ? ` · ${new Date(data.fetchedAt).toLocaleDateString()}` : ""}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleAnalyze(null, true)}
+                    disabled={loading}
+                    title="Bypass cache and re-fetch live data (uses API credits)"
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-bold text-gray-600 hover:text-emerald-700 hover:border-emerald-300 disabled:opacity-50"
+                  >
+                    <FiRefreshCw className={`size-3 ${loading ? "animate-spin" : ""}`} /> Refresh
+                  </button>
+                </div>
               </div>
             </div>
           </div>

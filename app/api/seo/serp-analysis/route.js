@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../api/auth/[...nextauth]/route";
 import { canAccessSection } from "@/lib/modulePermissions";
-import { buildSerpAnalysis } from "@/lib/serpAnalysis";
+import { getSerpAnalysis } from "@/lib/serpAnalysis";
 import { isSerpApiConfigured } from "@/lib/serpapi";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(req) {
   try {
@@ -27,7 +27,7 @@ export async function POST(req) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { keyword = "", siteUrl = "", location = "", device = "desktop", depth = 100, geo = "us" } = body;
+    const { keyword = "", siteUrl = "", location = "", device = "desktop", depth = 100, geo = "us", refresh = false } = body;
 
     if (!String(keyword).trim()) {
       return NextResponse.json({ error: "Please enter a target keyword or phrase." }, { status: 400 });
@@ -35,12 +35,17 @@ export async function POST(req) {
 
     const ALLOWED_GEO = new Set(["us", "uk", "ca", "au", "pk"]);
 
-    const data = await buildSerpAnalysis(siteUrl, keyword, {
-      location,
-      device: device === "mobile" ? "mobile" : "desktop",
-      geo: ALLOWED_GEO.has(String(geo).toLowerCase()) ? String(geo).toLowerCase() : "us",
-      depth: Math.min(100, Math.max(10, Number(depth) || 30)),
-    });
+    const data = await getSerpAnalysis(
+      siteUrl,
+      keyword,
+      {
+        location,
+        device: device === "mobile" ? "mobile" : "desktop",
+        geo: ALLOWED_GEO.has(String(geo).toLowerCase()) ? String(geo).toLowerCase() : "us",
+        depth: Math.min(100, Math.max(10, Number(depth) || 30)),
+      },
+      { force: Boolean(refresh) }
+    );
 
     return NextResponse.json({ success: true, data });
   } catch (err) {
