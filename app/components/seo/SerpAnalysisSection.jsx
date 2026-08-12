@@ -106,6 +106,17 @@ function Backlinks({ backlinks }) {
           <span className="text-[10px] text-gray-500">domain trust</span>
         </div>
       </div>
+      {hosts.length === 0 && (
+        <div className="pt-1 border-t border-blue-100">
+          <span className="text-[10px] font-bold text-blue-800 uppercase">Referring domains{backlinks.refdomains != null ? ` (${formatNum(backlinks.refdomains)} reported)` : ""}</span>
+          <p className="text-[11px] text-amber-700 mt-1">
+            {backlinks.refError
+              ? `List unavailable: ${backlinks.refError}`
+              : "The referring-domain list came back empty from SE Ranking for this domain."}
+          </p>
+        </div>
+      )}
+
       {hosts.length > 0 && (
         <div className="pt-1 border-t border-blue-100">
           <span className="text-[10px] font-bold text-blue-800 uppercase">Referring domains giving them authority ({backlinks.refdomains != null ? formatNum(backlinks.refdomains) : hosts.length}{backlinks.refdomains > hosts.length ? " total" : ""})</span>
