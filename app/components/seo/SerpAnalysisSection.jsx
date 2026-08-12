@@ -108,15 +108,18 @@ function Backlinks({ backlinks }) {
       </div>
       {hosts.length > 0 && (
         <div className="pt-1 border-t border-blue-100">
-          <span className="text-[10px] font-bold text-blue-800 uppercase">Sites linking to them ({hosts.length}{backlinks.refdomains > hosts.length ? `+` : ""})</span>
+          <span className="text-[10px] font-bold text-blue-800 uppercase">Referring domains giving them authority ({backlinks.refdomains != null ? formatNum(backlinks.refdomains) : hosts.length}{backlinks.refdomains > hosts.length ? " total" : ""})</span>
           <div className="flex flex-wrap gap-1 mt-1">
-            {shown.map((h, i) => (
-              <a key={i} href={`https://${h}`} target="_blank" rel="noreferrer" className="text-[10px] px-2 py-0.5 rounded bg-white border border-blue-200 text-blue-800 hover:bg-blue-100 truncate max-w-[180px]">{h}</a>
+            {shown.map((r, i) => (
+              <a key={i} href={`https://${r.domain}`} target="_blank" rel="noreferrer" title={r.inlinkRank != null ? `Domain authority ${r.inlinkRank}/100` : r.domain} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-white border border-blue-200 text-blue-800 hover:bg-blue-100 truncate max-w-[200px]">
+                {r.domain}
+                {r.inlinkRank != null && <span className="text-[9px] font-bold text-blue-500">{r.inlinkRank}</span>}
+              </a>
             ))}
           </div>
           {hosts.length > 12 && (
             <button type="button" onClick={() => setShowAll(!showAll)} className="text-[10px] font-semibold text-blue-700 hover:underline mt-1.5">
-              {showAll ? "Show fewer" : `Show all ${hosts.length} linking sites`}
+              {showAll ? "Show fewer" : `Show all ${hosts.length} referring domains`}
             </button>
           )}
         </div>
