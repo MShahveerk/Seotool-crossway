@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FiSearch,
   FiZap,
@@ -29,8 +29,12 @@ import {
   FiGlobe,
   FiCheckCircle,
   FiEdit3,
+  FiDownload,
+  FiX,
+  FiLayers,
 } from "react-icons/fi";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
+import { openSerpReportPrint } from "./serpAnalysisReport";
 
 const GEO_OPTIONS = [
   { value: "us", label: "US" },
@@ -262,9 +266,147 @@ function KeywordTable({ profile }) {
   );
 }
 
+/* ---------- deep-dive modal (additional; lazy-loads more backlinks) ---------- */
+
+function CompetitorModal({ item, onClose }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [detail, setDetail] = useState(null);
+  const [q, setQ] = useState("");
+
+  useEffect(() => {
+    if (!item) return;
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    setDetail(null);
+    (async () => {
+      try {
+        const res = await fetch("/api/seo/competitor-backlinks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ domain: item.domain }),
+        });
+        const json = await res.json();
+        if (cancelled) return;
+        if (!res.ok || !json.success) throw new Error(json.error || "Failed to load backlink detail");
+        setDetail(json.data);
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Failed to load backlink detail");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [item]);
+
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  if (!item) return null;
+  const refs = detail?.refdomains || [];
+  const links = detail?.links || [];
+  const query = q.trim().toLowerCase();
+  const filteredRefs = query ? refs.filter((r) => r.domain.includes(query)) : refs;
+  const filteredLinks = query ? links.filter((l) => `${l.sourceUrl} ${l.anchor}`.toLowerCase().includes(query)) : links;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-8 bg-black/50 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-4 flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 p-5 border-b border-gray-100 shrink-0">
+          <div className="flex items-start gap-3 min-w-0">
+            <span className={`inline-flex items-center justify-center rounded-xl font-bold text-sm size-11 shrink-0 ${item.isYou ? "bg-emerald-600 text-white" : "bg-gray-900 text-white"}`}>#{item.position}</span>
+            <div className="min-w-0">
+              <h3 className="font-bold text-base text-gray-900">{item.title}</h3>
+              <a href={item.link} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 hover:underline inline-flex items-center gap-1 break-all"><FiLink className="size-3 shrink-0" />{item.domain}</a>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><FiX className="size-5" /></button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto p-5 space-y-5">
+          {/* On-page snapshot */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <Tile icon={FiFileText} label="Content" value={`${formatNum(item.wordCount)} words`} sub={`~${item.readingTimeMinutes || 1} min`} />
+            <Tile icon={FiList} label="Structure" value={`H1:${item.h1Count} H2:${item.h2Count}`} sub={`${(item.headings || []).length} headings`} />
+            <Tile icon={FiZap} label="Speed" value={item.speed?.score != null ? `${item.speed.score}/100` : "—"} sub={`LCP ${item.speed?.lcp || "—"}`} />
+            <Tile icon={FiShield} label="Authority" value={item.authority?.score != null ? `${item.authority.score}/10` : "—"} />
+          </div>
+          {item.schemas?.length > 0 && (
+            <div><span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Schema markup</span><SchemaChips schemas={item.schemas} /></div>
+          )}
+
+          {/* Backlink summary */}
+          <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4">
+            <div className="grid grid-cols-3 gap-2">
+              <div><span className="font-bold text-gray-900 text-lg block">{detail?.summary?.refdomains != null ? formatNum(detail.summary.refdomains) : formatNum(item.backlinks?.refdomains)}</span><span className="text-[10px] text-gray-500">referring domains</span></div>
+              <div><span className="font-bold text-gray-900 text-lg block">{detail?.summary?.backlinks != null ? formatNum(detail.summary.backlinks) : formatNum(item.backlinks?.backlinks)}</span><span className="text-[10px] text-gray-500">total backlinks</span></div>
+              <div><span className="font-bold text-gray-900 text-lg block">{(detail?.summary?.domainTrust ?? item.backlinks?.domainTrust) != null ? `${detail?.summary?.domainTrust ?? item.backlinks?.domainTrust}/100` : "—"}</span><span className="text-[10px] text-gray-500">domain trust</span></div>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="flex items-center gap-2 sticky top-0 bg-white pt-1">
+            <FiSearch className="size-4 text-gray-400" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter domains, pages, anchors…" className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:border-emerald-500 focus:outline-none" />
+          </div>
+
+          {loading && <p className="text-sm text-gray-500 text-center py-6"><FiRefreshCw className="size-5 animate-spin inline mr-2" />Loading full link profile…</p>}
+          {error && <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">Couldn’t load deeper backlinks: {error}</p>}
+
+          {!loading && (
+            <>
+              {/* Referring domains */}
+              <div>
+                <h4 className="font-bold text-sm text-gray-900 flex items-center justify-between">
+                  <span className="flex items-center gap-2"><FiLink className="size-4 text-blue-600" /> Referring domains giving authority</span>
+                  <span className="text-[11px] font-normal text-gray-400">showing {formatNum(filteredRefs.length)}{detail?.summary?.refdomains ? ` of ${formatNum(detail.summary.refdomains)} total` : ""}</span>
+                </h4>
+                {filteredRefs.length ? (
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1">
+                    {filteredRefs.map((r, i) => (
+                      <a key={i} href={`https://${r.domain}`} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-1.5 text-xs hover:bg-blue-50">
+                        <span className="truncate text-blue-800">{r.domain}</span>
+                        {r.inlinkRank != null && <span className="shrink-0 text-[10px] font-bold text-blue-500" title="Domain authority">{r.inlinkRank}/100</span>}
+                      </a>
+                    ))}
+                  </div>
+                ) : <p className="text-xs text-gray-400 mt-2">No referring domains {query ? "match your filter" : "indexed"}.</p>}
+              </div>
+
+              {/* Linking pages */}
+              {filteredLinks.length > 0 && (
+                <div>
+                  <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2"><FiFileText className="size-4 text-blue-600" /> Linking pages &amp; anchor text</h4>
+                  <div className="mt-2 space-y-1">
+                    {filteredLinks.map((l, i) => (
+                      <div key={i} className="flex items-center justify-between gap-2 text-[11px] border-b border-gray-50 py-1">
+                        <a href={l.sourceUrl} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline truncate max-w-[58%]" title={l.sourceUrl}>{l.sourceUrl}</a>
+                        <span className="text-gray-500 italic truncate max-w-[40%]" title={l.anchor}>{l.anchor ? `“${l.anchor}”` : "—"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Keywords */}
+              <div><KeywordTable profile={item.keywordProfile} /></div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- the tabloid detail card ---------- */
 
-function DetailCard({ item }) {
+function DetailCard({ item, onDetails }) {
   const isYou = item.isYou;
   const relTag = item.relation === "above" ? { label: "Above you", cls: "bg-red-100 text-red-700", icon: FiArrowUp }
     : item.relation === "below" ? { label: "Below you", cls: "bg-emerald-100 text-emerald-700", icon: FiArrowDown }
@@ -341,6 +483,16 @@ function DetailCard({ item }) {
         </div>
         <KeywordTable profile={item.keywordProfile} />
       </div>
+
+      {onDetails && (
+        <button
+          type="button"
+          onClick={() => onDetails(item)}
+          className="w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-colors"
+        >
+          <FiLayers className="size-4" /> Full profile &amp; all referring domains
+        </button>
+      )}
     </div>
   );
 }
@@ -417,6 +569,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
   const [seedLoading, setSeedLoading] = useState(false);
   const [seedError, setSeedError] = useState("");
   const [seedResult, setSeedResult] = useState(null);
+  const [modalItem, setModalItem] = useState(null);
 
   const handleGenerateSeeds = async () => {
     if (!data?.keyword) return;
@@ -527,6 +680,9 @@ export default function SerpAnalysisSection({ selectedSite }) {
               <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${data.cached ? "bg-gray-100 text-gray-600" : "bg-emerald-100 text-emerald-700"}`}>
                 {data.cached ? "Cached" : "Fresh"}{data.fetchedAt ? ` · ${new Date(data.fetchedAt).toLocaleDateString()}` : ""}
               </span>
+              <button type="button" onClick={() => openSerpReportPrint(data)} title="Export this analysis as a PDF (opens a printable report — choose Save as PDF)" className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100">
+                <FiDownload className="size-3" /> Export PDF
+              </button>
               <button type="button" onClick={() => handleAnalyze(null, true)} disabled={loading} title="Bypass cache and re-fetch live data (uses API credits)" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-bold text-gray-600 hover:text-emerald-700 hover:border-emerald-300 disabled:opacity-50">
                 <FiRefreshCw className={`size-3 ${loading ? "animate-spin" : ""}`} /> Refresh
               </button>
@@ -545,7 +701,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
               </h3>
             </div>
             {data.you ? (
-              <DetailCard item={data.you} />
+              <DetailCard item={data.you} onDetails={setModalItem} />
             ) : (
               <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-5 text-sm text-amber-800">
                 {data.yourHost || "Your site"} wasn&apos;t found in the top {data.serpDepth} results for this keyword. Use the leader benchmark below as your target to break in.
@@ -615,7 +771,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
           {data.directCompetitors?.length > 0 && (
             <div className="space-y-3">
               <h3 className="font-bold text-base text-gray-900 flex items-center gap-2"><FiUser className="size-5 text-emerald-600" /> Your Direct Competitors <span className="text-xs font-normal text-gray-500">(nearest real rivals around you)</span></h3>
-              <div className="space-y-4">{data.directCompetitors.map((c, i) => <DetailCard key={i} item={c} />)}</div>
+              <div className="space-y-4">{data.directCompetitors.map((c, i) => <DetailCard key={i} item={c} onDetails={setModalItem} />)}</div>
             </div>
           )}
 
@@ -623,7 +779,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
           {data.topRankers?.length > 0 && (
             <div className="space-y-3">
               <h3 className="font-bold text-base text-gray-900 flex items-center gap-2"><FiAward className="size-5 text-amber-500" /> Top Rankers <span className="text-xs font-normal text-gray-500">(strongest competitors on the SERP)</span></h3>
-              <div className="space-y-4">{data.topRankers.map((c, i) => <DetailCard key={i} item={c} />)}</div>
+              <div className="space-y-4">{data.topRankers.map((c, i) => <DetailCard key={i} item={c} onDetails={setModalItem} />)}</div>
             </div>
           )}
 
@@ -649,6 +805,8 @@ export default function SerpAnalysisSection({ selectedSite }) {
           )}
         </>
       )}
+
+      {modalItem && <CompetitorModal item={modalItem} onClose={() => setModalItem(null)} />}
     </SeoPanelShell>
   );
 }
