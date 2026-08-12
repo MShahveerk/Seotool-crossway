@@ -22,6 +22,11 @@ import {
   FiBarChart2,
   FiDollarSign,
   FiTrendingUp,
+  FiChevronDown,
+  FiChevronRight,
+  FiList,
+  FiFileText,
+  FiLink,
 } from "react-icons/fi";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
 
@@ -107,8 +112,73 @@ function SchemaChips({ schemas }) {
   );
 }
 
+function KeywordProfile({ profile, domain }) {
+  const [showAll, setShowAll] = useState(false);
+  if (!profile) {
+    return <p className="text-[11px] text-gray-400 italic">No keyword data available for {domain}.</p>;
+  }
+  if (!profile.keywords?.length) {
+    return <p className="text-[11px] text-gray-400 italic">SE Ranking has no organic keywords indexed for {domain}.</p>;
+  }
+  const list = showAll ? profile.keywords : profile.keywords.slice(0, 8);
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1.5">
+          <FiList className="size-3.5 text-emerald-600" /> Keywords {domain} ranks for
+        </span>
+        <span className="text-[10px] text-gray-400">{formatNum(profile.total)} total{profile.fromCache ? " · cached" : ""}</span>
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-gray-100">
+        <table className="w-full text-left text-[11px]">
+          <thead className="bg-gray-50 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+            <tr>
+              <th className="px-2.5 py-1.5">Keyword</th>
+              <th className="px-2.5 py-1.5 text-center">Rank</th>
+              <th className="px-2.5 py-1.5 text-right">Volume</th>
+              <th className="px-2.5 py-1.5 text-right">Traffic</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {list.map((k, i) => (
+              <tr key={i} className="hover:bg-gray-50">
+                <td className="px-2.5 py-1.5 font-medium text-gray-800 max-w-[200px] truncate" title={k.keyword}>{k.keyword}</td>
+                <td className="px-2.5 py-1.5 text-center">
+                  <span className={`font-bold ${k.position <= 3 ? "text-emerald-700" : k.position <= 10 ? "text-amber-700" : "text-gray-500"}`}>#{k.position}</span>
+                </td>
+                <td className="px-2.5 py-1.5 text-right text-gray-600">{k.volume != null ? formatNum(k.volume) : "—"}</td>
+                <td className="px-2.5 py-1.5 text-right text-gray-600">{k.traffic != null ? formatNum(k.traffic) : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {profile.keywords.length > 8 && (
+        <button type="button" onClick={() => setShowAll(!showAll)} className="text-[11px] font-semibold text-emerald-600 hover:underline">
+          {showAll ? "Show less" : `Show all ${profile.keywords.length} shown keywords`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function HeadingOutline({ headings }) {
+  if (!headings?.length) return <p className="text-[11px] text-gray-400 italic">No headings detected.</p>;
+  return (
+    <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
+      {headings.map((h, i) => (
+        <div key={i} className="flex items-center gap-2 text-[11px]">
+          <span className={`font-mono font-bold text-[9px] uppercase px-1.5 rounded ${h.tag === "h1" ? "bg-purple-100 text-purple-700" : h.tag === "h2" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>{h.tag}</span>
+          <span className="truncate text-gray-800">{h.text}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RankRow({ item, tone }) {
   const isYou = item.isYou;
+  const [open, setOpen] = useState(false);
   const border = isYou
     ? "border-emerald-300 bg-emerald-50/40 ring-2 ring-emerald-500/20"
     : tone === "above"
@@ -170,6 +240,32 @@ function RankRow({ item, tone }) {
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-gray-500 uppercase">Schema</span>
           <SchemaChips schemas={item.schemas} />
+        </div>
+      )}
+
+      {/* Expandable full detail */}
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white py-1.5 text-[11px] font-bold text-gray-600 hover:bg-gray-50 hover:text-emerald-700 transition-colors"
+      >
+        {open ? <FiChevronDown className="size-3.5" /> : <FiChevronRight className="size-3.5" />}
+        {open ? "Hide details" : "View full details & ranking keywords"}
+      </button>
+
+      {open && (
+        <div className="space-y-4 pt-2 border-t border-gray-100">
+          {item.metaDescription && (
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1"><FiFileText className="size-3" /> Meta Description</span>
+              <p className="text-[11px] text-gray-600 italic bg-gray-50 p-2 rounded-lg border border-gray-100">&ldquo;{item.metaDescription}&rdquo;</p>
+            </div>
+          )}
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold text-gray-500 uppercase">Heading Outline</span>
+            <HeadingOutline headings={item.headings} />
+          </div>
+          <KeywordProfile profile={item.keywordProfile} domain={item.domain} />
         </div>
       )}
     </div>
@@ -338,10 +434,18 @@ export default function SerpAnalysisSection({ selectedSite }) {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <FiTarget className={`size-6 ${data.found ? "text-emerald-600" : "text-amber-600"}`} />
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Your position for “{data.keyword}”</p>
                   {data.found ? (
-                    <p className="text-2xl font-bold text-gray-900">#{data.yourRank} <span className="text-sm font-medium text-gray-500">of {data.serpDepth} results scanned</span></p>
+                    <>
+                      <p className="text-2xl font-bold text-gray-900">#{data.yourRank} <span className="text-sm font-medium text-gray-500">of {data.serpDepth} results scanned</span></p>
+                      {data.yourUrl && (
+                        <a href={data.yourUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 hover:underline break-all">
+                          <FiLink className="size-3.5 shrink-0" />
+                          <span className="truncate max-w-md">{data.yourUrl}</span>
+                        </a>
+                      )}
+                    </>
                   ) : (
                     <p className="text-lg font-bold text-amber-800">Not ranking in the top {data.serpDepth} results</p>
                   )}
@@ -409,6 +513,16 @@ export default function SerpAnalysisSection({ selectedSite }) {
             )}
           </div>
 
+          {/* Excluded listings note */}
+          {data.excludedListings?.length > 0 && (
+            <p className="text-[11px] text-gray-500 flex items-center gap-1.5 flex-wrap">
+              <FiAlertCircle className="size-3.5 text-gray-400" />
+              <span className="font-semibold">{data.excludedListings.length} directory/listing result{data.excludedListings.length > 1 ? "s" : ""} hidden</span>
+              from the competitor set:
+              <span className="text-gray-400">{[...new Set(data.excludedListings.map((e) => e.domain))].slice(0, 8).join(", ")}</span>
+            </p>
+          )}
+
           {/* SERP ladder */}
           <div className="space-y-4">
             {data.found && data.rivalsAbove.length > 0 && (
@@ -430,7 +544,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
               </div>
             )}
             <div className="space-y-3">
-              <h3 className="text-sm font-bold text-amber-800 flex items-center gap-2"><FiAward className="size-4" /> Page-1 Leaders (Top 10)</h3>
+              <h3 className="text-sm font-bold text-amber-800 flex items-center gap-2"><FiAward className="size-4" /> Top Ranking Competitors</h3>
               {data.leaders.map((r, i) => <RankRow key={i} item={r} tone="leader" />)}
             </div>
           </div>

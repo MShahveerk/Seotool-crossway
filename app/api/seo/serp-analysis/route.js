@@ -27,7 +27,7 @@ export async function POST(req) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { keyword = "", siteUrl = "", location = "", device = "desktop", depth = 30, geo = "us" } = body;
+    const { keyword = "", siteUrl = "", location = "", device = "desktop", depth = 100, geo = "us" } = body;
 
     if (!String(keyword).trim()) {
       return NextResponse.json({ error: "Please enter a target keyword or phrase." }, { status: 400 });
