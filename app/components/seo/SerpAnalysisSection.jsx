@@ -34,8 +34,14 @@ import {
   FiX,
   FiLayers,
 } from "react-icons/fi";
+import "@fontsource/nunito/400.css";
+import "@fontsource/nunito/600.css";
+import "@fontsource/nunito/700.css";
+import "@fontsource/nunito/800.css";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
 import { downloadSerpReportPdf } from "./serpAnalysisReport";
+
+const NUNITO = { fontFamily: "'Nunito', ui-sans-serif, system-ui, sans-serif" };
 
 const GEO_OPTIONS = [
   { value: "us", label: "US" },
@@ -88,12 +94,12 @@ function ContentExcerpt({ paragraphs }) {
   const list = open ? paragraphs : paragraphs.slice(0, 3);
   return (
     <div>
-      <span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Page content</span>
-      <div className="space-y-2 text-[11px] text-gray-600 leading-relaxed">
+      <span className="text-xs font-bold text-gray-500 uppercase tracking-wide block mb-1.5">Page content</span>
+      <div className="space-y-2.5 text-sm text-gray-600 leading-relaxed">
         {list.map((p, i) => <p key={i}>{p}</p>)}
       </div>
       {paragraphs.length > 3 && (
-        <button type="button" onClick={() => setOpen(!open)} className="text-[11px] font-semibold text-emerald-600 hover:underline mt-1.5">
+        <button type="button" onClick={() => setOpen(!open)} className="text-sm font-semibold text-emerald-600 hover:underline mt-2">
           {open ? "Show less content" : `Read all ${paragraphs.length} passages`}
         </button>
       )}
@@ -103,20 +109,20 @@ function ContentExcerpt({ paragraphs }) {
 
 function HeadingOutline({ headings }) {
   const [open, setOpen] = useState(false);
-  if (!headings?.length) return <p className="text-[11px] text-gray-400 italic">No headings detected on the page.</p>;
+  if (!headings?.length) return <p className="text-sm text-gray-400 italic">No headings detected on the page.</p>;
   const list = open ? headings : headings.slice(0, 6);
   return (
-    <div className="space-y-1">
-      <div className="space-y-1">
+    <div className="space-y-1.5">
+      <div className="space-y-1.5">
         {list.map((h, i) => (
-          <div key={i} className="flex items-center gap-2 text-[11px]">
-            <span className={`font-mono font-bold text-[9px] uppercase px-1.5 rounded shrink-0 ${h.tag === "h1" ? "bg-purple-100 text-purple-700" : h.tag === "h2" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>{h.tag}</span>
+          <div key={i} className="flex items-center gap-2 text-sm">
+            <span className={`font-mono font-bold text-[10px] uppercase px-1.5 py-0.5 rounded shrink-0 ${h.tag === "h1" ? "bg-purple-100 text-purple-700" : h.tag === "h2" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>{h.tag}</span>
             <span className="text-gray-800">{h.text}</span>
           </div>
         ))}
       </div>
       {headings.length > 6 && (
-        <button type="button" onClick={() => setOpen(!open)} className="text-[11px] font-semibold text-emerald-600 hover:underline">
+        <button type="button" onClick={() => setOpen(!open)} className="text-sm font-semibold text-emerald-600 hover:underline">
           {open ? "Show fewer headings" : `Show all ${headings.length} headings`}
         </button>
       )}
@@ -126,52 +132,63 @@ function HeadingOutline({ headings }) {
 
 function KeywordTable({ profile }) {
   const [showAll, setShowAll] = useState(false);
-  if (!profile) return <p className="text-[11px] text-gray-400 italic">No keyword data available.</p>;
-  if (!profile.keywords?.length) return <p className="text-[11px] text-gray-400 italic">No organic keywords indexed.</p>;
-  const list = showAll ? profile.keywords : profile.keywords.slice(0, 8);
+  const [sortBy, setSortBy] = useState("rank");
+  if (!profile) return <p className="text-sm text-gray-400 italic">No keyword data available.</p>;
+  if (!profile.keywords?.length) return <p className="text-sm text-gray-400 italic">No organic keywords indexed.</p>;
+  const sorted = [...profile.keywords].sort((a, b) =>
+    sortBy === "rank"
+      ? (a.position ?? 9999) - (b.position ?? 9999) || (b.traffic ?? 0) - (a.traffic ?? 0)
+      : (b.traffic ?? 0) - (a.traffic ?? 0) || (a.position ?? 9999) - (b.position ?? 9999)
+  );
+  const capped = sorted.slice(0, 15);
+  const list = showAll ? capped : capped.slice(0, 8);
+  const tab = (id, label) => (
+    <button type="button" onClick={() => setSortBy(id)} className={`rounded-md px-3 py-1 text-xs font-bold transition-colors ${sortBy === id ? "bg-emerald-600 text-white" : "text-gray-600 hover:text-gray-900"}`}>{label}</button>
+  );
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold text-gray-600 uppercase flex items-center gap-1"><FiList className="size-3 text-emerald-600" /> Other keywords it ranks for</span>
-        <span className="text-[10px] text-gray-400">
-          {profile.relevantCount != null ? `${formatNum(profile.relevantCount)} on-topic · ` : ""}{formatNum(profile.total)} total
-        </span>
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <span className="text-base font-extrabold text-gray-900 flex items-center gap-2"><FiList className="size-5 text-emerald-600" /> Top 15 keywords it ranks for</span>
+          <span className="text-xs text-gray-400">{profile.relevantCount != null ? `${formatNum(profile.relevantCount)} on-topic · ` : ""}{formatNum(profile.total)} total indexed</span>
+        </div>
+        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">{tab("rank", "Highest rank")}{tab("traffic", "Most traffic")}</div>
       </div>
       {profile.relevantCount === 0 && (
-        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+        <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
           ⚠ Ranks for none of your target terms — a broad publisher/directory, not a direct competitor.
         </p>
       )}
-      <div className="overflow-x-auto rounded-lg border border-gray-100">
-        <table className="w-full text-left text-[11px]">
-          <thead className="bg-gray-50 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+      <div className="overflow-x-auto rounded-xl border border-gray-100">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-gray-50 text-xs font-bold uppercase tracking-wide text-gray-500">
             <tr>
-              <th className="px-2.5 py-1.5">Keyword</th>
-              <th className="px-2.5 py-1.5 text-center">Rank</th>
-              <th className="px-2.5 py-1.5 text-right">Volume</th>
-              <th className="px-2.5 py-1.5 text-right">Traffic</th>
+              <th className="px-3.5 py-2.5">Keyword</th>
+              <th className="px-3.5 py-2.5 text-center">Rank</th>
+              <th className="px-3.5 py-2.5 text-right">Volume</th>
+              <th className="px-3.5 py-2.5 text-right">Traffic</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {list.map((k, i) => (
               <tr key={i} className={k.relevant ? "bg-emerald-50/60" : "hover:bg-gray-50"}>
-                <td className="px-2.5 py-1.5 font-medium text-gray-800 max-w-[220px] truncate" title={k.keyword}>
-                  {k.relevant && <span className="inline-block size-1.5 rounded-full bg-emerald-500 mr-1.5 align-middle" />}
+                <td className="px-3.5 py-2.5 font-medium text-gray-800 max-w-[280px] truncate" title={k.keyword}>
+                  {k.relevant && <span className="inline-block size-1.5 rounded-full bg-emerald-500 mr-2 align-middle" />}
                   {k.keyword}
                 </td>
-                <td className="px-2.5 py-1.5 text-center">
+                <td className="px-3.5 py-2.5 text-center">
                   <span className={`font-bold ${k.position <= 3 ? "text-emerald-700" : k.position <= 10 ? "text-amber-700" : "text-gray-500"}`}>#{k.position}</span>
                 </td>
-                <td className="px-2.5 py-1.5 text-right text-gray-600">{k.volume != null ? formatNum(k.volume) : "—"}</td>
-                <td className="px-2.5 py-1.5 text-right text-gray-600">{k.traffic != null ? formatNum(k.traffic) : "—"}</td>
+                <td className="px-3.5 py-2.5 text-right text-gray-600">{k.volume != null ? formatNum(k.volume) : "—"}</td>
+                <td className="px-3.5 py-2.5 text-right text-gray-600">{k.traffic != null ? formatNum(k.traffic) : "—"}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {profile.keywords.length > 8 && (
-        <button type="button" onClick={() => setShowAll(!showAll)} className="text-[11px] font-semibold text-emerald-600 hover:underline">
-          {showAll ? "Show fewer" : `Show all ${profile.keywords.length}`}
+      {capped.length > 8 && (
+        <button type="button" onClick={() => setShowAll(!showAll)} className="text-sm font-semibold text-emerald-600 hover:underline">
+          {showAll ? "Show fewer" : `Show top ${capped.length}`}
         </button>
       )}
     </div>
@@ -232,22 +249,22 @@ function CompetitorModal({ item, onClose }) {
   const filteredLinks = query ? links.filter((l) => `${l.sourceUrl} ${l.anchor}`.toLowerCase().includes(query)) : links;
 
   const overlay = (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 sm:p-8 bg-black/50 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-4 flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 sm:p-8 bg-black/50 backdrop-blur-sm overflow-y-auto" onClick={onClose} style={NUNITO}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl my-4 flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 p-5 border-b border-gray-100 shrink-0">
-          <div className="flex items-start gap-3 min-w-0">
-            <span className={`inline-flex items-center justify-center rounded-xl font-bold text-sm size-11 shrink-0 ${item.isYou ? "bg-emerald-600 text-white" : "bg-gray-900 text-white"}`}>#{item.position}</span>
+        <div className="flex items-start justify-between gap-4 p-6 border-b border-gray-100 shrink-0 bg-gradient-to-r from-emerald-50/70 to-white rounded-t-3xl">
+          <div className="flex items-start gap-4 min-w-0">
+            <span className={`inline-flex items-center justify-center rounded-2xl font-extrabold text-lg size-14 shrink-0 ${item.isYou ? "bg-emerald-600 text-white" : "bg-gray-900 text-white"}`}>#{item.position}</span>
             <div className="min-w-0">
-              <h3 className="font-bold text-base text-gray-900">{item.title}</h3>
-              <a href={item.link} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 hover:underline inline-flex items-center gap-1 break-all"><FiLink className="size-3 shrink-0" />{item.domain}</a>
+              <h3 className="font-extrabold text-xl text-gray-900 leading-snug">{item.title}</h3>
+              <a href={item.link} target="_blank" rel="noreferrer" className="text-base text-emerald-600 hover:underline inline-flex items-center gap-1.5 break-all mt-1"><FiLink className="size-4 shrink-0" />{item.domain}</a>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><FiX className="size-5" /></button>
+          <button type="button" onClick={onClose} className="shrink-0 rounded-xl p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><FiX className="size-6" /></button>
         </div>
 
         {/* Body */}
-        <div className="overflow-y-auto p-5 space-y-5">
+        <div className="overflow-y-auto p-6 space-y-6 text-[15px] text-gray-700 leading-relaxed">
           {/* On-page snapshot */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Tile icon={FiFileText} label="Content" value={`${formatNum(item.wordCount)} words`} sub={`~${item.readingTimeMinutes || 1} min`} />
@@ -267,52 +284,56 @@ function CompetitorModal({ item, onClose }) {
           )}
 
           {/* Backlink summary */}
-          <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4">
-            <div className="grid grid-cols-3 gap-2">
-              <div><span className="font-bold text-gray-900 text-lg block">{detail?.summary?.refdomains != null ? formatNum(detail.summary.refdomains) : formatNum(item.backlinks?.refdomains)}</span><span className="text-[10px] text-gray-500">referring domains</span></div>
-              <div><span className="font-bold text-gray-900 text-lg block">{detail?.summary?.backlinks != null ? formatNum(detail.summary.backlinks) : formatNum(item.backlinks?.backlinks)}</span><span className="text-[10px] text-gray-500">total backlinks</span></div>
-              <div><span className="font-bold text-gray-900 text-lg block">{(detail?.summary?.domainTrust ?? item.backlinks?.domainTrust) != null ? `${detail?.summary?.domainTrust ?? item.backlinks?.domainTrust}/100` : "—"}</span><span className="text-[10px] text-gray-500">domain trust</span></div>
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-5">
+            <div className="grid grid-cols-3 gap-3">
+              <div><span className="font-extrabold text-gray-900 text-3xl block leading-none">{detail?.summary?.refdomains != null ? formatNum(detail.summary.refdomains) : formatNum(item.backlinks?.refdomains)}</span><span className="text-sm text-gray-500 mt-1.5 block">referring domains</span></div>
+              <div><span className="font-extrabold text-gray-900 text-3xl block leading-none">{detail?.summary?.backlinks != null ? formatNum(detail.summary.backlinks) : formatNum(item.backlinks?.backlinks)}</span><span className="text-sm text-gray-500 mt-1.5 block">total backlinks</span></div>
+              <div><span className="font-extrabold text-gray-900 text-3xl block leading-none">{(detail?.summary?.domainTrust ?? item.backlinks?.domainTrust) != null ? `${detail?.summary?.domainTrust ?? item.backlinks?.domainTrust}` : "—"}<span className="text-base text-gray-400">/100</span></span><span className="text-sm text-gray-500 mt-1.5 block">domain trust</span></div>
             </div>
           </div>
 
           {/* Search */}
-          <div className="flex items-center gap-2 sticky top-0 bg-white pt-1">
-            <FiSearch className="size-4 text-gray-400" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter domains, pages, anchors…" className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-xs focus:border-emerald-500 focus:outline-none" />
+          <div className="flex items-center gap-2 sticky top-0 bg-white pt-1 pb-1 z-10">
+            <FiSearch className="size-5 text-gray-400" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter domains, pages, anchors…" className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-emerald-500 focus:outline-none" style={NUNITO} />
           </div>
 
-          {loading && <p className="text-sm text-gray-500 text-center py-6"><FiRefreshCw className="size-5 animate-spin inline mr-2" />Loading full link profile…</p>}
-          {error && <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">Couldn’t load deeper backlinks: {error}</p>}
+          {loading && <p className="text-base text-gray-500 text-center py-8"><FiRefreshCw className="size-5 animate-spin inline mr-2" />Loading full link profile…</p>}
+          {error && <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">Couldn’t load deeper backlinks: {error}</p>}
 
           {!loading && (
             <>
               {/* Referring domains */}
               <div>
-                <h4 className="font-bold text-sm text-gray-900 flex items-center justify-between">
-                  <span className="flex items-center gap-2"><FiLink className="size-4 text-blue-600" /> Referring domains giving authority</span>
-                  <span className="text-[11px] font-normal text-gray-400">showing {formatNum(filteredRefs.length)}{detail?.summary?.refdomains ? ` of ${formatNum(detail.summary.refdomains)} total` : ""}</span>
+                <h4 className="font-extrabold text-base text-gray-900 flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2"><FiLink className="size-5 text-blue-600" /> Referring domains giving authority</span>
+                  <span className="text-xs font-normal text-gray-400">showing {formatNum(filteredRefs.length)}{detail?.summary?.refdomains ? ` of ${formatNum(detail.summary.refdomains)} total` : ""}</span>
                 </h4>
                 {filteredRefs.length ? (
-                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1">
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {filteredRefs.map((r, i) => (
-                      <a key={i} href={`https://${r.domain}`} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-1.5 text-xs hover:bg-blue-50">
-                        <span className="truncate text-blue-800">{r.domain}</span>
-                        {r.inlinkRank != null && <span className="shrink-0 text-[10px] font-bold text-blue-500" title="Domain authority">{r.inlinkRank}/100</span>}
+                      <a key={i} href={`https://${r.domain}`} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-2 rounded-xl border border-gray-100 bg-gray-50/70 px-3.5 py-2.5 text-sm hover:bg-blue-50">
+                        <span className="truncate text-blue-800 font-medium">{r.domain}</span>
+                        {r.inlinkRank != null && <span className="shrink-0 text-xs font-bold text-blue-500" title="Domain authority">{r.inlinkRank}/100</span>}
                       </a>
                     ))}
                   </div>
-                ) : <p className="text-xs text-gray-400 mt-2">No referring domains {query ? "match your filter" : "indexed"}.</p>}
+                ) : <p className="text-sm text-gray-400 mt-2">No referring domains {query ? "match your filter" : "indexed"}.</p>}
               </div>
 
-              {/* Linking pages */}
+              {/* Exact linking pages: source page -> target page + anchor */}
               {filteredLinks.length > 0 && (
                 <div>
-                  <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2"><FiFileText className="size-4 text-blue-600" /> Linking pages &amp; anchor text</h4>
-                  <div className="mt-2 space-y-1">
+                  <h4 className="font-extrabold text-base text-gray-900 flex items-center gap-2"><FiFileText className="size-5 text-blue-600" /> Exact linking pages ({formatNum(filteredLinks.length)})</h4>
+                  <p className="text-sm text-gray-400 mt-0.5">The specific page each backlink comes from — and which page it points to.</p>
+                  <div className="mt-3 space-y-2.5">
                     {filteredLinks.map((l, i) => (
-                      <div key={i} className="flex items-center justify-between gap-2 text-[11px] border-b border-gray-50 py-1">
-                        <a href={l.sourceUrl} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline truncate max-w-[58%]" title={l.sourceUrl}>{l.sourceUrl}</a>
-                        <span className="text-gray-500 italic truncate max-w-[40%]" title={l.anchor}>{l.anchor ? `“${l.anchor}”` : "—"}</span>
+                      <div key={i} className="rounded-xl border border-gray-100 bg-gray-50/70 p-3.5">
+                        <a href={l.sourceUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-blue-700 hover:underline break-all">{l.sourceUrl}</a>
+                        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-gray-500">
+                          {l.anchor && <span>anchor: <span className="text-gray-800 font-medium">&ldquo;{l.anchor}&rdquo;</span></span>}
+                          {l.targetUrl && <span className="inline-flex items-center gap-1 break-all">→ links to <a href={l.targetUrl} target="_blank" rel="noreferrer" className="text-emerald-700 hover:underline">{l.targetUrl}</a></span>}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -322,10 +343,10 @@ function CompetitorModal({ item, onClose }) {
               {/* Anchor texts */}
               {item.backlinks?.topAnchors?.length > 0 && (
                 <div>
-                  <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2"><FiLink className="size-4 text-blue-600" /> Top anchor texts</h4>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
+                  <h4 className="font-extrabold text-base text-gray-900 flex items-center gap-2"><FiLink className="size-5 text-blue-600" /> Top anchor texts</h4>
+                  <div className="flex flex-wrap gap-2 mt-3">
                     {item.backlinks.topAnchors.map((a, i) => (
-                      <span key={i} className="text-xs px-2.5 py-1 rounded-lg bg-white border border-blue-200 text-blue-800">{a.anchor}{a.count != null ? <span className="text-gray-400"> ·{formatNum(a.count)}</span> : null}</span>
+                      <span key={i} className="text-sm px-3 py-1.5 rounded-lg bg-white border border-blue-200 text-blue-800">{a.anchor}{a.count != null ? <span className="text-gray-400"> ·{formatNum(a.count)}</span> : null}</span>
                     ))}
                   </div>
                 </div>
