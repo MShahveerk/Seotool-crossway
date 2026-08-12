@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   FiSearch,
   FiZap,
@@ -34,7 +35,7 @@ import {
   FiLayers,
 } from "react-icons/fi";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
-import { openSerpReportPrint } from "./serpAnalysisReport";
+import { downloadSerpReportPdf } from "./serpAnalysisReport";
 
 const GEO_OPTIONS = [
   { value: "us", label: "US" },
@@ -303,7 +304,13 @@ function CompetitorModal({ item, onClose }) {
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // Lock background scroll while the modal is open.
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [onClose]);
 
   if (!item) return null;
@@ -313,8 +320,8 @@ function CompetitorModal({ item, onClose }) {
   const filteredRefs = query ? refs.filter((r) => r.domain.includes(query)) : refs;
   const filteredLinks = query ? links.filter((l) => `${l.sourceUrl} ${l.anchor}`.toLowerCase().includes(query)) : links;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:p-8 bg-black/50 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+  const overlay = (
+    <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 sm:p-8 bg-black/50 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-4 flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-start justify-between gap-3 p-5 border-b border-gray-100 shrink-0">
@@ -402,6 +409,8 @@ function CompetitorModal({ item, onClose }) {
       </div>
     </div>
   );
+
+  return typeof document !== "undefined" ? createPortal(overlay, document.body) : overlay;
 }
 
 /* ---------- the tabloid detail card ---------- */
@@ -570,6 +579,19 @@ export default function SerpAnalysisSection({ selectedSite }) {
   const [seedError, setSeedError] = useState("");
   const [seedResult, setSeedResult] = useState(null);
   const [modalItem, setModalItem] = useState(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  const handleExportPdf = async () => {
+    if (!data || pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      await downloadSerpReportPdf(data);
+    } catch (err) {
+      setError(`PDF export failed: ${err.message || "unknown error"}`);
+    } finally {
+      setPdfBusy(false);
+    }
+  };
 
   const handleGenerateSeeds = async () => {
     if (!data?.keyword) return;
@@ -680,8 +702,8 @@ export default function SerpAnalysisSection({ selectedSite }) {
               <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${data.cached ? "bg-gray-100 text-gray-600" : "bg-emerald-100 text-emerald-700"}`}>
                 {data.cached ? "Cached" : "Fresh"}{data.fetchedAt ? ` · ${new Date(data.fetchedAt).toLocaleDateString()}` : ""}
               </span>
-              <button type="button" onClick={() => openSerpReportPrint(data)} title="Export this analysis as a PDF (opens a printable report — choose Save as PDF)" className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100">
-                <FiDownload className="size-3" /> Export PDF
+              <button type="button" onClick={handleExportPdf} disabled={pdfBusy} title="Download this analysis as a designed PDF" className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50">
+                {pdfBusy ? <FiRefreshCw className="size-3 animate-spin" /> : <FiDownload className="size-3" />} {pdfBusy ? "Building PDF…" : "Download PDF"}
               </button>
               <button type="button" onClick={() => handleAnalyze(null, true)} disabled={loading} title="Bypass cache and re-fetch live data (uses API credits)" className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-bold text-gray-600 hover:text-emerald-700 hover:border-emerald-300 disabled:opacity-50">
                 <FiRefreshCw className={`size-3 ${loading ? "animate-spin" : ""}`} /> Refresh

@@ -1,6 +1,7 @@
 /**
- * Build a self-contained, print-optimized HTML report from a SERP Analysis result
- * and open it in a new window for "Save as PDF". No external assets — inline CSS only.
+ * Build a beautiful, self-contained PDF from a SERP Analysis result and DOWNLOAD it
+ * (client-side, via html2pdf.js). Styles are scoped under `.sr` so they never leak
+ * into the app during generation. No external assets.
  */
 
 function esc(v) {
@@ -16,6 +17,14 @@ function num(n) {
   return new Intl.NumberFormat("en-US").format(Math.round(Number(n)));
 }
 
+function slugify(s) {
+  return String(s || "serp-analysis")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "serp-analysis";
+}
+
 function metricRow(items) {
   return `<div class="metrics">${items
     .map((i) => `<div class="metric"><span class="mlabel">${esc(i.label)}</span><span class="mval">${i.value}</span>${i.sub ? `<span class="msub">${esc(i.sub)}</span>` : ""}</div>`)
@@ -24,8 +33,8 @@ function metricRow(items) {
 
 function backlinksBlock(b) {
   if (!b) return `<p class="muted">No backlink data indexed.</p>`;
-  const refs = (b.refdomainList || []).slice(0, 20);
-  const anchors = (b.topAnchors || []).slice(0, 10);
+  const refs = (b.refdomainList || []).slice(0, 24);
+  const anchors = (b.topAnchors || []).slice(0, 8);
   return `
     <div class="bl">
       ${metricRow([
@@ -34,18 +43,18 @@ function backlinksBlock(b) {
         { label: "Domain trust", value: b.domainTrust != null ? `${b.domainTrust}/100` : "—" },
       ])}
       ${refs.length ? `<div class="sub"><b>Referring domains giving authority</b><div class="chips">${refs.map((r) => `<span class="chip">${esc(r.domain)}${r.inlinkRank != null ? ` <em>${r.inlinkRank}</em>` : ""}</span>`).join("")}</div></div>` : ""}
-      ${anchors.length ? `<div class="sub"><b>Top anchor texts</b><div class="chips">${anchors.map((a) => `<span class="chip">${esc(a.anchor)}${a.count != null ? ` <em>${num(a.count)}</em>` : ""}</span>`).join("")}</div></div>` : ""}
+      ${anchors.length ? `<div class="sub"><b>Top anchor texts</b><div class="chips">${anchors.map((a) => `<span class="chip">${esc(a.anchor)}</span>`).join("")}</div></div>` : ""}
     </div>`;
 }
 
 function keywordsTable(profile) {
-  const kws = (profile?.keywords || []).slice(0, 10);
+  const kws = (profile?.keywords || []).slice(0, 8);
   if (!kws.length) return "";
   return `
     <div class="sub"><b>Keywords it ranks for</b>
       <table class="kw"><thead><tr><th>Keyword</th><th>Rank</th><th>Volume</th><th>Traffic</th></tr></thead>
       <tbody>${kws
-        .map((k) => `<tr><td>${esc(k.keyword)}</td><td class="c">#${k.position}</td><td class="r">${num(k.volume)}</td><td class="r">${num(k.traffic)}</td></tr>`)
+        .map((k) => `<tr><td>${esc(k.keyword)}</td><td class="c">#${esc(k.position)}</td><td class="r">${num(k.volume)}</td><td class="r">${num(k.traffic)}</td></tr>`)
         .join("")}</tbody></table>
     </div>`;
 }
@@ -66,7 +75,7 @@ function card(item, opts = {}) {
         <span class="rank">#${esc(item.position)}</span>
         <div class="ctitle">
           <div class="ct">${esc(item.title)} ${tag ? `<span class="badge">${tag}</span>` : ""}</div>
-          <a class="url">${esc(item.link)}</a>
+          <span class="url">${esc(item.link)}</span>
         </div>
         <div class="cbadges">
           ${item.speed?.score != null ? `<span class="pill">Speed ${item.speed.score}</span>` : ""}
@@ -86,61 +95,62 @@ function card(item, opts = {}) {
     </div>`;
 }
 
-export function buildSerpReportHtml(data) {
+const STYLES = `
+  .sr { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827; font-size: 12px; line-height: 1.45; background: #fff; padding: 0; }
+  .sr * { box-sizing: border-box; }
+  .sr .cover { background: linear-gradient(135deg, #064e3b, #065f46 55%, #047857); color: #fff; border-radius: 14px; padding: 26px 28px; margin-bottom: 18px; }
+  .sr .cover .eyebrow { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #6ee7b7; font-weight: 700; }
+  .sr .cover h1 { font-size: 24px; margin: 6px 0 4px; color: #fff; }
+  .sr .cover .subhdr { color: #d1fae5; font-size: 11px; }
+  .sr .cover .rankchip { display: inline-block; margin-top: 12px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px; }
+  .sr h2 { font-size: 15px; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #10b98155; color: #065f46; }
+  .sr .muted { color: #9ca3af; font-style: italic; }
+  .sr .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
+  .sr .metric { background: #f9fafb; border: 1px solid #eef0f2; border-radius: 8px; padding: 8px; }
+  .sr .mlabel { display: block; font-size: 8px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; font-weight: 700; }
+  .sr .mval { display: block; font-weight: 700; font-size: 13px; margin-top: 2px; }
+  .sr .msub { display: block; font-size: 9px; color: #9ca3af; }
+  .sr .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin: 10px 0; page-break-inside: avoid; }
+  .sr .card.you { border-color: #10b981; background: #ecfdf5; }
+  .sr .chead { display: flex; gap: 10px; align-items: flex-start; border-bottom: 1px solid #f0f1f3; padding-bottom: 8px; margin-bottom: 8px; }
+  .sr .rank { background: #111827; color: #fff; font-weight: 700; border-radius: 8px; padding: 5px 9px; font-size: 12px; }
+  .sr .card.you .rank { background: #059669; }
+  .sr .ctitle { flex: 1; min-width: 0; }
+  .sr .ct { font-weight: 700; font-size: 12.5px; }
+  .sr .badge { font-size: 8px; background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 10px; }
+  .sr .url { color: #059669; font-size: 10px; word-break: break-all; }
+  .sr .cbadges { text-align: right; white-space: nowrap; }
+  .sr .pill { display: inline-block; background: #eff6ff; color: #1e40af; border: 1px solid #dbeafe; border-radius: 6px; padding: 2px 6px; font-size: 9px; font-weight: 700; margin-left: 4px; }
+  .sr .meta { font-style: italic; color: #4b5563; background: #f9fafb; border: 1px solid #f0f1f3; border-radius: 8px; padding: 6px 8px; margin: 6px 0; font-size: 10.5px; }
+  .sr .bl { background: #eff6ff88; border: 1px solid #dbeafe; border-radius: 8px; padding: 8px; margin: 6px 0; }
+  .sr .sub { margin-top: 8px; }
+  .sr .sub b { font-size: 8px; text-transform: uppercase; letter-spacing: .04em; color: #374151; }
+  .sr .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .sr .chip { background: #fff; border: 1px solid #dbeafe; color: #1e40af; border-radius: 5px; padding: 1px 6px; font-size: 9px; }
+  .sr .chip em { color: #60a5fa; font-style: normal; font-weight: 700; }
+  .sr table.kw { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 9.5px; }
+  .sr table.kw th { text-align: left; background: #f9fafb; color: #6b7280; font-size: 8px; text-transform: uppercase; padding: 3px 6px; border-bottom: 1px solid #eee; }
+  .sr table.kw td { padding: 3px 6px; border-bottom: 1px solid #f3f4f6; }
+  .sr table.kw td.c { text-align: center; font-weight: 700; } .sr table.kw td.r { text-align: right; }
+  .sr ul.hl { list-style: none; margin: 4px 0 0; padding: 0; }
+  .sr ul.hl li { font-size: 9.5px; padding: 1px 0; }
+  .sr .tag { font-family: monospace; font-size: 8px; font-weight: 700; text-transform: uppercase; padding: 0 4px; border-radius: 3px; background: #eef2ff; color: #4338ca; }
+  .sr .action { display: flex; gap: 8px; padding: 8px; border: 1px solid #f0f1f3; border-radius: 8px; margin: 6px 0; page-break-inside: avoid; }
+  .sr .prio { font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 4px; height: fit-content; }
+  .sr .prio.HIGH { background: #fee2e2; color: #b91c1c; } .sr .prio.MEDIUM { background: #fef3c7; color: #92400e; }
+  .sr table.ladder { width: 100%; border-collapse: collapse; }
+  .sr table.ladder td { padding: 2px 6px; border-bottom: 1px solid #f3f4f6; font-size: 9.5px; }
+  .sr table.ladder .dir { color: #9ca3af; }
+  .sr .foot { margin-top: 22px; padding-top: 10px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 9px; text-align: center; }
+`;
+
+export function buildSerpReportFragment(data) {
   const km = data.keywordMetrics || {};
   const today = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 
-  const styles = `
-    * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111827; margin: 0; padding: 28px 32px; font-size: 12px; line-height: 1.45; }
-    h1 { font-size: 22px; margin: 0 0 4px; }
-    h2 { font-size: 15px; margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #10b98133; color: #065f46; }
-    .sub-hdr { color: #6b7280; font-size: 12px; margin-bottom: 14px; }
-    .rankline { font-size: 15px; font-weight: 700; margin: 6px 0 2px; }
-    .rankline .n { color: #059669; }
-    .muted { color: #9ca3af; font-style: italic; }
-    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
-    .metric { background: #f9fafb; border: 1px solid #f0f1f3; border-radius: 8px; padding: 8px; }
-    .mlabel { display: block; font-size: 8.5px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; font-weight: 700; }
-    .mval { display: block; font-weight: 700; font-size: 13px; margin-top: 2px; }
-    .msub { display: block; font-size: 9px; color: #9ca3af; }
-    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin: 10px 0; page-break-inside: avoid; }
-    .card.you { border-color: #10b981; background: #ecfdf5aa; }
-    .chead { display: flex; gap: 10px; align-items: flex-start; border-bottom: 1px solid #f0f1f3; padding-bottom: 8px; margin-bottom: 8px; }
-    .rank { background: #111827; color: #fff; font-weight: 700; border-radius: 8px; padding: 4px 8px; font-size: 12px; }
-    .card.you .rank { background: #059669; }
-    .ctitle { flex: 1; min-width: 0; }
-    .ct { font-weight: 700; font-size: 12.5px; }
-    .badge { font-size: 8px; background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 10px; vertical-align: middle; }
-    .url { color: #059669; font-size: 10px; word-break: break-all; }
-    .cbadges { text-align: right; white-space: nowrap; }
-    .pill { display: inline-block; background: #eff6ff; color: #1e40af; border: 1px solid #dbeafe; border-radius: 6px; padding: 2px 6px; font-size: 9px; font-weight: 700; margin-left: 4px; }
-    .meta { font-style: italic; color: #4b5563; background: #f9fafb; border: 1px solid #f0f1f3; border-radius: 8px; padding: 6px 8px; margin: 6px 0; font-size: 10.5px; }
-    .bl { background: #eff6ff55; border: 1px solid #dbeafe; border-radius: 8px; padding: 8px; margin: 6px 0; }
-    .sub { margin-top: 8px; }
-    .sub b { font-size: 8.5px; text-transform: uppercase; letter-spacing: .04em; color: #374151; }
-    .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-    .chip { background: #fff; border: 1px solid #dbeafe; color: #1e40af; border-radius: 5px; padding: 1px 6px; font-size: 9px; }
-    .chip em { color: #93c5fd; font-style: normal; font-weight: 700; }
-    table.kw { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 9.5px; }
-    table.kw th { text-align: left; background: #f9fafb; color: #6b7280; font-size: 8px; text-transform: uppercase; padding: 3px 6px; border-bottom: 1px solid #eee; }
-    table.kw td { padding: 3px 6px; border-bottom: 1px solid #f3f4f6; }
-    table.kw td.c { text-align: center; font-weight: 700; } table.kw td.r { text-align: right; }
-    ul.hl { list-style: none; margin: 4px 0 0; padding: 0; }
-    ul.hl li { font-size: 9.5px; padding: 1px 0; }
-    .tag { font-family: monospace; font-size: 8px; font-weight: 700; text-transform: uppercase; padding: 0 4px; border-radius: 3px; background: #eef2ff; color: #4338ca; }
-    .action { display: flex; gap: 8px; padding: 8px; border: 1px solid #f0f1f3; border-radius: 8px; margin: 6px 0; page-break-inside: avoid; }
-    .prio { font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 4px; height: fit-content; }
-    .prio.HIGH { background: #fee2e2; color: #b91c1c; } .prio.MEDIUM { background: #fef3c7; color: #92400e; }
-    .ladder td { padding: 2px 6px; border-bottom: 1px solid #f3f4f6; font-size: 9.5px; }
-    .ladder .dir { color: #9ca3af; }
-    .foot { margin-top: 24px; padding-top: 10px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 9px; text-align: center; }
-    @media print { body { padding: 0; } h2 { page-break-after: avoid; } }
-  `;
-
   const yourCard = data.you
     ? card({ ...data.you, isYou: true }, { headings: true })
-    : `<p class="muted">${esc(data.yourHost || "Your site")} did not rank in the top ${data.serpDepth} results for this keyword.</p>`;
+    : `<p class="muted">${esc(data.yourHost || "Your site")} did not rank in the top ${esc(data.serpDepth)} results for this keyword.</p>`;
 
   const actions = (data.actions || [])
     .map((a) => `<div class="action"><span class="prio ${esc(a.priority)}">${esc(a.priority)}</span><div><b>${esc(a.title)}</b><div>${esc(a.description)}</div></div></div>`)
@@ -153,11 +163,13 @@ export function buildSerpReportHtml(data) {
     .map((r) => `<tr><td>#${esc(r.position)}</td><td class="${r.tag === "directory" ? "dir" : ""}">${esc(r.title || r.domain)}</td><td class="dir">${esc(r.domain)}</td><td>${r.tag === "you" ? "YOU" : r.tag === "directory" ? "directory" : ""}</td></tr>`)
     .join("");
 
-  return `<!doctype html><html><head><meta charset="utf-8"><title>SERP Analysis — ${esc(data.keyword)}</title><style>${styles}</style></head>
-  <body>
-    <h1>SERP Analysis: “${esc(data.keyword)}”</h1>
-    <div class="sub-hdr">${esc(data.location || "no location")} · ${esc(data.device)} · ${esc(data.serpDepth)} results · generated ${esc(today)}</div>
-    <div class="rankline">${data.found ? `Your position: <span class="n">#${esc(data.yourRank)}</span>` : `Not ranking in the top ${esc(data.serpDepth)} results`}</div>
+  const content = `
+    <div class="cover">
+      <div class="eyebrow">Crossway SEO · SERP Analysis</div>
+      <h1>“${esc(data.keyword)}”</h1>
+      <div class="subhdr">${esc(data.location || "no location")} · ${esc(data.device)} · ${esc(data.serpDepth)} results · ${esc(today)}</div>
+      <div class="rankchip">${data.found ? `Your position: #${esc(data.yourRank)}` : `Not ranking in the top ${esc(data.serpDepth)} results`}</div>
+    </div>
 
     <h2>Keyword Metrics</h2>
     ${km.available ? metricRow([
@@ -169,39 +181,39 @@ export function buildSerpReportHtml(data) {
 
     <h2>Your Site</h2>
     ${yourCard}
-
     ${actions ? `<h2>How To Move Up</h2>${actions}` : ""}
-
     ${competitors ? `<h2>Your Direct Competitors</h2>${competitors}` : ""}
-
     ${leaders ? `<h2>Top Rankers</h2>${leaders}` : ""}
-
-    ${ladder ? `<h2>Full Google SERP (${esc(data.serpDepth)} results)</h2><table class="ladder" style="width:100%;border-collapse:collapse">${ladder}</table>` : ""}
-
+    ${ladder ? `<h2>Full Google SERP (${esc(data.serpDepth)} results)</h2><table class="ladder">${ladder}</table>` : ""}
     ${(data.relatedQuestions || []).length ? `<h2>People Also Ask</h2><ul>${data.relatedQuestions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul>` : ""}
+    <div class="foot">Generated by Crossway SEO Tool · SERP Analysis · ${esc(today)}</div>
+  `;
 
-    <div class="foot">Crossway SEO Tool · SERP Analysis · ${esc(data.keyword)} · ${esc(today)}</div>
-  </body></html>`;
+  return `<style>${STYLES}</style><div class="sr">${content}</div>`;
 }
 
-/** Open the report in a new window and trigger the print dialog (Save as PDF). */
-export function openSerpReportPrint(data) {
-  const html = buildSerpReportHtml(data);
-  const w = window.open("", "_blank");
-  if (!w) {
-    alert("Please allow pop-ups to export the PDF.");
-    return;
+/** Render the report offscreen and download it as a PDF. */
+export async function downloadSerpReportPdf(data) {
+  const html2pdf = (await import("html2pdf.js")).default;
+
+  const holder = document.createElement("div");
+  holder.style.cssText = "position:fixed;left:-10000px;top:0;width:780px;background:#fff;padding:24px;";
+  holder.innerHTML = buildSerpReportFragment(data);
+  document.body.appendChild(holder);
+
+  const target = holder.querySelector(".sr") || holder;
+  const opt = {
+    margin: [10, 10, 12, 10],
+    filename: `serp-analysis-${slugify(data.keyword)}.pdf`,
+    image: { type: "jpeg", quality: 0.96 },
+    html2canvas: { scale: 2, backgroundColor: "#ffffff", logging: false, windowWidth: 780 },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    pagebreak: { mode: ["css", "legacy"], avoid: [".card", ".action"] },
+  };
+
+  try {
+    await html2pdf().set(opt).from(target).save();
+  } finally {
+    holder.remove();
   }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  // Give the new document a tick to lay out before printing.
-  setTimeout(() => {
-    try {
-      w.print();
-    } catch {
-      /* user can print manually */
-    }
-  }, 400);
 }

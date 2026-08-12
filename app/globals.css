@@ -226,16 +226,23 @@ body {
 }
 
 @layer utilities {
+  /*
+   * fill-mode is `backwards` (not `both`) on purpose: `both` retains the final
+   * keyframe's transform permanently, and a residual transform on a wrapper makes
+   * every position:fixed modal inside it anchor to the wrapper instead of the
+   * viewport (you'd have to scroll up to see the modal). The end state equals the
+   * element's natural (no-transform) state, so there is no visual flicker.
+   */
   .animate-soft-rise {
-    animation: soft-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: soft-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
 
   .animate-section-enter {
-    animation: section-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: section-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
 
   .animate-soft-scale-in {
-    animation: soft-scale-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: soft-scale-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
 
   .transition-smooth {
