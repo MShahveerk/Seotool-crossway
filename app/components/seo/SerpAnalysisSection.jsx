@@ -76,18 +76,21 @@ function SchemaChips({ schemas }) {
 }
 
 function Backlinks({ backlinks }) {
+  const [showAll, setShowAll] = useState(false);
   if (!backlinks) {
     return (
       <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
         <span className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1"><FiLink className="size-3" /> Backlink Profile</span>
-        <p className="text-[11px] text-gray-400 italic mt-1">No backlink data (SE Ranking not configured or none indexed).</p>
+        <p className="text-[11px] text-gray-400 italic mt-1">No backlink data (SE Ranking not configured or none indexed for this domain).</p>
       </div>
     );
   }
+  const hosts = backlinks.refdomainList || [];
+  const shown = showAll ? hosts : hosts.slice(0, 12);
   return (
-    <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-3">
+    <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-3 space-y-2">
       <span className="text-[10px] font-bold text-blue-800 uppercase flex items-center gap-1"><FiLink className="size-3" /> Backlinks giving this rank</span>
-      <div className="grid grid-cols-3 gap-2 mt-1.5">
+      <div className="grid grid-cols-3 gap-2">
         <div>
           <span className="font-bold text-gray-900 text-sm block">{backlinks.refdomains != null ? formatNum(backlinks.refdomains) : "—"}</span>
           <span className="text-[10px] text-gray-500">ref. domains</span>
@@ -101,6 +104,40 @@ function Backlinks({ backlinks }) {
           <span className="text-[10px] text-gray-500">domain trust</span>
         </div>
       </div>
+      {hosts.length > 0 && (
+        <div className="pt-1 border-t border-blue-100">
+          <span className="text-[10px] font-bold text-blue-800 uppercase">Sites linking to them ({hosts.length}{backlinks.refdomains > hosts.length ? `+` : ""})</span>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {shown.map((h, i) => (
+              <a key={i} href={`https://${h}`} target="_blank" rel="noreferrer" className="text-[10px] px-2 py-0.5 rounded bg-white border border-blue-200 text-blue-800 hover:bg-blue-100 truncate max-w-[180px]">{h}</a>
+            ))}
+          </div>
+          {hosts.length > 12 && (
+            <button type="button" onClick={() => setShowAll(!showAll)} className="text-[10px] font-semibold text-blue-700 hover:underline mt-1.5">
+              {showAll ? "Show fewer" : `Show all ${hosts.length} linking sites`}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContentExcerpt({ paragraphs }) {
+  const [open, setOpen] = useState(false);
+  if (!paragraphs?.length) return null;
+  const list = open ? paragraphs : paragraphs.slice(0, 3);
+  return (
+    <div>
+      <span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Page content</span>
+      <div className="space-y-2 text-[11px] text-gray-600 leading-relaxed">
+        {list.map((p, i) => <p key={i}>{p}</p>)}
+      </div>
+      {paragraphs.length > 3 && (
+        <button type="button" onClick={() => setOpen(!open)} className="text-[11px] font-semibold text-emerald-600 hover:underline mt-1.5">
+          {open ? "Show less content" : `Read all ${paragraphs.length} passages`}
+        </button>
+      )}
     </div>
   );
 }
@@ -111,11 +148,11 @@ function HeadingOutline({ headings }) {
   const list = open ? headings : headings.slice(0, 6);
   return (
     <div className="space-y-1">
-      <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
+      <div className="space-y-1">
         {list.map((h, i) => (
           <div key={i} className="flex items-center gap-2 text-[11px]">
-            <span className={`font-mono font-bold text-[9px] uppercase px-1.5 rounded ${h.tag === "h1" ? "bg-purple-100 text-purple-700" : h.tag === "h2" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>{h.tag}</span>
-            <span className="truncate text-gray-800">{h.text}</span>
+            <span className={`font-mono font-bold text-[9px] uppercase px-1.5 rounded shrink-0 ${h.tag === "h1" ? "bg-purple-100 text-purple-700" : h.tag === "h2" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>{h.tag}</span>
+            <span className="text-gray-800">{h.text}</span>
           </div>
         ))}
       </div>
@@ -253,8 +290,9 @@ function DetailCard({ item }) {
               <p className="text-[11px] text-gray-600 italic bg-gray-50 p-2 rounded-lg border border-gray-100">&ldquo;{item.metaDescription}&rdquo;</p>
             </div>
           )}
+          <ContentExcerpt paragraphs={item.paragraphs} />
           <div>
-            <span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Page content outline</span>
+            <span className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Page content outline (headings)</span>
             <HeadingOutline headings={item.headings} />
           </div>
         </div>
@@ -375,8 +413,8 @@ export default function SerpAnalysisSection({ selectedSite }) {
             <input type="text" value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="e.g. dallas email marketing" className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5"><FiMapPin className="size-4 text-emerald-600" /> Location <span className="font-normal text-gray-400">(match local intent)</span></label>
-            <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Dallas, Texas" className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none" />
+            <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5"><FiMapPin className="size-4 text-emerald-600" /> Location <span className="font-normal text-gray-400">(auto-detected from keyword — override here)</span></label>
+            <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Leave blank — we detect the city in your keyword" className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none" />
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -407,9 +445,17 @@ export default function SerpAnalysisSection({ selectedSite }) {
         <>
           {/* Toolbar: status + refresh */}
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
-            <span className="capitalize">
-              “{data.keyword}” · {data.device} · {data.location || "no location set"} · {data.serpDepth} results ({data.serpPagesFetched} page{data.serpPagesFetched > 1 ? "s" : ""})
-            </span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span>“{data.keyword}” · {data.device} · {data.serpDepth} results ({data.serpPagesFetched} page{data.serpPagesFetched > 1 ? "s" : ""})</span>
+              {data.location ? (
+                <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                  <FiMapPin className="size-3" /> {data.location}
+                  {data.locationSource === "auto" && <span className="text-gray-400 font-normal">· auto-detected from keyword</span>}
+                </span>
+              ) : (
+                <span className="text-amber-600">no location — generic {String(data.geo).toUpperCase()} SERP (may differ from local Google)</span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${data.cached ? "bg-gray-100 text-gray-600" : "bg-emerald-100 text-emerald-700"}`}>
                 {data.cached ? "Cached" : "Fresh"}{data.fetchedAt ? ` · ${new Date(data.fetchedAt).toLocaleDateString()}` : ""}
