@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import BlogSeedsPanel from "../seoAutopilot/BlogSeedsPanel";
 
-export default function WriterSendsPanel({ siteLink, onRan }) {
+export default function WriterSendsPanel({ siteLink, onRan, source = "autopilot" }) {
   const [sends, setSends] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
+  const isCompetitor = source === "competitor";
 
   const load = useCallback(async ({ soft = false } = {}) => {
     if (!siteLink) {
@@ -21,7 +22,7 @@ export default function WriterSendsPanel({ siteLink, onRan }) {
     }
     try {
       const res = await fetch(
-        `/api/admin/blog-automation/writer-sends?siteLink=${encodeURIComponent(siteLink)}`
+        `/api/admin/blog-automation/writer-sends?siteLink=${encodeURIComponent(siteLink)}&source=${source}`
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load Autopilot seeds");
@@ -32,7 +33,7 @@ export default function WriterSendsPanel({ siteLink, onRan }) {
     } finally {
       if (!soft) setLoading(false);
     }
-  }, [siteLink]);
+  }, [siteLink, source]);
 
   useEffect(() => {
     load();
@@ -80,6 +81,12 @@ export default function WriterSendsPanel({ siteLink, onRan }) {
     <BlogSeedsPanel
       siteLink={siteLink}
       mode="studio"
+      label={isCompetitor ? "Competitor Analysis seeds" : "Autopilot seeds"}
+      blurb={
+        isCompetitor
+          ? "Blog ideas generated from SERP Analysis — grounded in the live SERP, top rankers, and gaps for your target keyword. Pick a batch, review the brief, then run it through Studio agents 1–3."
+          : "Incoming Blog Studio run payloads from SEO Autopilot’s Writer agent. Pick a timestamped batch, review the seed, then run it through Studio agents 1–3."
+      }
       sends={sends}
       loading={loading}
       error={error}

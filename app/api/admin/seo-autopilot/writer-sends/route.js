@@ -9,7 +9,7 @@ export async function GET(req) {
     const url = new URL(req.url);
     const siteLink = String(url.searchParams.get("siteLink") || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
-    const sends = await listWriterSends(siteLink);
+    const sends = await listWriterSends(siteLink, { source: "autopilot" });
     return Response.json({ sends });
   } catch (error) {
     return Response.json(

@@ -42,6 +42,8 @@ async function copyText(text) {
 export default function BlogSeedsPanel({
   siteLink,
   mode = "autopilot",
+  label,
+  blurb,
   sends: controlledSends,
   onReload,
   onRun,
@@ -136,10 +138,12 @@ export default function BlogSeedsPanel({
             </div>
             <div>
               <h3 className="text-sm font-bold text-gray-900">
-                {mode === "studio" ? "Autopilot seeds" : "Blog seeds"}
+                {label || (mode === "studio" ? "Autopilot seeds" : "Blog seeds")}
               </h3>
               <p className="mt-1 text-sm text-gray-600 max-w-2xl leading-relaxed">
-                {mode === "studio" ? (
+                {blurb ? (
+                  blurb
+                ) : mode === "studio" ? (
                   <>
                     Incoming Blog Studio run payloads from SEO Autopilot’s Writer agent. Pick a
                     timestamped batch, review the seed, then run it through Studio agents 1–3.

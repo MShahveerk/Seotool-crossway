@@ -9,7 +9,9 @@ export async function GET(req) {
     const url = new URL(req.url);
     const siteLink = String(url.searchParams.get("siteLink") || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
-    const sends = await listWriterSends(siteLink);
+    // Default to Autopilot seeds; the Competitor seeds tab passes source=competitor.
+    const source = url.searchParams.get("source") === "competitor" ? "competitor" : "autopilot";
+    const sends = await listWriterSends(siteLink, { source });
     return Response.json({ sends });
   } catch (error) {
     return Response.json(

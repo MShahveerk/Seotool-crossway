@@ -37,6 +37,7 @@ import {
 const TABS = [
   { id: "run", label: "Run" },
   { id: "writer-sends", label: "Autopilot seeds" },
+  { id: "competitor-seeds", label: "Competitor seeds" },
   { id: "agents", label: "Agents" },
   { id: "seeds", label: "SEO Seeds" },
   { id: "excel", label: "Excel queue" },
@@ -877,6 +878,21 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                     text: run?.id
                       ? `Studio run queued — watch stages in the Run console below.`
                       : "Studio run queued — watch stages in the Run console below.",
+                  });
+                  await loadRuns();
+                }}
+              />
+            )}
+
+            {tab === "competitor-seeds" && (
+              <WriterSendsPanel
+                siteLink={selectedSite}
+                source="competitor"
+                onRan={async (run) => {
+                  if (run?.id) setActiveRun(run);
+                  setSaveMessage({
+                    ok: true,
+                    text: "Studio run queued — watch stages in the Run console below.",
                   });
                   await loadRuns();
                 }}
