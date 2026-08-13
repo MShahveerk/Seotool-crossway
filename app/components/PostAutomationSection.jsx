@@ -20,6 +20,7 @@ import ExcelQueuePanel from "./postsStudio/ExcelQueuePanel";
 import ModelCombobox from "./studioShared/ModelCombobox";
 import StudioReferenceImages from "./studioShared/StudioReferenceImages";
 import StudioBrandKit from "./studioShared/StudioBrandKit";
+import TabRail from "./ui-shared/TabRail";
 import { POST_STUDIO_DEFAULT_PROMPTS } from "../../lib/postsStudio/defaults";
 import {
   INTERVAL_OPTIONS,
@@ -400,22 +401,17 @@ export default function PostAutomationSection({ selectedSite = "" }) {
         <>
           <AgentRoster config={siteConfig} onPatchSite={patchSite} />
 
-          <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 pb-1">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id)}
-                className={`px-3 py-2 text-sm font-semibold rounded-t-lg border-b-2 transition ${
-                  tab === t.id
-                    ? "border-[#1d9c35] text-[#1d9c35]"
-                    : "border-transparent text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-            <div className="ml-auto flex items-center gap-2 pb-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <TabRail
+              tabs={TABS.map((t) =>
+                t.id === "run" && hasLiveAutomation ? { ...t, live: true } : t
+              )}
+              value={tab}
+              onChange={setTab}
+              ariaLabel="Post studio sections"
+              className="min-w-0 flex-1"
+            />
+            <div className="ml-auto flex items-center gap-2">
               {hasLiveAutomation && (
                 <button
                   type="button"

@@ -5,6 +5,7 @@ import PageHeader from "../ui-shared/PageHeader";
 import EmptyState from "../ui-shared/EmptyState";
 import { LoadingSpinner, StatCardSkeleton } from "../ui-shared/LoadingBlock";
 import { HoverLift } from "../ui-shared/Motion";
+import TabRail from "../ui-shared/TabRail";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -104,20 +105,28 @@ export default function SeoPanelShell({
   }
 
   return (
-    <div className="min-h-[calc(100vh-2rem)] space-y-8 rounded-xl border border-gray-200 bg-white p-5 sm:p-6 shadow-sm">
-      {/* Consistent Dark Hero Header Banner */}
-      <header className="relative overflow-hidden rounded-2xl border border-gray-100 bg-gradient-to-br from-gray-900 via-gray-800 to-emerald-950 p-6 text-white shadow-[0_8px_32px_rgba(0,0,0,0.12)] sm:p-8 animate-fade-in">
-        <div className="absolute -right-16 -top-16 size-64 rounded-full bg-emerald-500/10 blur-3xl" aria-hidden />
-        <div className="absolute -bottom-20 -left-10 size-48 rounded-full bg-teal-400/10 blur-3xl" aria-hidden />
+    <div className="min-h-[calc(100vh-2rem)] space-y-8 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 sm:p-6">
+      {/* Section hero — the one place a page states what it is. */}
+      <header className="cw-grid animate-fade-in relative overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)] p-6 sm:p-8">
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_75%_at_6%_0%,rgba(14,255,42,0.13),transparent_62%),radial-gradient(ellipse_45%_60%_at_96%_8%,rgba(56,225,255,0.055),transparent_62%)]"
+          aria-hidden
+        />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300/90">{eyebrow || "SEO Tools"}</p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
+            <p className="text-[10px] font-bold tracking-[0.18em] text-[var(--cw-neon)] uppercase">
+              {eyebrow || "SEO Tools"}
+            </p>
+            <h1 className="font-heading mt-2 text-2xl font-semibold tracking-tight text-balance text-[var(--cw-ink)] sm:text-[32px]">
+              {title}
+            </h1>
             {description ? (
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-300">{description}</p>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--cw-ink-muted)]">
+                {description}
+              </p>
             ) : null}
             {siteUrl ? (
-              <p className="mt-2 text-sm font-medium text-emerald-300">
+              <p className="mt-2.5 font-mono text-[13px] text-[var(--cw-ink-dim)]">
                 {String(siteUrl).trim()}
               </p>
             ) : null}
@@ -125,22 +134,13 @@ export default function SeoPanelShell({
           {(onRangeChange || action) && (
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               {onRangeChange ? (
-                <div className="inline-flex rounded-lg border border-white/10 bg-white/5 p-0.5 backdrop-blur-sm">
-                  {RANGES.map((r) => (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => onRangeChange(r.id)}
-                      className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                        range === r.id
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-300 hover:text-white"
-                      }`}
-                    >
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
+                <TabRail
+                  size="sm"
+                  tabs={RANGES.map((r) => ({ id: r.id, label: r.label }))}
+                  value={range}
+                  onChange={onRangeChange}
+                  ariaLabel="Date range"
+                />
               ) : null}
               {action}
             </div>

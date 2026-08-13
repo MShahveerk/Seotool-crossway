@@ -140,9 +140,10 @@ export const AGENT_ROLES = [
 ];
 
 export const inputClass =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1d9c35]/30 focus:border-[#1d9c35]";
+  "w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 text-sm text-[var(--cw-ink)] transition-smooth placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]";
 
-export const labelClass = "text-xs font-semibold uppercase tracking-wide text-gray-500";
+export const labelClass =
+  "text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--cw-ink-faint)]";
 
 export function formatMoney(n) {
   if (n == null || Number.isNaN(Number(n))) return "—";

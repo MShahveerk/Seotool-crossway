@@ -1,178 +1,92 @@
 "use client";
 
-import { FiExternalLink, FiLoader, FiXCircle } from "react-icons/fi";
-import { formatMoney, formatWhen, statusTone } from "./studioConstants";
+import { useMemo } from "react";
+import { PenLine } from "lucide-react";
+import AgentPipeline from "../studioShared/AgentPipeline";
+import { buildPipelineSteps } from "../studioShared/runFormat";
 
-export default function RunConsole({ run, onCancel, cancelling }) {
-  if (!run) {
-    return (
-      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/80 p-8 text-center text-sm text-gray-500">
-        Run a draft to see live stages, cost estimates, and HTML preview here.
-      </div>
-    );
-  }
+/**
+ * Blog Studio run console — a thin adapter that maps this studio's stage shape
+ * onto the shared AgentPipeline cockpit.
+ */
 
-  const stages = Array.isArray(run.stagesJson) ? run.stagesJson : [];
-  const preview = run.draftPreviewJson || {};
-  const live = run.status === "running" || run.status === "queued";
+/** Pipeline order. The Interpreter only runs for document/Excel sources. */
+const BLOG_PIPELINE = [
+  { id: "interpreter", title: "Interpreter", subtitle: "Document → SEO seeds", optional: true },
+  { id: "agent1", title: "Strategist", subtitle: "Keyword intelligence" },
+  { id: "agent2", title: "Architect", subtitle: "Article blueprint" },
+  { id: "agent3", title: "Writer", subtitle: "Publication draft" },
+  { id: "image", title: "Image", subtitle: "Featured visual" },
+];
+
+function resolveImageSrc(path) {
+  if (!path) return null;
+  const value = String(path);
+  if (value.startsWith("/") || /^(https?:|data:|blob:)/i.test(value)) return value;
+  return `/api/uploads/${value.replace(/^.*[\\/]/, "")}`;
+}
+
+/** The image agent reports style-reference details worth surfacing verbatim. */
+function imageStageExtra(stage) {
+  if (!stage || stage.agent !== "image") return null;
+  const bits = [];
+  if (stage.usedReference) bits.push(`Style refs applied: ${stage.referenceCount || 1}`);
+  else if (stage.status === "succeeded") bits.push("No style reference — text-only generation");
+  if (stage.note) bits.push(String(stage.note));
+  if (!bits.length && !stage.promptPreview) return null;
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gradient-to-r from-[#f4fbf4] to-white px-4 py-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Run console</p>
-          <p className="text-sm font-semibold text-gray-900 mt-0.5">{run.topic || "Untitled topic"}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusTone(run.status)}`}>
-            {live && <FiLoader className="inline h-3 w-3 mr-1 animate-spin" />}
-            {run.status}
-          </span>
-          <span className="text-xs font-mono text-gray-600 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-1">
-            est. {formatMoney(run.totalCostUsd)}
-          </span>
-          {live && (
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={cancelling}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 border border-red-200 bg-red-50 rounded-lg px-2.5 py-1.5 hover:bg-red-100 disabled:opacity-50"
-            >
-              <FiXCircle className="h-3.5 w-3.5" />
-              Cancel
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-0">
-        <div className="p-4 border-b xl:border-b-0 xl:border-r border-gray-100">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Stages</p>
-          <ol className="space-y-2">
-            {stages.length === 0 && (
-              <li className="text-sm text-gray-500">Waiting for first stage…</li>
-            )}
-            {stages.map((stage, idx) => (
-              <li
-                key={`${stage.agent}-${idx}`}
-                className={`rounded-lg border px-3 py-2 transition-all ${
-                  stage.status === "running"
-                    ? "border-[#1d9c35] bg-[#dff7de]/40 shadow-[0_0_0_3px_rgba(29,156,53,0.08)] animate-pulse"
-                    : "border-gray-200 bg-white"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{stage.role || stage.agent}</p>
-                    <p className="text-[11px] text-gray-500 font-mono">
-                      {stage.provider || "—"} · {stage.model || "—"}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${statusTone(stage.status)}`}>
-                      {stage.status}
-                    </span>
-                    <p className="text-[11px] text-gray-500 mt-1">{formatMoney(stage.costUsd)}</p>
-                  </div>
-                </div>
-                {stage.error && (
-                  <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-red-50 border border-red-100 p-2 text-[11px] text-red-700 whitespace-pre-wrap break-words">
-                    {String(stage.error)}
-                  </pre>
-                )}
-                {stage.agent === "image" && stage.status === "succeeded" ? (
-                  <p className="mt-2 text-[11px] text-gray-600">
-                    {stage.usedReference
-                      ? `Style refs applied: ${stage.referenceCount || 1}`
-                      : "No style reference attached — text-only generation"}
-                    {stage.note ? <span className="block mt-0.5 text-gray-500">{stage.note}</span> : null}
-                    {stage.promptPreview ? (
-                      <span className="block mt-1 text-gray-500 line-clamp-3 whitespace-pre-wrap">
-                        {String(stage.promptPreview).slice(0, 280)}
-                      </span>
-                    ) : null}
-                  </p>
-                ) : null}
-                {stage.preview && stage.status === "succeeded" && stage.agent !== "image" && (
-                  <pre className="mt-2 max-h-24 overflow-auto rounded bg-gray-50 border border-gray-100 p-2 text-[10px] text-gray-600 whitespace-pre-wrap">
-                    {String(stage.preview).slice(0, 500)}
-                  </pre>
-                )}
-              </li>
-            ))}
-          </ol>
-          {run.errorMessage && (
-            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-red-800">Run failed</p>
-              <pre className="mt-1 max-h-48 overflow-auto text-sm text-red-800 whitespace-pre-wrap break-words font-sans">
-                {run.errorMessage}
-              </pre>
-            </div>
-          )}
-          <p className="mt-3 text-[11px] text-gray-400">
-            Started {formatWhen(run.startedAt || run.createdAt)}
-            {run.finishedAt ? ` · Finished ${formatWhen(run.finishedAt)}` : ""}
-          </p>
-        </div>
-
-        <div className="p-4 bg-[#fafcfa]">
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Draft preview</p>
-            {preview.blogPostId && (
-              <a
-                href={`/?section=my-blog-approvals`}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[#1d9c35] hover:underline"
-              >
-                Open approvals <FiExternalLink className="h-3 w-3" />
-              </a>
-            )}
-          </div>
-          {preview.title ? (
-            <div className="animate-soft-rise">
-              <h3 className="text-lg font-semibold text-gray-900">{preview.title}</h3>
-              {preview.excerpt && <p className="mt-1 text-sm text-gray-600">{preview.excerpt}</p>}
-              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-gray-500">
-                {preview.slug && <span className="font-mono bg-white border rounded px-2 py-0.5">/{preview.slug}</span>}
-                {preview.seoTitle && <span className="bg-white border rounded px-2 py-0.5">SEO: {preview.seoTitle}</span>}
-              </div>
-              {preview.featuredImagePath ? (
-                <div className="mt-3 overflow-hidden rounded-lg border border-gray-200">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={
-                      preview.featuredImagePath.startsWith("/") ||
-                      /^(https?:|data:|blob:)/i.test(preview.featuredImagePath)
-                        ? preview.featuredImagePath
-                        : `/api/uploads/${String(preview.featuredImagePath).replace(/^.*[\\/]/, "")}`
-                    }
-                    alt=""
-                    className="w-full max-h-40 object-cover"
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      const el = e.currentTarget;
-                      if (el.dataset.retried === "1") return;
-                      el.dataset.retried = "1";
-                      const base = String(el.src || "").split("?")[0];
-                      if (base) el.src = `${base}?_cb=${Date.now()}`;
-                    }}
-                  />
-                </div>
-              ) : null}
-              {preview.html && (
-                <div
-                  className="mt-3 max-h-72 overflow-auto rounded-lg border border-gray-200 bg-white p-4 prose prose-sm max-w-none text-gray-800"
-                  dangerouslySetInnerHTML={{ __html: preview.html }}
-                />
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">
-              {live ? "Draft will appear when the writer finishes…" : "No draft preview for this run."}
-            </p>
-          )}
-        </div>
-      </div>
+    <div className="space-y-1.5 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5">
+      {bits.map((b, i) => (
+        <p key={i} className="text-[11px] text-[var(--cw-ink-muted)]">
+          {b}
+        </p>
+      ))}
+      {stage.promptPreview ? (
+        <p className="line-clamp-4 text-[11px] leading-relaxed whitespace-pre-wrap text-[var(--cw-ink-faint)]">
+          {String(stage.promptPreview).slice(0, 320)}
+        </p>
+      ) : null}
     </div>
+  );
+}
+
+export default function RunConsole({ run, onCancel, cancelling }) {
+  const steps = useMemo(() => {
+    const stages = Array.isArray(run?.stagesJson) ? run.stagesJson : [];
+    return buildPipelineSteps(BLOG_PIPELINE, stages, (s) => s?.agent).map((step) => ({
+      ...step,
+      extra: imageStageExtra(step.raw),
+    }));
+  }, [run?.stagesJson]);
+
+  const draft = useMemo(() => {
+    const p = run?.draftPreviewJson || {};
+    if (!p.title && !p.html && !p.featuredImagePath) return null;
+    return {
+      title: p.title,
+      excerpt: p.excerpt,
+      slug: p.slug,
+      seoTitle: p.seoTitle,
+      imageUrl: resolveImageSrc(p.featuredImagePath),
+      html: p.html,
+      href: p.blogPostId ? "/?section=my-blog-approvals" : null,
+      hrefLabel: "Open in approvals",
+    };
+  }, [run?.draftPreviewJson]);
+
+  return (
+    <AgentPipeline
+      run={run}
+      steps={steps}
+      eyebrow="Blog run"
+      title={run?.topic || "Untitled topic"}
+      draft={draft}
+      onCancel={onCancel}
+      cancelling={cancelling}
+      emptyIcon={PenLine}
+      emptyTitle="No run yet"
+      emptyHint="Start a draft and every agent — Strategist, Architect, Writer, Image — appears here as it works, with its full output one click away."
+    />
   );
 }

@@ -4,51 +4,298 @@
 
 @custom-variant dark (&:is(.dark *));
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
+/* ══════════════════════════════════════════════════════════════════════════
+   CROSSWAY — "CARBON NEON"
+   Dark-only design system. Near-black canvas, layered graphite surfaces,
+   one neon green accent spent sparingly (live state, active control,
+   primary action, focus, hero numbers). Everything else is greyscale.
+
+   Structure of this file:
+     1. @theme      — design tokens + Tailwind palette remap
+     2. :root/.dark — shadcn semantic tokens
+     3. base        — element defaults
+     4. compat      — remaps legacy light-theme classes still in components
+     5. utilities   — glow, rails, textures, motion
+   ══════════════════════════════════════════════════════════════════════════ */
 
 @theme inline {
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* ── Brand accent (neon green) ──────────────────────────────────────── */
+  --color-primary-50: #061a09;
+  --color-primary-100: #0a2a10;
+  --color-primary-200: #0f4419;
+  --color-primary-300: #5fff6e;
+  --color-primary-400: #3fff52;
+  --color-primary-500: #0eff2a;
+  --color-primary-600: #0bcc22;
+  --color-primary-700: #099e1b;
+  --color-primary-800: #077015;
+  --color-primary-900: #04440d;
+
+  --color-neon: #0eff2a;
+  --color-neon-soft: #5fff6e;
+  --color-neon-deep: #0bcc22;
+  --color-neon-ink: #04140a;
+
+  /* ── Carbon surfaces ────────────────────────────────────────────────── */
+  --color-canvas: #08090a;
+  --color-surface: #101316;
+  --color-raised: #171b1f;
+  --color-overlay: #1c2126;
+  --color-hairline: #23282e;
+  --color-hairline-strong: #333940;
+
+  --color-ink: #f2f4f5;
+  --color-ink-dim: #b9c0c7;
+  --color-ink-muted: #8a9199;
+  --color-ink-faint: #626a72;
+
+  --color-indicator: #8a9199;
+
+  /* ── Greyscale ramp, INVERTED ────────────────────────────────────────
+     Legacy components use light shades (50–300) for fills/borders and dark
+     shades (600–900) for text. Inverting the ramp makes ~4,000 existing
+     utility usages read correctly on a dark canvas without touching them. */
+  --color-gray-50: #0d0f12;
+  --color-gray-100: #14171b;
+  --color-gray-200: #23282e;
+  --color-gray-300: #333940;
+  --color-gray-400: #626a72;
+  --color-gray-500: #8a9199;
+  --color-gray-600: #a2a9b1;
+  --color-gray-700: #c3c9cf;
+  --color-gray-800: #dfe3e7;
+  --color-gray-900: #f2f4f5;
+  --color-gray-950: #fafbfc;
+
+  --color-slate-50: #0d0f13;
+  --color-slate-100: #14181d;
+  --color-slate-200: #242a31;
+  --color-slate-300: #343b44;
+  --color-slate-400: #646d78;
+  --color-slate-500: #8b939d;
+  --color-slate-600: #a3abb4;
+  --color-slate-700: #c4cad1;
+  --color-slate-800: #e0e4e8;
+  --color-slate-900: #f2f4f6;
+  --color-slate-950: #fafbfc;
+
+  --color-neutral-50: #0d0e10;
+  --color-neutral-100: #141619;
+  --color-neutral-200: #23262a;
+  --color-neutral-300: #33373c;
+  --color-neutral-400: #62676d;
+  --color-neutral-500: #8a8f96;
+  --color-neutral-600: #a2a7ad;
+  --color-neutral-700: #c3c7cc;
+  --color-neutral-800: #dfe2e5;
+  --color-neutral-900: #f2f3f5;
+  --color-neutral-950: #fafbfc;
+
+  --color-stone-50: #0f0f0e;
+  --color-stone-100: #171715;
+  --color-stone-200: #272623;
+  --color-stone-300: #373530;
+  --color-stone-400: #6a675f;
+  --color-stone-500: #918d84;
+  --color-stone-600: #a8a49c;
+  --color-stone-700: #c9c6c0;
+  --color-stone-800: #e3e1dd;
+  --color-stone-900: #f4f3f1;
+  --color-stone-950: #fbfbfa;
+
+  /* ── Emerald / green → the neon accent ramp ─────────────────────────── */
+  --color-emerald-50: #071c0c;
+  --color-emerald-100: #0a2a11;
+  --color-emerald-200: #10441b;
+  --color-emerald-300: #1c6b28;
+  --color-emerald-400: #35d94a;
+  --color-emerald-500: #0eff2a;
+  --color-emerald-600: #0eff2a;
+  --color-emerald-700: #3fff52;
+  --color-emerald-800: #5fff6e;
+  --color-emerald-900: #8dff97;
+  --color-emerald-950: #d8ffdc;
+
+  --color-green-50: #071c0c;
+  --color-green-100: #0a2a11;
+  --color-green-200: #10441b;
+  --color-green-300: #1c6b28;
+  --color-green-400: #35d94a;
+  --color-green-500: #0eff2a;
+  --color-green-600: #0eff2a;
+  --color-green-700: #3fff52;
+  --color-green-800: #5fff6e;
+  --color-green-900: #8dff97;
+  --color-green-950: #d8ffdc;
+
+  --color-teal-50: #04201c;
+  --color-teal-100: #062e28;
+  --color-teal-200: #0a463d;
+  --color-teal-300: #14705f;
+  --color-teal-400: #2ad9b6;
+  --color-teal-500: #38f8d4;
+  --color-teal-600: #38f8d4;
+  --color-teal-700: #6bfae0;
+  --color-teal-800: #93fbe8;
+  --color-teal-900: #bffcf1;
+  --color-teal-950: #e4fef8;
+
+  /* ── Status: danger ─────────────────────────────────────────────────── */
+  --color-red-50: #240b0b;
+  --color-red-100: #331010;
+  --color-red-200: #4d1919;
+  --color-red-300: #7a2727;
+  --color-red-400: #e05252;
+  --color-red-500: #ff5c5c;
+  --color-red-600: #ff5c5c;
+  --color-red-700: #ff7d7d;
+  --color-red-800: #ff9a9a;
+  --color-red-900: #ffbcbc;
+  --color-red-950: #ffe4e4;
+
+  --color-rose-50: #240b10;
+  --color-rose-100: #331016;
+  --color-rose-200: #4d1922;
+  --color-rose-300: #7a2735;
+  --color-rose-400: #e0526c;
+  --color-rose-500: #ff5c78;
+  --color-rose-600: #ff5c78;
+  --color-rose-700: #ff7d93;
+  --color-rose-800: #ff9aab;
+  --color-rose-900: #ffbcc8;
+  --color-rose-950: #ffe4e9;
+
+  /* ── Status: caution ────────────────────────────────────────────────── */
+  --color-amber-50: #241a05;
+  --color-amber-100: #33250a;
+  --color-amber-200: #4d3a10;
+  --color-amber-300: #7a5c19;
+  --color-amber-400: #e0a230;
+  --color-amber-500: #ffb020;
+  --color-amber-600: #ffb020;
+  --color-amber-700: #ffc558;
+  --color-amber-800: #ffd587;
+  --color-amber-900: #ffe5b4;
+  --color-amber-950: #fff5e3;
+
+  --color-yellow-50: #241f05;
+  --color-yellow-100: #332c0a;
+  --color-yellow-200: #4d4310;
+  --color-yellow-300: #7a6b19;
+  --color-yellow-400: #e0c130;
+  --color-yellow-500: #ffd426;
+  --color-yellow-600: #ffd426;
+  --color-yellow-700: #ffe066;
+  --color-yellow-800: #ffe994;
+  --color-yellow-900: #fff2c0;
+  --color-yellow-950: #fffbe8;
+
+  --color-orange-50: #241405;
+  --color-orange-100: #331d0a;
+  --color-orange-200: #4d2d10;
+  --color-orange-300: #7a4819;
+  --color-orange-400: #e08430;
+  --color-orange-500: #ff9433;
+  --color-orange-600: #ff9433;
+  --color-orange-700: #ffae63;
+  --color-orange-800: #ffc590;
+  --color-orange-900: #ffdcbc;
+  --color-orange-950: #fff2e6;
+
+  /* ── Status: information (cool secondary for data viz) ──────────────── */
+  --color-sky-50: #051d24;
+  --color-sky-100: #0a2933;
+  --color-sky-200: #10404d;
+  --color-sky-300: #19677a;
+  --color-sky-400: #30c3e0;
+  --color-sky-500: #38e1ff;
+  --color-sky-600: #38e1ff;
+  --color-sky-700: #6ee9ff;
+  --color-sky-800: #99f0ff;
+  --color-sky-900: #c2f6ff;
+  --color-sky-950: #e6fcff;
+
+  --color-cyan-50: #051d24;
+  --color-cyan-100: #0a2933;
+  --color-cyan-200: #10404d;
+  --color-cyan-300: #19677a;
+  --color-cyan-400: #30c3e0;
+  --color-cyan-500: #38e1ff;
+  --color-cyan-600: #38e1ff;
+  --color-cyan-700: #6ee9ff;
+  --color-cyan-800: #99f0ff;
+  --color-cyan-900: #c2f6ff;
+  --color-cyan-950: #e6fcff;
+
+  --color-blue-50: #071426;
+  --color-blue-100: #0b1e36;
+  --color-blue-200: #123052;
+  --color-blue-300: #1d4b80;
+  --color-blue-400: #4a92e8;
+  --color-blue-500: #5aa5ff;
+  --color-blue-600: #5aa5ff;
+  --color-blue-700: #85bcff;
+  --color-blue-800: #a8d0ff;
+  --color-blue-900: #cbe3ff;
+  --color-blue-950: #eaf4ff;
+
+  --color-indigo-50: #0c0c26;
+  --color-indigo-100: #121236;
+  --color-indigo-200: #1c1c52;
+  --color-indigo-300: #2d2d80;
+  --color-indigo-400: #7c7ce8;
+  --color-indigo-500: #9090ff;
+  --color-indigo-600: #9090ff;
+  --color-indigo-700: #aaaaff;
+  --color-indigo-800: #c4c4ff;
+  --color-indigo-900: #dedeff;
+  --color-indigo-950: #f2f2ff;
+
+  --color-violet-50: #10082a;
+  --color-violet-100: #180c3c;
+  --color-violet-200: #26135c;
+  --color-violet-300: #3d1f8c;
+  --color-violet-400: #9b6ef0;
+  --color-violet-500: #b184ff;
+  --color-violet-600: #b184ff;
+  --color-violet-700: #c5a3ff;
+  --color-violet-800: #d8c1ff;
+  --color-violet-900: #eadfff;
+  --color-violet-950: #f7f2ff;
+
+  --color-purple-50: #16082a;
+  --color-purple-100: #200c3c;
+  --color-purple-200: #33135c;
+  --color-purple-300: #521f8c;
+  --color-purple-400: #af6ef0;
+  --color-purple-500: #c084ff;
+  --color-purple-600: #c084ff;
+  --color-purple-700: #d0a3ff;
+  --color-purple-800: #dfc1ff;
+  --color-purple-900: #eedfff;
+  --color-purple-950: #f9f2ff;
+
+  --color-pink-50: #26081a;
+  --color-pink-100: #360c26;
+  --color-pink-200: #52133b;
+  --color-pink-300: #801f5d;
+  --color-pink-400: #ef6eb0;
+  --color-pink-500: #ff84c0;
+  --color-pink-600: #ff84c0;
+  --color-pink-700: #ffa3d0;
+  --color-pink-800: #ffc1e0;
+  --color-pink-900: #ffdfef;
+  --color-pink-950: #fff2f9;
+
+  /* ── shadcn semantic bridge ─────────────────────────────────────────── */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --color-primary: #0EFF2A;
-  --color-primary-300: #5FFF6E;
-  --color-primary-400: #3FFF52;
-  --color-primary-500: #0EFF2A;
-  --color-primary-600: #0BCC22;
-  --color-indicator: oklch(37.3% 0.034 259.733);
-  --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -77,6 +324,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -86,87 +334,611 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-body {
-  font-family: var(--font-nunito), system-ui, -apple-system, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
+/* ══ 2. Semantic tokens ═══════════════════════════════════════════════════
+   Dark-only: :root and .dark are identical so nothing can render half-light. */
+:root,
+.dark {
+  color-scheme: dark;
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+  --cw-canvas: #08090a;
+  --cw-surface: #101316;
+  --cw-raised: #171b1f;
+  --cw-overlay: #1c2126;
+  --cw-hairline: #23282e;
+  --cw-hairline-strong: #333940;
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+  --cw-ink: #f2f4f5;
+  --cw-ink-dim: #b9c0c7;
+  --cw-ink-muted: #8a9199;
+  --cw-ink-faint: #626a72;
 
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
+  --cw-neon: #0eff2a;
+  --cw-neon-soft: #5fff6e;
+  --cw-neon-deep: #0bcc22;
+  --cw-neon-ink: #04140a;
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #4a5568;
-}
+  --cw-danger: #ff5c5c;
+  --cw-caution: #ffb020;
+  --cw-info: #38e1ff;
 
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
+  /* Glow strengths — the accent's only decorative role */
+  --cw-glow-sm: 0 0 0 1px rgb(14 255 42 / 0.22), 0 0 12px -2px rgb(14 255 42 / 0.28);
+  --cw-glow: 0 0 0 1px rgb(14 255 42 / 0.3), 0 0 24px -4px rgb(14 255 42 / 0.35);
+  --cw-glow-lg: 0 0 0 1px rgb(14 255 42 / 0.4), 0 0 44px -6px rgb(14 255 42 / 0.45);
 
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #718096;
-}
+  /* Neutral elevation shadows — deep and soft, never grey-washed */
+  --cw-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
+  --cw-shadow: 0 4px 16px -4px rgb(0 0 0 / 0.6), 0 1px 3px rgb(0 0 0 / 0.4);
+  --cw-shadow-lg: 0 18px 48px -12px rgb(0 0 0 / 0.8), 0 4px 12px rgb(0 0 0 / 0.5);
 
-:root {
-  --background: oklch(0.995 0.002 145);
-  --foreground: oklch(0.18 0.02 145);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.02 145);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.02 145);
-  --primary: oklch(0.62 0.17 145);
-  --primary-foreground: oklch(0.985 0.01 145);
-  --secondary: oklch(0.96 0.02 145);
-  --secondary-foreground: oklch(0.28 0.04 145);
-  --muted: oklch(0.965 0.01 145);
-  --muted-foreground: oklch(0.48 0.02 145);
-  --accent: oklch(0.93 0.04 145);
-  --accent-foreground: oklch(0.28 0.05 145);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.91 0.01 145);
-  --input: oklch(0.91 0.01 145);
-  --ring: oklch(0.62 0.17 145);
-  --chart-1: oklch(0.72 0.16 145);
-  --chart-2: oklch(0.62 0.17 145);
-  --chart-3: oklch(0.52 0.14 145);
-  --chart-4: oklch(0.45 0.12 145);
-  --chart-5: oklch(0.38 0.1 145);
+  --background: #08090a;
+  --foreground: #f2f4f5;
+  --card: #101316;
+  --card-foreground: #f2f4f5;
+  --popover: #1c2126;
+  --popover-foreground: #f2f4f5;
+  --primary: #0eff2a;
+  --primary-foreground: #04140a;
+  --secondary: #171b1f;
+  --secondary-foreground: #f2f4f5;
+  --muted: #171b1f;
+  --muted-foreground: #8a9199;
+  --accent: #1c2126;
+  --accent-foreground: #0eff2a;
+  --destructive: #ff5c5c;
+  --border: #23282e;
+  --input: #23282e;
+  --ring: #0eff2a;
+
+  --chart-1: #0eff2a;
+  --chart-2: #38e1ff;
+  --chart-3: #8a9199;
+  --chart-4: #ffb020;
+  --chart-5: #b184ff;
+
   --radius: 0.75rem;
-  --sidebar: oklch(0.985 0.008 145);
-  --sidebar-foreground: oklch(0.22 0.03 145);
-  --sidebar-primary: oklch(0.58 0.16 145);
-  --sidebar-primary-foreground: oklch(0.985 0.01 145);
-  --sidebar-accent: oklch(0.94 0.04 145);
-  --sidebar-accent-foreground: oklch(0.28 0.05 145);
-  --sidebar-border: oklch(0.9 0.015 145);
-  --sidebar-ring: oklch(0.62 0.17 145);
+
+  --sidebar: #0b0d0f;
+  --sidebar-foreground: #c3c9cf;
+  --sidebar-primary: #0eff2a;
+  --sidebar-primary-foreground: #04140a;
+  --sidebar-accent: #171b1f;
+  --sidebar-accent-foreground: #f2f4f5;
+  --sidebar-border: #1d2227;
+  --sidebar-ring: #0eff2a;
 }
 
+/* ══ 3. Base ══════════════════════════════════════════════════════════════ */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+
   html {
     @apply font-sans;
     scroll-behavior: smooth;
+    background-color: var(--cw-canvas);
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-heading {
+    font-family: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.018em;
+  }
+
+  /* Numbers always align in columns */
+  th,
+  td,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: rgb(14 255 42 / 0.28);
+    color: #ffffff;
+  }
+
+  ::placeholder {
+    color: var(--cw-ink-faint);
+  }
+
+  input,
+  textarea,
+  select {
+    color-scheme: dark;
+  }
+
+  /* Native controls tinted to the accent */
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"],
+  progress {
+    accent-color: var(--cw-neon);
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(14 255 42 / 0.55);
+    outline-offset: 2px;
+  }
+
+  /* Scrollbars: invisible until the surface is hovered */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #262b31;
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3b424a;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  * {
+    scrollbar-color: #262b31 transparent;
+    scrollbar-width: thin;
   }
 }
 
-/* ── Motion utilities (respect reduced motion) ── */
+/* ══ 4. Legacy compatibility ══════════════════════════════════════════════
+   The app carries ~4,000 hand-written light-theme utilities. The inverted
+   ramps above cover the palette classes; these rules cover literal white and
+   the hard-coded brand hexes, so no component has to be rewritten to be dark.
+   New code should use the semantic tokens, not these. */
+@layer utilities {
+  .bg-white {
+    background-color: var(--cw-surface);
+  }
+
+  /* Opaque-ish white panels are surfaces. Low-alpha whites (/20 and under) are
+     deliberate veils over dark heroes and are left alone. */
+  .bg-white\/95,
+  .bg-white\/90,
+  .bg-white\/80,
+  .bg-white\/70 {
+    background-color: color-mix(in srgb, var(--cw-surface) 92%, transparent);
+  }
+
+  .border-white {
+    border-color: var(--cw-hairline);
+  }
+
+  .from-violet-600,
+  .from-violet-500,
+  .from-indigo-600 {
+    --tw-gradient-from: #2a1a5e;
+  }
+
+  .to-indigo-600,
+  .to-violet-600,
+  .to-purple-600 {
+    --tw-gradient-to: #1a1240;
+  }
+
+  .divide-white > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--cw-hairline);
+  }
+
+  /* Light-tinted panels → faintly green-lit dark panels */
+  .bg-\[\#ffffff\],
+  .bg-\[\#fafcfa\],
+  .bg-\[\#fafbfa\],
+  .bg-\[\#f9f9f9\],
+  .bg-\[\#F9F9F9\],
+  .bg-\[\#f7faf8\],
+  .bg-\[\#f3faf4\],
+  .bg-\[\#f4fbf4\],
+  .bg-\[\#eef6f0\] {
+    background-color: var(--cw-surface);
+  }
+
+  .bg-\[\#dff7de\],
+  .bg-\[\#e8f7eb\],
+  .bg-\[\#d7efd4\] {
+    background-color: color-mix(in srgb, var(--cw-neon) 11%, var(--cw-surface));
+  }
+
+  .from-\[\#f4fbf4\],
+  .from-\[\#f3faf4\] {
+    --tw-gradient-from: color-mix(in srgb, var(--cw-neon) 5%, var(--cw-surface));
+  }
+
+  .to-\[\#eef6f0\] {
+    --tw-gradient-to: var(--cw-surface);
+  }
+
+  /* Brand greens → the single neon accent */
+  .text-\[\#1d9c35\],
+  .text-\[\#178a2e\],
+  .text-\[\#178a2c\],
+  .text-\[\#178c2e\],
+  .text-\[\#167a2a\],
+  .text-\[\#157a29\],
+  .text-\[\#146b24\],
+  .text-\[\#145c22\],
+  .text-\[\#0a9e22\],
+  .text-\[\#2fb54a\],
+  .text-\[\#34a853\] {
+    color: var(--cw-neon);
+  }
+
+  .border-\[\#1d9c35\],
+  .border-\[\#b6ddb1\],
+  .border-\[\#c4edc2\] {
+    border-color: color-mix(in srgb, var(--cw-neon) 38%, transparent);
+  }
+
+  .ring-\[\#1d9c35\],
+  .ring-\[\#31c655\] {
+    --tw-ring-color: color-mix(in srgb, var(--cw-neon) 45%, transparent);
+  }
+
+  .bg-\[\#1d9c35\],
+  .bg-\[\#178a2e\],
+  .bg-\[\#178c2e\],
+  .bg-\[\#178a2c\],
+  .bg-\[\#2fb54a\],
+  .bg-\[\#31c655\],
+  .bg-\[\#33d56a\],
+  .bg-\[\#34a853\],
+  .bg-\[\#2aff4a\] {
+    background-color: var(--cw-neon);
+  }
+
+  .from-\[\#1d9c35\] {
+    --tw-gradient-from: var(--cw-neon-deep);
+  }
+
+  .text-\[\#6b7280\],
+  .text-\[\#666666\] {
+    color: var(--cw-ink-muted);
+  }
+
+  .bg-\[\#6b7280\] {
+    background-color: var(--cw-raised);
+  }
+
+  /* Filled neon surfaces must carry dark ink, never white.
+     Two-class selectors beat Tailwind's single-class text utilities. */
+  .bg-neon.text-white,
+  .bg-primary.text-white,
+  .bg-emerald-500.text-white,
+  .bg-emerald-600.text-white,
+  .bg-emerald-700.text-white,
+  .bg-emerald-800.text-white,
+  .bg-green-500.text-white,
+  .bg-green-600.text-white,
+  .bg-green-700.text-white,
+  .bg-\[\#1d9c35\].text-white,
+  .bg-\[\#178a2e\].text-white,
+  .bg-\[\#178c2e\].text-white,
+  .bg-\[\#178a2c\].text-white,
+  .bg-\[\#2fb54a\].text-white,
+  .bg-\[\#0EFF2A\].text-white,
+  .bg-\[\#0BCC22\].text-white {
+    color: var(--cw-neon-ink);
+  }
+
+  .bg-neon.text-gray-900,
+  .bg-\[\#0EFF2A\].text-gray-900,
+  .bg-\[\#0BCC22\].text-gray-900,
+  .bg-emerald-600.text-gray-900 {
+    color: var(--cw-neon-ink);
+  }
+
+  /* Amber / red / sky fills keep dark ink too */
+  .bg-amber-500.text-white,
+  .bg-amber-600.text-white,
+  .bg-yellow-500.text-white,
+  .bg-sky-500.text-white,
+  .bg-sky-600.text-white,
+  .bg-cyan-500.text-white {
+    color: #10130f;
+  }
+
+  /* Dark hero gradients. The inverted ramps would turn `from-gray-900
+     via-gray-800 to-emerald-950` into a near-white banner carrying white text,
+     so the dark end of every hero gradient is pinned back to real dark values. */
+  .from-gray-900,
+  .from-gray-950,
+  .from-slate-900,
+  .from-slate-950,
+  .from-neutral-900,
+  .from-neutral-950,
+  .from-indigo-950,
+  .from-emerald-950,
+  .from-sky-950 {
+    --tw-gradient-from: #0a0c0e;
+  }
+
+  .via-gray-800,
+  .via-gray-900,
+  .via-slate-800,
+  .via-slate-900,
+  .via-neutral-800,
+  .via-neutral-900 {
+    --tw-gradient-via: #101317;
+  }
+
+  .to-emerald-950,
+  .to-emerald-900,
+  .to-sky-950,
+  .to-teal-950,
+  .to-gray-900,
+  .to-gray-950,
+  .to-slate-900,
+  .to-slate-950 {
+    --tw-gradient-to: #0a1410;
+  }
+
+  /* Code / terminal blocks: the ramp inversion would flip these to light */
+  .bg-gray-900,
+  .bg-gray-950,
+  .bg-slate-900,
+  .bg-slate-950,
+  .bg-neutral-900,
+  .bg-neutral-950,
+  .bg-black {
+    background-color: #060708;
+  }
+
+  .bg-gray-800,
+  .bg-slate-800,
+  .bg-neutral-800 {
+    background-color: #0d1013;
+  }
+
+  .bg-gray-900 .text-gray-100,
+  .bg-gray-950 .text-gray-100,
+  .bg-gray-900.text-gray-100,
+  .bg-gray-950.text-gray-100,
+  .bg-black .text-white {
+    color: var(--cw-ink-dim);
+  }
+}
+
+/* ══ 4b. Navigation chrome ════════════════════════════════════════════════
+   The sidebar's active item gets the same neon language as the tab rails: a lit
+   leading bar, neon label, faint tinted fill. Applied here rather than in the
+   shadcn primitive so the primitive stays upgradeable. */
+[data-sidebar="menu-button"],
+[data-sidebar="menu-sub-button"] {
+  position: relative;
+  font-weight: 500;
+  transition:
+    color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-sidebar="menu-button"][data-active="true"],
+[data-sidebar="menu-sub-button"][data-active="true"] {
+  background-color: color-mix(in srgb, var(--cw-neon) 9%, var(--cw-raised));
+  color: var(--cw-neon);
+  font-weight: 600;
+}
+
+[data-sidebar="menu-button"][data-active="true"] svg,
+[data-sidebar="menu-sub-button"][data-active="true"] svg {
+  color: var(--cw-neon);
+}
+
+[data-sidebar="menu-button"][data-active="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--cw-neon);
+  box-shadow: 0 0 10px rgb(14 255 42 / 0.75);
+}
+
+[data-sidebar="group-label"] {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cw-ink-faint);
+}
+
+[data-sidebar="menu-badge"] {
+  background-color: color-mix(in srgb, var(--cw-neon) 16%, transparent);
+  color: var(--cw-neon);
+  border-radius: 999px;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ══ 5. Crossway utilities ════════════════════════════════════════════════ */
+@layer utilities {
+  /* ── Surfaces ─────────────────────────────────────────────────────── */
+  .cw-surface {
+    background-color: var(--cw-surface);
+    border: 1px solid var(--cw-hairline);
+    border-radius: var(--radius);
+  }
+
+  .cw-raised {
+    background-color: var(--cw-raised);
+    border: 1px solid var(--cw-hairline);
+  }
+
+  /* A hairline of light along the top edge — reads as a lit surface */
+  .cw-lit {
+    position: relative;
+  }
+
+  .cw-lit::before {
+    content: "";
+    position: absolute;
+    inset-inline: 1px;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.07) 30%, rgb(255 255 255 / 0.07) 70%, transparent);
+    pointer-events: none;
+  }
+
+  .surface-glass {
+    background-color: color-mix(in srgb, var(--cw-canvas) 82%, transparent);
+    border: 1px solid var(--cw-hairline);
+    backdrop-filter: blur(14px) saturate(140%);
+  }
+
+  /* Canvas texture: one cold pool of light, top-left, and a faint grid */
+  .mesh-bg {
+    background-image:
+      radial-gradient(ellipse 70% 45% at 12% -10%, rgb(14 255 42 / 0.055), transparent 70%),
+      radial-gradient(ellipse 50% 40% at 100% 0%, rgb(56 225 255 / 0.03), transparent 70%);
+  }
+
+  .cw-grid {
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.018) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  /* ── Neon accents ─────────────────────────────────────────────────── */
+  .cw-glow {
+    box-shadow: var(--cw-glow);
+  }
+
+  .cw-glow-sm {
+    box-shadow: var(--cw-glow-sm);
+  }
+
+  .cw-glow-lg {
+    box-shadow: var(--cw-glow-lg);
+  }
+
+  .cw-neon-text {
+    color: var(--cw-neon);
+    text-shadow: 0 0 18px rgb(14 255 42 / 0.35);
+  }
+
+  /* The live-agent surface: breathing glow + a slow sheen sweeping across */
+  .cw-live {
+    position: relative;
+    border-color: color-mix(in srgb, var(--cw-neon) 55%, transparent) !important;
+    background-color: color-mix(in srgb, var(--cw-neon) 7%, var(--cw-surface)) !important;
+    animation: cw-breathe 2.6s ease-in-out infinite;
+    overflow: hidden;
+  }
+
+  .cw-live::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 35%, rgb(14 255 42 / 0.13) 50%, transparent 65%);
+    animation: cw-sweep 2.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* Pulsing status dot with an expanding halo */
+  .cw-pulse {
+    position: relative;
+  }
+
+  .cw-pulse::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: currentColor;
+    animation: cw-ping 1.9s cubic-bezier(0, 0, 0.2, 1) infinite;
+    pointer-events: none;
+  }
+
+  /* Progress / connector line that fills with light */
+  .cw-flow {
+    background-image: linear-gradient(
+      90deg,
+      var(--cw-neon) 0%,
+      var(--cw-neon) 40%,
+      rgb(14 255 42 / 0.15) 60%,
+      rgb(14 255 42 / 0.15) 100%
+    );
+    background-size: 250% 100%;
+    animation: cw-flow-slide 1.8s linear infinite;
+  }
+
+  /* ── Motion ───────────────────────────────────────────────────────── */
+  .animate-soft-rise {
+    animation: soft-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .animate-section-enter {
+    animation: section-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .animate-soft-scale-in {
+    animation: soft-scale-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .transition-smooth {
+    transition-property: transform, box-shadow, border-color, background-color, color, opacity;
+    transition-duration: 240ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .hover-lift {
+    transition-property: transform, box-shadow, border-color, background-color, opacity;
+    transition-duration: 240ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    border-color: var(--cw-hairline-strong);
+    box-shadow: var(--cw-shadow-lg);
+  }
+
+  .hover-lift:active {
+    transform: translateY(0);
+  }
+
+  .shimmer-overlay {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer-overlay::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.06) 50%, transparent 60%);
+    animation: shimmer-slide 1.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+}
+
+/* ══ Keyframes ════════════════════════════════════════════════════════════ */
 @keyframes soft-rise {
   from {
     opacity: 0;
@@ -219,82 +991,50 @@ body {
   }
 }
 
-@keyframes spin-smooth {
-  to {
-    transform: rotate(360deg);
+@keyframes cw-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgb(14 255 42 / 0.25), 0 0 20px -6px rgb(14 255 42 / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgb(14 255 42 / 0.45), 0 0 34px -4px rgb(14 255 42 / 0.5);
   }
 }
 
-@layer utilities {
-  /*
-   * fill-mode is `backwards` (not `both`) on purpose: `both` retains the final
-   * keyframe's transform permanently, and a residual transform on a wrapper makes
-   * every position:fixed modal inside it anchor to the wrapper instead of the
-   * viewport (you'd have to scroll up to see the modal). The end state equals the
-   * element's natural (no-transform) state, so there is no visual flicker.
-   */
-  .animate-soft-rise {
-    animation: soft-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+@keyframes cw-sweep {
+  0% {
+    transform: translateX(-120%);
   }
-
-  .animate-section-enter {
-    animation: section-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  60%,
+  100% {
+    transform: translateX(120%);
   }
+}
 
-  .animate-soft-scale-in {
-    animation: soft-scale-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+@keyframes cw-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
   }
-
-  .transition-smooth {
-    transition-property: transform, box-shadow, border-color, background-color, opacity;
-    transition-duration: 280ms;
-    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  70%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
   }
+}
 
-  .hover-lift {
-    transition-property: transform, box-shadow, border-color, background-color, opacity;
-    transition-duration: 280ms;
-    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+@keyframes cw-flow-slide {
+  from {
+    background-position: 100% 0;
   }
-
-  .hover-lift:hover {
-    transform: translateY(-3px);
-    box-shadow:
-      0 12px 28px -8px oklch(0.62 0.17 145 / 0.18),
-      0 4px 12px -4px oklch(0 0 0 / 0.08);
+  to {
+    background-position: -100% 0;
   }
+}
 
-  .hover-lift:active {
-    transform: translateY(-1px);
-  }
-
-  .surface-glass {
-    @apply border border-border/70 bg-background/85 backdrop-blur-md;
-  }
-
-  .mesh-bg {
-    background-image:
-      radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.72 0.16 145 / 0.14), transparent),
-      radial-gradient(ellipse 60% 40% at 100% 0%, oklch(0.62 0.17 145 / 0.08), transparent);
-  }
-
-  .shimmer-overlay {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .shimmer-overlay::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      105deg,
-      transparent 40%,
-      oklch(1 0 0 / 0.35) 50%,
-      transparent 60%
-    );
-    animation: shimmer-slide 1.8s ease-in-out infinite;
-    pointer-events: none;
+@keyframes spin-smooth {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -306,7 +1046,11 @@ body {
   .animate-soft-rise,
   .animate-section-enter,
   .animate-soft-scale-in,
-  .shimmer-overlay::after {
+  .shimmer-overlay::after,
+  .cw-live,
+  .cw-live::after,
+  .cw-pulse::after,
+  .cw-flow {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

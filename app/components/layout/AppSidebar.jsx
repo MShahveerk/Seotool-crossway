@@ -387,11 +387,12 @@ export default function AppSidebar({
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader className="border-b border-sidebar-border/80">
         <div className="flex items-center gap-3 px-1 py-1">
-          <CrosswayLogo variant="light" size={36} className="dark:hidden" />
-          <CrosswayLogo variant="dark" size={36} className="hidden dark:inline-flex" />
+          <CrosswayLogo variant="dark" size={36} />
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-sm font-bold text-sidebar-foreground">Crossway</p>
-            <p className="truncate text-xs text-muted-foreground">SEO & Marketing Suite</p>
+            <p className="font-heading truncate text-sm font-bold text-[var(--cw-ink)]">Crossway</p>
+            <p className="truncate text-[11px] tracking-wide text-[var(--cw-ink-faint)]">
+              SEO &amp; Marketing Suite
+            </p>
           </div>
         </div>
 
@@ -399,7 +400,8 @@ export default function AppSidebar({
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(
-                "mt-2 flex w-full items-center justify-between gap-2 rounded-lg border border-sidebar-border bg-background px-3 py-2 text-left text-sm transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden"
+                "mt-2 flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 text-left text-sm transition-smooth group-data-[collapsible=icon]:hidden",
+                "hover:border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] hover:bg-[var(--cw-overlay)]"
               )}
             >
               <span className="flex min-w-0 items-center gap-2">
@@ -418,7 +420,10 @@ export default function AppSidebar({
                   <DropdownMenuItem
                     key={`${val}-${index}`}
                     onClick={() => onSelectedSiteChange?.(val)}
-                    className={cn(isSelected && "bg-emerald-50 text-emerald-900")}
+                    className={cn(
+                      isSelected &&
+                        "bg-[color-mix(in_srgb,var(--cw-neon)_12%,transparent)] font-semibold text-[var(--cw-neon)]"
+                    )}
                   >
                     <ClientAccountLogo entry={siteEntry} size="sm" />
                     {getPageDisplayName(siteEntry)}
@@ -428,9 +433,13 @@ export default function AppSidebar({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <div className="mt-2 rounded-lg border border-sidebar-border bg-background px-3 py-2 group-data-[collapsible=icon]:hidden">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Current Site</p>
-            <p className="mt-1 truncate text-sm font-medium">{getSiteHostName(userSiteLink)}</p>
+          <div className="mt-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 group-data-[collapsible=icon]:hidden">
+            <p className="text-[10px] font-bold tracking-[0.14em] text-[var(--cw-ink-faint)] uppercase">
+              Current Site
+            </p>
+            <p className="mt-1 truncate font-mono text-[13px] text-[var(--cw-ink)]">
+              {getSiteHostName(userSiteLink)}
+            </p>
           </div>
         )}
       </SidebarHeader>
@@ -519,9 +528,9 @@ export default function AppSidebar({
 
       <SidebarFooter className="border-t border-sidebar-border/80">
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center">
+          <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-smooth hover:bg-[var(--cw-raised)] group-data-[collapsible=icon]:justify-center">
             <Avatar className="size-8">
-              <AvatarFallback className="bg-emerald-100 text-emerald-800 text-xs font-semibold">
+              <AvatarFallback className="bg-[color-mix(in_srgb,var(--cw-neon)_14%,var(--cw-raised))] text-xs font-bold text-[var(--cw-neon)]">
                 {userInitials}
               </AvatarFallback>
             </Avatar>

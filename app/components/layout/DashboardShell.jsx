@@ -3,7 +3,6 @@
 import AppSidebar from "./AppSidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { getSectionLabel } from "@/lib/sectionMeta";
 import { cn } from "@/lib/utils";
 import { FadeIn } from "../ui-shared/Motion";
@@ -19,6 +18,12 @@ export default function DashboardLayout({
   const isDashboard = activeSection === "dashboard";
   const isBoard = activeSection === "post-board" || activeSection === "blog-board";
 
+  const siteLabel = selectedSite
+    ? String(selectedSite).startsWith("http")
+      ? selectedSite.replace(/^https?:\/\//, "").split("/")[0]
+      : "Client account"
+    : null;
+
   return (
     <SidebarProvider defaultOpen>
       <AppSidebar
@@ -27,42 +32,39 @@ export default function DashboardLayout({
         selectedSite={selectedSite}
         onSelectedSiteChange={onSelectedSiteChange}
       />
-      <SidebarInset className="mesh-bg flex min-h-svh flex-col">
-        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border/60 surface-glass px-4">
-          <SidebarTrigger className="-ml-1 transition-smooth hover:bg-emerald-50" />
-          <Separator orientation="vertical" className="hidden h-5 sm:block" />
+      <SidebarInset className="mesh-bg cw-grid flex min-h-svh flex-col bg-[var(--cw-canvas)]">
+        {/* Header: glass over the canvas, one hairline, nothing else. */}
+        <header className="surface-glass sticky top-0 z-20 flex h-14 shrink-0 items-center gap-3 border-x-0 border-t-0 px-4">
+          <SidebarTrigger className="-ml-1 text-[var(--cw-ink-muted)] transition-smooth hover:bg-[var(--cw-raised)] hover:text-[var(--cw-neon)]" />
+          <Separator
+            orientation="vertical"
+            className="hidden h-5 bg-[var(--cw-hairline)] sm:block"
+          />
           <div className="min-w-0 flex-1" key={activeSection}>
             <FadeIn delay={0}>
-              <p className="truncate text-sm font-semibold text-foreground">{sectionLabel}</p>
+              <p className="font-heading truncate text-sm font-semibold text-[var(--cw-ink)]">
+                {sectionLabel}
+              </p>
             </FadeIn>
-            {selectedSite ? (
+            {siteLabel ? (
               <FadeIn delay={40}>
-                <p className="truncate text-xs text-muted-foreground">
-                  {String(selectedSite).startsWith("http")
-                    ? selectedSite.replace(/^https?:\/\//, "").split("/")[0]
-                    : "Client account selected"}
+                <p className="truncate font-mono text-[11px] text-[var(--cw-ink-faint)]">
+                  {siteLabel}
                 </p>
               </FadeIn>
             ) : null}
           </div>
-          <Badge
-            variant="outline"
-            className="hidden capitalize transition-smooth sm:inline-flex hover:border-emerald-300 hover:bg-emerald-50/80"
-          >
-            {activeSection.replace(/-/g, " ")}
-          </Badge>
         </header>
 
         <main
           id="main-content"
           className={cn(
             "flex min-h-0 flex-1 flex-col",
-            isBoard ? "p-2 sm:p-2.5 lg:p-3" : "p-3 pt-4 sm:p-4 lg:p-5",
-            isDashboard ? "bg-muted/20" : "bg-transparent"
+            isBoard ? "p-2 sm:p-2.5 lg:p-3" : "p-3 pt-4 sm:p-4 lg:p-6"
           )}
         >
           {isDashboard ? (
-            <div className="mx-auto max-w-6xl rounded-2xl border border-border/70 bg-card/95 p-4 shadow-sm backdrop-blur-sm transition-smooth sm:p-6 hover:shadow-md">
+            <div className="cw-lit mx-auto w-full max-w-6xl rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-4 sm:p-6">
               {children}
             </div>
           ) : isBoard ? (

@@ -26,6 +26,9 @@ import BlogSeedsPanel from "./seoAutopilot/BlogSeedsPanel";
 import PitchesPanel from "./seoAutopilot/PitchesPanel";
 import AutopilotRunConsole from "./seoAutopilot/AutopilotRunConsole";
 import SeoAutopilotMark from "./seoAutopilot/SeoAutopilotMark";
+import TabRail from "./ui-shared/TabRail";
+import LiveRunStrip from "./studioShared/LiveRunStrip";
+import Btn from "./ui-shared/Btn";
 
 const TABS = [
   { id: "overview", label: "Scorecard" },
@@ -363,161 +366,120 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
   }
 
   return (
-    <div className="min-h-[calc(100vh-2rem)] rounded-2xl border border-gray-200 bg-[#fafbfa] overflow-hidden">
-      <div className="relative border-b border-gray-200 bg-gradient-to-r from-[#0b1f14] via-[#123524] to-[#1a4d32] px-6 py-6 text-white">
-        <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_20%_20%,#0EFF2A,transparent_40%),radial-gradient(circle_at_80%_0%,#38bdf8,transparent_35%)]" />
-        <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+    <div className="min-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)]">
+      <div className="cw-grid relative border-b border-[var(--cw-hairline)] bg-[var(--cw-canvas)] px-6 py-7">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_8%_0%,rgba(14,255,42,0.13),transparent_60%),radial-gradient(ellipse_50%_60%_at_95%_10%,rgba(56,225,255,0.06),transparent_60%)]" />
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold tracking-wide uppercase">
-              <SeoAutopilotMark className="w-3.5 h-3.5 text-lime-300" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_8%,transparent)] px-3 py-1 text-[10px] font-bold tracking-[0.14em] text-[var(--cw-neon)] uppercase">
+              <SeoAutopilotMark className="h-3.5 w-3.5" />
               SEO Autopilot Studio
             </div>
-            <div className="mt-3 flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-[#0EFF2A]">
+            <div className="mt-3.5 flex items-start gap-3">
+              <span className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--cw-neon)_30%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_9%,transparent)] text-[var(--cw-neon)]">
                 <SeoAutopilotMark className="h-6 w-6" strokeWidth={1.75} />
               </span>
-              <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+              <h2 className="font-heading text-2xl font-semibold tracking-tight text-balance text-[var(--cw-ink)] sm:text-[32px]">
                 Audit → Diagnose → Fix → Pitch → Track
               </h2>
             </div>
-            <p className="mt-2 text-sm text-white/70 max-w-2xl">
+            <p className="mt-2.5 max-w-2xl text-sm leading-relaxed text-[var(--cw-ink-muted)]">
               Google + AI-search loop for{" "}
-              <span className="text-white font-medium">{siteLink}</span>. Configure each agent like
-              Blog Automation Studio, run on demand or on a schedule, and send outreach from here.
+              <span className="font-mono text-[var(--cw-ink)]">{siteLink}</span>. Configure each
+              agent, run on demand or on a schedule, and send outreach from here.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={saveConfig}
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/20 px-4 py-2.5 text-sm font-semibold hover:bg-white/15"
-            >
-              <FiSave className="w-4 h-4" />
+            <Btn variant="secondary" size="lg" icon={FiSave} onClick={saveConfig} disabled={saving}>
               {saving ? "Saving…" : "Save"}
-            </button>
+            </Btn>
             {hasLiveAutopilot ? (
-              <button
-                type="button"
+              <Btn
+                variant="danger"
+                size="lg"
+                icon={FiXCircle}
+                loading={cancellingRun}
                 onClick={cancelAllLiveRuns}
                 disabled={cancellingRun}
-                className="inline-flex items-center gap-2 rounded-xl bg-red-500/90 border border-red-300/40 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-500 disabled:opacity-60"
               >
-                {cancellingRun ? (
-                  <FiRefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <FiXCircle className="w-4 h-4" />
-                )}
                 Cancel run{liveRuns.length > 1 ? "s" : ""}
-              </button>
+              </Btn>
             ) : null}
-            <button
-              type="button"
+            <Btn
+              variant="primary"
+              size="lg"
+              icon={FiPlay}
+              loading={running || hasLiveAutopilot}
               onClick={() => runNow()}
               disabled={running || hasLiveAutopilot}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#0EFF2A] text-gray-900 px-4 py-2.5 text-sm font-bold hover:brightness-105 disabled:opacity-60"
             >
-              {running || hasLiveAutopilot ? (
-                <FiRefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <FiPlay className="w-4 h-4" />
-              )}
               {running || hasLiveAutopilot ? "Running…" : "Run Autopilot"}
-            </button>
+            </Btn>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1 border-b border-gray-200 bg-white px-4 pt-3">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`px-3 py-2 text-sm font-medium rounded-t-lg border-b-2 -mb-px ${
-              tab === t.id
-                ? "border-emerald-600 text-emerald-800 bg-emerald-50/60"
-                : "border-transparent text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            {t.label}
-            {t.id === "runs" &&
+      <div className="border-b border-[var(--cw-hairline)] px-4 py-3">
+        <TabRail
+          tabs={TABS.map((t) =>
+            t.id === "runs" &&
             activeRun &&
-            ["queued", "running"].includes(String(activeRun.status || "")) ? (
-              <span className="ml-1.5 inline-flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            ) : null}
-          </button>
-        ))}
+            ["queued", "running"].includes(String(activeRun.status || ""))
+              ? { ...t, live: true }
+              : t
+          )}
+          value={tab}
+          onChange={setTab}
+          ariaLabel="Autopilot sections"
+        />
       </div>
 
       <div className="p-5 space-y-4">
         {error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <div className="rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,transparent)] bg-[color-mix(in_srgb,var(--cw-danger)_9%,transparent)] px-4 py-3 text-sm text-[var(--cw-danger)]">
             {error}
           </div>
         ) : null}
         {notice ? (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <div className="rounded-xl border border-[color-mix(in_srgb,var(--cw-neon)_32%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_8%,transparent)] px-4 py-3 text-sm text-[var(--cw-neon-soft)]">
             {notice}
           </div>
         ) : null}
 
-        {/* Optional live pin on other tabs — can be hidden; preference is remembered */}
+        {/* A run in flight stays visible from every tab. Compact by default —
+            one line that names the agent actually working — and expandable into
+            the full cockpit right here. The preference is remembered. */}
         {tab !== "runs" &&
         activeRun &&
         ["queued", "running"].includes(String(activeRun.status || "")) ? (
           hideLivePin ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2">
-              <p className="text-xs font-semibold text-emerald-900">
-                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse mr-1.5 align-middle" />
-                Autopilot running in background
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-emerald-900 hover:underline"
-                  onClick={() => setLivePinHidden(false)}
-                >
-                  Show live panel
-                </button>
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-emerald-900 hover:underline"
-                  onClick={() => setTab("runs")}
-                >
-                  Open Run console →
-                </button>
-              </div>
-            </div>
+            <LiveRunStrip
+              run={activeRun}
+              onExpand={() => setLivePinHidden(false)}
+              onOpenConsole={() => setTab("runs")}
+              onCancel={cancelActiveRun}
+              cancelling={cancellingRun}
+            />
           ) : (
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                <p className="text-[10px] font-bold tracking-[0.14em] text-[var(--cw-ink-faint)] uppercase">
                   Live Autopilot run
                 </p>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 hover:underline disabled:opacity-50"
-                    onClick={cancelActiveRun}
-                    disabled={cancellingRun}
-                  >
-                    <FiXCircle className="h-3.5 w-3.5" />
-                    {cancellingRun ? "Cancelling…" : "Cancel"}
-                  </button>
-                  <button
-                    type="button"
-                    className="text-xs font-semibold text-gray-600 hover:underline"
+                    className="text-[11px] font-semibold text-[var(--cw-ink-muted)] transition-smooth hover:text-[var(--cw-ink)]"
                     onClick={() => setLivePinHidden(true)}
                   >
-                    Hide on other tabs
+                    Collapse
                   </button>
                   <button
                     type="button"
-                    className="text-xs font-semibold text-emerald-800 hover:underline"
+                    className="text-[11px] font-bold text-[var(--cw-neon)] transition-smooth hover:text-[var(--cw-neon-soft)]"
                     onClick={() => setTab("runs")}
                   >
-                    Expand Run console →
+                    Open Run console →
                   </button>
                 </div>
               </div>

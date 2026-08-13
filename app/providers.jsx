@@ -8,7 +8,15 @@ import { Toaster } from "@/components/ui/sonner";
 export default function Providers({ children }) {
   return (
     <SessionProvider>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+      {/* Carbon Neon is dark-only — forcedTheme stops next-themes from ever
+          writing a light class onto <html>. */}
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
+        forcedTheme="dark"
+        enableSystem={false}
+        disableTransitionOnChange
+      >
         <TooltipProvider delayDuration={200}>
           {children}
           <Toaster richColors closeButton position="top-right" />
