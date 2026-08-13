@@ -4,10 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { RefreshCw, Coins, Clock, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import PageHeader from "../ui-shared/PageHeader";
+import Btn from "../ui-shared/Btn";
 import { LoadingSpinner } from "../ui-shared/LoadingBlock";
 import EmptyState from "../ui-shared/EmptyState";
 import { Globe } from "lucide-react";
@@ -33,20 +31,30 @@ function formatDate(iso) {
 export function SerankingCreditBar({ credits, compact = false }) {
   if (!credits) return null;
   const pct = credits.percentUsed ?? 0;
-  const tone = pct >= 90 ? "destructive" : pct >= 70 ? "secondary" : "default";
+  // Budget pressure is the message — colour only escalates as it runs out.
+  const tone =
+    pct >= 90
+      ? "text-[var(--cw-danger)] border-[color-mix(in_srgb,var(--cw-danger)_35%,transparent)] bg-[color-mix(in_srgb,var(--cw-danger)_8%,transparent)]"
+      : pct >= 70
+        ? "text-[var(--cw-caution)] border-[color-mix(in_srgb,var(--cw-caution)_35%,transparent)] bg-[color-mix(in_srgb,var(--cw-caution)_8%,transparent)]"
+        : "text-[var(--cw-ink-dim)] border-[var(--cw-hairline)] bg-[var(--cw-raised)]";
+
   return (
     <div
-      className={`flex flex-wrap items-center gap-2 rounded-xl border border-violet-100 bg-violet-50/60 px-3 py-2 ${compact ? "text-xs" : "text-sm"}`}
+      className={`flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 ${tone} ${compact ? "text-xs" : "text-sm"}`}
     >
-      <Coins className="size-4 text-violet-700 shrink-0" aria-hidden />
-      <span className="font-semibold text-violet-900 tabular-nums">
-        {credits.remaining?.toLocaleString()} / {credits.budget?.toLocaleString()} credits
+      <Coins className="size-3.5 shrink-0" aria-hidden />
+      <span className="font-mono font-semibold tabular-nums">
+        {credits.remaining?.toLocaleString()} / {credits.budget?.toLocaleString()}
       </span>
-      <Badge variant={tone} className="tabular-nums">
+      <span className="text-[var(--cw-ink-faint)]">credits</span>
+      <span className="rounded-full bg-[color-mix(in_srgb,currentColor_14%,transparent)] px-1.5 py-0.5 font-mono text-[10px] font-bold tabular-nums">
         {pct}% used
-      </Badge>
+      </span>
       {!compact ? (
-        <span className="text-violet-800/70 text-xs">Scheduled refresh reserve: {credits.reserve?.toLocaleString()}</span>
+        <span className="text-xs text-[var(--cw-ink-faint)]">
+          Refresh reserve: {credits.reserve?.toLocaleString()}
+        </span>
       ) : null}
     </div>
   );
@@ -115,50 +123,51 @@ export default function SerankingShell({
         eyebrow="SEO Tools"
         title={title}
         description={description}
-        action={
+        actions={
           onRefresh ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
+            <Btn
+              variant="secondary"
+              icon={RefreshCw}
+              loading={refreshing}
               onClick={onRefresh}
               disabled={refreshing || refreshDisabled}
-              className="gap-2"
             >
-              <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
               {refreshing ? "Refreshing…" : refreshLabel}
-            </Button>
+            </Btn>
           ) : null
         }
       />
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      {/* Provenance strip: which site, how fresh, what it costs. */}
+      <div className="flex flex-col gap-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline" className="font-mono text-xs">
+          <span className="rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-2 py-1 font-mono text-[11px] text-[var(--cw-ink-dim)]">
             {siteBadge || siteHost(effectiveSite)}
-          </Badge>
+          </span>
           {fetchedAt ? (
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <Clock className="size-3.5" aria-hidden />
+            <span className="inline-flex items-center gap-1 text-[11px] text-[var(--cw-ink-muted)]">
+              <Clock className="size-3" aria-hidden />
               Updated {formatDate(fetchedAt)}
             </span>
           ) : null}
           {expiresAt ? (
-            <span className="text-xs text-muted-foreground">· cache until {formatDate(expiresAt)}</span>
+            <span className="text-[11px] text-[var(--cw-ink-faint)]">
+              · cache until {formatDate(expiresAt)}
+            </span>
           ) : null}
         </div>
         <SerankingCreditBar credits={credits} compact />
       </div>
 
-      <p className="text-xs text-muted-foreground -mt-2">
-        Nightly refresh 04:45 · empty/expired cache fetches live on page load · use Force new audit
-        anytime to bypass a valid cache (uses credits)
+      <p className="-mt-2 text-[11px] leading-relaxed text-[var(--cw-ink-faint)]">
+        Nightly refresh 04:45 · empty or expired cache fetches live on page load · Force new audit
+        bypasses a valid cache and spends credits.
       </p>
 
       {error ? (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,transparent)] bg-[color-mix(in_srgb,var(--cw-danger)_8%,transparent)] px-4 py-3 text-sm text-[var(--cw-danger)]">
+          {error}
+        </div>
       ) : null}
 
       {loading ? (

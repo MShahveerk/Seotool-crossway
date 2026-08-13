@@ -212,7 +212,7 @@ function HealthTile({ icon: Icon, label, value, sub, tone = "gray", onClick }) {
   );
 }
 
-function QuickNavCard({ icon: Icon, title, desc, sectionId, onNavigate, accent }) {
+function QuickNavCard({ icon: Icon, title, desc, sectionId, onNavigate }) {
   return (
     <button
       type="button"

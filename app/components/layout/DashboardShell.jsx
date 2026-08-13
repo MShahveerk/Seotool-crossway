@@ -1,6 +1,7 @@
 "use client";
 
 import AppSidebar from "./AppSidebar";
+import WorkspaceTabs from "./WorkspaceTabs";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { getSectionLabel } from "@/lib/sectionMeta";
@@ -72,9 +73,23 @@ export default function DashboardLayout({
               {children}
             </div>
           ) : isBoard ? (
-            <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>
+            <div className="flex min-h-0 w-full flex-1 flex-col">
+              <WorkspaceTabs
+                activeSection={activeSection}
+                onSectionChange={onSectionChange}
+                selectedSite={selectedSite}
+              />
+              {children}
+            </div>
           ) : (
-            <div className="mx-auto w-full max-w-[1360px]">{children}</div>
+            <div className="mx-auto w-full max-w-[1360px]">
+              <WorkspaceTabs
+                activeSection={activeSection}
+                onSectionChange={onSectionChange}
+                selectedSite={selectedSite}
+              />
+              {children}
+            </div>
           )}
         </main>
       </SidebarInset>

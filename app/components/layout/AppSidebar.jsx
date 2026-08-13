@@ -1,37 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
-  Calendar,
-  CalendarClock,
-  CheckSquare,
   ChevronDown,
-  ClipboardList,
   Compass,
-  Crosshair,
   FileText,
   Globe,
   HelpCircle,
   LayoutDashboard,
-  Columns3,
   LogOut,
   Megaphone,
-  Newspaper,
+  Presentation,
   Search,
   Settings,
   Shield,
-  Users,
-  Activity,
-  Link2,
-  Presentation,
-  Workflow,
-  Database,
-  Target,
 } from "lucide-react";
 import { isMetaPageId } from "@/lib/siteAccess";
 import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";
+import { visibleWorkspaces, workspaceForSection } from "@/lib/workspaces";
 import {
   entryMatchesSelectValue,
   getClientAccountSelectValue,
@@ -39,20 +27,17 @@ import {
 } from "@/lib/clientAccountList";
 import ClientAccountLogo from "@/app/components/ui-shared/ClientAccountLogo";
 import CrosswayLogo from "@/app/components/ui-shared/CrosswayLogo";
-import SeoAutopilotMark from "@/app/components/seoAutopilot/SeoAutopilotMark";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -61,72 +46,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const dashboardItem = { id: "dashboard", label: "Dashboard", icon: LayoutDashboard };
+/** Workspace icons live here so `lib/workspaces.js` stays free of UI imports. */
+const WORKSPACE_ICONS = {
+  dashboard: LayoutDashboard,
+  globe: Globe,
+  search: Search,
+  fileText: FileText,
+  megaphone: Megaphone,
+  presentation: Presentation,
+  shield: Shield,
+};
 
-const gscMenuItems = [
-  { id: "website-statistics", label: "Website Statistics", icon: Globe },
-  { id: "url-inspection", label: "URL Inspection", icon: Crosshair },
-];
-
-const seoMenuItems = [
-  { id: "site-health", label: "Authority & Performance", icon: Activity },
-  { id: "site-audit", label: "Site Audit", icon: Shield },
-  { id: "keyword-research", label: "Keyword Research", icon: Search },
-  { id: "google-ads-planner", label: "Google Ads Planner", icon: Target },
-  { id: "serp-analysis", label: "SERP Analysis", icon: Crosshair },
-  { id: "site-explorer", label: "Site Explorer", icon: Compass },
-  { id: "backlink-profile", label: "Backlink Profile", icon: Link2 },
-  { id: "seo-autopilot", label: "SEO Autopilot", icon: SeoAutopilotMark },
-];
-
-const dataforseoMenuItems = [
-  { id: "dataforseo-explorer", label: "DataForSEO Explorer", icon: Database },
-];
-
-const smmMenuItems = [
-  { id: "smm-statistics", label: "SMM Statistics", icon: Megaphone },
-  { id: "calendar", label: "Content Calendar", icon: Calendar },
-  { id: "my-approvals", label: "SMM Post Approvals", icon: CheckSquare },
-  { id: "admin-approvals", label: "Create Post", icon: ClipboardList },
-  { id: "post-board", label: "Post Board", icon: Columns3 },
-  { id: "post-automation", label: "Post Automation Studio", icon: Workflow },
-  { id: "post-autoschedule", label: "Post Autoscheduler", icon: CalendarClock },
-];
-
-const blogsMenuItems = [
-  { id: "my-blog-approvals", label: "Blog Approvals", icon: FileText },
-  { id: "admin-blogs", label: "Create Blog", icon: FileText },
-  { id: "blog-board", label: "Blog Board", icon: Columns3 },
-  { id: "blog-automation", label: "Blog Automation Studio", icon: Newspaper },
-  { id: "blog-autoschedule", label: "Blog Autoscheduler", icon: CalendarClock },
-];
-
-const reportsMenuItems = [
-  { id: "reports-studio", label: "Report Studio", icon: Presentation },
-];
-
-function groupContainsSection(items, sectionId) {
-  return items.some((item) => item.id === sectionId);
-}
-
-function filterMenuItem(item, { session, hasGlobalSiteAccess, isWebsiteSelected }) {
-  if (!sessionCanAccessSection(session, item.id)) {
-    return false;
-  }
-  if (item.id === "website-statistics" && hasGlobalSiteAccess && !isWebsiteSelected) {
-    return false;
-  }
-  return true;
-}
+/** Unread badges are per-section; a workspace shows the sum of its sections'. */
+const BADGE_SECTIONS = {
+  "my-approvals": "user",
+  "admin-approvals": "admin",
+};
 
 function getSiteHostName(siteUrl) {
   if (!siteUrl) return "No Site Linked";
@@ -150,16 +89,7 @@ export default function AppSidebar({
   const [metaAccounts, setMetaAccounts] = useState([]);
   const [approvalAdminUnread, setApprovalAdminUnread] = useState(0);
   const [approvalUserUnread, setApprovalUserUnread] = useState(0);
-  const [gscOpen, setGscOpen] = useState(true);
-  const [seoOpen, setSeoOpen] = useState(true);
-  const [dataforseoOpen, setDataforseoOpen] = useState(true);
-  const [smmOpen, setSmmOpen] = useState(true);
-  const [blogsOpen, setBlogsOpen] = useState(true);
-  const [reportsOpen, setReportsOpen] = useState(true);
 
-  const userRole = session?.user?.role;
-
-  const canManageUsers = sessionCanAccessSection(session, "user-management");
   const canSeeAdminApprovals = sessionCanAccessSection(session, "admin-approvals");
   const hasGlobalSiteAccess = sessionHasGlobalSiteAccess(session);
   const userSiteLink = session?.user?.siteLink || "";
@@ -297,86 +227,41 @@ export default function AppSidebar({
     return isString ? getSiteHostName(siteEntryOrVal) : "No Account Selected";
   };
 
-  useEffect(() => {
-    if (groupContainsSection(gscMenuItems, activeSection)) setGscOpen(true);
-    if (groupContainsSection(seoMenuItems, activeSection)) setSeoOpen(true);
-    if (groupContainsSection(dataforseoMenuItems, activeSection)) setDataforseoOpen(true);
-    if (groupContainsSection(smmMenuItems, activeSection)) setSmmOpen(true);
-    if (groupContainsSection(blogsMenuItems, activeSection)) setBlogsOpen(true);
-    if (groupContainsSection(reportsMenuItems, activeSection)) setReportsOpen(true);
-  }, [activeSection]);
-
-  const menuContext = { session, hasGlobalSiteAccess, isWebsiteSelected };
-
-  const showDashboard =
-    sessionCanAccessSection(session, "dashboard") && userRole !== "approver";
-  const visibleGscItems = gscMenuItems.filter((item) => filterMenuItem(item, menuContext));
-  const visibleSeoItems = seoMenuItems.filter((item) => filterMenuItem(item, menuContext));
-  const visibleDataForSeoItems = dataforseoMenuItems.filter((item) => filterMenuItem(item, menuContext));
-  const visibleSmmItems = smmMenuItems.filter((item) => filterMenuItem(item, menuContext));
-  const visibleBlogItems = blogsMenuItems.filter((item) => filterMenuItem(item, menuContext));
-  const visibleReportsItems = reportsMenuItems.filter((item) => filterMenuItem(item, menuContext));
-
-  const seoItemsForMenu = isWebsiteSelected
-    ? visibleSeoItems
-    : visibleSeoItems.filter((item) => item.id === "site-explorer");
-
-  const showGscGroup = isWebsiteSelected && visibleGscItems.length > 0;
-  const showSeoGroup = seoItemsForMenu.length > 0;
-  const showDataForSeoGroup = visibleDataForSeoItems.length > 0;
-  const showSmmGroup = visibleSmmItems.length > 0;
-  const showBlogsGroup = visibleBlogItems.length > 0;
-  const showReportsGroup = visibleReportsItems.length > 0;
-
-  const getItemBadge = (item) => {
-    if (item.id === "my-approvals" && approvalUserUnread > 0) {
-      return approvalUserUnread > 9 ? "9+" : String(approvalUserUnread);
-    }
-    if (item.id === "admin-approvals" && approvalAdminUnread > 0) {
-      return approvalAdminUnread > 9 ? "9+" : String(approvalAdminUnread);
-    }
-    return null;
-  };
-
   const navigate = (id) => onSectionChange?.(id);
 
-  const renderNavItem = (item, badge) => {
-    const Icon = item.icon;
-    const isActive = activeSection === item.id;
-    return (
-      <SidebarMenuItem key={item.id}>
-        <SidebarMenuButton isActive={isActive} onClick={() => navigate(item.id)} tooltip={item.label}>
-          <Icon className="size-4" />
-          <span>{item.label}</span>
-        </SidebarMenuButton>
-        {badge ? <SidebarMenuBadge>{badge}</SidebarMenuBadge> : null}
-      </SidebarMenuItem>
-    );
+  const canAccess = (sectionId) => sessionCanAccessSection(session, sectionId);
+
+  // The whole nav is derived: workspaces the user can reach, each carrying the
+  // tabs that will appear on the page. One source of truth, shared with
+  // WorkspaceTabs so the sidebar and the tab rail can never disagree.
+  const workspaceEntries = visibleWorkspaces({ canAccess, isWebsiteSelected }).filter(
+    (entry) => !(entry.workspace.id === "dashboard" && session?.user?.role === "approver")
+  );
+
+  const activeWorkspace = workspaceForSection(activeSection);
+
+  // Coming back to a workspace should resume the tab you were last on, not
+  // dump you at the first one. A ref, so remembering doesn't cause a render.
+  const lastSectionRef = useRef({});
+  useEffect(() => {
+    const owner = workspaceForSection(activeSection);
+    if (owner) lastSectionRef.current[owner.id] = activeSection;
+  }, [activeSection]);
+
+  /** Read in the click handler, never during render. */
+  const openWorkspace = (workspace, sections) => {
+    const remembered = lastSectionRef.current[workspace.id];
+    const target = sections.find((s) => s.id === remembered)?.id || sections[0]?.id;
+    if (target) navigate(target);
   };
 
-  const renderMenuGroup = (label, GroupIcon, items, open, setOpen, groupKey) => {
-    if (!items.length) return null;
-    return (
-      <Collapsible key={groupKey} open={open} onOpenChange={setOpen} className="group/collapsible">
-        <SidebarGroup>
-          <SidebarGroupLabel asChild>
-            <CollapsibleTrigger className="flex w-full items-center justify-between">
-              <span className="flex items-center gap-2">
-                {GroupIcon ? <GroupIcon className="size-3.5 shrink-0 opacity-80" aria-hidden /> : null}
-                {label}
-              </span>
-              <ChevronDown className="size-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-            </CollapsibleTrigger>
-          </SidebarGroupLabel>
-          <CollapsibleContent>
-            <SidebarGroupContent>
-              <SidebarMenu>{items.map((item) => renderNavItem(item, getItemBadge(item)))}</SidebarMenu>
-            </SidebarGroupContent>
-          </CollapsibleContent>
-        </SidebarGroup>
-      </Collapsible>
-    );
-  };
+  const workspaceBadge = (workspace) =>
+    workspace.sections.reduce((total, section) => {
+      const kind = BADGE_SECTIONS[section.id];
+      if (kind === "user") return total + approvalUserUnread;
+      if (kind === "admin" && canSeeAdminApprovals) return total + approvalAdminUnread;
+      return total;
+    }, 0);
 
   const userInitials =
     session?.user?.name?.slice(0, 2)?.toUpperCase() ||
@@ -445,85 +330,50 @@ export default function AppSidebar({
       </SidebarHeader>
 
       <SidebarContent>
-        {showDashboard ? (
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>{renderNavItem(dashboardItem, null)}</SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ) : null}
+        {/* Workspaces, not a tool inventory. Clicking one lands on its first
+            tab; the rest of its tools appear as a rail on the page itself. */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {workspaceEntries.map(({ workspace, sections }) => {
+                const Icon = WORKSPACE_ICONS[workspace.icon] || Compass;
+                const isActive = activeWorkspace?.id === workspace.id;
+                const badge = workspaceBadge(workspace);
+                return (
+                  <SidebarMenuItem key={workspace.id}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      onClick={() => openWorkspace(workspace, sections)}
+                      tooltip={workspace.label}
+                    >
+                      <Icon className="size-4" />
+                      <span>{workspace.label}</span>
+                    </SidebarMenuButton>
+                    {badge > 0 ? (
+                      <SidebarMenuBadge>{badge > 9 ? "9+" : String(badge)}</SidebarMenuBadge>
+                    ) : null}
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-        {showGscGroup
-          ? renderMenuGroup("Search Console", Globe, visibleGscItems, gscOpen, setGscOpen, "gsc")
-          : null}
-
-        {showSeoGroup
-          ? renderMenuGroup("SEO Tools", Search, seoItemsForMenu, seoOpen, setSeoOpen, "seo")
-          : null}
-
-        {showDataForSeoGroup
-          ? renderMenuGroup("DataForSEO", Database, visibleDataForSeoItems, dataforseoOpen, setDataforseoOpen, "dataforseo")
-          : null}
-
-        {showSmmGroup ? renderMenuGroup("Social Media", Megaphone, visibleSmmItems, smmOpen, setSmmOpen, "smm") : null}
-
-        {showBlogsGroup ? renderMenuGroup("Blogs", FileText, visibleBlogItems, blogsOpen, setBlogsOpen, "blogs") : null}
-
-        {showReportsGroup
-          ? renderMenuGroup("Reports", Presentation, visibleReportsItems, reportsOpen, setReportsOpen, "reports")
-          : null}
-
-        {canManageUsers ? (
-          <SidebarGroup>
-            <SidebarGroupLabel className="flex items-center gap-2">
-              <Shield className="size-3.5 shrink-0 opacity-80" aria-hidden />
-              Admin
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={activeSection === "user-management"}
-                    onClick={() => navigate("user-management")}
-                    tooltip="User Management"
-                  >
-                    <Users className="size-4" />
-                    <span>User Management</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => window.open("mailto:support@crossway.com", "_blank")}
-                    tooltip="Help & support"
-                  >
-                    <HelpCircle className="size-4" />
-                    <span>Help & Support</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ) : (
-          <SidebarGroup>
-            <SidebarGroupLabel className="flex items-center gap-2">
-              <Shield className="size-3.5 shrink-0 opacity-80" aria-hidden />
-              Admin
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => window.open("mailto:support@crossway.com", "_blank")}
-                    tooltip="Help & support"
-                  >
-                    <HelpCircle className="size-4" />
-                    <span>Help & Support</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => window.open("mailto:support@crossway.com", "_blank")}
+                  tooltip="Help & support"
+                >
+                  <HelpCircle className="size-4" />
+                  <span>Help &amp; Support</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border/80">
