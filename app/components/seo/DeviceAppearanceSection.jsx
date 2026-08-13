@@ -15,7 +15,7 @@ import SeoPanelShell, { formatNum, formatPct, formatPos } from "./SeoPanelShell"
 import ReportSectionActions from "../ReportSectionActions";
 import { buildDeviceGaps } from "../../../lib/seoOpportunityHelpers";
 
-const DEVICE_COLORS = { DESKTOP: "#111827", MOBILE: "#1d9c35", TABLET: "#64748b" };
+const DEVICE_COLORS = { DESKTOP: "#111827", MOBILE: "#1d9c35", TABLET: "#949CA5" };
 
 export default function DeviceAppearanceSection({ selectedSite = "", embedded = false }) {
   const [range, setRange] = useState("28d");
@@ -115,7 +115,7 @@ export default function DeviceAppearanceSection({ selectedSite = "", embedded = 
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={deviceChart} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip
@@ -123,7 +123,7 @@ export default function DeviceAppearanceSection({ selectedSite = "", embedded = 
                     />
                     <Bar dataKey="clicks" name="clicks" radius={[6, 6, 0, 0]}>
                       {deviceChart.map((row) => (
-                        <Cell key={row.device} fill={DEVICE_COLORS[row.device] || "#94a3b8"} />
+                        <Cell key={row.device} fill={DEVICE_COLORS[row.device] || "#6D757E"} />
                       ))}
                     </Bar>
                   </BarChart>

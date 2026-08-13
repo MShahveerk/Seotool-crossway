@@ -687,10 +687,10 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
           <div className="h-[320px] bg-slate-50/30 border border-slate-100 rounded-2xl p-4 sm:p-5">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 5, left: -10, bottom: 0 }}>
-                <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                <YAxis yAxisId="left" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                <CartesianGrid stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
                 <Tooltip content={<CustomTooltip activeMetrics={activeMetrics} hasCompare={hasCompare} />} />
                 {hasCompare && (
                   <Legend
@@ -704,7 +704,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     name={hasCompare ? "Clicks" : undefined}
                     type="monotone"
                     dataKey="clicks"
-                    stroke="#34a853"
+                    stroke="#0EFF2A"
                     strokeWidth={2}
                     dot={false}
                   />
@@ -715,7 +715,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     name="Clicks (compare)"
                     type="monotone"
                     dataKey="compareClicks"
-                    stroke="#34a853"
+                    stroke="#0EFF2A"
                     strokeWidth={2}
                     strokeOpacity={0.4}
                     strokeDasharray="5 4"
@@ -728,7 +728,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     name={hasCompare ? "Impressions" : undefined}
                     type="monotone"
                     dataKey="impressions"
-                    stroke="#7c7abc"
+                    stroke="#38E1FF"
                     strokeWidth={2}
                     dot={false}
                   />
@@ -739,7 +739,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     name="Impr. (compare)"
                     type="monotone"
                     dataKey="compareImpressions"
-                    stroke="#7c7abc"
+                    stroke="#38E1FF"
                     strokeWidth={2}
                     strokeOpacity={0.4}
                     strokeDasharray="5 4"
@@ -752,7 +752,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     name={hasCompare ? "CTR" : undefined}
                     type="monotone"
                     dataKey="ctr"
-                    stroke="#f59e0b"
+                    stroke="#FFB020"
                     strokeWidth={2}
                     dot={false}
                   />
@@ -763,7 +763,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     name="CTR (compare)"
                     type="monotone"
                     dataKey="compareCtr"
-                    stroke="#f59e0b"
+                    stroke="#FFB020"
                     strokeWidth={2}
                     strokeOpacity={0.4}
                     strokeDasharray="5 4"
@@ -776,7 +776,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     name={hasCompare ? "Position" : undefined}
                     type="monotone"
                     dataKey="position"
-                    stroke="#6b7280"
+                    stroke="#949CA5"
                     strokeWidth={2}
                     dot={false}
                   />
@@ -787,7 +787,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     name="Pos. (compare)"
                     type="monotone"
                     dataKey="comparePosition"
-                    stroke="#6b7280"
+                    stroke="#949CA5"
                     strokeWidth={2}
                     strokeOpacity={0.4}
                     strokeDasharray="5 4"
@@ -818,24 +818,24 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     )}
                   </div>
                 </div>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#34a853] shadow-[0_0_8px_rgba(52,168,83,0.3)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#0EFF2A] shadow-[0_0_8px_rgba(52,168,83,0.3)]" />
               </div>
               <div className="h-[180px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#34a853" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#34a853" stopOpacity={0.0}/>
+                        <stop offset="5%" stopColor="#0EFF2A" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#0EFF2A" stopOpacity={0.0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid stroke="#f8fafc" strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
                     <Tooltip content={<SeparateTooltip type="clicks" />} />
-                    <Area type="monotone" dataKey="clicks" stroke="#34a853" strokeWidth={2} fillOpacity={1} fill="url(#colorClicks)" />
+                    <Area type="monotone" dataKey="clicks" stroke="#0EFF2A" strokeWidth={2} fillOpacity={1} fill="url(#colorClicks)" />
                     {hasCompare && (
-                      <Area type="monotone" dataKey="compareClicks" stroke="#34a853" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
+                      <Area type="monotone" dataKey="compareClicks" stroke="#0EFF2A" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
                     )}
                   </AreaChart>
                 </ResponsiveContainer>
@@ -861,24 +861,24 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     )}
                   </div>
                 </div>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#7c7abc] shadow-[0_0_8px_rgba(124,122,188,0.3)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#38E1FF] shadow-[0_0_8px_rgba(124,122,188,0.3)]" />
               </div>
               <div className="h-[180px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorImpressions" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#7c7abc" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#7c7abc" stopOpacity={0.0}/>
+                        <stop offset="5%" stopColor="#38E1FF" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#38E1FF" stopOpacity={0.0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid stroke="#f8fafc" strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
                     <Tooltip content={<SeparateTooltip type="impressions" />} />
-                    <Area type="monotone" dataKey="impressions" stroke="#7c7abc" strokeWidth={2} fillOpacity={1} fill="url(#colorImpressions)" />
+                    <Area type="monotone" dataKey="impressions" stroke="#38E1FF" strokeWidth={2} fillOpacity={1} fill="url(#colorImpressions)" />
                     {hasCompare && (
-                      <Area type="monotone" dataKey="compareImpressions" stroke="#7c7abc" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
+                      <Area type="monotone" dataKey="compareImpressions" stroke="#38E1FF" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
                     )}
                   </AreaChart>
                 </ResponsiveContainer>
@@ -904,24 +904,24 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     )}
                   </div>
                 </div>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b] shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#FFB020] shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
               </div>
               <div className="h-[180px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorCtr" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0}/>
+                        <stop offset="5%" stopColor="#FFB020" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#FFB020" stopOpacity={0.0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid stroke="#f8fafc" strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
                     <Tooltip content={<SeparateTooltip type="ctr" />} />
-                    <Area type="monotone" dataKey="ctr" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorCtr)" />
+                    <Area type="monotone" dataKey="ctr" stroke="#FFB020" strokeWidth={2} fillOpacity={1} fill="url(#colorCtr)" />
                     {hasCompare && (
-                      <Area type="monotone" dataKey="compareCtr" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
+                      <Area type="monotone" dataKey="compareCtr" stroke="#FFB020" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
                     )}
                   </AreaChart>
                 </ResponsiveContainer>
@@ -947,24 +947,24 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     )}
                   </div>
                 </div>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#6b7280] shadow-[0_0_8px_rgba(107,114,128,0.3)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#949CA5] shadow-[0_0_8px_rgba(107,114,128,0.3)]" />
               </div>
               <div className="h-[180px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorPosition" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6b7280" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#6b7280" stopOpacity={0.0}/>
+                        <stop offset="5%" stopColor="#949CA5" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#949CA5" stopOpacity={0.0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid stroke="#f8fafc" strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                    <YAxis reversed={true} tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                    <CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
+                    <YAxis reversed={true} tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
                     <Tooltip content={<SeparateTooltip type="position" />} />
-                    <Area type="monotone" dataKey="position" stroke="#6b7280" strokeWidth={2} fillOpacity={1} fill="url(#colorPosition)" />
+                    <Area type="monotone" dataKey="position" stroke="#949CA5" strokeWidth={2} fillOpacity={1} fill="url(#colorPosition)" />
                     {hasCompare && (
-                      <Area type="monotone" dataKey="comparePosition" stroke="#6b7280" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
+                      <Area type="monotone" dataKey="comparePosition" stroke="#949CA5" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
                     )}
                   </AreaChart>
                 </ResponsiveContainer>
@@ -1077,15 +1077,16 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
 }
 
 const METRIC_LINE = {
-  clicks: "#34a853",
-  impressions: "#7c7abc",
-  ctr: "#f59e0b",
-  position: "#64748b",
+  clicks: "#0EFF2A",
+  impressions: "#38E1FF",
+  ctr: "#FFB020",
+  position: "#949CA5",
 };
 
+/** Each metric's selected tint matches its line colour in the chart. */
 const METRIC_ACTIVE_BG = {
-  clicks: "bg-sky-50/90",
-  impressions: "bg-violet-50/90",
+  clicks: "bg-emerald-50/90",
+  impressions: "bg-sky-50/90",
   ctr: "bg-amber-50/90",
   position: "bg-slate-50/90",
 };
@@ -1129,7 +1130,7 @@ function MetricCard({
   color,
   onToggle,
 }) {
-  const line = METRIC_LINE[metric] || "#64748b";
+  const line = METRIC_LINE[metric] || "#949CA5";
   const activeBg = METRIC_ACTIVE_BG[metric] || "bg-white";
   const surface = checked ? activeBg : "bg-white";
 
@@ -1208,10 +1209,10 @@ function CustomTooltip({ active, payload, label, activeMetrics, hasCompare }) {
   };
 
   const getColor = (type) => {
-    if (type === "clicks") return "text-[#34a853]";
-    if (type === "impressions") return "text-[#7c7abc]";
-    if (type === "ctr") return "text-[#f59e0b]";
-    if (type === "position") return "text-[#6b7280]";
+    if (type === "clicks") return "text-[#0EFF2A]";
+    if (type === "impressions") return "text-[#38E1FF]";
+    if (type === "ctr") return "text-[#FFB020]";
+    if (type === "position") return "text-[#949CA5]";
     return "text-gray-800";
   };
 
@@ -1257,10 +1258,10 @@ function SeparateTooltip({ active, payload, label, type }) {
   };
 
   const getColor = (type) => {
-    if (type === "clicks") return "text-[#34a853]";
-    if (type === "impressions") return "text-[#7c7abc]";
-    if (type === "ctr") return "text-[#f59e0b]";
-    if (type === "position") return "text-[#6b7280]";
+    if (type === "clicks") return "text-[#0EFF2A]";
+    if (type === "impressions") return "text-[#38E1FF]";
+    if (type === "ctr") return "text-[#FFB020]";
+    if (type === "position") return "text-[#949CA5]";
     return "text-gray-800";
   };
 

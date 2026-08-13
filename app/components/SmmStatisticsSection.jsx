@@ -366,7 +366,7 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
                   Reach
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#7a79d8]" />
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-[#38E1FF]" />
                   Engagements
                 </span>
               </div>
@@ -380,13 +380,13 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
                       <stop offset="95%" stopColor="#39d86e" stopOpacity={0.04} />
                     </linearGradient>
                     <linearGradient id="postsGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7a79d8" stopOpacity={0.24} />
-                      <stop offset="95%" stopColor="#7a79d8" stopOpacity={0.03} />
+                      <stop offset="5%" stopColor="#38E1FF" stopOpacity={0.24} />
+                      <stop offset="95%" stopColor="#38E1FF" stopOpacity={0.03} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#949CA5" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#949CA5" }} axisLine={false} tickLine={false} />
                   <Tooltip
                     content={(tipProps) => <AnalyticsTooltip {...tipProps} chartYear={chartYearFromSeries} />}
                     cursor={{ stroke: "#bfc3ca", strokeWidth: 1 }}
@@ -402,10 +402,10 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
                   <Line
                     type="monotone"
                     dataKey="posts"
-                    stroke="#7a79d8"
+                    stroke="#38E1FF"
                     strokeWidth={2.5}
                     dot={{ r: 2 }}
-                    activeDot={{ r: 5, fill: "#7a79d8" }}
+                    activeDot={{ r: 5, fill: "#38E1FF" }}
                   />
                 </LineChart>
               </ResponsiveContainer>
