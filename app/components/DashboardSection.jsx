@@ -339,51 +339,34 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
     <div className="relative min-h-[calc(100vh-1rem)]">
       <div className="relative mx-auto max-w-6xl space-y-8 py-2 sm:space-y-10">
         <FadeIn>
-          <div className="cw-grid relative overflow-hidden rounded-3xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)] p-6 sm:p-8">
-            <div
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_80%_at_5%_0%,rgba(14,255,42,0.14),transparent_62%),radial-gradient(ellipse_45%_60%_at_98%_10%,rgba(56,225,255,0.06),transparent_62%)]"
-              aria-hidden
-            />
-            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-2xl">
-                <p className="mb-2 text-[10px] font-bold tracking-[0.2em] text-[var(--cw-neon)] uppercase">
-                  Overview
-                </p>
-                <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance text-[var(--cw-ink)] sm:text-[38px]">
-                  Your performance at a glance
-                </h1>
-                <p className="mt-3 text-[15px] leading-relaxed text-[var(--cw-ink-muted)]">
-                  Search trends, site health, priority actions and social followers — refreshed
-                  from one snapshot.
-                </p>
-                {host ? (
-                  <div className="mt-5 flex flex-wrap items-center gap-2.5">
-                    <span className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--cw-neon)_30%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_8%,transparent)] px-4 py-2 font-mono text-[13px] font-semibold text-[var(--cw-ink)]">
-                      <span
-                        className="size-1.5 shrink-0 rounded-full bg-[var(--cw-neon)] shadow-[0_0_8px_rgb(14_255_42_/_0.8)]"
-                        aria-hidden
-                      />
-                      {host}
-                    </span>
-                    <span className="text-xs leading-snug text-[var(--cw-ink-faint)]">
-                      Search: last 28 days vs prior · Social: SMM baseline
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-              <Btn
-                variant="primary"
-                size="lg"
-                icon={FiRefreshCw}
-                loading={loading}
-                onClick={loadSnapshot}
-                disabled={loading || !effectiveSite}
-                className="self-start"
-              >
-                {loading ? "Updating…" : "Refresh data"}
-              </Btn>
+          <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-[var(--cw-hairline)] pb-4">
+            <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h1 className="font-heading text-lg font-semibold tracking-tight text-[var(--cw-ink)]">
+                Overview
+              </h1>
+              {host ? (
+                <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-[var(--cw-ink-dim)]">
+                  <span
+                    className="size-1.5 shrink-0 rounded-full bg-[var(--cw-neon)] shadow-[0_0_8px_rgb(14_255_42_/_0.8)]"
+                    aria-hidden
+                  />
+                  {host}
+                </span>
+              ) : null}
+              <span className="hidden text-xs text-[var(--cw-ink-faint)] lg:inline">
+                Search: last 28 days vs prior · Social: SMM baseline
+              </span>
             </div>
-          </div>
+            <Btn
+              variant="secondary"
+              icon={FiRefreshCw}
+              loading={loading}
+              onClick={loadSnapshot}
+              disabled={loading || !effectiveSite}
+            >
+              {loading ? "Updating…" : "Refresh"}
+            </Btn>
+          </header>
         </FadeIn>
 
         {error ? (

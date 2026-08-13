@@ -21,6 +21,7 @@ import ModelCombobox from "./studioShared/ModelCombobox";
 import StudioReferenceImages from "./studioShared/StudioReferenceImages";
 import StudioBrandKit from "./studioShared/StudioBrandKit";
 import TabRail from "./ui-shared/TabRail";
+import LiveRunDock from "./studioShared/LiveRunDock";
 import { POST_STUDIO_DEFAULT_PROMPTS } from "../../lib/postsStudio/defaults";
 import {
   INTERVAL_OPTIONS,
@@ -455,7 +456,24 @@ export default function PostAutomationSection({ selectedSite = "" }) {
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          {/* A live run docks here, minimised, on every tab except Run —
+              where the full console is already on screen. */}
+          {tab !== "run" ? (
+            <LiveRunDock
+              run={activeRun}
+              label="Post"
+              onCancel={() => cancelRun(activeRun?.id)}
+              cancelling={cancelling}
+            >
+              <RunConsole
+                run={activeRun}
+                onCancel={() => cancelRun(activeRun?.id)}
+                cancelling={cancelling}
+              />
+            </LiveRunDock>
+          ) : null}
+
+          <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5">
             {tab === "run" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

@@ -27,7 +27,7 @@ import PitchesPanel from "./seoAutopilot/PitchesPanel";
 import AutopilotRunConsole from "./seoAutopilot/AutopilotRunConsole";
 import SeoAutopilotMark from "./seoAutopilot/SeoAutopilotMark";
 import TabRail from "./ui-shared/TabRail";
-import LiveRunStrip from "./studioShared/LiveRunStrip";
+import LiveRunDock from "./studioShared/LiveRunDock";
 import Btn from "./ui-shared/Btn";
 
 const TABS = [
@@ -73,24 +73,7 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
   const [cancellingRun, setCancellingRun] = useState(false);
   const [researching, setResearching] = useState(false);
   const [pitchBusyId, setPitchBusyId] = useState("");
-  const [hideLivePin, setHideLivePin] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return window.localStorage.getItem("seoAutopilot.hideLivePin") === "1";
-    } catch {
-      return false;
-    }
-  });
   const selectedRunIdRef = useRef(null);
-
-  const setLivePinHidden = (hidden) => {
-    setHideLivePin(hidden);
-    try {
-      window.localStorage.setItem("seoAutopilot.hideLivePin", hidden ? "1" : "0");
-    } catch {
-      /* ignore */
-    }
-  };
 
   const fetchRunDetail = useCallback(async (runId) => {
     const id = String(runId || "").trim();
@@ -367,36 +350,27 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
 
   return (
     <div className="min-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)]">
-      <div className="cw-grid relative border-b border-[var(--cw-hairline)] bg-[var(--cw-canvas)] px-6 py-7">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_8%_0%,rgba(14,255,42,0.13),transparent_60%),radial-gradient(ellipse_50%_60%_at_95%_10%,rgba(56,225,255,0.06),transparent_60%)]" />
-        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_8%,transparent)] px-3 py-1 text-[10px] font-bold tracking-[0.14em] text-[var(--cw-neon)] uppercase">
-              <SeoAutopilotMark className="h-3.5 w-3.5" />
-              SEO Autopilot Studio
-            </div>
-            <div className="mt-3.5 flex items-start gap-3">
-              <span className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--cw-neon)_30%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_9%,transparent)] text-[var(--cw-neon)]">
-                <SeoAutopilotMark className="h-6 w-6" strokeWidth={1.75} />
-              </span>
-              <h2 className="font-heading text-2xl font-semibold tracking-tight text-balance text-[var(--cw-ink)] sm:text-[32px]">
-                Audit → Diagnose → Fix → Pitch → Track
-              </h2>
-            </div>
-            <p className="mt-2.5 max-w-2xl text-sm leading-relaxed text-[var(--cw-ink-muted)]">
-              Google + AI-search loop for{" "}
-              <span className="font-mono text-[var(--cw-ink)]">{siteLink}</span>. Configure each
-              agent, run on demand or on a schedule, and send outreach from here.
-            </p>
+      <div className="relative border-b border-[var(--cw-hairline)] px-5 py-4">
+        <div className="relative flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 className="font-heading inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-[var(--cw-ink)]">
+              <SeoAutopilotMark className="h-4 w-4 text-[var(--cw-neon)]" />
+              SEO Autopilot
+            </h2>
+            <span className="truncate font-mono text-[11px] text-[var(--cw-ink-faint)]">
+              {siteLink}
+            </span>
+            <span className="hidden text-xs text-[var(--cw-ink-muted)] xl:inline">
+              Audit → Diagnose → Fix → Pitch → Track
+            </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Btn variant="secondary" size="lg" icon={FiSave} onClick={saveConfig} disabled={saving}>
+            <Btn variant="secondary" icon={FiSave} onClick={saveConfig} disabled={saving}>
               {saving ? "Saving…" : "Save"}
             </Btn>
             {hasLiveAutopilot ? (
               <Btn
                 variant="danger"
-                size="lg"
                 icon={FiXCircle}
                 loading={cancellingRun}
                 onClick={cancelAllLiveRuns}
@@ -407,7 +381,6 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
             ) : null}
             <Btn
               variant="primary"
-              size="lg"
               icon={FiPlay}
               loading={running || hasLiveAutopilot}
               onClick={() => runNow()}
@@ -446,50 +419,21 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
           </div>
         ) : null}
 
-        {/* A run in flight stays visible from every tab. Compact by default —
-            one line that names the agent actually working — and expandable into
-            the full cockpit right here. The preference is remembered. */}
-        {tab !== "runs" &&
-        activeRun &&
-        ["queued", "running"].includes(String(activeRun.status || "")) ? (
-          hideLivePin ? (
-            <LiveRunStrip
+        {/* A run in flight docks at the top, minimised. Maximise to get the
+            whole cockpit without leaving the tab you're working in. */}
+        {tab !== "runs" ? (
+          <LiveRunDock
+            run={activeRun}
+            label="Autopilot"
+            onCancel={cancelActiveRun}
+            cancelling={cancellingRun}
+          >
+            <AutopilotRunConsole
               run={activeRun}
-              onExpand={() => setLivePinHidden(false)}
-              onOpenConsole={() => setTab("runs")}
               onCancel={cancelActiveRun}
               cancelling={cancellingRun}
             />
-          ) : (
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[10px] font-bold tracking-[0.14em] text-[var(--cw-ink-faint)] uppercase">
-                  Live Autopilot run
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    className="text-[11px] font-semibold text-[var(--cw-ink-muted)] transition-smooth hover:text-[var(--cw-ink)]"
-                    onClick={() => setLivePinHidden(true)}
-                  >
-                    Collapse
-                  </button>
-                  <button
-                    type="button"
-                    className="text-[11px] font-bold text-[var(--cw-neon)] transition-smooth hover:text-[var(--cw-neon-soft)]"
-                    onClick={() => setTab("runs")}
-                  >
-                    Open Run console →
-                  </button>
-                </div>
-              </div>
-              <AutopilotRunConsole
-                run={activeRun}
-                onCancel={cancelActiveRun}
-                cancelling={cancellingRun}
-              />
-            </div>
-          )
+          </LiveRunDock>
         ) : null}
 
         {tab === "overview" && (

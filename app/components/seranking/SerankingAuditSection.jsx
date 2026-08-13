@@ -144,8 +144,8 @@ export default function SerankingAuditSection({
         <Card className="border-amber-200 bg-amber-50/50 shadow-sm mb-4">
           <CardContent className="p-4">
             <p className="text-sm text-amber-950">
-              Not enough SE Ranking credits to force a new audit (need ~{auditCost}). Showing the
-              cached report until credits are available.
+              Not enough audit credits to force a new crawl (need ~{auditCost}). Showing the cached
+              report until credits are available.
             </p>
           </CardContent>
         </Card>

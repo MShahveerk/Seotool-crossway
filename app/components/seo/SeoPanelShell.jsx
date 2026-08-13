@@ -105,47 +105,39 @@ export default function SeoPanelShell({
   }
 
   return (
-    <div className="min-h-[calc(100vh-2rem)] space-y-8 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 sm:p-6">
-      {/* Section hero — the one place a page states what it is. */}
-      <header className="cw-grid animate-fade-in relative overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)] p-6 sm:p-8">
-        <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_75%_at_6%_0%,rgba(14,255,42,0.13),transparent_62%),radial-gradient(ellipse_45%_60%_at_96%_8%,rgba(56,225,255,0.055),transparent_62%)]"
-          aria-hidden
-        />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold tracking-[0.18em] text-[var(--cw-neon)] uppercase">
-              {eyebrow || "SEO Tools"}
-            </p>
-            <h1 className="font-heading mt-2 text-2xl font-semibold tracking-tight text-balance text-[var(--cw-ink)] sm:text-[32px]">
-              {title}
-            </h1>
-            {description ? (
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--cw-ink-muted)]">
-                {description}
-              </p>
-            ) : null}
-            {siteUrl ? (
-              <p className="mt-2.5 font-mono text-[13px] text-[var(--cw-ink-dim)]">
-                {String(siteUrl).trim()}
-              </p>
-            ) : null}
-          </div>
-          {(onRangeChange || action) && (
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              {onRangeChange ? (
-                <TabRail
-                  size="sm"
-                  tabs={RANGES.map((r) => ({ id: r.id, label: r.label }))}
-                  value={range}
-                  onChange={onRangeChange}
-                  ariaLabel="Date range"
-                />
-              ) : null}
-              {action}
-            </div>
-          )}
+    <div className="min-h-[calc(100vh-2rem)] space-y-5 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 sm:p-6">
+      {/* Compact header. The workspace rail above already says where you are,
+          so this is a title line and its controls — not a landing banner. */}
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[var(--cw-hairline)] pb-4">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h1 className="font-heading truncate text-lg font-semibold tracking-tight text-[var(--cw-ink)]">
+            {title}
+          </h1>
+          {siteUrl ? (
+            <span className="truncate font-mono text-[11px] text-[var(--cw-ink-faint)]">
+              {String(siteUrl).trim()}
+            </span>
+          ) : null}
+          {description ? (
+            <span className="hidden max-w-xl truncate text-xs text-[var(--cw-ink-muted)] xl:inline">
+              {description}
+            </span>
+          ) : null}
         </div>
+        {(onRangeChange || action) && (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {onRangeChange ? (
+              <TabRail
+                size="sm"
+                tabs={RANGES.map((r) => ({ id: r.id, label: r.label }))}
+                value={range}
+                onChange={onRangeChange}
+                ariaLabel="Date range"
+              />
+            ) : null}
+            {action}
+          </div>
+        )}
       </header>
 
       {error ? (

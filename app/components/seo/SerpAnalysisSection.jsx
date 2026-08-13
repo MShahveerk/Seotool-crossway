@@ -814,7 +814,10 @@ function KeywordMetricsBar({ metrics }) {
     <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-base text-gray-900 flex items-center gap-2"><FiBarChart2 className="size-5 text-emerald-600" /> Keyword Metrics</h3>
-        <span className="text-[11px] text-gray-400 uppercase tracking-wide">SE Ranking · {String(metrics.source || "us").toUpperCase()}{metrics.fromCache ? " · cached" : ""}</span>
+        <span className="font-mono text-[11px] tracking-wide text-[var(--cw-ink-faint)] uppercase">
+          Keyword data · {String(metrics.source || "us").toUpperCase()}
+          {metrics.fromCache ? " · cached" : ""}
+        </span>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 p-5">

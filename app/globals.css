@@ -45,40 +45,40 @@
   /* ── Carbon surfaces ────────────────────────────────────────────────────
      Graphite, not void. Each step up is visible on its own — you should be
      able to see a card sitting on the canvas without looking for the border. */
-  --color-canvas: #101317;
-  --color-surface: #1a1e23;
-  --color-raised: #232830;
-  --color-overlay: #2b3038;
-  --color-hairline: #333941;
-  --color-hairline-strong: #454d58;
+  --color-canvas: #151a1f;
+  --color-surface: #1f252c;
+  --color-raised: #2a313a;
+  --color-overlay: #343c46;
+  --color-hairline: #3d454f;
+  --color-hairline-strong: #505a66;
 
   --color-ink: #f4f6f7;
-  --color-ink-dim: #c3cad1;
-  --color-ink-muted: #949ca5;
-  --color-ink-faint: #6d757e;
+  --color-ink-dim: #ccd2d9;
+  --color-ink-muted: #9ba3ad;
+  --color-ink-faint: #79818b;
 
-  --color-indicator: #949ca5;
+  --color-indicator: #9ba3ad;
 
   /* ── Greyscale ramp, INVERTED ────────────────────────────────────────
      Legacy components use light shades (50–300) for fills/borders and dark
      shades (600–900) for text. Inverting the ramp makes ~4,000 existing
      utility usages read correctly on a dark canvas without touching them. */
-  --color-gray-50: #161a1f;
-  --color-gray-100: #1e232a;
-  --color-gray-200: #333941;
-  --color-gray-300: #454d58;
-  --color-gray-400: #6d757e;
-  --color-gray-500: #949ca5;
+  --color-gray-50: #1b2127;
+  --color-gray-100: #232a32;
+  --color-gray-200: #3d454f;
+  --color-gray-300: #505a66;
+  --color-gray-400: #79818b;
+  --color-gray-500: #9ba3ad;
   --color-gray-600: #aab1b9;
   --color-gray-700: #c8ced4;
   --color-gray-800: #e2e6ea;
   --color-gray-900: #f4f6f7;
   --color-gray-950: #fbfcfc;
 
-  --color-slate-50: #161b21;
-  --color-slate-100: #1e242c;
-  --color-slate-200: #333b45;
-  --color-slate-300: #454f5c;
+  --color-slate-50: #1b2228;
+  --color-slate-100: #232b34;
+  --color-slate-200: #3d4650;
+  --color-slate-300: #505b68;
   --color-slate-400: #6d7783;
   --color-slate-500: #949eaa;
   --color-slate-600: #aab3bd;
@@ -87,10 +87,10 @@
   --color-slate-900: #f4f6f8;
   --color-slate-950: #fbfcfd;
 
-  --color-neutral-50: #17191c;
-  --color-neutral-100: #1f2226;
-  --color-neutral-200: #34383d;
-  --color-neutral-300: #464b52;
+  --color-neutral-50: #1c1f23;
+  --color-neutral-100: #24282e;
+  --color-neutral-200: #3e434a;
+  --color-neutral-300: #51565f;
   --color-neutral-400: #6e737a;
   --color-neutral-500: #959aa1;
   --color-neutral-600: #abafb5;
@@ -99,8 +99,8 @@
   --color-neutral-900: #f4f5f6;
   --color-neutral-950: #fbfcfc;
 
-  --color-stone-50: #1a1918;
-  --color-stone-100: #232120;
+  --color-stone-50: #1f1e1c;
+  --color-stone-100: #282624;
   --color-stone-200: #3a3735;
   --color-stone-300: #4d4a46;
   --color-stone-400: #77726c;
@@ -112,8 +112,8 @@
   --color-stone-950: #fcfcfb;
 
   /* ── Emerald / green → the neon accent ramp ─────────────────────────── */
-  --color-emerald-50: #13291a;
-  --color-emerald-100: #1a3822;
+  --color-emerald-50: #18301f;
+  --color-emerald-100: #204028;
   --color-emerald-200: #245231;
   --color-emerald-300: #2f7a42;
   --color-emerald-400: #35d94a;
@@ -124,8 +124,8 @@
   --color-emerald-900: #8dff97;
   --color-emerald-950: #d8ffdc;
 
-  --color-green-50: #13291a;
-  --color-green-100: #1a3822;
+  --color-green-50: #18301f;
+  --color-green-100: #204028;
   --color-green-200: #245231;
   --color-green-300: #2f7a42;
   --color-green-400: #35d94a;
@@ -149,7 +149,7 @@
   --color-teal-950: #e4fef8;
 
   /* ── Status: danger ─────────────────────────────────────────────────── */
-  --color-red-50: #301b1b;
+  --color-red-50: #372121;
   --color-red-100: #402323;
   --color-red-200: #5c3232;
   --color-red-300: #8a4444;
@@ -174,7 +174,7 @@
   --color-rose-950: #ffe4e9;
 
   /* ── Status: caution ────────────────────────────────────────────────── */
-  --color-amber-50: #302715;
+  --color-amber-50: #372d1b;
   --color-amber-100: #40341c;
   --color-amber-200: #5c4b28;
   --color-amber-300: #8a713c;
@@ -211,7 +211,7 @@
   --color-orange-950: #fff2e6;
 
   /* ── Status: information (cool secondary for data viz) ──────────────── */
-  --color-sky-50: #142a31;
+  --color-sky-50: #1a3138;
   --color-sky-100: #1b3841;
   --color-sky-200: #27525e;
   --color-sky-300: #3a7a8b;
@@ -223,7 +223,7 @@
   --color-sky-900: #c2f6ff;
   --color-sky-950: #e6fcff;
 
-  --color-cyan-50: #142a31;
+  --color-cyan-50: #1a3138;
   --color-cyan-100: #1b3841;
   --color-cyan-200: #27525e;
   --color-cyan-300: #3a7a8b;
@@ -342,17 +342,17 @@
 .dark {
   color-scheme: dark;
 
-  --cw-canvas: #101317;
-  --cw-surface: #1a1e23;
-  --cw-raised: #232830;
-  --cw-overlay: #2b3038;
-  --cw-hairline: #333941;
-  --cw-hairline-strong: #454d58;
+  --cw-canvas: #151a1f;
+  --cw-surface: #1f252c;
+  --cw-raised: #2a313a;
+  --cw-overlay: #343c46;
+  --cw-hairline: #3d454f;
+  --cw-hairline-strong: #505a66;
 
   --cw-ink: #f4f6f7;
-  --cw-ink-dim: #c3cad1;
-  --cw-ink-muted: #949ca5;
-  --cw-ink-faint: #6d757e;
+  --cw-ink-dim: #ccd2d9;
+  --cw-ink-muted: #9ba3ad;
+  --cw-ink-faint: #79818b;
 
   --cw-neon: #0eff2a;
   --cw-neon-soft: #5fff6e;
@@ -373,40 +373,40 @@
   --cw-shadow: 0 4px 16px -4px rgb(0 0 0 / 0.6), 0 1px 3px rgb(0 0 0 / 0.4);
   --cw-shadow-lg: 0 18px 48px -12px rgb(0 0 0 / 0.8), 0 4px 12px rgb(0 0 0 / 0.5);
 
-  --background: #101317;
+  --background: #151a1f;
   --foreground: #f4f6f7;
-  --card: #1a1e23;
+  --card: #1f252c;
   --card-foreground: #f4f6f7;
-  --popover: #2b3038;
+  --popover: #343c46;
   --popover-foreground: #f4f6f7;
   --primary: #0eff2a;
   --primary-foreground: #04140a;
-  --secondary: #232830;
+  --secondary: #2a313a;
   --secondary-foreground: #f4f6f7;
-  --muted: #232830;
-  --muted-foreground: #949ca5;
-  --accent: #2b3038;
+  --muted: #2a313a;
+  --muted-foreground: #9ba3ad;
+  --accent: #343c46;
   --accent-foreground: #0eff2a;
   --destructive: #ff5c5c;
-  --border: #333941;
-  --input: #333941;
+  --border: #3d454f;
+  --input: #3d454f;
   --ring: #0eff2a;
 
   --chart-1: #0eff2a;
   --chart-2: #38e1ff;
-  --chart-3: #949ca5;
+  --chart-3: #9ba3ad;
   --chart-4: #ffb020;
   --chart-5: #b184ff;
 
   --radius: 0.75rem;
 
-  --sidebar: #171a1f;
-  --sidebar-foreground: #c3cad1;
+  --sidebar: #1a2026;
+  --sidebar-foreground: #ccd2d9;
   --sidebar-primary: #0eff2a;
   --sidebar-primary-foreground: #04140a;
-  --sidebar-accent: #232830;
+  --sidebar-accent: #2a313a;
   --sidebar-accent-foreground: #f4f6f7;
-  --sidebar-border: #2c323a;
+  --sidebar-border: #363e47;
   --sidebar-ring: #0eff2a;
 }
 
@@ -631,6 +631,20 @@
   .bg-white\/80,
   .bg-white\/70 {
     background-color: color-mix(in srgb, var(--cw-surface) 92%, transparent);
+  }
+
+  /* Literal white gradient stops wash a whole card out on dark — this is what
+     made the Autopilot executive briefing unreadable. Pin them to surfaces. */
+  .from-white {
+    --tw-gradient-from: var(--cw-surface);
+  }
+
+  .via-white {
+    --tw-gradient-via: var(--cw-surface);
+  }
+
+  .to-white {
+    --tw-gradient-to: var(--cw-surface);
   }
 
   .border-white {
@@ -880,13 +894,13 @@
   .bg-neutral-900,
   .bg-neutral-950,
   .bg-black {
-    background-color: #0b0e11;
+    background-color: #0f1216;
   }
 
   .bg-gray-800,
   .bg-slate-800,
   .bg-neutral-800 {
-    background-color: #141519;
+    background-color: #171b20;
   }
 
   .bg-gray-900 .text-gray-100,

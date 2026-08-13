@@ -86,59 +86,36 @@ export default function SearchConsoleSection({ selectedSite = "" }) {
         : "";
 
   return (
-    <div className="min-h-[calc(100vh-2rem)] space-y-6 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 sm:p-6">
-      <header className="cw-grid relative overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)] p-6 sm:p-8">
-        <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_75%_at_6%_0%,rgba(56,225,255,0.10),transparent_62%),radial-gradient(ellipse_45%_60%_at_96%_8%,rgba(14,255,42,0.07),transparent_62%)]"
-          aria-hidden
-        />
-        <div className="relative min-w-0">
-          <p className="text-[10px] font-bold tracking-[0.18em] text-[var(--cw-info)] uppercase">
-            Search Console
-          </p>
-          <h1 className="font-heading mt-2 text-2xl font-semibold tracking-tight text-balance text-[var(--cw-ink)] sm:text-[32px]">
+    <div className="min-h-[calc(100vh-2rem)] space-y-5 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 sm:p-6">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-[var(--cw-hairline)] pb-4">
+        <div className="flex min-w-0 items-baseline gap-3">
+          <h1 className="font-heading text-lg font-semibold tracking-tight text-[var(--cw-ink)]">
             Website Statistics
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--cw-ink-muted)]">
-            Performance, devices, query-page mapping, sitemaps and actionable opportunities — all
-            straight from Google Search Console.
-          </p>
           {siteHref ? (
             <a
               href={siteHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-smooth mt-4 inline-flex items-center gap-1.5 font-mono text-[13px] text-[var(--cw-info)] hover:text-[var(--cw-ink)]"
+              className="transition-smooth inline-flex items-center gap-1 truncate font-mono text-[11px] text-[var(--cw-ink-faint)] hover:text-[var(--cw-info)]"
             >
               {host || siteHref}
-              <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+              <ExternalLink className="size-3 shrink-0" aria-hidden />
             </a>
           ) : null}
         </div>
+        <TabRail
+          size="sm"
+          tabs={VIEWS.map((v) => ({ id: v.id, label: v.label, icon: v.icon }))}
+          value={view}
+          onChange={setView}
+          ariaLabel="Search Console views"
+        />
       </header>
 
-      <TabRail
-        tabs={VIEWS.map((v) => ({ id: v.id, label: v.label, icon: v.icon }))}
-        value={view}
-        onChange={setView}
-        ariaLabel="Search Console views"
-      />
-
-      <section key={active.id} className="animate-section-enter scroll-mt-24">
-        <div className="mb-5 border-b border-[var(--cw-hairline)] pb-4">
-          <div className="flex items-start gap-3">
-            <active.icon className="mt-0.5 size-5 shrink-0 text-[var(--cw-neon)]" aria-hidden />
-            <div className="min-w-0">
-              <h2 className="font-heading text-lg font-semibold text-[var(--cw-ink)]">
-                {active.title}
-              </h2>
-              <p className="mt-1 text-sm text-[var(--cw-ink-muted)]">{active.description}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)] p-4 sm:p-5">
-          {active.render(selectedSite)}
-        </div>
+      <section key={active.id} className="animate-section-enter">
+        <p className="mb-3 text-xs text-[var(--cw-ink-muted)]">{active.description}</p>
+        {active.render(selectedSite)}
       </section>
     </div>
   );

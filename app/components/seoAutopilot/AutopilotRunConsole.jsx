@@ -113,8 +113,9 @@ export default function AutopilotRunConsole({
 }) {
   const live = isLiveStatus(run?.status);
 
+  const stagesJson = run?.stagesJson;
   const steps = useMemo(() => {
-    const stages = Array.isArray(run?.stagesJson) ? run.stagesJson : [];
+    const stages = Array.isArray(stagesJson) ? stagesJson : [];
     const ran = new Set(stages.map((s) => String(s?.agentId || "")));
     // A live run shows the whole roster so you can see what's coming. A finished
     // run shows only the agents it actually ran — Autopilot supports single-agent
@@ -125,7 +126,7 @@ export default function AutopilotRunConsole({
       subtitle: a.subtitle,
     }));
     return buildPipelineSteps(blueprint, stages, (s) => s?.agentId);
-  }, [run?.stagesJson, live]);
+  }, [stagesJson, live]);
 
   const scorecard =
     run?.scorecardJson && typeof run.scorecardJson === "object" ? run.scorecardJson : null;

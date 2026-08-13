@@ -172,28 +172,32 @@ export function ScorecardDashboard({ scorecard, siteLink }) {
         <MetricTile label="CTR" value={fmtPct(m.ctr)} />
       </div>
 
-      <div className="rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-emerald-50/40 p-5">
-        <div className="flex items-center gap-2 mb-2">
-          <SeoAutopilotMark className="w-4 h-4 text-emerald-700" />
-          <h3 className="text-sm font-bold text-gray-900">Executive briefing</h3>
+      <div className="cw-lit rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <SeoAutopilotMark className="h-4 w-4 text-[var(--cw-neon)]" />
+          <h3 className="font-heading text-sm font-semibold text-[var(--cw-ink)]">
+            Executive briefing
+          </h3>
           {scorecard.at ? (
-            <span className="text-[10px] text-gray-500 ml-auto">
+            <span className="ml-auto font-mono text-[10px] text-[var(--cw-ink-faint)]">
               Updated {new Date(scorecard.at).toLocaleString()}
             </span>
           ) : null}
         </div>
-        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+        <p className="max-w-4xl text-sm leading-relaxed whitespace-pre-wrap text-[var(--cw-ink-dim)]">
           {scorecard.summary || "Summary unavailable for this run."}
         </p>
         {Array.isArray(scorecard.nextSteps) && scorecard.nextSteps.length ? (
-          <div className="mt-4">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+          <div className="mt-4 border-t border-[var(--cw-hairline)] pt-4">
+            <p className="mb-2 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
               Next steps
             </p>
             <ol className="space-y-1.5">
               {scorecard.nextSteps.filter(Boolean).map((s, i) => (
-                <li key={i} className="flex gap-2 text-sm text-gray-700">
-                  <span className="font-bold text-emerald-700 tabular-nums">{i + 1}.</span>
+                <li key={i} className="flex gap-2.5 text-sm text-[var(--cw-ink-dim)]">
+                  <span className="font-mono font-bold tabular-nums text-[var(--cw-neon)]">
+                    {i + 1}.
+                  </span>
                   <span>{s}</span>
                 </li>
               ))}
