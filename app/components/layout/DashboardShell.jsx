@@ -56,21 +56,25 @@ export default function DashboardLayout({
           </div>
         </header>
 
+        {/* Boards need the full width; every other page gets real margins so
+            content sits in a column rather than running edge to edge. */}
         <main
           id="main-content"
           className={cn(
             "flex min-h-0 flex-1 flex-col",
-            isBoard ? "p-2 sm:p-2.5 lg:p-3" : "p-3 pt-4 sm:p-4 lg:p-6"
+            isBoard
+              ? "p-2 sm:p-2.5 lg:p-3"
+              : "px-4 py-5 sm:px-8 sm:py-7 lg:px-12 xl:px-16 2xl:px-20"
           )}
         >
           {isDashboard ? (
-            <div className="cw-lit mx-auto w-full max-w-6xl rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-4 sm:p-6">
+            <div className="cw-lit mx-auto w-full max-w-6xl rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 sm:p-7">
               {children}
             </div>
           ) : isBoard ? (
             <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>
           ) : (
-            <div className="mx-auto w-full max-w-[1400px]">{children}</div>
+            <div className="mx-auto w-full max-w-[1360px]">{children}</div>
           )}
         </main>
       </SidebarInset>
