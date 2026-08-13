@@ -473,6 +473,114 @@
     outline-offset: 2px;
   }
 
+  /* ── Element defaults ────────────────────────────────────────────────
+     These are `@layer base`, so any utility class a component already sets
+     still wins. Their job is to make the screens nobody has hand-styled
+     look deliberate instead of like unstyled browser chrome. */
+
+  :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"])),
+  :where(textarea),
+  :where(select) {
+    background-color: var(--cw-raised);
+    color: var(--cw-ink);
+    border: 1px solid var(--cw-hairline);
+    border-radius: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    transition:
+      border-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  :where(input, textarea, select):hover:not(:disabled) {
+    border-color: var(--cw-hairline-strong);
+  }
+
+  :where(input, textarea, select):focus {
+    border-color: var(--cw-neon);
+    box-shadow: 0 0 0 3px rgb(14 255 42 / 0.16);
+    outline: none;
+  }
+
+  :where(input, textarea, select):disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Native dropdowns paint their own popup — it has to be told about dark. */
+  option,
+  optgroup {
+    background-color: var(--cw-overlay);
+    color: var(--cw-ink);
+  }
+
+  /* Tables: quiet header, hairline rows, numbers in columns. */
+  :where(table) {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  :where(thead) :where(th) {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cw-ink-faint);
+    background-color: var(--cw-raised);
+    text-align: left;
+    padding: 0.625rem 0.875rem;
+    white-space: nowrap;
+  }
+
+  :where(tbody) :where(td) {
+    padding: 0.625rem 0.875rem;
+    border-top: 1px solid var(--cw-hairline);
+    color: var(--cw-ink-dim);
+    font-size: 0.8125rem;
+  }
+
+  :where(tbody) :where(tr):hover {
+    background-color: color-mix(in srgb, var(--cw-ink) 3%, transparent);
+  }
+
+  :where(hr) {
+    border-color: var(--cw-hairline);
+  }
+
+  :where(pre) {
+    background-color: var(--cw-canvas);
+    border: 1px solid var(--cw-hairline);
+    border-radius: 0.75rem;
+    color: var(--cw-ink-dim);
+  }
+
+  :where(code, kbd, samp) {
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    font-size: 0.9em;
+  }
+
+  :where(dialog) {
+    background-color: var(--cw-overlay);
+    color: var(--cw-ink);
+    border: 1px solid var(--cw-hairline);
+    border-radius: 1rem;
+  }
+
+  ::backdrop {
+    background-color: rgb(0 0 0 / 0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  /* Anything painting its own dark tile keeps a hairline so it doesn't
+     dissolve into the canvas. */
+  :where(details) {
+    border-radius: 0.75rem;
+  }
+
+  :where(summary) {
+    cursor: pointer;
+  }
+
   /* Scrollbars: invisible until the surface is hovered */
   ::-webkit-scrollbar {
     width: 10px;
@@ -527,6 +635,73 @@
 
   .border-white {
     border-color: var(--cw-hairline);
+  }
+
+  /* In a light theme border-gray-50/100/200/300 all just meant "a light rule".
+     On dark they must all be *the* hairline, or half the cards lose their edge
+     and the other half get a bar. Same for rings and dividers. */
+  .border-gray-50,
+  .border-gray-100,
+  .border-gray-200,
+  .border-slate-50,
+  .border-slate-100,
+  .border-slate-200,
+  .border-neutral-100,
+  .border-neutral-200,
+  .border-stone-100,
+  .border-stone-200 {
+    border-color: var(--cw-hairline);
+  }
+
+  .border-gray-300,
+  .border-slate-300,
+  .border-neutral-300 {
+    border-color: var(--cw-hairline-strong);
+  }
+
+  .ring-gray-50,
+  .ring-gray-100,
+  .ring-gray-200,
+  .ring-slate-100,
+  .ring-slate-200 {
+    --tw-ring-color: var(--cw-hairline);
+  }
+
+  .divide-gray-50 > :not([hidden]) ~ :not([hidden]),
+  .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+  .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
+  .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+  .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--cw-hairline);
+  }
+
+  /* Light-theme shadows are tuned for black-on-white and simply don't exist on
+     a dark canvas. Re-point the whole scale at real depth so elevation reads. */
+  .shadow-xs,
+  .shadow-sm {
+    box-shadow: var(--cw-shadow-sm);
+  }
+
+  .shadow,
+  .shadow-md {
+    box-shadow: var(--cw-shadow);
+  }
+
+  .shadow-lg,
+  .shadow-xl,
+  .shadow-2xl {
+    box-shadow: var(--cw-shadow-lg);
+  }
+
+  .hover\:shadow-sm:hover,
+  .hover\:shadow:hover,
+  .hover\:shadow-md:hover {
+    box-shadow: var(--cw-shadow);
+  }
+
+  .hover\:shadow-lg:hover,
+  .hover\:shadow-xl:hover {
+    box-shadow: var(--cw-shadow-lg);
   }
 
   .from-violet-600,

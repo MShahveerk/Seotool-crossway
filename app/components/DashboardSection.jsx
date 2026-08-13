@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { FadeIn, StaggerItem } from "./ui-shared/Motion";
+import Btn from "./ui-shared/Btn";
 
 function siteHost(url) {
   if (!url) return "";
@@ -106,7 +107,12 @@ function DeltaBadge({ value, invert = false, suffix = "%", label = "vs prior per
 function ClickSparkline({ data }) {
   const series = (data || []).filter((d) => d.date);
   if (series.length < 2) {
-    return <div className="h-16 rounded-xl bg-gray-50 border border-gray-100" aria-hidden />;
+    return (
+      <div
+        className="h-16 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)]"
+        aria-hidden
+      />
+    );
   }
   return (
     <div className="h-16 w-full">
@@ -114,14 +120,14 @@ function ClickSparkline({ data }) {
         <AreaChart data={series} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="dashClickGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.35} />
-              <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
+              <stop offset="0%" stopColor="#0EFF2A" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#0EFF2A" stopOpacity={0} />
             </linearGradient>
           </defs>
           <Area
             type="monotone"
             dataKey="clicks"
-            stroke="#0284c7"
+            stroke="#0EFF2A"
             strokeWidth={2}
             fill="url(#dashClickGrad)"
             dot={false}
@@ -139,78 +145,91 @@ function BigStatCard({
   delta,
   deltaInvert = false,
   deltaSuffix = "%",
-  accentClass = "border-gray-100",
-  barClass = "bg-emerald-400",
+  accentClass = "",
+  barClass = "bg-[var(--cw-neon)]",
   index = 0,
 }) {
   return (
     <StaggerItem index={index}>
       <div
-        className={`group relative overflow-hidden rounded-2xl border bg-white p-5 sm:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover-lift ${accentClass} flex flex-col justify-between min-h-[140px]`}
+        className={`group cw-lit hover-lift relative flex min-h-[140px] flex-col justify-between overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 sm:p-6 ${accentClass}`}
       >
-        <div className={`absolute left-0 top-0 h-full w-1 ${barClass} opacity-90`} aria-hidden />
+        {/* A lit edge on the leading side — the card's only decoration. */}
+        <div
+          className={`absolute top-0 left-0 h-full w-0.5 ${barClass} opacity-80`}
+          aria-hidden
+        />
         <div className="flex items-start justify-between gap-2 pl-2">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{label}</p>
+          <p className="text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+            {label}
+          </p>
           {delta != null ? (
             <DeltaBadge value={delta} invert={deltaInvert} suffix={deltaSuffix} />
           ) : null}
         </div>
-        <p className="text-4xl sm:text-5xl font-bold text-gray-900 tabular-nums leading-none mt-3 pl-2 tracking-tight">
+        <p className="font-heading mt-3 pl-2 text-4xl leading-none font-semibold tracking-tight tabular-nums text-[var(--cw-ink)] sm:text-5xl">
           {value}
         </p>
-        {sub ? <p className="text-xs text-gray-500 mt-3 pl-2 leading-relaxed">{sub}</p> : null}
+        {sub ? (
+          <p className="mt-3 pl-2 text-xs leading-relaxed text-[var(--cw-ink-muted)]">{sub}</p>
+        ) : null}
       </div>
     </StaggerItem>
   );
 }
 
 function HealthTile({ icon: Icon, label, value, sub, tone = "gray", onClick }) {
+  // Tone tints the label and the fill only — the number stays plain ink so a
+  // row of tiles reads as one set of figures, not six competing colours.
   const tones = {
-    emerald: "border-emerald-100 bg-emerald-50/60 text-emerald-800",
-    amber: "border-amber-100 bg-amber-50/60 text-amber-800",
-    red: "border-red-100 bg-red-50/60 text-red-800",
-    gray: "border-gray-100 bg-gray-50/80 text-gray-500",
-    sky: "border-sky-100 bg-sky-50/60 text-sky-800",
-    violet: "border-violet-100 bg-violet-50/60 text-violet-800",
+    emerald: "text-[var(--cw-neon)] bg-[color-mix(in_srgb,var(--cw-neon)_8%,var(--cw-surface))]",
+    amber: "text-[var(--cw-caution)] bg-[color-mix(in_srgb,var(--cw-caution)_8%,var(--cw-surface))]",
+    red: "text-[var(--cw-danger)] bg-[color-mix(in_srgb,var(--cw-danger)_8%,var(--cw-surface))]",
+    gray: "text-[var(--cw-ink-muted)] bg-[var(--cw-surface)]",
+    sky: "text-[var(--cw-info)] bg-[color-mix(in_srgb,var(--cw-info)_8%,var(--cw-surface))]",
+    violet: "text-[#b184ff] bg-[color-mix(in_srgb,#b184ff_8%,var(--cw-surface))]",
   };
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`rounded-xl border p-4 text-left transition hover:shadow-md ${tones[tone] || tones.gray} ${onClick ? "cursor-pointer hover:scale-[1.01]" : ""}`}
+      className={`transition-smooth rounded-xl border border-[var(--cw-hairline)] p-4 text-left ${tones[tone] || tones.gray} ${
+        onClick
+          ? "hover-lift cursor-pointer hover:border-[var(--cw-hairline-strong)]"
+          : ""
+      }`}
     >
       <div className="flex items-center gap-2">
-        {Icon ? <Icon className="size-4 opacity-70 shrink-0" aria-hidden /> : null}
-        <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">{label}</p>
+        {Icon ? <Icon className="size-3.5 shrink-0" aria-hidden /> : null}
+        <p className="text-[10px] font-bold tracking-[0.12em] uppercase">{label}</p>
       </div>
-      <p className="mt-2 text-2xl font-bold tabular-nums text-gray-900">{value}</p>
-      {sub ? <p className="mt-1 text-xs opacity-75">{sub}</p> : null}
+      <p className="font-heading mt-2 text-2xl font-semibold tabular-nums text-[var(--cw-ink)]">
+        {value}
+      </p>
+      {sub ? <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">{sub}</p> : null}
     </Tag>
   );
 }
 
 function QuickNavCard({ icon: Icon, title, desc, sectionId, onNavigate, accent }) {
-  const accents = {
-    emerald: "hover:border-emerald-200 hover:bg-emerald-50/40",
-    sky: "hover:border-sky-200 hover:bg-sky-50/40",
-    violet: "hover:border-violet-200 hover:bg-violet-50/40",
-    amber: "hover:border-amber-200 hover:bg-amber-50/40",
-  };
   return (
     <button
       type="button"
       onClick={() => onNavigate(sectionId)}
-      className={`rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition hover-lift ${accents[accent] || accents.emerald}`}
+      className="group cw-lit hover-lift rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-4 text-left"
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 text-gray-700 ring-1 ring-gray-100">
+        <span className="transition-smooth inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] text-[var(--cw-ink-dim)] group-hover:border-[color-mix(in_srgb,var(--cw-neon)_35%,transparent)] group-hover:text-[var(--cw-neon)]">
           <Icon className="size-5" aria-hidden />
         </span>
-        <FiArrowRight className="size-4 text-gray-400 mt-1 shrink-0" aria-hidden />
+        <FiArrowRight
+          className="transition-smooth mt-1 size-4 shrink-0 text-[var(--cw-ink-faint)] group-hover:translate-x-0.5 group-hover:text-[var(--cw-neon)]"
+          aria-hidden
+        />
       </div>
-      <p className="mt-3 font-bold text-gray-900">{title}</p>
-      <p className="mt-1 text-xs text-gray-500 leading-relaxed">{desc}</p>
+      <p className="font-heading mt-3 font-semibold text-[var(--cw-ink)]">{title}</p>
+      <p className="mt-1 text-xs leading-relaxed text-[var(--cw-ink-muted)]">{desc}</p>
     </button>
   );
 }
@@ -311,59 +330,65 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
   const host = snapshot?.host || siteHost(effectiveSite);
 
   const linkPill =
-    "inline-flex items-center gap-1.5 rounded-full border border-emerald-200/90 bg-emerald-50/80 px-4 py-2 text-sm font-semibold text-emerald-900 shadow-sm transition-all hover:bg-emerald-100 hover:border-emerald-300 hover:shadow-md active:scale-[0.98]";
+    "transition-smooth inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--cw-neon)_32%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_8%,transparent)] px-4 py-2 text-sm font-semibold text-[var(--cw-neon)] hover:bg-[color-mix(in_srgb,var(--cw-neon)_16%,transparent)] active:translate-y-px";
 
   const showGscBlock = gsc?.available || loading;
   const gscErr = gsc?.available === false ? gsc.error : "";
 
   return (
     <div className="relative min-h-[calc(100vh-1rem)]">
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-72 max-w-6xl mx-auto bg-emerald-100/25 blur-3xl rounded-full opacity-70"
-        aria-hidden
-      />
-      <div className="relative max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8 sm:space-y-10">
+      <div className="relative mx-auto max-w-6xl space-y-8 py-2 sm:space-y-10">
         <FadeIn>
-          <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 sm:p-8 shadow-[0_8px_40px_rgba(0,0,0,0.06)] ring-1 ring-gray-100/80 transition-smooth hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)]">
-            <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-200/30 blur-2xl" aria-hidden />
-            <div className="absolute -left-10 bottom-0 h-32 w-32 rounded-full bg-sky-100/40 blur-2xl" aria-hidden />
-            <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+          <div className="cw-grid relative overflow-hidden rounded-3xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)] p-6 sm:p-8">
+            <div
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_55%_80%_at_5%_0%,rgba(14,255,42,0.14),transparent_62%),radial-gradient(ellipse_45%_60%_at_98%_10%,rgba(56,225,255,0.06),transparent_62%)]"
+              aria-hidden
+            />
+            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-2xl">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700/90 mb-2">Overview</p>
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight text-balance">
+                <p className="mb-2 text-[10px] font-bold tracking-[0.2em] text-[var(--cw-neon)] uppercase">
+                  Overview
+                </p>
+                <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance text-[var(--cw-ink)] sm:text-[38px]">
                   Your performance at a glance
                 </h1>
-                <p className="text-gray-600 mt-3 text-base leading-relaxed">
-                  Search trends, site health, priority actions, and social followers — refreshed from one snapshot.
+                <p className="mt-3 text-[15px] leading-relaxed text-[var(--cw-ink-muted)]">
+                  Search trends, site health, priority actions and social followers — refreshed
+                  from one snapshot.
                 </p>
                 {host ? (
-                  <div className="mt-5 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/90 px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" aria-hidden />
+                  <div className="mt-5 flex flex-wrap items-center gap-2.5">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--cw-neon)_30%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_8%,transparent)] px-4 py-2 font-mono text-[13px] font-semibold text-[var(--cw-ink)]">
+                      <span
+                        className="size-1.5 shrink-0 rounded-full bg-[var(--cw-neon)] shadow-[0_0_8px_rgb(14_255_42_/_0.8)]"
+                        aria-hidden
+                      />
                       {host}
                     </span>
-                    <span className="text-xs sm:text-sm text-gray-500 leading-snug">
-                      Search: last 28 days vs prior period · Social: SMM baseline
+                    <span className="text-xs leading-snug text-[var(--cw-ink-faint)]">
+                      Search: last 28 days vs prior · Social: SMM baseline
                     </span>
                   </div>
                 ) : null}
               </div>
-              <button
-                type="button"
+              <Btn
+                variant="primary"
+                size="lg"
+                icon={FiRefreshCw}
+                loading={loading}
                 onClick={loadSnapshot}
                 disabled={loading || !effectiveSite}
-                className="inline-flex items-center justify-center gap-2 self-start rounded-full bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-gray-900/20 transition hover:bg-gray-800 hover:shadow-xl disabled:opacity-45 disabled:shadow-none"
+                className="self-start"
               >
-                <FiRefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} aria-hidden />
                 {loading ? "Updating…" : "Refresh data"}
-              </button>
+              </Btn>
             </div>
           </div>
         </FadeIn>
 
         {error ? (
           <FadeIn delay={40}>
-            <p className="rounded-2xl border border-amber-200/80 bg-amber-50/90 px-4 py-3.5 text-sm text-amber-950 leading-relaxed shadow-sm">
+            <p className="rounded-2xl border border-[color-mix(in_srgb,var(--cw-caution)_32%,transparent)] bg-[color-mix(in_srgb,var(--cw-caution)_8%,transparent)] px-4 py-3.5 text-sm leading-relaxed text-[var(--cw-caution)]">
               {error}
             </p>
           </FadeIn>

@@ -1,7 +1,13 @@
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import Btn from "./Btn";
 import { FadeIn } from "./Motion";
 
+/**
+ * EmptyState — nothing here yet, said calmly.
+ *
+ * Dashed hairline so it reads as a placeholder rather than a broken panel, and
+ * the icon carries the only spot of neon.
+ */
 export default function EmptyState({
   icon: Icon,
   title,
@@ -13,23 +19,27 @@ export default function EmptyState({
   return (
     <FadeIn
       className={cn(
-        "flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center animate-soft-scale-in",
+        "animate-soft-scale-in flex flex-col items-center justify-center rounded-2xl",
+        "border border-dashed border-[var(--cw-hairline-strong)] bg-[var(--cw-surface)]/60",
+        "px-6 py-14 text-center",
         className
       )}
     >
       {Icon ? (
-        <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 transition-smooth hover:scale-105">
+        <div className="transition-smooth mb-4 flex size-12 items-center justify-center rounded-2xl border border-[color-mix(in_srgb,var(--cw-neon)_25%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_9%,transparent)] text-[var(--cw-neon)] hover:scale-105">
           <Icon className="size-5" aria-hidden />
         </div>
       ) : null}
-      <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      <h3 className="font-heading text-base font-semibold text-[var(--cw-ink)]">{title}</h3>
       {description ? (
-        <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">{description}</p>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-[var(--cw-ink-muted)]">
+          {description}
+        </p>
       ) : null}
       {actionLabel && onAction ? (
-        <Button className="mt-5 transition-smooth" onClick={onAction}>
+        <Btn variant="primary" className="mt-5" onClick={onAction}>
           {actionLabel}
-        </Button>
+        </Btn>
       ) : null}
     </FadeIn>
   );
