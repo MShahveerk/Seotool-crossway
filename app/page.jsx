@@ -31,6 +31,7 @@ import DataForSeoExplorerSection from "./components/seo/DataForSeoExplorerSectio
 import GoogleAdsKeywordPlannerSection from "./components/seo/GoogleAdsKeywordPlannerSection";
 import SerpAnalysisSection from "./components/seo/SerpAnalysisSection";
 import LinkOpportunitiesSection from "./components/seo/LinkOpportunitiesSection";
+import KeywordOpportunitiesSection from "./components/seo/KeywordOpportunitiesSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { sessionCanAccessSection } from "../lib/clientPermissions";
@@ -221,6 +222,8 @@ export default function Home() {
         return <SerpAnalysisSection selectedSite={seoSite} />;
       case "link-opportunities":
         return <LinkOpportunitiesSection selectedSite={seoSite} />;
+      case "keyword-opportunities":
+        return <KeywordOpportunitiesSection selectedSite={seoSite} />;
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
       case "calendar":
