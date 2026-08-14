@@ -185,12 +185,14 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
     return matchesQuery([r.sourceDomain, r.sourceUrl, r.anchor, r.targetDomain]);
   });
 
+  /* Rejected buckets stay visible — you should be able to see what was ruled
+     out and why — but they sit behind their own tabs, never in Can pitch. */
   const typeTabs = [
     { id: "actionable", label: "Can pitch" },
-    { id: "all", label: "All" },
     ...(data?.byType || [])
       .filter((t) => t.count > 0 && !ACTIONABLE.includes(t.type))
       .map((t) => ({ id: t.type, label: t.label, badge: t.count })),
+    { id: "all", label: "All" },
   ];
 
   const intersectColumns = [
