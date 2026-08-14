@@ -19,7 +19,7 @@ import DataTable from "../ui-shared/DataTable";
 import StatTile from "../ui-shared/StatTile";
 import Btn from "../ui-shared/Btn";
 import ProspectModal from "./ProspectModal";
-import { downloadLinkOpportunitiesPdf } from "./linkOpportunitiesReport";
+import { downloadServerReport } from "./downloadReport";
 
 const GEO_OPTIONS = [
   { value: "us", label: "US" },
@@ -77,7 +77,17 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
     if (!data || pdfBusy) return;
     setPdfBusy(true);
     try {
-      await downloadLinkOpportunitiesPdf(data);
+      await downloadServerReport(
+        "/api/seo/link-opportunities/report",
+        {
+          keyword: data.keyword,
+          siteUrl: analysisSite,
+          location: data.location || "",
+          device: data.device || device,
+          geo: data.geo || geo,
+        },
+        "link-opportunities.pdf"
+      );
     } catch (err) {
       setError(`PDF export failed: ${err.message || "unknown error"}`);
     } finally {

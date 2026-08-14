@@ -16,7 +16,7 @@ import TabRail from "../ui-shared/TabRail";
 import DataTable from "../ui-shared/DataTable";
 import StatTile from "../ui-shared/StatTile";
 import Btn from "../ui-shared/Btn";
-import { downloadKeywordOpportunitiesPdf } from "./keywordOpportunitiesReport";
+import { downloadServerReport } from "./downloadReport";
 
 const INPUT =
   "w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3.5 py-2.5 text-sm text-[var(--cw-ink)] transition-smooth placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_25%,transparent)]";
@@ -77,7 +77,11 @@ export default function KeywordOpportunitiesSection({ selectedSite = "" }) {
     if (!data || pdfBusy) return;
     setPdfBusy(true);
     try {
-      await downloadKeywordOpportunitiesPdf(data);
+      await downloadServerReport(
+        "/api/seo/keyword-opportunities/report",
+        { domain: data.domain },
+        "keyword-opportunities.pdf"
+      );
     } catch (err) {
       setError(`PDF export failed: ${err.message || "unknown error"}`);
     } finally {
