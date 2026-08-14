@@ -49,8 +49,8 @@ export async function POST(req) {
       location,
       device,
       geo,
-      rankers: Math.min(20, Math.max(3, Number(rankers) || 10)),
-      refdomains: Math.min(250, Math.max(25, Number(refdomains) || 200)),
+      rankers: Math.min(30, Math.max(3, Number(rankers) || 10)),
+      refdomains: Math.min(200, Math.max(25, Number(refdomains) || 200)),
     });
     const bytes = await buildLinkOpportunitiesPdf(data);
 

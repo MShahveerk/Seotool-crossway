@@ -65,8 +65,10 @@ export async function POST(req) {
         geo: ALLOWED_GEO.has(String(geo).toLowerCase()) ? String(geo).toLowerCase() : "us",
         // Clamped: depth is the credit dial, so it can't be driven off a cliff
         // by a hand-edited request. 20 x 250 is the ceiling the UI offers.
-        rankers: Math.min(20, Math.max(3, Number(rankers) || 10)),
-        refdomains: Math.min(250, Math.max(25, Number(refdomains) || 200)),
+        rankers: Math.min(30, Math.max(3, Number(rankers) || 10)),
+        // 200 is the hard ceiling in fetchBacklinksRefdomains; anything above
+        // it is silently truncated, so clamp honestly rather than pretending.
+        refdomains: Math.min(200, Math.max(25, Number(refdomains) || 200)),
       },
       { force: Boolean(refresh) }
     );

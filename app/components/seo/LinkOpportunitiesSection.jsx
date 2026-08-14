@@ -9,6 +9,7 @@ import {
   FiMonitor,
   FiRefreshCw,
   FiSearch,
+  FiX,
   FiSmartphone,
   FiZap,
 } from "react-icons/fi";
@@ -34,10 +35,18 @@ const GEO_OPTIONS = [
  * is the credit dial — shown with its cost rather than hidden, and cached
  * separately per depth so widening a search never re-bills the narrow one.
  */
+/*
+ * Referring domains are pinned at 200 because that is the ceiling
+ * `fetchBacklinksRefdomains` enforces — asking for more silently returns 200,
+ * so advertising a higher number here would be a lie. The real dial is how many
+ * ranking sites get analysed: each new rival brings a genuinely different link
+ * profile, where deeper refdomains just reach further down the same tail.
+ */
 const DEPTHS = {
   standard: { rankers: 10, refdomains: 200, label: "Standard", credits: "~3,000" },
-  wide: { rankers: 15, refdomains: 250, label: "Wide", credits: "~5,600" },
-  exhaustive: { rankers: 20, refdomains: 250, label: "Exhaustive", credits: "~7,000" },
+  wide: { rankers: 15, refdomains: 200, label: "Wide", credits: "~4,500" },
+  exhaustive: { rankers: 20, refdomains: 200, label: "Exhaustive", credits: "~6,000" },
+  maximum: { rankers: 30, refdomains: 200, label: "Maximum", credits: "~9,000" },
 };
 
 const INPUT =
@@ -70,6 +79,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   const [detail, setDetail] = useState(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [depth, setDepth] = useState("standard");
+  const [query, setQuery] = useState("");
 
   /**
    * The selected client IS used here — for one thing only: marking which
@@ -148,13 +158,32 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   /** Types you can realistically pitch, as opposed to links you can only observe. */
   const ACTIONABLE = ["serp-listing", "guest-post", "directory", "resource", "roundup"];
 
+  /**
+   * Free-text filter across everything that identifies a prospect — the domain,
+   * the anchors it hands out, who it links to, and its opportunity type. With
+   * hundreds of rows, scrolling is not a search strategy.
+   */
+  const q = query.trim().toLowerCase();
+  const matchesQuery = (haystacks) =>
+    !q || haystacks.filter(Boolean).some((h) => String(h).toLowerCase().includes(q));
+
   const intersectRows = (data?.intersect || []).filter((r) => {
     if (onlyGaps && r.youHaveIt) return false;
-    if (typeFilter === "all") return true;
-    if (typeFilter === "actionable") return ACTIONABLE.includes(r.type);
-    return r.type === typeFilter;
+    if (typeFilter === "actionable" && !ACTIONABLE.includes(r.type)) return false;
+    if (typeFilter !== "all" && typeFilter !== "actionable" && r.type !== typeFilter) return false;
+    return matchesQuery([
+      r.domain,
+      r.typeLabel,
+      (r.anchors || []).join(" "),
+      (r.linksTo || []).join(" "),
+      (r.examples || []).map((e) => e.sourceUrl).join(" "),
+    ]);
   });
-  const strongestRows = (data?.strongest || []).filter((r) => (onlyGaps ? !r.youHaveIt : true));
+
+  const strongestRows = (data?.strongest || []).filter((r) => {
+    if (onlyGaps && r.youHaveIt) return false;
+    return matchesQuery([r.sourceDomain, r.sourceUrl, r.anchor, r.targetDomain]);
+  });
 
   const typeTabs = [
     { id: "actionable", label: "Can pitch" },
@@ -525,15 +554,38 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
               onChange={setView}
               ariaLabel="Opportunity view"
             />
-            <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[var(--cw-ink-muted)]">
-              <input
-                type="checkbox"
-                checked={onlyGaps}
-                onChange={(e) => setOnlyGaps(e.target.checked)}
-                className="size-3.5"
-              />
-              Hide sites already linking to me
-            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative">
+                <FiSearch className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-[var(--cw-ink-faint)]" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Filter domains, anchors, pages…"
+                  aria-label="Filter prospects"
+                  className="w-56 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] py-2 pr-8 pl-9 text-xs text-[var(--cw-ink)] transition-smooth placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:outline-none sm:w-72"
+                />
+                {query ? (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    aria-label="Clear filter"
+                    className="transition-smooth absolute top-1/2 right-2 -translate-y-1/2 rounded-md p-1 text-[var(--cw-ink-faint)] hover:text-[var(--cw-ink)]"
+                  >
+                    <FiX className="size-3.5" />
+                  </button>
+                ) : null}
+              </div>
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[var(--cw-ink-muted)]">
+                <input
+                  type="checkbox"
+                  checked={onlyGaps}
+                  onChange={(e) => setOnlyGaps(e.target.checked)}
+                  className="size-3.5"
+                />
+                Hide sites already linking to me
+              </label>
+            </div>
           </div>
 
           {view === "intersect" ? (
@@ -554,8 +606,12 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
               onRowClick={(row) => setDetail(row)}
               maxHeight="60vh"
               emptyIcon={Link2Off}
-              emptyTitle="No prospects in this filter"
-              emptyDescription="Try the All tab, or untick 'hide sites already linking to me'. If everything is empty, the rivals' backlink data may not have returned."
+              emptyTitle={query ? `Nothing matches “${query}”` : "No prospects in this filter"}
+              emptyDescription={
+                query
+                  ? "Clear the filter, or widen the type tabs above."
+                  : "Try the All tab, or untick 'hide sites already linking to me'. If everything is empty, the rivals' backlink data may not have returned."
+              }
               footer={`${formatNum(intersectRows.length)} sites · click any row for full detail and an outreach check · ranked by how gettable the link is, then by how many rivals already have it`}
               ariaLabel="Link prospects"
             />
