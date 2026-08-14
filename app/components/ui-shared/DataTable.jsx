@@ -33,8 +33,8 @@
  *   headerHint title attribute on the header
  */
 
-import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ChevronsUpDown, Inbox } from "lucide-react";
+import { Fragment, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, ChevronDown, ChevronsUpDown, Inbox } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const DENSITY = {
@@ -66,6 +66,8 @@ export default function DataTable({
   rows = [],
   getRowKey,
   onRowClick,
+  /** (row, index) => node — when given, rows expand in place to reveal detail. */
+  renderExpanded,
   rowClassName,
   defaultSort = null,
   sort: controlledSort,
@@ -83,8 +85,19 @@ export default function DataTable({
   ariaLabel,
 }) {
   const [innerSort, setInnerSort] = useState(defaultSort);
+  const [expandedKeys, setExpandedKeys] = useState(() => new Set());
   const sort = controlledSort !== undefined ? controlledSort : innerSort;
   const d = DENSITY[density] || DENSITY.comfortable;
+  const expandable = typeof renderExpanded === "function";
+
+  const toggleExpanded = (key) => {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const setSort = (next) => {
     if (onSortChange) onSortChange(next);
@@ -133,6 +146,16 @@ export default function DataTable({
         <table className="w-full border-collapse" aria-label={ariaLabel}>
           <thead className={cn(stickyHeader && "sticky top-0 z-10")}>
             <tr>
+              {expandable ? (
+                <th
+                  scope="col"
+                  aria-label="Expand"
+                  className={cn(
+                    "w-8 border-b border-[var(--cw-hairline)] bg-[var(--cw-raised)]",
+                    d.head
+                  )}
+                />
+              ) : null}
               {columns.map((col) => {
                 const key = col.sortKey || col.key;
                 const sortable = col.sortable ?? Boolean(col.numeric);
@@ -185,6 +208,9 @@ export default function DataTable({
             {loading
               ? Array.from({ length: loadingRows }).map((_, i) => (
                   <tr key={`skeleton-${i}`}>
+                    {expandable ? (
+                      <td className={cn("border-t border-[var(--cw-hairline)]", d.cell)} />
+                    ) : null}
                     {columns.map((col) => (
                       <td
                         key={col.key}
@@ -198,33 +224,71 @@ export default function DataTable({
                     ))}
                   </tr>
                 ))
-              : sorted.map((row, i) => (
-                  <tr
-                    key={getRowKey ? getRowKey(row, i) : (row?.id ?? i)}
-                    onClick={onRowClick ? () => onRowClick(row, i) : undefined}
-                    className={cn(
-                      "transition-colors duration-150",
-                      "hover:bg-[color-mix(in_srgb,var(--cw-ink)_4%,transparent)]",
-                      onRowClick && "cursor-pointer",
-                      typeof rowClassName === "function" ? rowClassName(row, i) : rowClassName
-                    )}
-                  >
-                    {columns.map((col) => (
-                      <td
-                        key={col.key}
+              : sorted.map((row, i) => {
+                  const key = getRowKey ? getRowKey(row, i) : (row?.id ?? i);
+                  const isOpen = expandable && expandedKeys.has(key);
+                  return (
+                    <Fragment key={key}>
+                      <tr
+                        onClick={
+                          expandable
+                            ? () => toggleExpanded(key)
+                            : onRowClick
+                              ? () => onRowClick(row, i)
+                              : undefined
+                        }
                         className={cn(
-                          "border-t border-[var(--cw-hairline)] text-[var(--cw-ink-dim)]",
-                          d.cell,
-                          alignClass(col),
-                          col.numeric && "font-mono tabular-nums",
-                          col.className
+                          "transition-colors duration-150",
+                          "hover:bg-[color-mix(in_srgb,var(--cw-ink)_4%,transparent)]",
+                          (onRowClick || expandable) && "cursor-pointer",
+                          isOpen && "bg-[color-mix(in_srgb,var(--cw-ink)_4%,transparent)]",
+                          typeof rowClassName === "function" ? rowClassName(row, i) : rowClassName
                         )}
                       >
-                        {col.render ? col.render(row, i) : (row?.[col.key] ?? "—")}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
+                        {expandable ? (
+                          <td
+                            className={cn(
+                              "border-t border-[var(--cw-hairline)] text-[var(--cw-ink-faint)]",
+                              d.cell
+                            )}
+                          >
+                            <ChevronDown
+                              className={cn(
+                                "size-3.5 transition-transform duration-200",
+                                isOpen && "rotate-180 text-[var(--cw-neon)]"
+                              )}
+                              aria-hidden
+                            />
+                          </td>
+                        ) : null}
+                        {columns.map((col) => (
+                          <td
+                            key={col.key}
+                            className={cn(
+                              "border-t border-[var(--cw-hairline)] text-[var(--cw-ink-dim)]",
+                              d.cell,
+                              alignClass(col),
+                              col.numeric && "font-mono tabular-nums",
+                              col.className
+                            )}
+                          >
+                            {col.render ? col.render(row, i) : (row?.[col.key] ?? "—")}
+                          </td>
+                        ))}
+                      </tr>
+                      {isOpen ? (
+                        <tr>
+                          <td
+                            colSpan={columns.length + 1}
+                            className="border-t border-[var(--cw-hairline)] bg-[var(--cw-canvas)] px-4 py-3"
+                          >
+                            {renderExpanded(row, i)}
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
           </tbody>
         </table>
 

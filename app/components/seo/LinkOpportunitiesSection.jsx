@@ -193,9 +193,22 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       ),
     },
     {
+      key: "pageCount",
+      label: "Pages",
+      numeric: true,
+      width: "88px",
+      headerHint: "Exact linking pages captured for this site — click a row to open them",
+      render: (row) =>
+        row.pageCount ? (
+          <span className="text-[var(--cw-ink)]">{row.pageCount}</span>
+        ) : (
+          <span className="text-[var(--cw-ink-faint)]">—</span>
+        ),
+    },
+    {
       key: "anchors",
       label: "Anchors used",
-      width: "200px",
+      width: "180px",
       sortable: false,
       render: (row) =>
         row.anchors?.length ? (
@@ -207,6 +220,69 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
         ),
     },
   ];
+
+  /** The exact pages — what you actually open to find a contact or submission form. */
+  const renderProspectPages = (row) => (
+    <div className="space-y-2.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+          Linking pages on {row.domain}
+        </p>
+        <a
+          href={`https://${row.domain}`}
+          target="_blank"
+          rel="noreferrer"
+          className="transition-smooth inline-flex items-center gap-1 text-[11px] font-bold text-[var(--cw-neon)] hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          Open site <FiExternalLink className="size-2.5" />
+        </a>
+        {row.typeHint ? (
+          <span className="text-[11px] text-[var(--cw-ink-muted)]">· {row.typeHint}</span>
+        ) : null}
+      </div>
+
+      {row.examples?.length ? (
+        <ul className="space-y-1.5">
+          {row.examples.map((ex, i) => (
+            <li
+              key={`${ex.sourceUrl}-${i}`}
+              className="rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-3 py-2"
+            >
+              <a
+                href={ex.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="transition-smooth font-mono text-[12px] break-all text-[var(--cw-info)] hover:text-[var(--cw-neon)]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {ex.sourceUrl}
+              </a>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--cw-ink-muted)]">
+                {ex.anchor ? (
+                  <span>
+                    anchor: <span className="text-[var(--cw-ink)]">&ldquo;{ex.anchor}&rdquo;</span>
+                  </span>
+                ) : null}
+                <span>→ links to {ex.targetDomain}</span>
+                {ex.dofollow === false ? (
+                  <span className="text-[var(--cw-caution)]">nofollow</span>
+                ) : ex.dofollow === true ? (
+                  <span className="text-[var(--cw-neon)]">dofollow</span>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[12px] leading-relaxed text-[var(--cw-ink-muted)]">
+          No exact page was captured for this site — it came from the referring-domain list rather
+          than the per-link list, so you have the domain but not the URL. Open the site and look for
+          a resource, directory or contribute page.
+        </p>
+      )}
+    </div>
+  );
 
   const strongestColumns = [
     {
@@ -427,11 +503,12 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
               columns={intersectColumns}
               rows={intersectRows}
               getRowKey={(row) => row.domain}
+              renderExpanded={renderProspectPages}
               maxHeight="60vh"
               emptyIcon={Link2Off}
               emptyTitle="No prospects in this filter"
               emptyDescription="Try the All tab, or untick 'hide sites already linking to me'. If everything is empty, the rivals' backlink data may not have returned."
-              footer={`${formatNum(intersectRows.length)} sites · ranked by how gettable the link is, then by how many rivals already have it`}
+              footer={`${formatNum(intersectRows.length)} sites · click any row for its exact linking pages · ranked by how gettable the link is, then by how many rivals already have it`}
               ariaLabel="Link prospects"
             />
           ) : (
