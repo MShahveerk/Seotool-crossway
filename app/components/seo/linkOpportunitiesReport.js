@@ -32,6 +32,10 @@ const STYLES = `
   .sr .targets { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
   .sr .tchip { background: #f7f8f9; border: 1px solid #dfe3e8; color: #1f2937; border-radius: 5px; padding: 2px 7px; font-size: 10px; }
   .sr .tchip b { color: #047857; }
+  .sr .pages em { color: #1f2937; font-style: normal; }
+  .sr .toc { background: #f7f8f9; border: 1px solid #dfe3e8; border-radius: 8px; padding: 10px 14px; margin: 4px 0 6px; }
+  .sr .toc ol { margin: 0; padding-left: 18px; }
+  .sr .toc li { font-size: 10.5px; color: #1f2937; padding: 1px 0; }
 `;
 
 /** Groups mirror the intent: what would you actually do about this site? */
@@ -66,39 +70,54 @@ const GROUPS = [
 function prospectRows(rows) {
   return rows
     .map((r) => {
-      const pages = (r.examples || []).slice(0, 2).map((e) => esc(e.sourceUrl)).join("<br>");
+      // Every captured page, not a sample — these URLs are the deliverable:
+      // they're what someone opens to find the contact or submission form.
+      const pages = (r.examples || [])
+        .map((e) => `<div class="pages">${esc(e.sourceUrl)}${e.anchor ? ` <em>“${esc(e.anchor)}”</em>` : ""}</div>`)
+        .join("");
+      const targets = (r.linksTo || []).join(", ");
       return `<tr>
         <td>
           <span class="dom">${esc(r.domain)}</span>
           ${r.alsoRanks ? ' <span class="star">★ also ranks</span>' : ""}
           ${r.youHaveIt ? ' <span class="have">ALREADY LINKS TO YOU</span>' : ""}
-          ${pages ? `<div class="pages">${pages}</div>` : ""}
+          ${targets ? `<div class="pages">links to: ${esc(targets)}</div>` : ""}
+          ${pages}
         </td>
         <td class="c"><span class="hit ${r.hits > 1 ? "" : "one"}">${esc(r.hits)}</span></td>
         <td class="r">${r.authority != null ? esc(r.authority) : "—"}</td>
-        <td class="dir">${esc((r.anchors || []).slice(0, 2).join(" · ") || "—")}</td>
+        <td class="c">${r.dofollow === true ? "dofollow" : r.dofollow === false ? '<span class="dir">nofollow</span>' : '<span class="dir">—</span>'}</td>
+        <td class="dir">${esc((r.anchors || []).slice(0, 3).join(" · ") || "—")}</td>
       </tr>`;
     })
     .join("");
 }
 
-export function buildLinkOpportunitiesFragment(data, { limitPerGroup = 25 } = {}) {
+export function buildLinkOpportunitiesFragment(data, { limitPerGroup = 80 } = {}) {
   const day = today();
   const rows = data.intersect || [];
   const summary = data.summary || {};
   const forSite = data.yourHost || "";
 
-  const groups = GROUPS.map((g) => {
-    const list = rows.filter((r) => g.types.includes(r.type) && !r.youHaveIt).slice(0, limitPerGroup);
-    if (!list.length) return "";
-    return `
-      <div class="grouphdr"><h3>${esc(g.title)}</h3><span class="gcount">${num(list.length)} site${list.length === 1 ? "" : "s"}</span></div>
+  const present = GROUPS.map((g) => ({
+    g,
+    all: rows.filter((r) => g.types.includes(r.type) && !r.youHaveIt),
+  })).filter((x) => x.all.length);
+
+  const groups = present
+    .map(({ g, all }) => {
+      const list = all.slice(0, limitPerGroup);
+      return `
+      <div class="grouphdr"><h3>${esc(g.title)}</h3><span class="gcount">${num(all.length)} site${all.length === 1 ? "" : "s"}${
+        all.length > list.length ? ` · showing top ${num(list.length)}` : ""
+      }</span></div>
       <p class="ghint">${esc(g.hint)}</p>
       <table class="grid">
-        <thead><tr><th>Site &amp; example linking pages</th><th>Rivals</th><th>Authority</th><th>Anchors used</th></tr></thead>
+        <thead><tr><th>Site, who it links to, and the exact pages</th><th>Rivals</th><th>Authority</th><th>Follow</th><th>Anchors used</th></tr></thead>
         <tbody>${prospectRows(list)}</tbody>
       </table>`;
-  }).join("");
+    })
+    .join("");
 
   const analysed = (data.targets || [])
     .map((t) => `<span class="tchip"><b>#${esc(t.position ?? "—")}</b> ${esc(t.domain)}</span>`)
@@ -120,6 +139,14 @@ export function buildLinkOpportunitiesFragment(data, { limitPerGroup = 25 } = {}
         forSite ? `. Sites already linking to ${esc(forSite)} are excluded` : ""
       }.
     </p>
+
+    <div class="toc">
+      <ol>
+        <li>Summary</li>
+        ${present.map(({ g, all }) => `<li>${esc(g.title)} — ${num(all.length)}</li>`).join("")}
+        ${analysed ? "<li>Ranking sites analysed</li>" : ""}
+      </ol>
+    </div>
 
     <h2>Summary</h2>
     ${metricRow([
@@ -150,6 +177,8 @@ export async function downloadLinkOpportunitiesPdf(data) {
   await downloadReportPdf(
     buildLinkOpportunitiesFragment(data),
     `link-opportunities-${slugify(data.keyword, "keyword")}.pdf`,
-    { avoid: ["table"] }
+    // Break between rows, never through one — whole tables no longer fit now
+    // that the caps are generous.
+    { avoid: ["tr"] }
   );
 }
