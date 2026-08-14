@@ -30,6 +30,7 @@ import HelpCenterSection from "./components/seo/HelpCenterSection";
 import DataForSeoExplorerSection from "./components/seo/DataForSeoExplorerSection";
 import GoogleAdsKeywordPlannerSection from "./components/seo/GoogleAdsKeywordPlannerSection";
 import SerpAnalysisSection from "./components/seo/SerpAnalysisSection";
+import LinkOpportunitiesSection from "./components/seo/LinkOpportunitiesSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { sessionCanAccessSection } from "../lib/clientPermissions";
@@ -86,6 +87,7 @@ const WEBSITE_SEO_SECTIONS = new Set([
   "sitemap-health",
   "site-explorer",
   "backlink-profile",
+  "link-opportunities",
   "link-index",
   "seranking-domain",
   "seranking-backlinks",
@@ -217,6 +219,8 @@ export default function Home() {
       case "serp-analysis":
       case "competitor-matrix":
         return <SerpAnalysisSection selectedSite={seoSite} />;
+      case "link-opportunities":
+        return <LinkOpportunitiesSection selectedSite={seoSite} />;
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
       case "calendar":

@@ -12,8 +12,10 @@ import {
   LayoutDashboard,
   LogOut,
   Megaphone,
+  PenTool,
   Presentation,
   Search,
+  Send,
   Settings,
   Shield,
   Workflow,
@@ -61,6 +63,10 @@ const WORKSPACE_ICONS = {
   presentation: Presentation,
   shield: Shield,
   workflow: Workflow,
+  /* The two studios get their own glyphs — a writing machine and a broadcast
+     machine — so they're never mistaken for the domains they feed. */
+  blogStudio: PenTool,
+  postStudio: Send,
 };
 
 /** Unread badges are per-section; a workspace shows the sum of its sections'. */
@@ -345,6 +351,7 @@ export default function AppSidebar({
                   <SidebarMenuItem key={workspace.id}>
                     <SidebarMenuButton
                       isActive={isActive}
+                      data-accent={workspace.accent || undefined}
                       onClick={() => openWorkspace(workspace, sections)}
                       tooltip={workspace.label}
                     >
