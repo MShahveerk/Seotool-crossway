@@ -35,7 +35,6 @@ import {
   FiLayers,
 } from "react-icons/fi";
 import SeoPanelShell, { formatNum } from "./SeoPanelShell";
-import { downloadSerpReportPdf } from "./serpAnalysisReport";
 import SideTabs from "../ui-shared/SideTabs";
 import TabRail from "../ui-shared/TabRail";
 import Btn from "../ui-shared/Btn";
@@ -903,11 +902,43 @@ export default function SerpAnalysisSection({ selectedSite }) {
   const analysisSite = siteOverride.trim() || selectedSite || "";
   const [pdfBusy, setPdfBusy] = useState(false);
 
+  /**
+   * The report is built server-side with pdf-lib rather than rasterised in the
+   * browser — real text, embedded fonts, page numbers, and a fraction of the
+   * size. The server re-reads the cached analysis so the document always
+   * matches what the tool computed.
+   */
   const handleExportPdf = async () => {
     if (!data || pdfBusy) return;
     setPdfBusy(true);
     try {
-      await downloadSerpReportPdf(data);
+      const res = await fetch("/api/seo/serp-analysis/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keyword: data.keyword,
+          siteUrl: analysisSite,
+          location: data.location || "",
+          device: data.device || device,
+          geo: data.geo || geo,
+        }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || `Report failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `serp-analysis-${String(data.keyword || "report")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch (err) {
       setError(`PDF export failed: ${err.message || "unknown error"}`);
     } finally {
