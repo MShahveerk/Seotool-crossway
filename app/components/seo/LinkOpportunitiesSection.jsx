@@ -634,6 +634,12 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
             <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-3">
               <p className="mb-2 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
                 Rivals analysed
+                {data.summary?.fromCompetitors ? (
+                  <span className="ml-2 font-normal normal-case tracking-normal text-[var(--cw-ink-muted)]">
+                    {data.summary.fromSerp} from the results page ·{" "}
+                    {data.summary.fromCompetitors} true competitors by keyword overlap
+                  </span>
+                ) : null}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {data.targets.map((t) => (
@@ -644,7 +650,9 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
                     rel="noreferrer"
                     className="transition-smooth inline-flex items-center gap-1.5 rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-2 py-1 font-mono text-[11px] text-[var(--cw-ink-dim)] hover:border-[color-mix(in_srgb,var(--cw-neon)_35%,transparent)] hover:text-[var(--cw-neon)]"
                   >
-                    <span className="text-[var(--cw-ink-faint)]">#{t.position}</span>
+                    <span className="text-[var(--cw-ink-faint)]">
+                      {t.position != null ? `#${t.position}` : "overlap"}
+                    </span>
                     {t.domain}
                     <FiExternalLink className="size-2.5" />
                   </a>
