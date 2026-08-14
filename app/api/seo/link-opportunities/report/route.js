@@ -29,15 +29,29 @@ export async function POST(req) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { keyword = "", siteUrl = "", location = "", device = "desktop", geo = "us" } = body;
+    const {
+      keyword = "",
+      siteUrl = "",
+      location = "",
+      device = "desktop",
+      geo = "us",
+      rankers = 10,
+      refdomains = 200,
+    } = body;
 
     if (!String(keyword).trim()) {
       return NextResponse.json({ error: "No keyword supplied." }, { status: 400 });
     }
 
-    // Served from the 14-day cache in the normal case, so building the document
-    // costs nothing and always matches what the tool showed.
-    const data = await getLinkOpportunities(siteUrl, keyword, { location, device, geo });
+    // Depth must match what the screen ran, or this misses the cache and
+    // silently re-bills a full analysis just to print it.
+    const data = await getLinkOpportunities(siteUrl, keyword, {
+      location,
+      device,
+      geo,
+      rankers: Math.min(20, Math.max(3, Number(rankers) || 10)),
+      refdomains: Math.min(250, Math.max(25, Number(refdomains) || 200)),
+    });
     const bytes = await buildLinkOpportunitiesPdf(data);
 
     return new NextResponse(Buffer.from(bytes), {

@@ -29,6 +29,17 @@ const GEO_OPTIONS = [
   { value: "pk", label: "PK" },
 ];
 
+/**
+ * Search depth. Every referring domain returned costs about a credit, so this
+ * is the credit dial — shown with its cost rather than hidden, and cached
+ * separately per depth so widening a search never re-bills the narrow one.
+ */
+const DEPTHS = {
+  standard: { rankers: 10, refdomains: 200, label: "Standard", credits: "~3,000" },
+  wide: { rankers: 15, refdomains: 250, label: "Wide", credits: "~5,600" },
+  exhaustive: { rankers: 20, refdomains: 250, label: "Exhaustive", credits: "~7,000" },
+};
+
 const INPUT =
   "w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3.5 py-2.5 text-sm text-[var(--cw-ink)] transition-smooth placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_25%,transparent)]";
 
@@ -58,6 +69,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   const [typeFilter, setTypeFilter] = useState("actionable");
   const [detail, setDetail] = useState(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [depth, setDepth] = useState("standard");
 
   /**
    * The selected client IS used here — for one thing only: marking which
@@ -85,6 +97,10 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
           location: data.location || "",
           device: data.device || device,
           geo: data.geo || geo,
+          // Same depth the screen used, so the PDF reads the cached result
+          // instead of re-running the analysis.
+          rankers: data.depth?.rankers ?? DEPTHS[depth].rankers,
+          refdomains: data.depth?.refdomains ?? DEPTHS[depth].refdomains,
         },
         "link-opportunities.pdf"
       );
@@ -113,6 +129,8 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
           location: location.trim(),
           device,
           geo,
+          rankers: DEPTHS[depth].rankers,
+          refdomains: DEPTHS[depth].refdomains,
           refresh: force,
         }),
       });
@@ -403,8 +421,16 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
                 </option>
               ))}
             </select>
+            <TabRail
+              size="sm"
+              tabs={Object.entries(DEPTHS).map(([id, d]) => ({ id, label: d.label }))}
+              value={depth}
+              onChange={setDepth}
+              ariaLabel="Search depth"
+            />
             <span className="text-[11px] text-[var(--cw-ink-faint)]">
-              Top 10 rankers · 200 referring domains each
+              Top {DEPTHS[depth].rankers} rankers · {DEPTHS[depth].refdomains} referring domains
+              each · {DEPTHS[depth].credits} credits when uncached
             </span>
           </div>
           <Btn type="submit" variant="primary" size="lg" icon={FiZap} loading={loading} disabled={loading}>
