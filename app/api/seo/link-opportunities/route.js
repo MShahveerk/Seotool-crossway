@@ -48,7 +48,7 @@ export async function POST(req) {
       device = "desktop",
       geo = "us",
       rankers = 10,
-      refdomains = 100,
+      refdomains = 200,
       refresh = false,
     } = body;
 
