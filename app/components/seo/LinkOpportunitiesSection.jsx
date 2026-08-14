@@ -128,7 +128,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   };
 
   /** Types you can realistically pitch, as opposed to links you can only observe. */
-  const ACTIONABLE = ["guest-post", "directory", "resource", "roundup"];
+  const ACTIONABLE = ["serp-listing", "guest-post", "directory", "resource", "roundup"];
 
   const intersectRows = (data?.intersect || []).filter((r) => {
     if (onlyGaps && r.youHaveIt) return false;
@@ -163,6 +163,22 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
           >
             {row.domain}
           </a>
+          {row.onNiche ? (
+            <span
+              className="shrink-0 rounded-full border border-[color-mix(in_srgb,var(--cw-info)_35%,transparent)] bg-[color-mix(in_srgb,var(--cw-info)_10%,transparent)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--cw-info)]"
+              title="This domain reads as being in your niche"
+            >
+              NICHE
+            </span>
+          ) : null}
+          {row.serpPosition != null ? (
+            <span
+              className="shrink-0 rounded-full border border-[color-mix(in_srgb,var(--cw-neon)_30%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_10%,transparent)] px-1.5 py-0.5 font-mono text-[9px] font-bold text-[var(--cw-neon)]"
+              title="Where this listing site ranks for your keyword"
+            >
+              #{row.serpPosition}
+            </span>
+          ) : null}
           {row.youHaveIt ? (
             <span className="shrink-0 rounded-full border border-[color-mix(in_srgb,var(--cw-neon)_30%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_10%,transparent)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--cw-neon)]">
               YOU HAVE
