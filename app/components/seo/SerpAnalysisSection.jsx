@@ -879,6 +879,14 @@ function CompactLadder({ ladder, directoryCount }) {
 /* ---------- main ---------- */
 
 export default function SerpAnalysisSection({ selectedSite }) {
+  /**
+   * The analysis only uses "your site" to locate your own rank and pick the
+   * rivals immediately around you — everything else (the ladder, top rankers,
+   * keyword metrics) is site-independent. So an override here is safe: leave it
+   * blank to analyse as the selected client, or type any domain to research a
+   * SERP in someone else's context. Blank on both simply means no "you" row.
+   */
+  const [siteOverride, setSiteOverride] = useState("");
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
   const [device, setDevice] = useState("desktop");
@@ -890,6 +898,9 @@ export default function SerpAnalysisSection({ selectedSite }) {
   const [seedError, setSeedError] = useState("");
   const [seedResult, setSeedResult] = useState(null);
   const [modalItem, setModalItem] = useState(null);
+
+  /** Typed domain wins; otherwise the client selected in the sidebar. */
+  const analysisSite = siteOverride.trim() || selectedSite || "";
   const [pdfBusy, setPdfBusy] = useState(false);
 
   const handleExportPdf = async () => {
@@ -913,7 +924,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
       const res = await fetch("/api/seo/competitor-seeds", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: data.keyword, siteUrl: selectedSite, geo, device, location: location.trim() }),
+        body: JSON.stringify({ keyword: data.keyword, siteUrl: analysisSite, geo, device, location: location.trim() }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Failed to generate blog ideas");
@@ -937,7 +948,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
       const res = await fetch("/api/seo/serp-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: keyword.trim(), siteUrl: selectedSite, location: location.trim(), device, geo, refresh: force }),
+        body: JSON.stringify({ keyword: keyword.trim(), siteUrl: analysisSite, location: location.trim(), device, geo, refresh: force }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Failed to analyze SERP");
@@ -988,6 +999,26 @@ export default function SerpAnalysisSection({ selectedSite }) {
               className={SERP_INPUT}
             />
           </div>
+          <div className="space-y-1.5 md:col-span-3">
+            <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+              <FiUser className="size-3.5 text-[var(--cw-neon)]" /> Analyse for domain
+            </label>
+            <input
+              type="text"
+              value={siteOverride}
+              onChange={(e) => setSiteOverride(e.target.value)}
+              placeholder={
+                selectedSite
+                  ? `Blank = ${selectedSite} (the selected client)`
+                  : "e.g. example.com — leave blank to just study the SERP"
+              }
+              className={SERP_INPUT}
+            />
+            <p className="text-[11px] text-[var(--cw-ink-faint)]">
+              Only used to find that domain&rsquo;s own rank and the rivals around it. The ladder,
+              top rankers and keyword metrics are the same either way.
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2.5">
@@ -1013,12 +1044,24 @@ export default function SerpAnalysisSection({ selectedSite }) {
                 </option>
               ))}
             </select>
-            {selectedSite ? (
-              <span className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--cw-ink-muted)]">
+            {analysisSite ? (
+              <span
+                className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--cw-ink-muted)]"
+                title={siteOverride.trim() ? "Manual override" : "Selected client"}
+              >
                 <FiUser className="size-3.5 text-[var(--cw-neon)]" />
-                {selectedSite}
+                {analysisSite}
+                {siteOverride.trim() ? (
+                  <span className="rounded bg-[color-mix(in_srgb,var(--cw-neon)_14%,transparent)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--cw-neon)]">
+                    OVERRIDE
+                  </span>
+                ) : null}
               </span>
-            ) : null}
+            ) : (
+              <span className="font-mono text-[11px] text-[var(--cw-ink-faint)]">
+                no site — SERP only
+              </span>
+            )}
           </div>
           <Btn type="submit" variant="primary" size="lg" icon={FiZap} loading={loading} disabled={loading}>
             Analyze SERP

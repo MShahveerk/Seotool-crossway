@@ -69,12 +69,13 @@ function headingsBlock(headings) {
 
 function card(item, opts = {}) {
   const tag = item.isYou ? "YOU" : item.relation === "above" ? "ABOVE YOU" : item.relation === "below" ? "BELOW YOU" : "";
+  const tagCls = item.isYou ? "" : item.relation === "above" ? " above" : item.relation === "below" ? " below" : "";
   return `
     <div class="card ${item.isYou ? "you" : ""}">
       <div class="chead">
         <span class="rank">#${esc(item.position)}</span>
         <div class="ctitle">
-          <div class="ct">${esc(item.title)} ${tag ? `<span class="badge">${tag}</span>` : ""}</div>
+          <div class="ct">${esc(item.title)} ${tag ? `<span class="badge${tagCls}">${tag}</span>` : ""}</div>
           <span class="url">${esc(item.link)}</span>
         </div>
         <div class="cbadges">
@@ -95,53 +96,89 @@ function card(item, opts = {}) {
     </div>`;
 }
 
+/**
+ * Print styling.
+ *
+ * Two rules govern everything here, because the previous version broke both:
+ *  1. **Nothing lighter than #4B5563 on white.** The old palette leaned on
+ *     #9CA3AF for labels, sub-values, footers and the ladder — fine on a backlit
+ *     screen, washed out on paper and in a rasterised PDF.
+ *  2. **Nothing smaller than 9.5px.** Sub-10px type doesn't survive rasterising;
+ *     it thins out and reads grey even when the colour is black. Labels moved
+ *     from 8px to 9.5px and gained weight instead of relying on size to recede.
+ *
+ * Colour is a light document on purpose — this gets printed and emailed to
+ * clients. Crossway green is the accent; everything else is ink on paper.
+ */
 const STYLES = `
-  .sr { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827; font-size: 12px; line-height: 1.45; background: #fff; padding: 0; }
+  .sr { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827; font-size: 12.5px; line-height: 1.5; background: #fff; padding: 0; }
   .sr * { box-sizing: border-box; }
-  .sr .cover { background: linear-gradient(135deg, #064e3b, #065f46 55%, #047857); color: #fff; border-radius: 14px; padding: 26px 28px; margin-bottom: 18px; }
-  .sr .cover .eyebrow { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #6ee7b7; font-weight: 700; }
-  .sr .cover h1 { font-size: 24px; margin: 6px 0 4px; color: #fff; }
-  .sr .cover .subhdr { color: #d1fae5; font-size: 11px; }
-  .sr .cover .rankchip { display: inline-block; margin-top: 12px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px; }
-  .sr h2 { font-size: 15px; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #10b98155; color: #065f46; }
-  .sr .muted { color: #9ca3af; font-style: italic; }
-  .sr .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0; }
-  .sr .metric { background: #f9fafb; border: 1px solid #eef0f2; border-radius: 8px; padding: 8px; }
-  .sr .mlabel { display: block; font-size: 8px; text-transform: uppercase; letter-spacing: .04em; color: #6b7280; font-weight: 700; }
-  .sr .mval { display: block; font-weight: 700; font-size: 13px; margin-top: 2px; }
-  .sr .msub { display: block; font-size: 9px; color: #9ca3af; }
-  .sr .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin: 10px 0; page-break-inside: avoid; }
-  .sr .card.you { border-color: #10b981; background: #ecfdf5; }
-  .sr .chead { display: flex; gap: 10px; align-items: flex-start; border-bottom: 1px solid #f0f1f3; padding-bottom: 8px; margin-bottom: 8px; }
-  .sr .rank { background: #111827; color: #fff; font-weight: 700; border-radius: 8px; padding: 5px 9px; font-size: 12px; }
-  .sr .card.you .rank { background: #059669; }
+
+  .sr .cover { background: linear-gradient(135deg, #052e22, #065f46 58%, #047857); color: #fff; border-radius: 14px; padding: 28px 30px; margin-bottom: 20px; }
+  .sr .cover .eyebrow { font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: #a7f3d0; font-weight: 700; }
+  .sr .cover h1 { font-size: 26px; margin: 8px 0 6px; color: #fff; line-height: 1.2; }
+  .sr .cover .subhdr { color: #e6fffa; font-size: 11.5px; font-weight: 500; }
+  .sr .cover .forsite { color: #a7f3d0; font-size: 11px; margin-top: 4px; }
+  .sr .cover .rankchip { display: inline-block; margin-top: 14px; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 7px 16px; font-weight: 700; font-size: 13.5px; color: #fff; }
+
+  .sr h2 { font-size: 15.5px; margin: 22px 0 10px; padding-bottom: 7px; border-bottom: 2px solid #059669; color: #064e3b; }
+  .sr h3 { font-size: 12.5px; margin: 14px 0 6px; color: #065f46; text-transform: uppercase; letter-spacing: .06em; }
+  .sr .muted { color: #4b5563; }
+
+  .sr .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0; }
+  .sr .metric { background: #f7f8f9; border: 1px solid #dfe3e8; border-radius: 8px; padding: 9px 10px; }
+  .sr .mlabel { display: block; font-size: 9.5px; text-transform: uppercase; letter-spacing: .05em; color: #4b5563; font-weight: 700; }
+  .sr .mval { display: block; font-weight: 700; font-size: 14px; margin-top: 3px; color: #111827; }
+  .sr .msub { display: block; font-size: 10px; color: #4b5563; margin-top: 1px; }
+
+  .sr .card { border: 1px solid #d5dae0; border-radius: 12px; padding: 15px; margin: 11px 0; page-break-inside: avoid; }
+  .sr .card.you { border-color: #059669; border-width: 2px; background: #f0fdf7; }
+  .sr .chead { display: flex; gap: 11px; align-items: flex-start; border-bottom: 1px solid #dfe3e8; padding-bottom: 9px; margin-bottom: 9px; }
+  .sr .rank { background: #111827; color: #fff; font-weight: 700; border-radius: 8px; padding: 6px 10px; font-size: 12.5px; }
+  .sr .card.you .rank { background: #047857; }
   .sr .ctitle { flex: 1; min-width: 0; }
-  .sr .ct { font-weight: 700; font-size: 12.5px; }
-  .sr .badge { font-size: 8px; background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 10px; }
-  .sr .url { color: #059669; font-size: 10px; word-break: break-all; }
+  .sr .ct { font-weight: 700; font-size: 13px; color: #111827; }
+  .sr .badge { font-size: 9.5px; font-weight: 700; background: #047857; color: #fff; padding: 2px 7px; border-radius: 10px; margin-left: 4px; }
+  .sr .badge.above { background: #b91c1c; }
+  .sr .badge.below { background: #4b5563; }
+  .sr .url { color: #047857; font-size: 10.5px; word-break: break-all; font-weight: 500; }
   .sr .cbadges { text-align: right; white-space: nowrap; }
-  .sr .pill { display: inline-block; background: #eff6ff; color: #1e40af; border: 1px solid #dbeafe; border-radius: 6px; padding: 2px 6px; font-size: 9px; font-weight: 700; margin-left: 4px; }
-  .sr .meta { font-style: italic; color: #4b5563; background: #f9fafb; border: 1px solid #f0f1f3; border-radius: 8px; padding: 6px 8px; margin: 6px 0; font-size: 10.5px; }
-  .sr .bl { background: #eff6ff88; border: 1px solid #dbeafe; border-radius: 8px; padding: 8px; margin: 6px 0; }
-  .sr .sub { margin-top: 8px; }
-  .sr .sub b { font-size: 8px; text-transform: uppercase; letter-spacing: .04em; color: #374151; }
-  .sr .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-  .sr .chip { background: #fff; border: 1px solid #dbeafe; color: #1e40af; border-radius: 5px; padding: 1px 6px; font-size: 9px; }
-  .sr .chip em { color: #60a5fa; font-style: normal; font-weight: 700; }
-  .sr table.kw { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 9.5px; }
-  .sr table.kw th { text-align: left; background: #f9fafb; color: #6b7280; font-size: 8px; text-transform: uppercase; padding: 3px 6px; border-bottom: 1px solid #eee; }
-  .sr table.kw td { padding: 3px 6px; border-bottom: 1px solid #f3f4f6; }
+  .sr .pill { display: inline-block; background: #eef4ff; color: #1e3a8a; border: 1px solid #c7d7f5; border-radius: 6px; padding: 3px 7px; font-size: 10px; font-weight: 700; margin-left: 4px; }
+
+  .sr .meta { color: #374151; background: #f7f8f9; border-left: 3px solid #059669; border-radius: 0 6px 6px 0; padding: 7px 10px; margin: 8px 0; font-size: 11px; }
+  .sr .bl { background: #f5f9ff; border: 1px solid #c7d7f5; border-radius: 8px; padding: 9px; margin: 8px 0; }
+  .sr .sub { margin-top: 10px; }
+  .sr .sub b { display: block; font-size: 9.5px; text-transform: uppercase; letter-spacing: .05em; color: #1f2937; margin-bottom: 4px; }
+  .sr .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .sr .chip { background: #fff; border: 1px solid #c7d7f5; color: #1e3a8a; border-radius: 5px; padding: 2px 7px; font-size: 10px; }
+  .sr .chip em { color: #1d4ed8; font-style: normal; font-weight: 700; }
+
+  .sr table.kw { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 10.5px; }
+  .sr table.kw th { text-align: left; background: #eef0f3; color: #1f2937; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 5px 7px; border-bottom: 1px solid #d5dae0; }
+  .sr table.kw td { padding: 4px 7px; border-bottom: 1px solid #e8eaed; color: #1f2937; }
+  .sr table.kw tr:nth-child(even) td { background: #fafbfc; }
   .sr table.kw td.c { text-align: center; font-weight: 700; } .sr table.kw td.r { text-align: right; }
+
   .sr ul.hl { list-style: none; margin: 4px 0 0; padding: 0; }
-  .sr ul.hl li { font-size: 9.5px; padding: 1px 0; }
-  .sr .tag { font-family: monospace; font-size: 8px; font-weight: 700; text-transform: uppercase; padding: 0 4px; border-radius: 3px; background: #eef2ff; color: #4338ca; }
-  .sr .action { display: flex; gap: 8px; padding: 8px; border: 1px solid #f0f1f3; border-radius: 8px; margin: 6px 0; page-break-inside: avoid; }
-  .sr .prio { font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 4px; height: fit-content; }
-  .sr .prio.HIGH { background: #fee2e2; color: #b91c1c; } .sr .prio.MEDIUM { background: #fef3c7; color: #92400e; }
+  .sr ul.hl li { font-size: 10.5px; padding: 2px 0; color: #1f2937; }
+  .sr .tag { font-family: monospace; font-size: 9.5px; font-weight: 700; text-transform: uppercase; padding: 1px 5px; border-radius: 3px; background: #e0e7ff; color: #3730a3; margin-right: 4px; }
+
+  .sr .action { display: flex; gap: 9px; padding: 10px; border: 1px solid #d5dae0; border-radius: 8px; margin: 7px 0; page-break-inside: avoid; }
+  .sr .action b { font-size: 12px; color: #111827; }
+  .sr .action div div { color: #374151; font-size: 11px; margin-top: 2px; }
+  .sr .prio { font-size: 9.5px; font-weight: 700; padding: 3px 7px; border-radius: 4px; height: fit-content; white-space: nowrap; }
+  .sr .prio.HIGH { background: #b91c1c; color: #fff; } .sr .prio.MEDIUM { background: #b45309; color: #fff; }
+
   .sr table.ladder { width: 100%; border-collapse: collapse; }
-  .sr table.ladder td { padding: 2px 6px; border-bottom: 1px solid #f3f4f6; font-size: 9.5px; }
-  .sr table.ladder .dir { color: #9ca3af; }
-  .sr .foot { margin-top: 22px; padding-top: 10px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 9px; text-align: center; }
+  .sr table.ladder td { padding: 4px 7px; border-bottom: 1px solid #e8eaed; font-size: 10.5px; color: #1f2937; }
+  .sr table.ladder tr:nth-child(even) td { background: #fafbfc; }
+  .sr table.ladder .dir { color: #4b5563; }
+  .sr table.ladder .me { font-weight: 700; color: #047857; }
+
+  .sr ul.paa { margin: 6px 0 0; padding-left: 18px; }
+  .sr ul.paa li { font-size: 11px; color: #1f2937; padding: 2px 0; }
+
+  .sr .foot { margin-top: 24px; padding-top: 11px; border-top: 1px solid #d5dae0; color: #4b5563; font-size: 10px; text-align: center; }
 `;
 
 export function buildSerpReportFragment(data) {
@@ -156,36 +193,53 @@ export function buildSerpReportFragment(data) {
     .map((a) => `<div class="action"><span class="prio ${esc(a.priority)}">${esc(a.priority)}</span><div><b>${esc(a.title)}</b><div>${esc(a.description)}</div></div></div>`)
     .join("");
 
-  const competitors = (data.directCompetitors || []).map((c) => card(c, { headings: true })).join("");
+  // Grouped the same way the app groups them, so the PDF and the screen tell
+  // the same story rather than two different ones.
+  const rivals = data.directCompetitors || [];
+  const above = rivals.filter((c) => c.relation === "above").map((c) => card(c, { headings: true })).join("");
+  const below = rivals.filter((c) => c.relation === "below").map((c) => card(c, { headings: true })).join("");
+  const other = rivals
+    .filter((c) => c.relation !== "above" && c.relation !== "below")
+    .map((c) => card(c, { headings: true }))
+    .join("");
   const leaders = (data.topRankers || []).map((c) => card(c, { headings: false })).join("");
 
   const ladder = (data.fullLadder || [])
-    .map((r) => `<tr><td>#${esc(r.position)}</td><td class="${r.tag === "directory" ? "dir" : ""}">${esc(r.title || r.domain)}</td><td class="dir">${esc(r.domain)}</td><td>${r.tag === "you" ? "YOU" : r.tag === "directory" ? "directory" : ""}</td></tr>`)
+    .map(
+      (r) =>
+        `<tr><td class="${r.tag === "you" ? "me" : ""}">#${esc(r.position)}</td><td class="${r.tag === "directory" ? "dir" : r.tag === "you" ? "me" : ""}">${esc(r.title || r.domain)}</td><td class="dir">${esc(r.domain)}</td><td class="${r.tag === "you" ? "me" : "dir"}">${r.tag === "you" ? "YOU" : r.tag === "directory" ? "directory" : ""}</td></tr>`
+    )
     .join("");
+
+  const analysedFor = data.yourHost || "";
 
   const content = `
     <div class="cover">
       <div class="eyebrow">Crossway SEO · SERP Analysis</div>
       <h1>“${esc(data.keyword)}”</h1>
-      <div class="subhdr">${esc(data.location || "no location")} · ${esc(data.device)} · ${esc(data.serpDepth)} results · ${esc(today)}</div>
-      <div class="rankchip">${data.found ? `Your position: #${esc(data.yourRank)}` : `Not ranking in the top ${esc(data.serpDepth)} results`}</div>
+      <div class="subhdr">${esc(data.location || "no location set")} · ${esc(data.device)} · ${esc(data.serpDepth)} results · ${esc(today)}</div>
+      ${analysedFor ? `<div class="forsite">Analysed for ${esc(analysedFor)}</div>` : ""}
+      <div class="rankchip">${data.found ? `Position #${esc(data.yourRank)}` : `Not ranking in the top ${esc(data.serpDepth)} results`}</div>
     </div>
 
     <h2>Keyword Metrics</h2>
     ${km.available ? metricRow([
-      { label: "Search volume", value: num(km.volume), sub: "/ mo" },
+      { label: "Search volume", value: num(km.volume), sub: "per month" },
       { label: "Difficulty", value: km.difficulty != null ? `${km.difficulty}/100` : "—" },
       { label: "CPC", value: km.cpcFormatted || (km.cpc != null ? `$${km.cpc}` : "—") },
       { label: "Competition", value: esc(km.competitionLevel || "—"), sub: `trend: ${esc(km.trendDirection || "stable")}` },
-    ]) : `<p class="muted">Keyword metrics unavailable.</p>`}
+    ]) : `<p class="muted">Keyword metrics unavailable for this keyword.</p>`}
 
-    <h2>Your Site</h2>
+    <h2>${analysedFor ? esc(analysedFor) : "Your Site"}</h2>
     ${yourCard}
     ${actions ? `<h2>How To Move Up</h2>${actions}` : ""}
-    ${competitors ? `<h2>Your Direct Competitors</h2>${competitors}` : ""}
-    ${leaders ? `<h2>Top Rankers</h2>${leaders}` : ""}
+    ${above || below || other ? `<h2>Direct Competitors</h2>` : ""}
+    ${above ? `<h3>Above you</h3>${above}` : ""}
+    ${below ? `<h3>Below you</h3>${below}` : ""}
+    ${other ? `<h3>Nearest rivals</h3>${other}` : ""}
+    ${leaders ? `<h2>Top Ranking Sites</h2>${leaders}` : ""}
     ${ladder ? `<h2>Full Google SERP (${esc(data.serpDepth)} results)</h2><table class="ladder">${ladder}</table>` : ""}
-    ${(data.relatedQuestions || []).length ? `<h2>People Also Ask</h2><ul>${data.relatedQuestions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul>` : ""}
+    ${(data.relatedQuestions || []).length ? `<h2>People Also Ask</h2><ul class="paa">${data.relatedQuestions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul>` : ""}
     <div class="foot">Generated by Crossway SEO Tool · SERP Analysis · ${esc(today)}</div>
   `;
 
@@ -205,10 +259,19 @@ export async function downloadSerpReportPdf(data) {
   const opt = {
     margin: [10, 10, 12, 10],
     filename: `serp-analysis-${slugify(data.keyword)}.pdf`,
-    image: { type: "jpeg", quality: 0.96 },
-    html2canvas: { scale: 2, backgroundColor: "#ffffff", logging: false, windowWidth: 780 },
-    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    pagebreak: { mode: ["css", "legacy"], avoid: [".card", ".action"] },
+    // PNG, not JPEG. The report is almost entirely small text, and JPEG's
+    // chroma subsampling softens exactly that — it was a large part of why the
+    // text read washed out. Bigger file, dramatically crisper type.
+    image: { type: "png" },
+    html2canvas: {
+      scale: 2.5,
+      backgroundColor: "#ffffff",
+      logging: false,
+      windowWidth: 780,
+      useCORS: true,
+    },
+    jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true },
+    pagebreak: { mode: ["css", "legacy"], avoid: [".card", ".action", "h2", "h3"] },
   };
 
   try {
