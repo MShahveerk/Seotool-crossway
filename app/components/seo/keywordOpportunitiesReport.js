@@ -107,7 +107,44 @@ export function buildKeywordOpportunitiesFragment(data, { limitPerGroup = 25 } =
       at #6 versus a page that doesn't exist yet — decides the rest.
     </p>
 
-    <h2>Summary</h2>
+    <h2>Where the domain stands today</h2>
+    ${metricRow([
+      {
+        label: "Organic keywords",
+        value: num(data.overview?.keywords ?? s.ranking),
+        sub: data.overview?.keywords ? "total indexed" : "in this sample",
+      },
+      {
+        label: "Est. monthly traffic",
+        value: num(data.overview?.traffic ?? s.sampleTraffic),
+        sub: "organic visits",
+      },
+      {
+        label: "Traffic value",
+        value: data.overview?.price != null ? `$${num(data.overview.price)}` : "—",
+        sub: "equivalent ad spend",
+      },
+      {
+        label: "Top 3 positions",
+        value: num((s.distribution || []).find((d) => d.band === "1–3")?.count),
+        sub: "already winning",
+      },
+    ])}
+    ${
+      (s.distribution || []).some((d) => d.count > 0)
+        ? `<table class="grid">
+            <thead><tr><th>Position band</th><th>What it means</th><th>Keywords</th></tr></thead>
+            <tbody>${(s.distribution || [])
+              .map(
+                (d) =>
+                  `<tr><td><b>${esc(d.band)}</b></td><td class="dir">${esc(d.label)}</td><td class="r">${num(d.count)}</td></tr>`
+              )
+              .join("")}</tbody>
+          </table>`
+        : ""
+    }
+
+    <h2>Opportunity summary</h2>
     ${metricRow([
       { label: "Quick wins", value: num(s.quickWins), sub: "rank 4–10" },
       { label: "Striking distance", value: num(s.striking), sub: "rank 11–20" },
@@ -117,6 +154,22 @@ export function buildKeywordOpportunitiesFragment(data, { limitPerGroup = 25 } =
 
     <h2>The work, in order</h2>
     ${groups || `<p class="muted">No opportunities were returned for this domain.</p>`}
+
+    ${
+      (data.topPages || []).length
+        ? `<h2>Pages carrying the traffic</h2>
+           <table class="grid">
+             <thead><tr><th>Page</th><th>Est. traffic</th><th>Keywords</th></tr></thead>
+             <tbody>${data.topPages
+               .slice(0, 12)
+               .map(
+                 (p) =>
+                   `<tr><td class="kurl">${esc(p.url)}</td><td class="r">${num(p.traffic)}</td><td class="r">${num(p.keywords)}</td></tr>`
+               )
+               .join("")}</tbody>
+           </table>`
+        : ""
+    }
 
     ${rivals ? `<h2>Competitors read for gaps</h2><div class="chips">${rivals}</div>` : ""}
 

@@ -88,8 +88,14 @@ export default function KeywordOpportunitiesSection({ selectedSite = "" }) {
   const rows = (data?.rows || []).filter((r) => {
     if (view === "all") return true;
     if (view === "worth-it") return ["quick-win", "striking", "gap"].includes(r.type);
+    // "Ranking" is the plain picture — everything this domain actually holds a
+    // position for, gaps excluded.
+    if (view === "ranking") return r.position != null;
     return r.type === view;
   });
+
+  const dist = data?.summary?.distribution || [];
+  const distMax = Math.max(1, ...dist.map((d) => d.count));
 
   const columns = [
     {
@@ -279,6 +285,81 @@ export default function KeywordOpportunitiesSection({ selectedSite = "" }) {
             </div>
           </div>
 
+          {/* The plain picture first — what this domain actually holds today.
+              Opportunities are the recommendation; this is the evidence. */}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatTile
+              label="Organic keywords"
+              value={formatNum(data.overview?.keywords ?? data.summary?.ranking)}
+              hint={
+                data.overview?.keywords
+                  ? "Total indexed for this domain"
+                  : "From the keyword sample below"
+              }
+              icon={FiGlobe}
+            />
+            <StatTile
+              label="Est. monthly traffic"
+              value={formatNum(data.overview?.traffic ?? data.summary?.sampleTraffic)}
+              hint="Organic visits from those rankings"
+            />
+            <StatTile
+              label="Traffic value"
+              value={
+                data.overview?.price != null
+                  ? `$${formatNum(data.overview.price)}`
+                  : "—"
+              }
+              hint="What this traffic would cost in ads"
+            />
+            <StatTile
+              label="Top 3 positions"
+              value={formatNum(dist.find((d) => d.band === "1–3")?.count)}
+              hint="Keywords already winning"
+              accent
+              icon={Trophy}
+            />
+          </div>
+
+          {dist.some((d) => d.count > 0) ? (
+            <div className="cw-lit rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-3.5">
+              <p className="mb-3 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+                Where it ranks
+              </p>
+              <div className="space-y-2">
+                {dist.map((d) => (
+                  <div key={d.band} className="flex items-center gap-3">
+                    <span className="w-14 shrink-0 font-mono text-[11px] text-[var(--cw-ink-dim)]">
+                      {d.band}
+                    </span>
+                    <span className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--cw-raised)]">
+                      <span
+                        className="block h-full rounded-full transition-[width] duration-500"
+                        style={{
+                          width: `${Math.round((d.count / distMax) * 100)}%`,
+                          background:
+                            d.band === "1–3"
+                              ? "var(--cw-neon)"
+                              : d.band === "4–10"
+                                ? "color-mix(in srgb, var(--cw-neon) 60%, var(--cw-hairline))"
+                                : d.band === "11–20"
+                                  ? "var(--cw-info)"
+                                  : "var(--cw-hairline-strong)",
+                        }}
+                      />
+                    </span>
+                    <span className="w-10 shrink-0 text-right font-mono text-[11px] tabular-nums text-[var(--cw-ink)]">
+                      {formatNum(d.count)}
+                    </span>
+                    <span className="hidden w-32 shrink-0 text-[11px] text-[var(--cw-ink-faint)] sm:block">
+                      {d.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatTile
               label="Quick wins"
@@ -320,6 +401,11 @@ export default function KeywordOpportunitiesSection({ selectedSite = "" }) {
               { id: "striking", label: "Striking distance", badge: data.summary?.striking || undefined },
               { id: "gap", label: "Gaps", badge: data.summary?.gaps || undefined },
               { id: "defend", label: "Defend", badge: data.summary?.defend || undefined },
+              {
+                id: "ranking",
+                label: "Currently ranking",
+                badge: (data.rows || []).filter((r) => r.position != null).length || undefined,
+              },
               { id: "all", label: "All" },
             ]}
             value={view}
@@ -335,9 +421,46 @@ export default function KeywordOpportunitiesSection({ selectedSite = "" }) {
             emptyIcon={SearchX}
             emptyTitle="Nothing in this view"
             emptyDescription="Try the All tab. If everything is empty, the keyword database may not have this domain indexed yet."
-            footer={`${formatNum(rows.length)} keywords · scored on volume and commercial value, minus difficulty, plus how cheap the win is`}
+            defaultSort={view === "ranking" ? { key: "position", dir: "asc" } : undefined}
+            footer={
+              view === "ranking"
+                ? `${formatNum(rows.length)} keywords this domain currently ranks for, best position first`
+                : `${formatNum(rows.length)} keywords · scored on volume and commercial value, minus difficulty, plus how cheap the win is`
+            }
             ariaLabel="Keyword opportunities"
           />
+
+          {data.topPages?.length ? (
+            <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-3.5">
+              <p className="mb-2.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+                Pages carrying the traffic
+              </p>
+              <ul className="space-y-1.5">
+                {data.topPages.slice(0, 8).map((p) => (
+                  <li
+                    key={p.url}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2"
+                  >
+                    <a
+                      href={p.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="transition-smooth min-w-0 flex-1 truncate font-mono text-[11px] text-[var(--cw-ink-dim)] hover:text-[var(--cw-neon)]"
+                      title={p.url}
+                    >
+                      {p.url}
+                    </a>
+                    <span className="flex shrink-0 items-center gap-3 font-mono text-[11px] tabular-nums text-[var(--cw-ink-muted)]">
+                      <span title="Estimated monthly organic traffic">
+                        {formatNum(p.traffic)} visits
+                      </span>
+                      <span title="Keywords this page ranks for">{formatNum(p.keywords)} kw</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {data.competitors?.length ? (
             <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-3">
