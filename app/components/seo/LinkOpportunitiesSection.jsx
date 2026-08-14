@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  FiDownload,
   FiExternalLink,
   FiLink,
   FiMapPin,
@@ -18,6 +19,7 @@ import DataTable from "../ui-shared/DataTable";
 import StatTile from "../ui-shared/StatTile";
 import Btn from "../ui-shared/Btn";
 import ProspectModal from "./ProspectModal";
+import { downloadLinkOpportunitiesPdf } from "./linkOpportunitiesReport";
 
 const GEO_OPTIONS = [
   { value: "us", label: "US" },
@@ -55,10 +57,33 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   const [onlyGaps, setOnlyGaps] = useState(true);
   const [typeFilter, setTypeFilter] = useState("actionable");
   const [detail, setDetail] = useState(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  /**
+   * The selected client IS used here — for one thing only: marking which
+   * prospects already link to you, which drives the "hide sites already linking
+   * to me" filter and demotes them in the ranking. Prospect discovery itself is
+   * entirely site-independent. Override to research for any domain, or clear
+   * both to get an unfiltered list with no "you already have this" marking.
+   */
+  const [siteOverride, setSiteOverride] = useState("");
+  const analysisSite = siteOverride.trim() || selectedSite || "";
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
+
+  const exportPdf = async () => {
+    if (!data || pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      await downloadLinkOpportunitiesPdf(data);
+    } catch (err) {
+      setError(`PDF export failed: ${err.message || "unknown error"}`);
+    } finally {
+      setPdfBusy(false);
+    }
+  };
 
   const run = async (e, force = false) => {
     if (e) e.preventDefault();
@@ -74,7 +99,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           keyword: keyword.trim(),
-          siteUrl: selectedSite,
+          siteUrl: analysisSite,
           location: location.trim(),
           device,
           geo,
@@ -307,6 +332,26 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
               className={INPUT}
             />
           </div>
+          <div className="space-y-1.5 md:col-span-3">
+            <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+              <FiLink className="size-3.5 text-[var(--cw-neon)]" /> Prepare for domain
+            </label>
+            <input
+              type="text"
+              value={siteOverride}
+              onChange={(e) => setSiteOverride(e.target.value)}
+              placeholder={
+                selectedSite
+                  ? `Blank = ${selectedSite} (the selected client)`
+                  : "e.g. example.com — leave blank for an unfiltered list"
+              }
+              className={INPUT}
+            />
+            <p className="text-[11px] text-[var(--cw-ink-faint)]">
+              Only used to flag which prospects already link to that domain. Discovery itself is
+              the same either way.
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -357,6 +402,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
               &ldquo;{data.keyword}&rdquo; · {data.device}
               {data.location ? ` · ${data.location}` : ""} · {data.targets?.length || 0} rivals
               analysed
+              {data.yourHost ? ` · for ${data.yourHost}` : " · no site context"}
             </span>
             <div className="flex items-center gap-2">
               <span
@@ -368,6 +414,16 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
               >
                 {data.cached ? "Cached" : "Fresh"}
               </span>
+              <Btn
+                variant="outline"
+                size="xs"
+                icon={FiDownload}
+                loading={pdfBusy}
+                onClick={exportPdf}
+                disabled={pdfBusy}
+              >
+                {pdfBusy ? "Building PDF…" : "Download PDF"}
+              </Btn>
               <Btn variant="ghost" size="xs" icon={FiRefreshCw} onClick={() => run(null, true)}>
                 Refresh
               </Btn>
