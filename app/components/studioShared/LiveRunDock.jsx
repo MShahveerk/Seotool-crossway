@@ -11,12 +11,14 @@
  * matter how far down a settings tab you are.
  */
 
-import { useState } from "react";
-import { Ban, ChevronDown, Maximize2, Minimize2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Ban, Bell, ChevronDown, Maximize2, Minimize2, Workflow } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GlowDot } from "../ui-shared/Status";
 import Btn from "../ui-shared/Btn";
+import TabRail from "../ui-shared/TabRail";
 import { LiveClock } from "./AgentPipeline";
+import RunNotifications, { buildRunEvents } from "./RunNotifications";
 import { isLiveStatus, normalizeStatus } from "./runFormat";
 
 export default function LiveRunDock({
@@ -29,6 +31,9 @@ export default function LiveRunDock({
   className = "",
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const [view, setView] = useState("pipeline");
+
+  const eventCount = useMemo(() => buildRunEvents(run).length, [run]);
 
   if (!run || !isLiveStatus(run.status)) return null;
 
@@ -110,8 +115,22 @@ export default function LiveRunDock({
       </div>
 
       {expanded ? (
-        <div className="animate-soft-rise max-h-[70vh] overflow-auto border-t border-[var(--cw-hairline)] bg-[var(--cw-canvas)] p-3">
-          {children}
+        <div className="animate-soft-rise border-t border-[var(--cw-hairline)] bg-[var(--cw-canvas)]">
+          <div className="flex items-center gap-2 px-3 pt-3">
+            <TabRail
+              size="sm"
+              tabs={[
+                { id: "pipeline", label: "Pipeline", icon: Workflow },
+                { id: "activity", label: "Activity", icon: Bell, badge: eventCount || undefined },
+              ]}
+              value={view}
+              onChange={setView}
+              ariaLabel="Run views"
+            />
+          </div>
+          <div className="max-h-[70vh] overflow-auto p-3">
+            {view === "activity" ? <RunNotifications run={run} /> : children}
+          </div>
         </div>
       ) : null}
     </div>

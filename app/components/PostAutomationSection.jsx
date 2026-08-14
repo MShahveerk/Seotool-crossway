@@ -301,52 +301,32 @@ export default function PostAutomationSection({ selectedSite = "" }) {
 
   return (
     <div className="space-y-4 max-w-[1400px]">
-      <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(29,156,53,0.12),_transparent_55%),linear-gradient(135deg,#ffffff_0%,#f4fbf4_100%)]" />
+      <div className="relative">
         <div className="relative">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 text-[#1d9c35]">
-                <FiZap className="h-5 w-5" />
-                <span className="text-xs font-bold uppercase tracking-[0.18em]">
-                  Post Automation Studio
-                </span>
-              </div>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
-                Facebook & Instagram pipeline
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-[var(--cw-hairline)] pb-4">
+            <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h1 className="font-heading inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-[var(--cw-ink)]">
+                <FiZap className="h-4 w-4 text-[var(--cw-neon)]" />
+                Post Studio
               </h1>
-              <p className="mt-1 text-sm text-gray-600 max-w-2xl">
-                Two agents plus a required feed image create pending Approvals for the existing SMM
-                approve → publish flow. External mode keeps inbound / Meta pull / email as the source.
-              </p>
+              <span className="truncate font-mono text-[11px] text-[var(--cw-ink-faint)]">
+                {selectedSite || "No account selected"}
+              </span>
+              <span className="hidden text-xs text-[var(--cw-ink-muted)] xl:inline">
+                Two agents plus a feed image, straight into the SMM approve → publish flow.
+              </span>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => saveEngine("external")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-                    !isInternal ? "bg-[#1d9c35] text-white" : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  External
-                </button>
-                <button
-                  type="button"
-                  onClick={() => saveEngine("internal")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-                    isInternal ? "bg-[#1d9c35] text-white" : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  Internal Studio
-                </button>
-              </div>
-              <p className="text-[11px] text-gray-500">
-                Site:{" "}
-                <span className="font-semibold text-gray-800">
-                  {selectedSite || "None selected"}
-                </span>
-              </p>
+              <TabRail
+                size="sm"
+                tabs={[
+                  { id: "internal", label: "Internal Studio" },
+                  { id: "external", label: "External" },
+                ]}
+                value={isInternal ? "internal" : "external"}
+                onChange={(id) => saveEngine(id)}
+                ariaLabel="Automation engine"
+              />
             </div>
           </div>
 
@@ -456,22 +436,20 @@ export default function PostAutomationSection({ selectedSite = "" }) {
             </div>
           </div>
 
-          {/* A live run docks here, minimised, on every tab except Run —
-              where the full console is already on screen. */}
-          {tab !== "run" ? (
-            <LiveRunDock
+          {/* A live run docks here on every tab, minimised. It self-hides when
+              nothing is running, so it never costs space it hasn't earned. */}
+          <LiveRunDock
+            run={activeRun}
+            label="Post"
+            onCancel={() => cancelRun(activeRun?.id)}
+            cancelling={cancelling}
+          >
+            <RunConsole
               run={activeRun}
-              label="Post"
               onCancel={() => cancelRun(activeRun?.id)}
               cancelling={cancelling}
-            >
-              <RunConsole
-                run={activeRun}
-                onCancel={() => cancelRun(activeRun?.id)}
-                cancelling={cancelling}
-              />
-            </LiveRunDock>
-          ) : null}
+            />
+          </LiveRunDock>
 
           <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5">
             {tab === "run" && (
@@ -884,11 +862,15 @@ export default function PostAutomationSection({ selectedSite = "" }) {
             )}
           </div>
 
-          <RunConsole
-            run={activeRun}
-            onCancel={() => cancelRun(activeRun?.id)}
-            cancelling={cancelling}
-          />
+          {/* While a run is live the docked cockpit above owns it — showing a
+              second copy here would just be the same thing twice. */}
+          {!hasLiveAutomation ? (
+            <RunConsole
+              run={activeRun}
+              onCancel={() => cancelRun(activeRun?.id)}
+              cancelling={cancelling}
+            />
+          ) : null}
 
           {runs.length > 0 && (
             <div className="rounded-xl border border-gray-200 bg-white p-4">

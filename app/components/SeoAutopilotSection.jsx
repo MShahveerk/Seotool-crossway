@@ -419,22 +419,20 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
           </div>
         ) : null}
 
-        {/* A run in flight docks at the top, minimised. Maximise to get the
-            whole cockpit without leaving the tab you're working in. */}
-        {tab !== "runs" ? (
-          <LiveRunDock
+        {/* A run in flight docks at the top of every tab, minimised. Maximise
+            to get the whole cockpit without leaving the tab you're in. */}
+        <LiveRunDock
+          run={activeRun}
+          label="Autopilot"
+          onCancel={cancelActiveRun}
+          cancelling={cancellingRun}
+        >
+          <AutopilotRunConsole
             run={activeRun}
-            label="Autopilot"
             onCancel={cancelActiveRun}
             cancelling={cancellingRun}
-          >
-            <AutopilotRunConsole
-              run={activeRun}
-              onCancel={cancelActiveRun}
-              cancelling={cancellingRun}
-            />
-          </LiveRunDock>
-        ) : null}
+          />
+        </LiveRunDock>
 
         {tab === "overview" && (
           <div className="space-y-4">

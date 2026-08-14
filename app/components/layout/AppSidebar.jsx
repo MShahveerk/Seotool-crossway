@@ -16,6 +16,7 @@ import {
   Search,
   Settings,
   Shield,
+  Workflow,
 } from "lucide-react";
 import { isMetaPageId } from "@/lib/siteAccess";
 import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";
@@ -59,6 +60,7 @@ const WORKSPACE_ICONS = {
   megaphone: Megaphone,
   presentation: Presentation,
   shield: Shield,
+  workflow: Workflow,
 };
 
 /** Unread badges are per-section; a workspace shows the sum of its sections'. */
