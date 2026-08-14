@@ -12,7 +12,7 @@
  * thinner than the tool.
  */
 
-import { BASE_STYLES, downloadReportPdf, esc, metricRow, num, slugify, today } from "./reportKit";
+import { BASE_STYLES, cols, downloadReportPdf, esc, metricRow, num, slugify, today } from "./reportKit";
 
 const STYLES = `
   ${BASE_STYLES}
@@ -124,7 +124,10 @@ function keywordRows(rows, { showRivals = true } = {}) {
     .join("");
 }
 
-const HEAD = `<thead><tr><th>Keyword</th><th>Rank</th><th>Volume</th><th>Effort</th><th>CPC</th><th>Trend</th><th>Score</th></tr></thead>`;
+/* Header alignment must match the cells beneath it — a left-aligned "Volume"
+   sitting over right-aligned numbers is what made these read as misaligned. */
+const KW_COLS = cols(["40%", "8%", "10%", "14%", "9%", "10%", "9%"]);
+const HEAD = `<thead><tr><th>Keyword</th><th class="c">Rank</th><th class="r">Volume</th><th class="r">Effort</th><th class="r">CPC</th><th class="c">Trend</th><th class="r">Score</th></tr></thead>`;
 
 export function buildKeywordOpportunitiesFragment(data, { limitPerGroup = 80, appendixLimit = 150 } = {}) {
   const day = today();
@@ -145,7 +148,7 @@ export function buildKeywordOpportunitiesFragment(data, { limitPerGroup = 80, ap
         list.length > shown.length ? ` · showing top ${num(shown.length)}` : ""
       }</span></div>
       <p class="ghint">${esc(g.hint)}</p>
-      <table class="grid">${HEAD}<tbody>${keywordRows(shown)}</tbody></table>`;
+      <table class="grid">${KW_COLS}${HEAD}<tbody>${keywordRows(shown)}</tbody></table>`;
     })
     .join("");
 
@@ -157,8 +160,8 @@ export function buildKeywordOpportunitiesFragment(data, { limitPerGroup = 80, ap
     .slice(0, appendixLimit);
 
   const rivalsTable = (data.competitors || []).length
-    ? `<table class="grid">
-        <thead><tr><th>Competitor</th><th>Keywords read</th><th>Shared keywords</th><th>Est. traffic</th></tr></thead>
+    ? `<table class="grid">${cols(["34%","22%","22%","22%"])}
+        <thead><tr><th>Competitor</th><th class="r">Keywords read</th><th class="r">Shared keywords</th><th class="r">Est. traffic</th></tr></thead>
         <tbody>${data.competitors
           .map(
             (c) =>
@@ -216,8 +219,8 @@ export function buildKeywordOpportunitiesFragment(data, { limitPerGroup = 80, ap
     ])}
     ${
       dist.some((d) => d.count > 0)
-        ? `<table class="grid">
-            <thead><tr><th>Position</th><th>What it means</th><th>Spread</th><th>Keywords</th></tr></thead>
+        ? `<table class="grid">${cols(["14%","30%","36%","20%"])}
+            <thead><tr><th>Position</th><th>What it means</th><th>Spread</th><th class="r">Keywords</th></tr></thead>
             <tbody>${dist
               .map((d) => {
                 const cls = d.band === "1–3" ? "" : d.band === "4–10" ? "p1" : d.band === "11–20" ? "p2" : "pn";
@@ -248,8 +251,8 @@ export function buildKeywordOpportunitiesFragment(data, { limitPerGroup = 80, ap
     ${
       (data.topPages || []).length
         ? `<h2>Pages carrying the traffic</h2>
-           <table class="grid">
-             <thead><tr><th>Page</th><th>Est. traffic</th><th>Keywords</th></tr></thead>
+           <table class="grid">${cols(["62%","20%","18%"])}
+             <thead><tr><th>Page</th><th class="r">Est. traffic</th><th class="r">Keywords</th></tr></thead>
              <tbody>${data.topPages
                .slice(0, 20)
                .map(
@@ -267,7 +270,7 @@ export function buildKeywordOpportunitiesFragment(data, { limitPerGroup = 80, ap
       ranking.length
         ? `<h2>Appendix — everything currently ranking</h2>
            <p class="lead">Every keyword ${esc(data.domain)} holds a position for, best first.</p>
-           <table class="grid">${HEAD}<tbody>${keywordRows(ranking, { showRivals: false })}</tbody></table>`
+           <table class="grid">${KW_COLS}${HEAD}<tbody>${keywordRows(ranking, { showRivals: false })}</tbody></table>`
         : ""
     }
 

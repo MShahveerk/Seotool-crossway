@@ -59,6 +59,19 @@ export function metricRow(items) {
     .join("")}</div>`;
 }
 
+/**
+ * Column widths for a fixed-layout table.
+ *
+ * Fixed layout ignores content when sizing, so every table that shares a shape
+ * lines up down the page — and a 200-character URL can no longer strangle the
+ * numeric columns beside it.
+ *
+ * @param {string[]} widths CSS widths, one per column (e.g. ["46%","9%",…])
+ */
+export function cols(widths = []) {
+  return `<colgroup>${widths.map((w) => `<col style="width:${w}">`).join("")}</colgroup>`;
+}
+
 /** Typography, cover, headings, metric tiles, tables, chips, footer. */
 export const BASE_STYLES = `
   .sr { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827; font-size: 12.5px; line-height: 1.5; background: #fff; padding: 0; }
@@ -82,12 +95,39 @@ export const BASE_STYLES = `
   .sr .mval { display: block; font-weight: 700; font-size: 14px; margin-top: 3px; color: #111827; }
   .sr .msub { display: block; font-size: 10px; color: #4b5563; margin-top: 1px; }
 
-  .sr table.grid { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 10.5px; }
-  .sr table.grid th { text-align: left; background: #eef0f3; color: #1f2937; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 6px 8px; border-bottom: 1px solid #d5dae0; }
-  .sr table.grid td { padding: 5px 8px; border-bottom: 1px solid #e8eaed; color: #1f2937; vertical-align: top; }
+  /* The report is rendered inside the live (dark) app, so the app's element
+     defaults reach these tables. They set border-top and a dark cell colour
+     that the report never overrode, giving every row a dark rule on top and a
+     light one underneath. Reset first, then style — nothing here may rely on
+     inheriting from the page. */
+  .sr table, .sr thead, .sr tbody, .sr tr, .sr th, .sr td {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+    white-space: normal;
+  }
+
+  /* table-layout:fixed is the fix for wonky columns. With auto layout the
+     browser sizes each column from its content, so one long URL blows out
+     column 1, squashes the numbers, and no two tables in the document line up.
+     Fixed layout obeys the colgroup widths instead. */
+  .sr table.grid {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    margin-top: 6px;
+    font-size: 10.5px;
+  }
+  .sr table.grid th { text-align: left; background: #eef0f3; color: #1f2937; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 6px 8px; border-bottom: 1px solid #d5dae0; vertical-align: bottom; }
+  .sr table.grid td { padding: 5px 8px; border-bottom: 1px solid #e8eaed; color: #1f2937; vertical-align: top; overflow-wrap: anywhere; word-break: break-word; }
   .sr table.grid tr:nth-child(even) td { background: #fafbfc; }
   .sr table.grid td.c { text-align: center; font-weight: 700; }
-  .sr table.grid td.r { text-align: right; }
+  .sr table.grid td.r { text-align: right; font-variant-numeric: tabular-nums; }
+  .sr table.grid th.c { text-align: center; }
+  .sr table.grid th.r { text-align: right; }
   .sr table.grid .dir { color: #4b5563; }
 
   .sr .chips { display: flex; flex-wrap: wrap; gap: 4px; }

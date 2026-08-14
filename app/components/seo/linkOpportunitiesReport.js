@@ -9,6 +9,7 @@
 
 import {
   BASE_STYLES,
+  cols,
   downloadReportPdf,
   esc,
   metricRow,
@@ -112,8 +113,8 @@ export function buildLinkOpportunitiesFragment(data, { limitPerGroup = 80 } = {}
         all.length > list.length ? ` · showing top ${num(list.length)}` : ""
       }</span></div>
       <p class="ghint">${esc(g.hint)}</p>
-      <table class="grid">
-        <thead><tr><th>Site, who it links to, and the exact pages</th><th>Rivals</th><th>Authority</th><th>Follow</th><th>Anchors used</th></tr></thead>
+      <table class="grid">${cols(["46%","9%","11%","11%","23%"])}
+        <thead><tr><th>Site, who it links to, and the exact pages</th><th class="c">Rivals</th><th class="r">Authority</th><th class="c">Follow</th><th>Anchors used</th></tr></thead>
         <tbody>${prospectRows(list)}</tbody>
       </table>`;
     })
