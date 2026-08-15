@@ -897,6 +897,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
   const [seedError, setSeedError] = useState("");
   const [seedResult, setSeedResult] = useState(null);
   const [modalItem, setModalItem] = useState(null);
+  const [lastRequest, setLastRequest] = useState(null);
 
   /** Typed domain wins; otherwise the client selected in the sidebar. */
   const analysisSite = siteOverride.trim() || selectedSite || "";
@@ -915,13 +916,19 @@ export default function SerpAnalysisSection({ selectedSite }) {
       const res = await fetch("/api/seo/serp-analysis/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          keyword: data.keyword,
-          siteUrl: analysisSite,
-          location: data.location || "",
-          device: data.device || device,
-          geo: data.geo || geo,
-        }),
+        // Replay the request this result came from. Reconstructing it sent
+        // back the *derived* location instead of the blank one actually typed,
+        // which missed the cache and rebuilt a different analysis than the one
+        // being exported.
+        body: JSON.stringify(
+          lastRequest || {
+            keyword: data.keyword,
+            siteUrl: analysisSite,
+            location: location.trim(),
+            device: data.device || device,
+            geo: data.geo || geo,
+          }
+        ),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -975,18 +982,30 @@ export default function SerpAnalysisSection({ selectedSite }) {
     }
     setLoading(true);
     setError("");
+
+    // Exactly what this run is keyed on, kept so the PDF replays it verbatim.
+    const request = {
+      keyword: keyword.trim(),
+      siteUrl: analysisSite,
+      location: location.trim(),
+      device,
+      geo,
+    };
+
     try {
       const res = await fetch("/api/seo/serp-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: keyword.trim(), siteUrl: analysisSite, location: location.trim(), device, geo, refresh: force }),
+        body: JSON.stringify({ ...request, refresh: force }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Failed to analyze SERP");
       setData(json.data);
+      setLastRequest(request);
     } catch (err) {
       setError(err.message || "SERP analysis failed");
       setData(null);
+      setLastRequest(null);
     } finally {
       setLoading(false);
     }

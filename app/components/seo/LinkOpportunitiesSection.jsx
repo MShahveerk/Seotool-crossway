@@ -79,6 +79,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   const [detail, setDetail] = useState(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [depth, setDepth] = useState("standard");
+  const [lastRequest, setLastRequest] = useState(null);
   const [query, setQuery] = useState("");
 
   /**
@@ -99,16 +100,23 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
     if (!data || pdfBusy) return;
     setPdfBusy(true);
     try {
+      /*
+       * Replay the exact request the on-screen result came from.
+       *
+       * Reconstructing it from form state was the bug: the export sent back
+       * `data.location` — the location the engine *derived* from the keyword —
+       * while the analysis had been cached under the blank location actually
+       * typed. Different cache key, so the PDF quietly ran a second, narrower
+       * analysis and printed that instead of what you were looking at.
+       */
       await downloadServerReport(
         "/api/seo/link-opportunities/report",
-        {
+        lastRequest || {
           keyword: data.keyword,
           siteUrl: analysisSite,
-          location: data.location || "",
+          location: location.trim(),
           device: data.device || device,
           geo: data.geo || geo,
-          // Same depth the screen used, so the PDF reads the cached result
-          // instead of re-running the analysis.
           rankers: data.depth?.rankers ?? DEPTHS[depth].rankers,
           refdomains: data.depth?.refdomains ?? DEPTHS[depth].refdomains,
         },
@@ -129,27 +137,33 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
     }
     setLoading(true);
     setError("");
+
+    // Exactly what this run is keyed on. Kept so the PDF can replay it rather
+    // than reconstructing it from form state that may since have changed.
+    const request = {
+      keyword: keyword.trim(),
+      siteUrl: analysisSite,
+      location: location.trim(),
+      device,
+      geo,
+      rankers: DEPTHS[depth].rankers,
+      refdomains: DEPTHS[depth].refdomains,
+    };
+
     try {
       const res = await fetch("/api/seo/link-opportunities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          keyword: keyword.trim(),
-          siteUrl: analysisSite,
-          location: location.trim(),
-          device,
-          geo,
-          rankers: DEPTHS[depth].rankers,
-          refdomains: DEPTHS[depth].refdomains,
-          refresh: force,
-        }),
+        body: JSON.stringify({ ...request, refresh: force }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Failed to build link opportunities");
       setData(json.data);
+      setLastRequest(request);
     } catch (err) {
       setError(err.message || "Failed to build link opportunities");
       setData(null);
+      setLastRequest(null);
     } finally {
       setLoading(false);
     }
