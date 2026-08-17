@@ -267,13 +267,17 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   });
 
   /* Rejected buckets stay visible — you should be able to see what was ruled
-     out and why — but they sit behind their own tabs, never in Can pitch. */
+     out and why — but they sit behind their own tabs, never in Can pitch.
+     Giants (big publishers/platforms) get a spot right after the pitch tabs so
+     they're easy to find without crowding the list. */
+  const giantCount = (data?.byType || []).find((t) => t.type === "giant")?.count || 0;
   const typeTabs = [
     { id: "actionable", label: "Can pitch", badge: data?.summary?.prospects },
     { id: "unpaid", label: "Unpaid", badge: data?.summary?.unpaid },
     { id: "paid", label: "Paid", badge: data?.summary?.paid },
+    ...(giantCount > 0 ? [{ id: "giant", label: "Giants", badge: giantCount }] : []),
     ...(data?.byType || [])
-      .filter((t) => t.count > 0 && !ACTIONABLE.includes(t.type))
+      .filter((t) => t.count > 0 && t.type !== "giant" && !ACTIONABLE.includes(t.type))
       .map((t) => ({ id: t.type, label: t.label, badge: t.count })),
     { id: "all", label: "All" },
   ];
