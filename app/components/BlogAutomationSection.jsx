@@ -17,7 +17,7 @@ import {
 import AgentRoster from "./blogStudio/AgentRoster";
 import RunConsole from "./blogStudio/RunConsole";
 import ExcelQueuePanel from "./blogStudio/ExcelQueuePanel";
-import WriterSendsPanel from "./blogStudio/WriterSendsPanel";
+import ContentInbox from "./blogStudio/ContentInbox";
 import ModelCombobox from "./studioShared/ModelCombobox";
 import StudioReferenceImages from "./studioShared/StudioReferenceImages";
 import StudioBrandKit from "./studioShared/StudioBrandKit";
@@ -38,8 +38,7 @@ import {
 
 const TABS = [
   { id: "run", label: "Run" },
-  { id: "writer-sends", label: "Autopilot seeds" },
-  { id: "competitor-seeds", label: "Competitor seeds" },
+  { id: "content-inbox", label: "Content Inbox" },
   { id: "agents", label: "Agents" },
   { id: "seeds", label: "SEO Seeds" },
   { id: "excel", label: "Excel queue" },
@@ -66,6 +65,7 @@ function parseLinksEditor(text) {
 
 export default function BlogAutomationSection({ selectedSite = "" }) {
   const [tab, setTab] = useState("run");
+  const [seedHandoffRunId, setSeedHandoffRunId] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [engineMode, setEngineMode] = useState("external");
@@ -142,6 +142,29 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   useEffect(() => {
     loadAll();
   }, [loadAll]);
+
+  // Deep-link handoff from SERP Analysis / Autopilot: land on the Content Inbox
+  // with the freshly-sent batch highlighted, instead of making the user hunt.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let raw;
+    try {
+      raw = sessionStorage.getItem("cw:blogSeedHandoff");
+    } catch {
+      raw = null;
+    }
+    if (!raw) return;
+    try {
+      sessionStorage.removeItem("cw:blogSeedHandoff");
+    } catch {}
+    try {
+      const h = JSON.parse(raw);
+      // Ignore stale handoffs (older than 2 minutes).
+      if (h?.at && Date.now() - h.at > 120000) return;
+      setTab("content-inbox");
+      if (h?.runId) setSeedHandoffRunId(h.runId);
+    } catch {}
+  }, []);
 
   // Poll active run
   useEffect(() => {
@@ -861,29 +884,13 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
               </div>
             )}
 
-            {tab === "writer-sends" && (
-              <WriterSendsPanel
+            {tab === "content-inbox" && (
+              <ContentInbox
                 siteLink={selectedSite}
+                highlightRunId={seedHandoffRunId}
                 onRan={async (run) => {
-                  // Keep Autopilot seeds mounted — Run console sits below every tab, so
-                  // switching to "Run" only unmounts the seeds panel and feels jittery.
-                  if (run?.id) setActiveRun(run);
-                  setSaveMessage({
-                    ok: true,
-                    text: run?.id
-                      ? `Studio run queued — watch stages in the Run console below.`
-                      : "Studio run queued — watch stages in the Run console below.",
-                  });
-                  await loadRuns();
-                }}
-              />
-            )}
-
-            {tab === "competitor-seeds" && (
-              <WriterSendsPanel
-                siteLink={selectedSite}
-                source="competitor"
-                onRan={async (run) => {
+                  // Run console sits below every tab, so keep the inbox mounted
+                  // rather than snapping to "Run" (which feels jittery).
                   if (run?.id) setActiveRun(run);
                   setSaveMessage({
                     ok: true,

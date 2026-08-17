@@ -38,6 +38,7 @@ import SeoPanelShell, { formatNum } from "./SeoPanelShell";
 import SideTabs from "../ui-shared/SideTabs";
 import TabRail from "../ui-shared/TabRail";
 import Btn from "../ui-shared/Btn";
+import SeedReviewDrawer from "./SeedReviewDrawer";
 
 const SERP_INPUT =
   "w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3.5 py-2.5 text-sm text-[var(--cw-ink)] transition-smooth placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_25%,transparent)]";
@@ -896,6 +897,10 @@ export default function SerpAnalysisSection({ selectedSite }) {
   const [seedLoading, setSeedLoading] = useState(false);
   const [seedError, setSeedError] = useState("");
   const [seedResult, setSeedResult] = useState(null);
+  const [seedDraft, setSeedDraft] = useState([]);
+  const [seedDrawerOpen, setSeedDrawerOpen] = useState(false);
+  const [seedSending, setSeedSending] = useState(false);
+  const [seedSendError, setSeedSendError] = useState("");
   const [modalItem, setModalItem] = useState(null);
   const [lastRequest, setLastRequest] = useState(null);
 
@@ -958,19 +963,67 @@ export default function SerpAnalysisSection({ selectedSite }) {
     setSeedLoading(true);
     setSeedError("");
     setSeedResult(null);
+    setSeedSendError("");
     try {
       const res = await fetch("/api/seo/competitor-seeds", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keyword: data.keyword, siteUrl: analysisSite, geo, device, location: location.trim() }),
+        body: JSON.stringify({
+          keyword: data.keyword,
+          siteUrl: analysisSite,
+          geo,
+          device,
+          location: location.trim(),
+          persist: false,
+        }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Failed to generate blog ideas");
-      setSeedResult(json);
+      setSeedDraft(json.seeds || []);
+      setSeedDrawerOpen(true);
     } catch (err) {
       setSeedError(err.message || "Failed to generate blog ideas");
     } finally {
       setSeedLoading(false);
+    }
+  };
+
+  // Commit the reviewed ideas, then walk the user into the Studio focused on
+  // the fresh batch — a real handoff, not a "go find it yourself" toast.
+  const handleSendSeeds = async (payloads) => {
+    if (!payloads?.length) return;
+    setSeedSending(true);
+    setSeedSendError("");
+    try {
+      const res = await fetch("/api/seo/competitor-seeds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteUrl: analysisSite, keyword: data.keyword, sends: payloads }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || "Failed to save ideas");
+      setSeedResult(json);
+      setSeedDrawerOpen(false);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem(
+            "cw:blogSeedHandoff",
+            JSON.stringify({
+              siteLink: analysisSite,
+              source: "competitor",
+              runId: json.runId || "",
+              at: Date.now(),
+            })
+          );
+        } catch {}
+        window.dispatchEvent(
+          new CustomEvent("navigate-section", { detail: { section: "blog-automation" } })
+        );
+      }
+    } catch (err) {
+      setSeedSendError(err.message || "Failed to save ideas");
+    } finally {
+      setSeedSending(false);
     }
   };
 
@@ -1193,45 +1246,57 @@ export default function SerpAnalysisSection({ selectedSite }) {
             </div>
           )}
 
-          {/* 3b. Generate competitor blog ideas → Studio */}
-          <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50/60 to-white p-5 space-y-3 shadow-sm">
+          {/* 3b. Generate competitor blog ideas → review drawer → Studio */}
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50/70 via-white to-white p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <FiEdit3 className="size-5 text-emerald-600" />
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl border border-emerald-100 bg-white p-2.5 shadow-sm">
+                  <FiEdit3 className="size-5 text-emerald-600" />
+                </div>
                 <div>
-                  <h3 className="font-bold text-sm text-gray-900">Turn this into content that outranks them</h3>
-                  <p className="text-xs text-gray-500">Generate 5 unique blog ideas from this SERP and send them to Blog Automation Studio → Competitor seeds.</p>
+                  <h3 className="text-sm font-bold text-gray-900">
+                    Turn this into content that outranks them
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Draft {5} unique ideas from this SERP, review and tweak them, then send straight
+                    into the Studio — no hunting for tabs.
+                  </p>
                 </div>
               </div>
-              <button type="button" onClick={handleGenerateSeeds} disabled={seedLoading} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 disabled:opacity-50">
+              <button
+                type="button"
+                onClick={handleGenerateSeeds}
+                disabled={seedLoading || seedSending}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:opacity-50"
+              >
                 {seedLoading ? <FiRefreshCw className="size-4 animate-spin" /> : <FiZap className="size-4" />}
-                {seedLoading ? "Generating…" : "Generate 5 blog ideas"}
+                {seedLoading ? "Drafting ideas…" : "Turn into content"}
               </button>
             </div>
-            {seedError && <p className="text-xs text-red-600">{seedError}</p>}
-            {seedResult && (
-              <div className="space-y-2 pt-1">
-                <p className="text-xs font-semibold text-emerald-800 inline-flex items-center gap-1">
-                  <FiCheckCircle className="size-3.5" /> {seedResult.count} ideas saved to Blog Automation Studio → Competitor seeds. Open the Studio to run them into full blogs.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {seedResult.seeds.map((s, i) => (
-                    <div key={s.id || i} className="rounded-xl border border-gray-200 bg-white p-3">
-                      <p className="font-bold text-xs text-gray-900">{i + 1}. {s.title || s.topic}</p>
-                      {s.payload?.why && <p className="text-[11px] text-gray-600 mt-1">{s.payload.why}</p>}
-                      {s.payload?.mustFollowKeywords && (
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {String(s.payload.mustFollowKeywords).split(/\n+/).filter(Boolean).slice(0, 4).map((k, j) => (
-                            <span key={j} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-100 text-emerald-800">{k}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {seedError && <p className="mt-2 text-xs text-red-600">{seedError}</p>}
+            {seedResult && !seedDrawerOpen && (
+              <button
+                type="button"
+                onClick={() => setSeedDrawerOpen(true)}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-50"
+              >
+                <FiCheckCircle className="size-3.5" />
+                {seedResult.count} idea{seedResult.count === 1 ? "" : "s"} sent to the Studio — review
+                again
+              </button>
             )}
           </div>
+
+          <SeedReviewDrawer
+            open={seedDrawerOpen}
+            keyword={data.keyword}
+            location={data.location}
+            seeds={seedDraft}
+            sending={seedSending}
+            error={seedSendError}
+            onSend={handleSendSeeds}
+            onClose={() => setSeedDrawerOpen(false)}
+          />
 
           {/* 4. Rivals, split by whether they beat you — cards side by side */}
           <CompetitorGroup
