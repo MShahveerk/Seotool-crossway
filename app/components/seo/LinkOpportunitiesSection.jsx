@@ -558,11 +558,16 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
                 <label className="text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
                   Model
                 </label>
-                <select
+                <input
+                  list="lo-llm-models"
                   value={llmConfig?.model || ""}
                   onChange={(e) => patchLlm({ model: e.target.value })}
+                  placeholder="Type any model id, e.g. google/gemma-2-9b-it:free"
                   className={INPUT}
-                >
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <datalist id="lo-llm-models">
                   {modelsForProvider(llmConfig?.provider || "openrouter", {
                     kind: "chat",
                     current: llmConfig?.model || "",
@@ -571,7 +576,11 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
                       {m.label}
                     </option>
                   ))}
-                </select>
+                </datalist>
+                <p className="text-[11px] text-[var(--cw-ink-faint)]">
+                  Suggestions are optional. Paste any OpenRouter id, including{" "}
+                  <span className="font-mono">:free</span> models.
+                </p>
               </div>
             </div>
             <div className="flex justify-end">
