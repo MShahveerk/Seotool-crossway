@@ -509,9 +509,11 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
         {llmOpen ? (
           <div className="space-y-4 border-t border-[var(--cw-hairline)] pt-4">
             <p className="text-[12px] leading-relaxed text-[var(--cw-ink-muted)]">
-              Can pitch fetches live pages, then the model judges only that evidence. It cannot invent
-              a submit URL. Leave a field masked to keep the saved key. Server env keys
-              (OPENROUTER_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY) still work as fallback.
+              Live pages are fetched to mark paid vs free and to drop parked spam. A missing
+              form does not remove a site. The model may only cite fetched evidence — it
+              cannot invent a URL or veto a live route. Leave a field masked to keep the
+              saved key. Server env keys (OPENROUTER_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY)
+              still work as fallback.
             </p>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               {[

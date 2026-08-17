@@ -7,7 +7,7 @@ import { isSerpApiConfigured } from "@/lib/serpapi";
 import { isSerankingConfigured } from "@/lib/seranking/config";
 
 export const runtime = "nodejs";
-/** Up to 11 backlink profiles behind a cold keyword — this one needs the room. */
+/** Up to 30 backlink profiles plus live page checks — this one needs the room. */
 export const maxDuration = 300;
 
 const ALLOWED_GEO = new Set(["us", "uk", "ca", "au", "pk"]);
