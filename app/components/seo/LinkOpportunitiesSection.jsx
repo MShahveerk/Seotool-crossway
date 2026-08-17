@@ -184,10 +184,15 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   const intersectRows = (data?.intersect || []).filter((r) => {
     if (onlyGaps && r.youHaveIt) return false;
     if (typeFilter === "actionable" && !ACTIONABLE.includes(r.type)) return false;
-    if (typeFilter !== "all" && typeFilter !== "actionable" && r.type !== typeFilter) return false;
+    if (typeFilter === "unpaid" && (!ACTIONABLE.includes(r.type) || r.cost === "paid")) return false;
+    if (typeFilter === "paid" && (!ACTIONABLE.includes(r.type) || r.cost !== "paid")) return false;
+    if (!["all", "actionable", "unpaid", "paid"].includes(typeFilter) && r.type !== typeFilter) {
+      return false;
+    }
     return matchesQuery([
       r.domain,
       r.typeLabel,
+      r.cost,
       (r.anchors || []).join(" "),
       (r.linksTo || []).join(" "),
       (r.examples || []).map((e) => e.sourceUrl).join(" "),
@@ -202,7 +207,9 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   /* Rejected buckets stay visible — you should be able to see what was ruled
      out and why — but they sit behind their own tabs, never in Can pitch. */
   const typeTabs = [
-    { id: "actionable", label: "Can pitch" },
+    { id: "actionable", label: "Can pitch", badge: data?.summary?.prospects },
+    { id: "unpaid", label: "Unpaid", badge: data?.summary?.unpaid },
+    { id: "paid", label: "Paid", badge: data?.summary?.paid },
     ...(data?.byType || [])
       .filter((t) => t.count > 0 && !ACTIONABLE.includes(t.type))
       .map((t) => ({ id: t.type, label: t.label, badge: t.count })),
@@ -232,6 +239,28 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
               title="This domain reads as being in your niche"
             >
               NICHE
+            </span>
+          ) : null}
+          {row.cost === "paid" ? (
+            <span
+              className="shrink-0 rounded-full border border-[color-mix(in_srgb,var(--cw-caution)_40%,transparent)] bg-[color-mix(in_srgb,var(--cw-caution)_10%,transparent)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--cw-caution)]"
+              title={row.costNote || "Paid listing or sponsored placement"}
+            >
+              PAID
+            </span>
+          ) : row.cost === "unpaid" ? (
+            <span
+              className="shrink-0 rounded-full border border-[color-mix(in_srgb,var(--cw-neon)_32%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_10%,transparent)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--cw-neon)]"
+              title={row.costNote || "Free to submit, claim, or pitch"}
+            >
+              FREE
+            </span>
+          ) : ACTIONABLE.includes(row.type) ? (
+            <span
+              className="shrink-0 rounded-full border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--cw-ink-faint)]"
+              title={row.costNote || "Couldn't confirm whether a listing is free"}
+            >
+              UNCONFIRMED
             </span>
           ) : null}
           {row.serpPosition != null ? (
@@ -531,7 +560,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
             <StatTile
               label="You can pitch"
               value={formatNum(data.summary?.prospects)}
-              hint="Directories, resource pages, roundups, contributor sites"
+              hint={`${formatNum(data.summary?.unpaid)} unpaid · ${formatNum(data.summary?.paid)} paid`}
               accent
               icon={Trophy}
             />

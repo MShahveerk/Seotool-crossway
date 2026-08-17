@@ -197,6 +197,21 @@ export default function ProspectModal({ prospect, targets = [], onClose }) {
 
                 <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-3">
                   <Row label="Opportunity type">{prospect.typeLabel}</Row>
+                  <Row label="Cost">
+                    {prospect.cost === "paid" ? (
+                      <span className="text-[var(--cw-caution)]" title={prospect.costNote}>
+                        Paid listing / sponsored
+                      </span>
+                    ) : prospect.cost === "unpaid" ? (
+                      <span className="text-[var(--cw-neon)]" title={prospect.costNote}>
+                        Unpaid — pitch or submit free
+                      </span>
+                    ) : (
+                      <span className="text-[var(--cw-ink-faint)]" title={prospect.costNote}>
+                        Unconfirmed
+                      </span>
+                    )}
+                  </Row>
                   <Row label="Link type">
                     {dofollowCount || nofollowCount ? (
                       <>
