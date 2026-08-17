@@ -170,7 +170,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   };
 
   /** Types you can realistically pitch, as opposed to links you can only observe. */
-  const ACTIONABLE = ["serp-listing", "guest-post", "directory", "resource", "roundup"];
+  const ACTIONABLE = ["serp-listing", "guest-post", "publication", "directory", "resource", "roundup"];
 
   /**
    * Free-text filter across everything that identifies a prospect — the domain,

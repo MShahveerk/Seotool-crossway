@@ -132,7 +132,7 @@ export default function ProspectModal({ prospect, targets = [], onClose }) {
               <span
                 title={prospect.typeHint}
                 className={`rounded-lg border px-2 py-0.5 text-[10px] font-bold ${
-                  ["guest-post", "directory", "resource", "roundup"].includes(prospect.type)
+                  ["guest-post", "publication", "directory", "resource", "roundup", "serp-listing"].includes(prospect.type)
                     ? "border-[color-mix(in_srgb,var(--cw-neon)_32%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_10%,transparent)] text-[var(--cw-neon)]"
                     : "border-[var(--cw-hairline)] bg-[var(--cw-raised)] text-[var(--cw-ink-faint)]"
                 }`}
