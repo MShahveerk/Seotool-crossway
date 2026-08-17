@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FiDownload,
   FiExternalLink,
+  FiKey,
   FiLink,
   FiMapPin,
   FiMonitor,
@@ -21,6 +22,11 @@ import StatTile from "../ui-shared/StatTile";
 import Btn from "../ui-shared/Btn";
 import ProspectModal from "./ProspectModal";
 import { downloadServerReport } from "./downloadReport";
+import {
+  PROVIDERS,
+  modelsForProvider,
+  defaultModelForProvider,
+} from "../blogStudio/studioConstants";
 
 const GEO_OPTIONS = [
   { value: "us", label: "US" },
@@ -95,6 +101,62 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
+  const [llmConfig, setLlmConfig] = useState(null);
+  const [llmSaving, setLlmSaving] = useState(false);
+  const [llmOpen, setLlmOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/seo/link-opportunities/llm");
+        const json = await res.json();
+        if (!cancelled && res.ok && json.config) setLlmConfig(json.config);
+      } catch {
+        /* settings are optional */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const patchLlm = (partial) => {
+    setLlmConfig((prev) => {
+      const next = { ...(prev || {}), ...partial };
+      if (partial.provider && partial.provider !== prev?.provider) {
+        next.model = defaultModelForProvider(partial.provider, "chat");
+      }
+      return next;
+    });
+  };
+
+  const saveLlm = async () => {
+    if (!llmConfig || llmSaving) return;
+    setLlmSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/seo/link-opportunities/llm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: llmConfig.enabled !== false,
+          provider: llmConfig.provider,
+          model: llmConfig.model,
+          openaiApiKey: llmConfig.openaiApiKey,
+          anthropicApiKey: llmConfig.anthropicApiKey,
+          openrouterApiKey: llmConfig.openrouterApiKey,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || "Failed to save LLM keys");
+      setLlmConfig(json.config);
+    } catch (err) {
+      setError(err.message || "Failed to save LLM keys");
+    } finally {
+      setLlmSaving(false);
+    }
+  };
 
   const exportPdf = async () => {
     if (!data || pdfBusy) return;
@@ -421,6 +483,106 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       loading={false}
       error={error}
     >
+      <div className="cw-lit space-y-3 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5">
+        <button
+          type="button"
+          onClick={() => setLlmOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-3 text-left"
+        >
+          <span className="flex items-center gap-2">
+            <FiKey className="size-4 text-[var(--cw-neon)]" />
+            <span className="text-sm font-semibold text-[var(--cw-ink)]">LLM probe keys</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                llmConfig?.ready
+                  ? "bg-[color-mix(in_srgb,var(--cw-neon)_14%,transparent)] text-[var(--cw-neon)]"
+                  : "bg-[var(--cw-raised)] text-[var(--cw-ink-muted)]"
+              }`}
+            >
+              {llmConfig?.ready ? "Ready" : "Not configured"}
+            </span>
+          </span>
+          <span className="text-[11px] text-[var(--cw-ink-faint)]">
+            {llmOpen ? "Hide" : "Same as Autopilot — OpenRouter, OpenAI or Anthropic"}
+          </span>
+        </button>
+        {llmOpen ? (
+          <div className="space-y-4 border-t border-[var(--cw-hairline)] pt-4">
+            <p className="text-[12px] leading-relaxed text-[var(--cw-ink-muted)]">
+              Can pitch fetches live pages, then the model judges only that evidence. It cannot invent
+              a submit URL. Leave a field masked to keep the saved key. Server env keys
+              (OPENROUTER_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY) still work as fallback.
+            </p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {[
+                ["openaiApiKey", "OpenAI API key", "openai"],
+                ["anthropicApiKey", "Anthropic API key", "anthropic"],
+                ["openrouterApiKey", "OpenRouter API key", "openrouter"],
+              ].map(([key, label, statusKey]) => (
+                <div key={key} className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+                    {label}
+                    {llmConfig?.keyStatus?.[statusKey] ? (
+                      <span className="normal-case tracking-normal text-[var(--cw-neon)]">ready</span>
+                    ) : null}
+                  </label>
+                  <input
+                    type="password"
+                    value={llmConfig?.[key] || ""}
+                    onChange={(e) => patchLlm({ [key]: e.target.value })}
+                    placeholder="Leave masked to keep existing"
+                    className={INPUT}
+                    autoComplete="off"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+                  Provider
+                </label>
+                <select
+                  value={llmConfig?.provider || "openrouter"}
+                  onChange={(e) => patchLlm({ provider: e.target.value })}
+                  className={INPUT}
+                >
+                  {PROVIDERS.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+                  Model
+                </label>
+                <select
+                  value={llmConfig?.model || ""}
+                  onChange={(e) => patchLlm({ model: e.target.value })}
+                  className={INPUT}
+                >
+                  {modelsForProvider(llmConfig?.provider || "openrouter", {
+                    kind: "chat",
+                    current: llmConfig?.model || "",
+                  }).map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Btn type="button" variant="secondary" size="sm" loading={llmSaving} onClick={saveLlm}>
+                Save keys
+              </Btn>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
       <form
         onSubmit={run}
         className="cw-lit space-y-4 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5"
@@ -516,7 +678,8 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       {loading ? (
         <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-8 text-center text-sm text-[var(--cw-ink-muted)]">
           <FiRefreshCw className="mx-auto mb-3 size-6 animate-spin text-[var(--cw-neon)]" />
-          Pulling the link profile of every top-ranking site. A keyword in a niche you&rsquo;ve
+          Pulling rival backlinks, then checking live submit routes
+          {llmConfig?.ready ? " with the saved LLM" : ""}. A keyword you&rsquo;ve
           analysed before is mostly cached — a brand new one can take a minute.
         </div>
       ) : null}
