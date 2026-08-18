@@ -11,7 +11,7 @@ import { buildPipelineSteps } from "../studioShared/runFormat";
  */
 
 /** Pipeline order. The Interpreter only runs for document/Excel sources. */
-const BLOG_PIPELINE = [
+export const BLOG_PIPELINE = [
   { id: "interpreter", title: "Interpreter", subtitle: "Document → SEO seeds", optional: true },
   { id: "agent1", title: "Strategist", subtitle: "Keyword intelligence" },
   { id: "agent2", title: "Architect", subtitle: "Article blueprint" },
@@ -19,7 +19,7 @@ const BLOG_PIPELINE = [
   { id: "image", title: "Image", subtitle: "Featured visual" },
 ];
 
-function resolveImageSrc(path) {
+export function resolveImageSrc(path) {
   if (!path) return null;
   const value = String(path);
   if (value.startsWith("/") || /^(https?:|data:|blob:)/i.test(value)) return value;

@@ -12,7 +12,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { Ban, Bell, ChevronDown, Maximize2, Minimize2, Workflow } from "lucide-react";
+import { ArrowUpRight, Ban, Bell, ChevronDown, Maximize2, Minimize2, Workflow } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GlowDot } from "../ui-shared/Status";
 import Btn from "../ui-shared/Btn";
@@ -26,6 +26,8 @@ export default function LiveRunDock({
   label = "Run",
   children,
   onCancel,
+  onOpen,
+  openLabel = "Open",
   cancelling = false,
   defaultExpanded = false,
   className = "",
@@ -43,12 +45,14 @@ export default function LiveRunDock({
   const total = Math.max(stages.length, done + (current ? 1 : 0));
   const pct = total ? Math.round(((done + (current ? 0.5 : 0)) / total) * 100) : 6;
 
+  const queued = normalizeStatus(run.status) === "queued";
+
   const agentName =
     current?.title ||
     current?.role ||
     current?.agentId ||
     current?.agent ||
-    (done ? "wrapping up" : "starting up");
+    (done ? "wrapping up" : queued ? "waiting for a slot" : "starting up");
 
   return (
     <div
@@ -68,9 +72,18 @@ export default function LiveRunDock({
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
           aria-expanded={expanded}
         >
-          <GlowDot status="running" />
-          <span className="text-[13px] font-semibold text-[var(--cw-ink)]">{label} running</span>
-          <span className="truncate text-[13px] text-[var(--cw-neon)]">· {agentName}</span>
+          <GlowDot status={queued ? "queued" : "running"} />
+          <span className="text-[13px] font-semibold text-[var(--cw-ink)]">
+            {label} {queued ? "queued" : "running"}
+          </span>
+          <span
+            className={cn(
+              "truncate text-[13px]",
+              queued ? "text-[var(--cw-caution)]" : "text-[var(--cw-neon)]"
+            )}
+          >
+            · {agentName}
+          </span>
           <ChevronDown
             className={cn(
               "size-3.5 shrink-0 text-[var(--cw-ink-faint)] transition-transform duration-200",
@@ -95,13 +108,18 @@ export default function LiveRunDock({
               {cancelling ? "Cancelling…" : "Cancel"}
             </Btn>
           ) : null}
+          {onOpen ? (
+            <Btn variant="outline" size="xs" iconRight={ArrowUpRight} onClick={onOpen}>
+              {openLabel}
+            </Btn>
+          ) : null}
           <Btn
-            variant="outline"
+            variant={onOpen ? "ghost" : "outline"}
             size="xs"
             icon={expanded ? Minimize2 : Maximize2}
             onClick={() => setExpanded((v) => !v)}
           >
-            {expanded ? "Minimise" : "Maximise"}
+            {expanded ? "Minimise" : "Peek"}
           </Btn>
         </span>
 

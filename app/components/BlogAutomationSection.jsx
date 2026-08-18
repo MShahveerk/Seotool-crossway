@@ -24,6 +24,7 @@ import {
   FiExternalLink,
 } from "react-icons/fi";
 import RunConsole from "./blogStudio/RunConsole";
+import RunLibrary from "./blogStudio/RunLibrary";
 import ExcelQueuePanel from "./blogStudio/ExcelQueuePanel";
 import ContentInbox from "./blogStudio/ContentInbox";
 import PipelinePreview from "./blogStudio/PipelinePreview";
@@ -33,6 +34,7 @@ import StudioBrandKit from "./studioShared/StudioBrandKit";
 import TabRail from "./ui-shared/TabRail";
 import Btn from "./ui-shared/Btn";
 import LiveRunDock from "./studioShared/LiveRunDock";
+import { isLiveStatus } from "./studioShared/runFormat";
 import { BLOG_STUDIO_DEFAULT_PROMPTS } from "../../lib/blogStudio/defaults";
 import {
   INTERVAL_OPTIONS,
@@ -72,18 +74,6 @@ const surfaceCard = "rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw
 const raisedCard = "rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-4";
 const helpText = "text-sm text-[var(--cw-ink-muted)]";
 
-function statusChip(status) {
-  const s = String(status || "");
-  const map = {
-    succeeded: "border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] text-[var(--cw-neon)]",
-    running: "border-amber-400/40 bg-amber-400/10 text-amber-300",
-    queued: "border-amber-400/40 bg-amber-400/10 text-amber-300",
-    failed: "border-[color-mix(in_srgb,var(--cw-danger)_45%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_12%,var(--cw-surface))] text-[var(--cw-danger)]",
-    cancelled: "border-[var(--cw-hairline)] bg-[var(--cw-raised)] text-[var(--cw-ink-muted)]",
-  };
-  return map[s] || "border-[var(--cw-hairline)] bg-[var(--cw-raised)] text-[var(--cw-ink-muted)]";
-}
-
 function linksToEditor(value) {
   try {
     return JSON.stringify(Array.isArray(value) ? value : [], null, 2);
@@ -113,8 +103,16 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   const [saveMessage, setSaveMessage] = useState(null);
   const [topic, setTopic] = useState("");
   const [running, setRunning] = useState(false);
-  const [activeRun, setActiveRun] = useState(null);
   const [runs, setRuns] = useState([]);
+  // The run in flight and the run you're reading are separate things: opening an
+  // old run from the Library must not tear down the live dock.
+  const [liveRun, setLiveRun] = useState(null);
+  const [selectedRunId, setSelectedRunId] = useState("");
+  const [selectedRunDetail, setSelectedRunDetail] = useState(null);
+  const [runDetailLoading, setRunDetailLoading] = useState(false);
+  const [runDetailError, setRunDetailError] = useState("");
+  const [runDetailNonce, setRunDetailNonce] = useState(0);
+  const [refreshingRuns, setRefreshingRuns] = useState(false);
   const [internalLinksText, setInternalLinksText] = useState("[]");
   const [externalLinksText, setExternalLinksText] = useState("[]");
   const [interpreting, setInterpreting] = useState(false);
@@ -156,11 +154,20 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
       return;
     }
     const res = await fetch(
-      `/api/admin/blog-automation/runs?siteLink=${encodeURIComponent(selectedSite)}&limit=15`
+      `/api/admin/blog-automation/runs?siteLink=${encodeURIComponent(selectedSite)}&limit=25`
     );
     const data = await res.json();
     if (res.ok) setRuns(Array.isArray(data.runs) ? data.runs : []);
   }, [selectedSite]);
+
+  const refreshRuns = useCallback(async () => {
+    setRefreshingRuns(true);
+    try {
+      await loadRuns();
+    } finally {
+      setRefreshingRuns(false);
+    }
+  }, [loadRuns]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -203,26 +210,102 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     } catch {}
   }, []);
 
-  // Poll active run
+  // The run in flight, taken from the list so runs started elsewhere (Excel
+  // queue, Autopilot, another tab) are picked up too.
+  const liveRunFromList = useMemo(() => runs.find((r) => isLiveStatus(r.status)) || null, [runs]);
+  const liveRunId = isLiveStatus(liveRun?.status) ? liveRun.id : liveRunFromList?.id || "";
+  const hasLiveAutomation = Boolean(liveRunId);
+
+  // Follow the live run closely — this is what feeds the dock and, when it's the
+  // run you have open, the cockpit.
   useEffect(() => {
-    if (!activeRun?.id) return undefined;
-    if (["succeeded", "failed", "cancelled"].includes(activeRun.status)) return undefined;
-    const t = setInterval(async () => {
+    if (!liveRunId) return undefined;
+    let cancelled = false;
+    const tick = async () => {
       try {
-        const res = await fetch(`/api/admin/blog-automation/runs/${activeRun.id}`);
+        const res = await fetch(`/api/admin/blog-automation/runs/${liveRunId}`);
         const data = await res.json();
-        if (res.ok && data.run) {
-          setActiveRun(data.run);
-          if (["succeeded", "failed", "cancelled"].includes(data.run.status)) {
-            loadRuns();
-          }
-        }
+        if (!cancelled && res.ok && data.run) setLiveRun(data.run);
       } catch {
         /* ignore poll errors */
       }
-    }, 2000);
+    };
+    tick();
+    const t = setInterval(tick, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [liveRunId]);
+
+  // Keep the library list itself moving while anything is live, so its cards
+  // report progress instead of going stale until someone hits Refresh.
+  useEffect(() => {
+    if (!hasLiveAutomation) return undefined;
+    const t = setInterval(() => {
+      loadRuns();
+    }, 4000);
     return () => clearInterval(t);
-  }, [activeRun?.id, activeRun?.status, loadRuns]);
+  }, [hasLiveAutomation, loadRuns]);
+
+  // Whichever run the dock follows is already polled, so the Library reads it
+  // off that object rather than fetching the same run twice.
+  const selectedIsLiveRun =
+    Boolean(selectedRunId) && (selectedRunId === liveRunId || selectedRunId === liveRun?.id);
+
+  // The run you selected in the Library, for every run that isn't the live one.
+  useEffect(() => {
+    if (!selectedRunId || selectedIsLiveRun) {
+      setRunDetailLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    let timer = null;
+
+    const load = async (initial) => {
+      if (initial) {
+        setRunDetailLoading(true);
+        setRunDetailError("");
+      }
+      try {
+        const res = await fetch(`/api/admin/blog-automation/runs/${selectedRunId}`);
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) throw new Error(data.error || "Failed to load this run.");
+        setSelectedRunDetail(data.run);
+        // A run can be live without being *the* live run (a queued Excel batch).
+        if (isLiveStatus(data.run?.status)) timer = setTimeout(() => load(false), 2500);
+      } catch (err) {
+        if (!cancelled && initial) setRunDetailError(err.message || "Failed to load this run.");
+      } finally {
+        if (!cancelled && initial) setRunDetailLoading(false);
+      }
+    };
+
+    load(true);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [selectedRunId, selectedIsLiveRun, runDetailNonce]);
+
+  const selectedRun =
+    selectedRunId && liveRun?.id === selectedRunId ? liveRun : selectedRunDetail;
+
+  const selectRun = useCallback((id) => {
+    const runId = String(id || "");
+    if (!runId) return;
+    setSelectedRunId(runId);
+    setSelectedRunDetail(null);
+    setRunDetailError("");
+    setZone("library");
+  }, []);
+
+  const closeRun = useCallback(() => {
+    setSelectedRunId("");
+    setSelectedRunDetail(null);
+    setRunDetailError("");
+  }, []);
 
   const patchSite = useCallback(
     (patch) => setSiteConfig((c) => (c ? { ...c, ...patch } : c)),
@@ -318,8 +401,11 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start run.");
-      setActiveRun(data.run);
-      setSaveMessage({ ok: true, text: "Studio run queued — watch it below." });
+      if (data.run) {
+        setLiveRun(data.run);
+        selectRun(data.run.id);
+      }
+      setSaveMessage({ ok: true, text: "Run queued — following it in the Library." });
       loadRuns();
     } catch (err) {
       setSaveMessage({ ok: false, text: err.message });
@@ -328,16 +414,8 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     }
   };
 
-  const liveRuns = useMemo(
-    () => runs.filter((r) => r.status === "queued" || r.status === "running"),
-    [runs]
-  );
-  const hasLiveAutomation =
-    liveRuns.length > 0 ||
-    ["queued", "running"].includes(String(activeRun?.status || ""));
-
   const cancelRun = async (runId) => {
-    const id = runId || activeRun?.id || liveRuns[0]?.id;
+    const id = runId || liveRunId;
     if (!selectedSite) return;
     setCancelling(true);
     setSaveMessage(null);
@@ -350,7 +428,10 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to cancel.");
       const cancelled = data.run || data.runs?.[0] || null;
-      if (cancelled) setActiveRun(cancelled);
+      if (cancelled) {
+        if (liveRun?.id === cancelled.id) setLiveRun(cancelled);
+        if (selectedRunId === cancelled.id) setSelectedRunDetail(cancelled);
+      }
       setSaveMessage({
         ok: true,
         text:
@@ -378,7 +459,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to cancel.");
-      if (data.runs?.[0]) setActiveRun(data.runs[0]);
+      if (data.runs?.[0]) setLiveRun(data.runs[0]);
       setSaveMessage({
         ok: true,
         text:
@@ -472,15 +553,6 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     }
   };
 
-  const openRun = useCallback(async (id) => {
-    const res = await fetch(`/api/admin/blog-automation/runs/${id}`);
-    const data = await res.json();
-    if (res.ok) {
-      setActiveRun(data.run);
-      setZone("library");
-    }
-  }, []);
-
   if (loading) {
     return (
       <div className="flex items-center gap-2 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-8 text-sm text-[var(--cw-ink-muted)]">
@@ -493,6 +565,11 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     setZone("setup");
     setSetupTab("agents");
   };
+
+  // The dock is a pointer to the live run; in the Library with that run open
+  // there is nothing left for it to point at.
+  const dockedRun =
+    zone === "library" && selectedRunId && selectedRunId === liveRun?.id ? null : liveRun;
 
   return (
     <div className="space-y-4">
@@ -663,7 +740,9 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
           <div className="flex flex-wrap items-center gap-3">
             <TabRail
               tabs={ZONES.map((z) =>
-                z.id === "library" && hasLiveAutomation ? { ...z, live: true } : z
+                z.id === "library"
+                  ? { ...z, live: hasLiveAutomation, badge: runs.length || undefined }
+                  : z
               )}
               value={zone}
               onChange={setZone}
@@ -690,9 +769,18 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
             </div>
           </div>
 
-          {/* Live run docks on every zone, minimised, self-hiding. */}
-          <LiveRunDock run={activeRun} label="Draft" onCancel={() => cancelRun(activeRun?.id)} cancelling={cancelling}>
-            <RunConsole run={activeRun} onCancel={() => cancelRun(activeRun?.id)} cancelling={cancelling} />
+          {/* Live run docks on every zone, minimised, self-hiding — except in the
+              Library with that same run already open, where it would only be
+              pointing at what you're looking at. */}
+          <LiveRunDock
+            run={dockedRun}
+            label="Draft"
+            onCancel={() => cancelRun(liveRun?.id)}
+            onOpen={liveRun?.id ? () => selectRun(liveRun.id) : undefined}
+            openLabel="Open in Library"
+            cancelling={cancelling}
+          >
+            <RunConsole run={liveRun} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />
           </LiveRunDock>
 
           {/* ── COMPOSE ─────────────────────────────────────────────── */}
@@ -763,8 +851,11 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                     siteLink={selectedSite}
                     highlightRunId={seedHandoffRunId}
                     onRan={async (run) => {
-                      if (run?.id) setActiveRun(run);
-                      setSaveMessage({ ok: true, text: "Studio run queued — watch stages above." });
+                      if (run?.id) {
+                        setLiveRun(run);
+                        selectRun(run.id);
+                      }
+                      setSaveMessage({ ok: true, text: "Run queued — following it in the Library." });
                       await loadRuns();
                     }}
                   />
@@ -787,85 +878,22 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
 
           {/* ── LIBRARY ─────────────────────────────────────────────── */}
           {zone === "library" && (
-            <div className="space-y-4">
-              {!hasLiveAutomation ? (
-                <RunConsole run={activeRun} onCancel={() => cancelRun(activeRun?.id)} cancelling={cancelling} />
-              ) : null}
-
-              {runs.length > 0 ? (
-                <div className={surfaceCard}>
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">
-                      Recent runs
-                    </p>
-                    <Btn variant="ghost" size="xs" icon={FiRefreshCw} onClick={loadRuns}>
-                      Refresh
-                    </Btn>
-                  </div>
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-                    {runs.map((r) => {
-                      const live = r.status === "queued" || r.status === "running";
-                      return (
-                        <button
-                          key={r.id}
-                          type="button"
-                          onClick={() => openRun(r.id)}
-                          className="group flex flex-col gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-3.5 text-left transition-smooth hover:border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] hover:bg-[var(--cw-overlay)]"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${statusChip(r.status)}`}>
-                              {r.status}
-                            </span>
-                            <span className="font-mono text-[10px] text-[var(--cw-ink-faint)]">
-                              {formatWhen(r.createdAt)}
-                            </span>
-                          </div>
-                          <p className="line-clamp-2 text-sm font-semibold text-[var(--cw-ink)]">
-                            {r.topic || "Untitled topic"}
-                          </p>
-                          <div className="mt-auto flex items-center justify-between gap-2 pt-1 text-[11px] text-[var(--cw-ink-muted)]">
-                            <span className="font-mono">
-                              {r.totalCostUsd != null ? `$${Number(r.totalCostUsd).toFixed(4)}` : "—"}
-                            </span>
-                            <span className="truncate">{r.trigger}</span>
-                          </div>
-                          {live && (
-                            <span
-                              role="button"
-                              tabIndex={0}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                cancelRun(r.id);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.stopPropagation();
-                                  cancelRun(r.id);
-                                }
-                              }}
-                              className="inline-flex w-fit items-center gap-1 rounded-md border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] px-2 py-1 text-[11px] font-semibold text-[var(--cw-danger)]"
-                            >
-                              <FiXCircle className="h-3 w-3" /> Cancel
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className={`${surfaceCard} text-center`}>
-                  <FiList className="mx-auto h-6 w-6 text-[var(--cw-ink-faint)]" />
-                  <p className="mt-2 text-sm font-semibold text-[var(--cw-ink)]">No runs yet</p>
-                  <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
-                    Head to Compose and generate your first draft — it will appear here.
-                  </p>
-                  <Btn variant="outline" size="sm" icon={FiEdit3} className="mt-3" onClick={() => setZone("compose")}>
-                    Go to Compose
-                  </Btn>
-                </div>
-              )}
-            </div>
+            <RunLibrary
+              runs={runs}
+              selectedRunId={selectedRunId}
+              selectedRun={selectedRun}
+              detailLoading={runDetailLoading}
+              detailError={runDetailError}
+              liveRunId={liveRunId}
+              refreshing={refreshingRuns}
+              cancelling={cancelling}
+              onSelect={selectRun}
+              onClose={closeRun}
+              onRefresh={refreshRuns}
+              onRetryDetail={() => setRunDetailNonce((n) => n + 1)}
+              onCancel={cancelRun}
+              onGoCompose={() => setZone("compose")}
+            />
           )}
 
           {/* ── SETUP ───────────────────────────────────────────────── */}
