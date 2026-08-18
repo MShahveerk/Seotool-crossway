@@ -195,7 +195,7 @@ export default function SiteHealthSection({ selectedSite = "" }) {
         <div className="relative flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300/90">SEO Tools</p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Authority &amp; Performance</h1>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Performance Metrics</h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-300">
               Domain authority, backlinks, organic reach, and page performance — live SEO metrics when available,
               Open PageRank and PageSpeed as fallback.

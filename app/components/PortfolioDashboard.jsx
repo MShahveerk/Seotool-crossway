@@ -110,6 +110,46 @@ function toAuthorityMap(rows) {
   return m;
 }
 
+/** Domain-keyed lookup for site-explorer referring-domain snapshots. */
+function toDomainMap(rows) {
+  const m = new Map();
+  for (const row of rows || []) {
+    const k = String(row.domain || "").toLowerCase().replace(/^www\./, "");
+    if (k && !m.has(k)) m.set(k, row);
+  }
+  return m;
+}
+
+/** `[{ siteLink, refdomains }]` → Map keyed like clients (max per key). */
+function toRefdomainMap(rows) {
+  const m = new Map();
+  for (const row of rows || []) {
+    const k = normalizeMatchKey(row.siteLink);
+    const v = Number(row.refdomains);
+    if (k && Number.isFinite(v)) m.set(k, Math.max(m.get(k) || 0, v));
+  }
+  return m;
+}
+
+/** First finite value > 0, else null — mirrors the dashboard's firstPositive. */
+function firstPositive(...vals) {
+  for (const v of vals) {
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
+/** Best (max) positive metric for a client across its identifiers. */
+function metricForClient(entry, map) {
+  let best = null;
+  for (const key of clientMatchKeys(entry)) {
+    const n = Number(map.get(key));
+    if (Number.isFinite(n) && n > 0) best = best == null ? n : Math.max(best, n);
+  }
+  return best;
+}
+
 function compactNum(n) {
   const v = Number(n) || 0;
   return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(v);
@@ -179,6 +219,8 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
     totalPosts: [],
     totalBlogs: [],
     authority: [],
+    backlinks: [],
+    explorer: [],
     followers: [],
   });
   const [loading, setLoading] = useState(true);
@@ -201,6 +243,8 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
         totalPosts: Array.isArray(ov?.totalPosts) ? ov.totalPosts : [],
         totalBlogs: Array.isArray(ov?.totalBlogs) ? ov.totalBlogs : [],
         authority: Array.isArray(ov?.authority) ? ov.authority : [],
+        backlinks: Array.isArray(ov?.backlinks) ? ov.backlinks : [],
+        explorer: Array.isArray(ov?.explorer) ? ov.explorer : [],
         followers: Array.isArray(ov?.followers) ? ov.followers : [],
       });
       setLoading(false);
@@ -215,6 +259,8 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
   const totalPostMap = useMemo(() => toCountMap(overview.totalPosts), [overview.totalPosts]);
   const totalBlogMap = useMemo(() => toCountMap(overview.totalBlogs), [overview.totalBlogs]);
   const authorityMap = useMemo(() => toAuthorityMap(overview.authority), [overview.authority]);
+  const backlinkMap = useMemo(() => toRefdomainMap(overview.backlinks), [overview.backlinks]);
+  const explorerMap = useMemo(() => toDomainMap(overview.explorer), [overview.explorer]);
 
   const followerRowsByKey = useMemo(() => {
     const m = new Map();
@@ -233,6 +279,7 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
       .map((entry) => {
         const host = siteHost(entry.siteLink);
         const auth = host ? authorityMap.get(host.toLowerCase()) : null;
+        const exp = host ? explorerMap.get(host.toLowerCase()) : null;
         return {
           entry,
           value: getClientAccountSelectValue(entry),
@@ -245,14 +292,34 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
           totalPosts: sumForClient(entry, totalPostMap),
           totalBlogs: sumForClient(entry, totalBlogMap),
           followers: followersForClient(entry, followerRowsByKey),
-          authority: auth?.score != null ? Math.round(auth.score) : null,
-          referringDomains: auth?.referringDomains ?? null,
+          // 0-100 (DA-style), matching the dashboard scorecard.
+          authority: auth?.score100 ?? null,
+          // Same cascade the dashboard uses: SE Ranking backlinks → explorer
+          // (OPR/count) → OPR authority. Prefers the richest known source.
+          referringDomains: firstPositive(
+            metricForClient(entry, backlinkMap),
+            exp?.refOpr,
+            auth?.referringDomains,
+            exp?.refCount
+          ),
         };
       })
       .filter((c) => c.value)
       .filter((c) => !q || c.name.toLowerCase().includes(q) || c.host.toLowerCase().includes(q))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [sites, metaAccounts, query, postMap, blogMap, totalPostMap, totalBlogMap, followerRowsByKey, authorityMap]);
+  }, [
+    sites,
+    metaAccounts,
+    query,
+    postMap,
+    blogMap,
+    totalPostMap,
+    totalBlogMap,
+    followerRowsByKey,
+    authorityMap,
+    backlinkMap,
+    explorerMap,
+  ]);
 
   const totalAlerts = useMemo(
     () => clients.reduce((s, c) => s + c.pendingPosts + c.pendingBlogs, 0),
