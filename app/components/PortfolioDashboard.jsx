@@ -120,13 +120,23 @@ function toDomainMap(rows) {
   return m;
 }
 
-/** `[{ siteLink, refdomains }]` → Map keyed like clients (max per key). */
-function toRefdomainMap(rows) {
+/**
+ * SE Ranking backlink rows (`[{ domain, refdomains, inlinkRank }]`) → domain-keyed
+ * map. Domain (bare host) is the only key stable across the many siteUrl variants
+ * SE Ranking snapshots are stored under. Max per field when a host repeats.
+ */
+function toBacklinkMap(rows) {
   const m = new Map();
   for (const row of rows || []) {
-    const k = normalizeMatchKey(row.siteLink);
-    const v = Number(row.refdomains);
-    if (k && Number.isFinite(v)) m.set(k, Math.max(m.get(k) || 0, v));
+    const k = String(row.domain || "").toLowerCase().replace(/^www\./, "");
+    if (!k) continue;
+    const prev = m.get(k) || { refdomains: null, inlinkRank: null };
+    const rd = Number(row.refdomains);
+    const ir = Number(row.inlinkRank);
+    m.set(k, {
+      refdomains: Number.isFinite(rd) ? Math.max(prev.refdomains || 0, rd) : prev.refdomains,
+      inlinkRank: Number.isFinite(ir) ? Math.max(prev.inlinkRank || 0, ir) : prev.inlinkRank,
+    });
   }
   return m;
 }
@@ -138,16 +148,6 @@ function firstPositive(...vals) {
     if (Number.isFinite(n) && n > 0) return n;
   }
   return null;
-}
-
-/** Best (max) positive metric for a client across its identifiers. */
-function metricForClient(entry, map) {
-  let best = null;
-  for (const key of clientMatchKeys(entry)) {
-    const n = Number(map.get(key));
-    if (Number.isFinite(n) && n > 0) best = best == null ? n : Math.max(best, n);
-  }
-  return best;
 }
 
 function compactNum(n) {
@@ -259,7 +259,7 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
   const totalPostMap = useMemo(() => toCountMap(overview.totalPosts), [overview.totalPosts]);
   const totalBlogMap = useMemo(() => toCountMap(overview.totalBlogs), [overview.totalBlogs]);
   const authorityMap = useMemo(() => toAuthorityMap(overview.authority), [overview.authority]);
-  const backlinkMap = useMemo(() => toRefdomainMap(overview.backlinks), [overview.backlinks]);
+  const backlinkMap = useMemo(() => toBacklinkMap(overview.backlinks), [overview.backlinks]);
   const explorerMap = useMemo(() => toDomainMap(overview.explorer), [overview.explorer]);
 
   const followerRowsByKey = useMemo(() => {
@@ -278,8 +278,10 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
     return sites
       .map((entry) => {
         const host = siteHost(entry.siteLink);
-        const auth = host ? authorityMap.get(host.toLowerCase()) : null;
-        const exp = host ? explorerMap.get(host.toLowerCase()) : null;
+        const hostKey = host ? host.toLowerCase() : "";
+        const auth = hostKey ? authorityMap.get(hostKey) : null;
+        const exp = hostKey ? explorerMap.get(hostKey) : null;
+        const bl = hostKey ? backlinkMap.get(hostKey) : null;
         return {
           entry,
           value: getClientAccountSelectValue(entry),
@@ -292,12 +294,13 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
           totalPosts: sumForClient(entry, totalPostMap),
           totalBlogs: sumForClient(entry, totalBlogMap),
           followers: followersForClient(entry, followerRowsByKey),
-          // 0-100 (DA-style), matching the dashboard scorecard.
-          authority: auth?.score100 ?? null,
-          // Same cascade the dashboard uses: SE Ranking backlinks → explorer
-          // (OPR/count) → OPR authority. Prefers the richest known source.
+          // Same cascade as Site Intelligence / the dashboard: SE Ranking's
+          // domain inlink rank (0-100) first, Open PageRank (scaled) as fallback.
+          authority: firstPositive(bl?.inlinkRank, auth?.score100),
+          // SE Ranking referring domains first, then site-explorer (OPR/count),
+          // then OPR authority — the dashboard's exact order.
           referringDomains: firstPositive(
-            metricForClient(entry, backlinkMap),
+            bl?.refdomains,
             exp?.refOpr,
             auth?.referringDomains,
             exp?.refCount

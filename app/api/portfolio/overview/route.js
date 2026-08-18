@@ -3,6 +3,7 @@ import { authOptions } from "../../auth/[...nextauth]/route";
 import prisma from "../../../../lib/prisma";
 import { hasGlobalSiteAccess } from "../../../../lib/modulePermissions";
 import { toScore100 } from "../../../../lib/authorityScore";
+import { toDomain } from "../../../../lib/authority";
 import { normalizeBacklinksSummary } from "../../../../lib/seranking/normalize";
 import { DATA_TYPES } from "../../../../lib/seranking/config";
 
@@ -86,12 +87,20 @@ export async function GET() {
         .filter((r) => r.siteLink)
         .map((r) => ({ siteLink: r.siteLink, count: r._count?._all || 0 }));
 
+    // Keyed by bare host — the only identifier stable across the many siteUrl
+    // variants SE Ranking snapshots are stored under. Carries both the
+    // referring-domain count (407) and the domain inlink rank (SE Ranking's
+    // 0-100 authority, which Site Intelligence shows).
     const backlinks = backlinkRows
       .map((r) => {
         const summary = normalizeBacklinksSummary(r.payload);
-        return { siteLink: r.siteUrl, refdomains: summary?.refdomains ?? null };
+        return {
+          domain: toDomain(r.siteUrl),
+          refdomains: summary?.refdomains ?? null,
+          inlinkRank: summary?.domainInlinkRank ?? null,
+        };
       })
-      .filter((r) => r.siteLink && r.refdomains != null);
+      .filter((r) => r.domain && (r.refdomains != null || r.inlinkRank != null));
 
     const explorer = explorerRows
       .filter((r) => r.domain)

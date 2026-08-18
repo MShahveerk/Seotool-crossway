@@ -33,13 +33,6 @@ const MARKETS = [
   { id: "pk", label: "Pakistan" },
 ];
 
-const RESEARCH_MODES = [
-  { id: "similar", label: "Similar", desc: "Synonyms & close variations" },
-  { id: "related", label: "Related", desc: "Topically related terms" },
-  { id: "questions", label: "Questions", desc: "Question-style queries" },
-  { id: "longtail", label: "Long-tail", desc: "Extended phrase matches" },
-];
-
 const INTENT_MAP = { I: "Info", C: "Commercial", T: "Transaction", L: "Local", N: "Nav" };
 
 function TrendSparkline({ trend, id = "trend" }) {
@@ -410,7 +403,9 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
   const [viewTab, setViewTab] = useState("research");
 
   const [market, setMarket] = useState("us");
-  const [mode, setMode] = useState("similar");
+  // Fixed expansion type — the Similar/Related/Questions/Long-tail selector was
+  // removed as it added noise without value.
+  const mode = "similar";
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(25);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -512,8 +507,6 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
     }
   };
 
-  const activeMode = RESEARCH_MODES.find((m) => m.id === mode);
-
   return (
     <SerankingShell
       title="Keyword Explorer"
@@ -558,26 +551,6 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
             <Card className="shadow-sm border-violet-100 overflow-hidden">
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-violet-50/80 via-white to-sky-50/40 p-5 sm:p-6 space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    {RESEARCH_MODES.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => setMode(m.id)}
-                        className={`rounded-lg px-3 py-2 text-left border transition-colors ${
-                          mode === m.id
-                            ? "border-violet-300 bg-violet-600 text-white shadow-sm"
-                            : "border-border/80 bg-white hover:border-violet-200"
-                        }`}
-                      >
-                        <span className="block text-xs font-bold">{m.label}</span>
-                        <span className={`block text-[10px] ${mode === m.id ? "text-violet-100" : "text-muted-foreground"}`}>
-                          {m.desc}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
                   <div className="flex flex-col lg:flex-row gap-3">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -635,7 +608,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    {activeMode?.desc} · {MARKETS.find((m) => m.id === market)?.label} · results cached 7 days ·
+                    {MARKETS.find((m) => m.id === market)?.label} · results cached 7 days ·
                     click any row for full metrics
                   </p>
                 </div>
