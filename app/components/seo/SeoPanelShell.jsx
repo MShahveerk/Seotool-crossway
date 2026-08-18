@@ -49,11 +49,11 @@ export default function SeoPanelShell({
 }) {
   if (!embedded && (!selectedSite || (!String(selectedSite).startsWith("http") && !/^\d+$/.test(String(selectedSite))))) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-6 sm:p-8 shadow-sm">
+      <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-6 shadow-sm sm:p-8">
         <EmptyState
           icon={Globe}
-          title="Select a client website"
-          description="Choose a website from the Client Account menu in the sidebar to use this tool. Meta-only pages do not support website SEO features."
+          title="Select a project"
+          description="Choose a project from the switcher in the sidebar to use this tool. Meta-only projects have no website behind them, so website SEO tools stay unavailable for them."
         />
       </div>
     );

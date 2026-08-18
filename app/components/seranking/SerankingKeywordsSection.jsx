@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import ProjectPicker from "@/app/components/ui-shared/ProjectPicker";
 import {
   Select,
   SelectContent,
@@ -426,10 +427,26 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
   const [domainSortField, setDomainSortField] = useState("traffic");
   const [domainSortDir, setDomainSortDir] = useState("desc");
   const [domainExpanded, setDomainExpanded] = useState(null);
+  /* Keyword research is a Toolkit tool: it must work with no project selected.
+     The typed domain wins over the selection, so research never depends on
+     which project happens to be open. Scoped users stay pinned to their own
+     site — the API would reject anything else anyway. */
+  const [domainOverride, setDomainOverride] = useState("");
+
+  const activeSite = useMemo(() => {
+    if (!hasGlobalAccess) return session?.user?.siteLink || "";
+    const typed = domainOverride.trim();
+    if (typed) return typed.startsWith("http") ? typed : `https://${typed}`;
+    return selectedSite || "";
+  }, [hasGlobalAccess, domainOverride, selectedSite, session?.user?.siteLink]);
 
   const loadSiteData = useCallback(async () => {
-    const site = hasGlobalAccess ? selectedSite : session?.user?.siteLink;
-    if (!site?.startsWith("http")) return;
+    const site = activeSite;
+    if (!site?.startsWith("http")) {
+      setDomainKeywords([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError("");
     const q = new URLSearchParams();
@@ -444,14 +461,14 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
     } finally {
       setLoading(false);
     }
-  }, [selectedSite, hasGlobalAccess, session?.user?.siteLink]);
+  }, [activeSite, hasGlobalAccess]);
 
   useEffect(() => {
     loadSiteData();
   }, [loadSiteData]);
 
   const runSearch = async (refresh = false) => {
-    const site = hasGlobalAccess ? selectedSite : session?.user?.siteLink;
+    const site = activeSite;
     const kw = query.trim();
     if (!kw || !site?.startsWith("http")) return;
     setSearchLoading(true);
@@ -544,7 +561,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
             onClick={() => setViewTab("domain")}
           >
             <Globe2 className="size-4 mr-1.5" />
-            Your domain keywords
+            Domain keywords
             {domainKeywords.length ? (
               <Badge variant="secondary" className="ml-2 tabular-nums">
                 {domainKeywords.length}
@@ -552,6 +569,25 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
             ) : null}
           </Button>
         </div>
+
+        {hasGlobalAccess ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2">
+            <span className="text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+              Domain
+            </span>
+            <Input
+              value={domainOverride}
+              onChange={(e) => setDomainOverride(e.target.value)}
+              placeholder={
+                selectedSite
+                  ? `Blank = ${selectedSite} (the selected project)`
+                  : "e.g. example.com — or pick a project"
+              }
+              className="h-9 min-w-0 flex-1 text-sm"
+            />
+            <ProjectPicker onSelect={setDomainOverride} />
+          </div>
+        ) : null}
 
         {viewTab === "research" ? (
           <>

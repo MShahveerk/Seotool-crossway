@@ -233,7 +233,7 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
             ) : sites.length === 0 && editingId !== "new" ? (
               <div className="text-center py-12 bg-[var(--cw-surface)] rounded-xl border border-[var(--cw-hairline)]">
                 <FiGlobe className="w-12 h-12 text-[var(--cw-ink-faint)] mx-auto mb-4" />
-                <p className="text-[var(--cw-ink-muted)]">No websites onboarded yet.</p>
+                <p className="text-[var(--cw-ink-muted)]">No projects onboarded yet.</p>
               </div>
             ) : (
               sites.map((site) => (

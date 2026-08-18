@@ -117,7 +117,6 @@ const SMM_BASELINE_PLATFORM_LABEL = {
 };
 import SiteAssociationsModal from "./SiteAssociationsModal";
 import SeoDigestSettingsPanel from "./SeoDigestSettingsPanel";
-import DataForSeoSettingsPanel from "./DataForSeoSettingsPanel";
 import ReportsManagementPanel from "./ReportsManagementPanel";
 import CronJobsPanel from "./CronJobsPanel";
 import ModulePermissionPicker from "./ModulePermissionPicker";
@@ -1284,7 +1283,6 @@ export default function AdminSection({ onNavigate } = {}) {
 
       {adminTab === "sources" && (
         <div className="space-y-4">
-          <DataForSeoSettingsPanel />
           <SeoDigestSettingsPanel />
         </div>
       )}
@@ -1577,10 +1575,10 @@ export default function AdminSection({ onNavigate } = {}) {
               {(formData.role === "smm" || formData.role === "approver" || formData.role === "viewer") && (
                 <div className="col-span-1 space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-4 md:col-span-2">
                   <label className="block text-sm font-bold text-[var(--cw-ink)]">
-                    Assign accessible client sites / pages
+                    Assign accessible projects
                   </label>
                   <p className="text-xs text-[var(--cw-ink-muted)]">
-                    Select the client sites or Meta pages this user is allowed to access and manage.
+                    Select the projects this user is allowed to access and manage.
                   </p>
                   {availableIntegrations.length > 0 ? (
                     <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-2">

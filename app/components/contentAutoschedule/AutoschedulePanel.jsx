@@ -163,7 +163,7 @@ export default function AutoschedulePanel({
   if (!selectedSite) {
     return (
       <div className="rounded-xl border border-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_10%,var(--cw-surface))] p-5 text-sm text-[var(--cw-caution)]">
-        Select a client site in the dashboard header to configure the autoscheduler.
+        Select a project in the sidebar to configure the autoscheduler.
       </div>
     );
   }

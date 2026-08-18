@@ -25,7 +25,6 @@ const SECTION_TO_KIND = {
   "keyword-research": "website",
   "ai-keyword-research": "website",
   "site-explorer": "website",
-  "link-index": "website",
 };
 
 /**

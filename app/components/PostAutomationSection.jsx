@@ -1025,7 +1025,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
 
       {isInternal && !selectedSite && (
         <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-5 text-sm text-amber-200">
-          Select a client account in the dashboard header to configure Internal Studio for that account.
+          Select a project in the sidebar to configure Internal Studio for that project.
         </div>
       )}
     </div>

@@ -38,6 +38,7 @@ import SeoPanelShell, { formatNum } from "./SeoPanelShell";
 import SideTabs from "../ui-shared/SideTabs";
 import TabRail from "../ui-shared/TabRail";
 import Btn from "../ui-shared/Btn";
+import ProjectPicker from "../ui-shared/ProjectPicker";
 import SeedReviewDrawer from "./SeedReviewDrawer";
 
 const SERP_INPUT =
@@ -1103,16 +1104,19 @@ export default function SerpAnalysisSection({ selectedSite }) {
             />
           </div>
           <div className="space-y-1.5 md:col-span-3">
-            <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
-              <FiUser className="size-3.5 text-[var(--cw-neon)]" /> Analyse for domain
-            </label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+                <FiUser className="size-3.5 text-[var(--cw-neon)]" /> Analyse for domain
+              </label>
+              <ProjectPicker onSelect={setSiteOverride} />
+            </div>
             <input
               type="text"
               value={siteOverride}
               onChange={(e) => setSiteOverride(e.target.value)}
               placeholder={
                 selectedSite
-                  ? `Blank = ${selectedSite} (the selected client)`
+                  ? `Blank = ${selectedSite} (the selected project)`
                   : "e.g. example.com — leave blank to just study the SERP"
               }
               className={SERP_INPUT}
@@ -1150,7 +1154,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
             {analysisSite ? (
               <span
                 className="flex items-center gap-1.5 font-mono text-[11px] text-[var(--cw-ink-muted)]"
-                title={siteOverride.trim() ? "Manual override" : "Selected client"}
+                  title={siteOverride.trim() ? "Manual override" : "Selected project"}
               >
                 <FiUser className="size-3.5 text-[var(--cw-neon)]" />
                 {analysisSite}

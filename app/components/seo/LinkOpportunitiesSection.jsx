@@ -20,6 +20,7 @@ import TabRail from "../ui-shared/TabRail";
 import DataTable from "../ui-shared/DataTable";
 import StatTile from "../ui-shared/StatTile";
 import Btn from "../ui-shared/Btn";
+import ProjectPicker from "../ui-shared/ProjectPicker";
 import ProspectModal from "./ProspectModal";
 import { downloadServerReport } from "./downloadReport";
 import {
@@ -628,16 +629,19 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
             />
           </div>
           <div className="space-y-1.5 md:col-span-3">
-            <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
-              <FiLink className="size-3.5 text-[var(--cw-neon)]" /> Prepare for domain
-            </label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+                <FiLink className="size-3.5 text-[var(--cw-neon)]" /> Prepare for domain
+              </label>
+              <ProjectPicker onSelect={setSiteOverride} />
+            </div>
             <input
               type="text"
               value={siteOverride}
               onChange={(e) => setSiteOverride(e.target.value)}
               placeholder={
                 selectedSite
-                  ? `Blank = ${selectedSite} (the selected client)`
+                  ? `Blank = ${selectedSite} (the selected project)`
                   : "e.g. example.com — leave blank for an unfiltered list"
               }
               className={INPUT}

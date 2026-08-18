@@ -16,6 +16,7 @@ import TabRail from "../ui-shared/TabRail";
 import DataTable from "../ui-shared/DataTable";
 import StatTile from "../ui-shared/StatTile";
 import Btn from "../ui-shared/Btn";
+import ProjectPicker from "../ui-shared/ProjectPicker";
 import { downloadServerReport } from "./downloadReport";
 
 const INPUT =
@@ -226,9 +227,12 @@ export default function KeywordOpportunitiesSection({ selectedSite = "" }) {
         className="cw-lit space-y-4 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5"
       >
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
-            <FiGlobe className="size-3.5 text-[var(--cw-neon)]" /> Domain
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+              <FiGlobe className="size-3.5 text-[var(--cw-neon)]" /> Domain
+            </label>
+            <ProjectPicker onSelect={setDomain} />
+          </div>
           <div className="flex flex-wrap gap-2">
             <input
               type="text"
@@ -242,7 +246,7 @@ export default function KeywordOpportunitiesSection({ selectedSite = "" }) {
             </Btn>
           </div>
           <p className="text-[11px] text-[var(--cw-ink-faint)]">
-            Pre-filled with the selected client, but any domain works — each gets its own cache, so
+            Pre-filled with the selected project, but any domain works — each gets its own cache, so
             you can research a competitor&rsquo;s best keywords the same way.
           </p>
         </div>

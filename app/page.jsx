@@ -25,10 +25,9 @@ import KeywordWorkbenchSection from "./components/seo/KeywordWorkbenchSection";
 import ReportsStudioSection from "./components/ReportsStudioSection";
 import SeoAutopilotSection from "./components/SeoAutopilotSection";
 import HelpCenterSection from "./components/seo/HelpCenterSection";
-import DataForSeoExplorerSection from "./components/seo/DataForSeoExplorerSection";
-import GoogleAdsKeywordPlannerSection from "./components/seo/GoogleAdsKeywordPlannerSection";
 import SerpAnalysisSection from "./components/seo/SerpAnalysisSection";
 import LinkOpportunitiesSection from "./components/seo/LinkOpportunitiesSection";
+import { isGlobalSection } from "../lib/workspaces";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "../lib/clientPermissions";
@@ -62,7 +61,6 @@ const SECTION_ALIASES = {
   "ai-keyword-research": "keyword-research",
   "pagespeed-insights": "site-health",
   "domain-authority": "site-health",
-  "link-index": "site-health",
 };
 
 function resolveSection(section) {
@@ -70,14 +68,17 @@ function resolveSection(section) {
   return SECTION_ALIASES[section] || section;
 }
 
+/**
+ * Project tools that read a real website. Selecting a Meta-only project bounces
+ * you out of these. Toolkit sections are deliberately absent — they start from
+ * a keyword or a typed domain, so what's selected is irrelevant to them.
+ */
 const WEBSITE_SEO_SECTIONS = new Set([
   "website-statistics",
   "site-health",
   "pagespeed-insights",
   "site-audit",
   "domain-authority",
-  "keyword-research",
-  "ai-keyword-research",
   "seo-opportunities",
   "device-appearance",
   "url-inspection",
@@ -85,11 +86,8 @@ const WEBSITE_SEO_SECTIONS = new Set([
   "sitemap-health",
   "site-explorer",
   "backlink-profile",
-  "link-opportunities",
-  "link-index",
   "seranking-domain",
   "seranking-backlinks",
-  "seranking-keywords",
   "seranking-audit",
   "seranking-explorer",
 ]);
@@ -167,9 +165,12 @@ export default function Home() {
     }
   }, [status, router, session, activeSection]);
 
-  // Leave website SEO tools when a Meta-only page is selected (site-explorer works without a linked site)
+  // Leave website SEO tools when a Meta-only project is selected (site-explorer
+  // works without a linked site). Toolkit tools never get pulled out from under
+  // the user — they don't read the selection in the first place.
   useEffect(() => {
-    if (!selectedSite || !WEBSITE_SEO_SECTIONS.has(activeSection)) return;
+    if (!selectedSite || isGlobalSection(activeSection)) return;
+    if (!WEBSITE_SEO_SECTIONS.has(activeSection)) return;
     if (activeSection === "site-explorer") return;
     const isWebsite =
       String(selectedSite).startsWith("http") ||
@@ -241,7 +242,6 @@ export default function Home() {
       case "site-health":
       case "pagespeed-insights":
       case "domain-authority":
-      case "link-index":
         return (
           <SiteIntelligenceSection
             selectedSite={seoSite}
@@ -284,10 +284,6 @@ export default function Home() {
             onNavigateSection={setActiveSection}
           />
         );
-      case "dataforseo-explorer":
-        return <DataForSeoExplorerSection selectedSite={seoSite} />;
-      case "google-ads-planner":
-        return <GoogleAdsKeywordPlannerSection selectedSite={seoSite} />;
       case "serp-analysis":
       case "competitor-matrix":
         return <SerpAnalysisSection selectedSite={seoSite} />;

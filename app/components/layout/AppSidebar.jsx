@@ -20,10 +20,11 @@ import {
   Settings,
   Shield,
   Workflow,
+  Wrench,
 } from "lucide-react";
 import { isMetaPageId } from "@/lib/siteAccess";
 import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "@/lib/clientPermissions";
-import { visibleWorkspaces, workspaceForSection } from "@/lib/workspaces";
+import { SCOPES, visibleWorkspaceGroups, workspaceForSection } from "@/lib/workspaces";
 import {
   entryMatchesSelectValue,
   getClientAccountSelectValue,
@@ -37,6 +38,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuBadge,
@@ -64,6 +66,7 @@ const WORKSPACE_ICONS = {
   presentation: Presentation,
   shield: Shield,
   workflow: Workflow,
+  toolkit: Wrench,
   /* The two studios get their own glyphs — a writing machine and a broadcast
      machine — so they're never mistaken for the domains they feed. */
   blogStudio: PenTool,
@@ -231,11 +234,19 @@ export default function AppSidebar({
   // The whole nav is derived: workspaces the user can reach, each carrying the
   // tabs that will appear on the page. One source of truth, shared with
   // WorkspaceTabs so the sidebar and the tab rail can never disagree.
-  const workspaceEntries = visibleWorkspaces({ canAccess, isWebsiteSelected }).filter(
-    (entry) => !(entry.workspace.id === "dashboard" && session?.user?.role === "approver")
-  );
+  const workspaceGroups = visibleWorkspaceGroups({ canAccess, isWebsiteSelected })
+    .map((group) => ({
+      ...group,
+      entries: group.entries.filter(
+        (entry) => !(entry.workspace.id === "dashboard" && session?.user?.role === "approver")
+      ),
+    }))
+    .filter((group) => group.entries.length > 0);
 
   const activeWorkspace = workspaceForSection(activeSection);
+  /* Inside the Toolkit the switcher is dead weight: nothing on screen reads it.
+     Dimming it beats hiding it — the selection is still there when you go back. */
+  const inGlobalWorkspace = activeWorkspace?.scope === SCOPES.GLOBAL;
 
   // Coming back to a workspace should resume the tab you were last on, not
   // dump you at the first one. A ref, so remembering doesn't cause a render.
@@ -302,20 +313,22 @@ export default function AppSidebar({
               )}
             >
               <LayoutGrid className="size-4 shrink-0" />
-              <span className="truncate">All clients</span>
+              <span className="truncate">All projects</span>
             </button>
 
             <DropdownMenu onOpenChange={(open) => !open && setClientQuery("")}>
               <DropdownMenuTrigger
+                title={inGlobalWorkspace ? "Toolkit tools don't use the selected project" : undefined}
                 className={cn(
                   "flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 text-left text-sm transition-smooth",
-                  "hover:border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] hover:bg-[var(--cw-overlay)]"
+                  "hover:border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] hover:bg-[var(--cw-overlay)]",
+                  inGlobalWorkspace && "opacity-45"
                 )}
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <ClientAccountLogo entry={selectedSiteEntry} size="sm" />
                   <span className="truncate font-medium">
-                    {selectedSite ? getPageDisplayName(selectedSite) : "Select client"}
+                    {selectedSite ? getPageDisplayName(selectedSite) : "Select project"}
                   </span>
                 </span>
                 <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
@@ -329,7 +342,7 @@ export default function AppSidebar({
                       value={clientQuery}
                       onChange={(e) => setClientQuery(e.target.value)}
                       onKeyDown={(e) => e.stopPropagation()}
-                      placeholder="Search clients…"
+                      placeholder="Search projects…"
                       className="w-full bg-transparent text-xs text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] focus:outline-none"
                     />
                   </div>
@@ -337,7 +350,7 @@ export default function AppSidebar({
                 <div className="max-h-64 overflow-y-auto py-1">
                   {filteredSites.length === 0 ? (
                     <p className="px-3 py-4 text-center text-xs text-[var(--cw-ink-faint)]">
-                      No matching clients
+                      No matching projects
                     </p>
                   ) : (
                     filteredSites.map((siteEntry, index) => {
@@ -365,7 +378,7 @@ export default function AppSidebar({
         ) : (
           <div className="mt-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 group-data-[collapsible=icon]:hidden">
             <p className="text-[10px] font-bold tracking-[0.14em] text-[var(--cw-ink-faint)] uppercase">
-              Current Site
+              Current project
             </p>
             <p className="mt-1 truncate font-mono text-[13px] text-[var(--cw-ink)]">
               {getSiteHostName(userSiteLink)}
@@ -377,33 +390,42 @@ export default function AppSidebar({
       <SidebarContent>
         {/* Workspaces, not a tool inventory. Clicking one lands on its first
             tab; the rest of its tools appear as a rail on the page itself. */}
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {workspaceEntries.map(({ workspace, sections }) => {
-                const Icon = WORKSPACE_ICONS[workspace.icon] || Compass;
-                const isActive = activeWorkspace?.id === workspace.id;
-                const badge = workspaceBadge(workspace);
-                return (
-                  <SidebarMenuItem key={workspace.id}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      data-accent={workspace.accent || undefined}
-                      onClick={() => openWorkspace(workspace, sections)}
-                      tooltip={workspace.label}
-                    >
-                      <Icon className="size-4" />
-                      <span>{workspace.label}</span>
-                    </SidebarMenuButton>
-                    {badge > 0 ? (
-                      <SidebarMenuBadge>{badge > 9 ? "9+" : String(badge)}</SidebarMenuBadge>
-                    ) : null}
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Two rails: what belongs to the selected project, then research that
+            belongs to none. The label is the whole point of the split. */}
+        {workspaceGroups.map((group) => (
+          <SidebarGroup key={group.id}>
+            {group.label ? (
+              <SidebarGroupLabel className="text-[10px] font-bold tracking-[0.14em] text-[var(--cw-ink-faint)] uppercase">
+                {group.label}
+              </SidebarGroupLabel>
+            ) : null}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.entries.map(({ workspace, sections }) => {
+                  const Icon = WORKSPACE_ICONS[workspace.icon] || Compass;
+                  const isActive = activeWorkspace?.id === workspace.id;
+                  const badge = workspaceBadge(workspace);
+                  return (
+                    <SidebarMenuItem key={workspace.id}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        data-accent={workspace.accent || undefined}
+                        onClick={() => openWorkspace(workspace, sections)}
+                        tooltip={workspace.label}
+                      >
+                        <Icon className="size-4" />
+                        <span>{workspace.label}</span>
+                      </SidebarMenuButton>
+                      {badge > 0 ? (
+                        <SidebarMenuBadge>{badge > 9 ? "9+" : String(badge)}</SidebarMenuBadge>
+                      ) : null}
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
 
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
