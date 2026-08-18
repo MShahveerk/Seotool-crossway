@@ -5,9 +5,7 @@ import {
   ArrowUpRight,
   Bell,
   FileText,
-  Gauge,
   Globe,
-  Link2,
   Megaphone,
   Search,
   Send,
@@ -100,56 +98,6 @@ function followersForClient(entry, rowsByKey) {
   return total;
 }
 
-/** Authority snapshots are keyed by bare domain; match against a client host. */
-function toAuthorityMap(rows) {
-  const m = new Map();
-  for (const row of rows || []) {
-    const k = String(row.domain || "").toLowerCase().replace(/^www\./, "");
-    if (k && !m.has(k)) m.set(k, row);
-  }
-  return m;
-}
-
-/** Domain-keyed lookup for site-explorer referring-domain snapshots. */
-function toDomainMap(rows) {
-  const m = new Map();
-  for (const row of rows || []) {
-    const k = String(row.domain || "").toLowerCase().replace(/^www\./, "");
-    if (k && !m.has(k)) m.set(k, row);
-  }
-  return m;
-}
-
-/**
- * SE Ranking backlink rows (`[{ domain, refdomains, inlinkRank }]`) → domain-keyed
- * map. Domain (bare host) is the only key stable across the many siteUrl variants
- * SE Ranking snapshots are stored under. Max per field when a host repeats.
- */
-function toBacklinkMap(rows) {
-  const m = new Map();
-  for (const row of rows || []) {
-    const k = String(row.domain || "").toLowerCase().replace(/^www\./, "");
-    if (!k) continue;
-    const prev = m.get(k) || { refdomains: null, inlinkRank: null };
-    const rd = Number(row.refdomains);
-    const ir = Number(row.inlinkRank);
-    m.set(k, {
-      refdomains: Number.isFinite(rd) ? Math.max(prev.refdomains || 0, rd) : prev.refdomains,
-      inlinkRank: Number.isFinite(ir) ? Math.max(prev.inlinkRank || 0, ir) : prev.inlinkRank,
-    });
-  }
-  return m;
-}
-
-/** First finite value > 0, else null — mirrors the dashboard's firstPositive. */
-function firstPositive(...vals) {
-  for (const v of vals) {
-    const n = Number(v);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
-  return null;
-}
-
 function compactNum(n) {
   const v = Number(n) || 0;
   return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(v);
@@ -218,9 +166,6 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
     blogs: [],
     totalPosts: [],
     totalBlogs: [],
-    authority: [],
-    backlinks: [],
-    explorer: [],
     followers: [],
   });
   const [loading, setLoading] = useState(true);
@@ -242,9 +187,6 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
         blogs: Array.isArray(ov?.blogs) ? ov.blogs : [],
         totalPosts: Array.isArray(ov?.totalPosts) ? ov.totalPosts : [],
         totalBlogs: Array.isArray(ov?.totalBlogs) ? ov.totalBlogs : [],
-        authority: Array.isArray(ov?.authority) ? ov.authority : [],
-        backlinks: Array.isArray(ov?.backlinks) ? ov.backlinks : [],
-        explorer: Array.isArray(ov?.explorer) ? ov.explorer : [],
         followers: Array.isArray(ov?.followers) ? ov.followers : [],
       });
       setLoading(false);
@@ -258,9 +200,6 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
   const blogMap = useMemo(() => toCountMap(overview.blogs), [overview.blogs]);
   const totalPostMap = useMemo(() => toCountMap(overview.totalPosts), [overview.totalPosts]);
   const totalBlogMap = useMemo(() => toCountMap(overview.totalBlogs), [overview.totalBlogs]);
-  const authorityMap = useMemo(() => toAuthorityMap(overview.authority), [overview.authority]);
-  const backlinkMap = useMemo(() => toBacklinkMap(overview.backlinks), [overview.backlinks]);
-  const explorerMap = useMemo(() => toDomainMap(overview.explorer), [overview.explorer]);
 
   const followerRowsByKey = useMemo(() => {
     const m = new Map();
@@ -278,10 +217,6 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
     return sites
       .map((entry) => {
         const host = siteHost(entry.siteLink);
-        const hostKey = host ? host.toLowerCase() : "";
-        const auth = hostKey ? authorityMap.get(hostKey) : null;
-        const exp = hostKey ? explorerMap.get(hostKey) : null;
-        const bl = hostKey ? backlinkMap.get(hostKey) : null;
         return {
           entry,
           value: getClientAccountSelectValue(entry),
@@ -294,17 +229,6 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
           totalPosts: sumForClient(entry, totalPostMap),
           totalBlogs: sumForClient(entry, totalBlogMap),
           followers: followersForClient(entry, followerRowsByKey),
-          // Same cascade as Site Intelligence / the dashboard: SE Ranking's
-          // domain inlink rank (0-100) first, Open PageRank (scaled) as fallback.
-          authority: firstPositive(bl?.inlinkRank, auth?.score100),
-          // SE Ranking referring domains first, then site-explorer (OPR/count),
-          // then OPR authority — the dashboard's exact order.
-          referringDomains: firstPositive(
-            bl?.refdomains,
-            exp?.refOpr,
-            auth?.referringDomains,
-            exp?.refCount
-          ),
         };
       })
       .filter((c) => c.value)
@@ -319,9 +243,6 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
     totalPostMap,
     totalBlogMap,
     followerRowsByKey,
-    authorityMap,
-    backlinkMap,
-    explorerMap,
   ]);
 
   const totalAlerts = useMemo(
@@ -565,12 +486,6 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
                     </div>
                     <div className="hidden h-8 w-px bg-[var(--cw-hairline)] sm:block" />
                     <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1.5">
-                      <Metric icon={Gauge} label="Authority" value={detail.authority != null ? detail.authority : "—"} />
-                      <Metric
-                        icon={Link2}
-                        label="Ref. domains"
-                        value={detail.referringDomains != null ? compactNum(detail.referringDomains) : "—"}
-                      />
                       <Metric
                         icon={Users}
                         label="Followers"

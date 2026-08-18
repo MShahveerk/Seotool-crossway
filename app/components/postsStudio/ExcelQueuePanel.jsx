@@ -31,29 +31,30 @@ const COLUMNS = [
 ];
 
 function rowTone(status, isToday) {
-  if (isToday) return "border-l-[#1d9c35] bg-[#e8f7eb]/80 ring-1 ring-inset ring-[#1d9c35]/25";
+  if (isToday)
+    return "border-l-[var(--cw-neon)] bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] ring-1 ring-inset ring-[color-mix(in_srgb,var(--cw-neon)_25%,transparent)]";
   switch (String(status || "")) {
     case "done":
-      return "border-l-[#1d9c35] bg-emerald-50/40";
+      return "border-l-[var(--cw-neon)] bg-[color-mix(in_srgb,var(--cw-neon)_7%,var(--cw-surface))]";
     case "processing":
-      return "border-l-amber-400 bg-amber-50/50";
+      return "border-l-[var(--cw-caution)] bg-[color-mix(in_srgb,var(--cw-caution)_10%,var(--cw-surface))]";
     case "failed":
-      return "border-l-red-400 bg-red-50/40";
+      return "border-l-[var(--cw-danger)] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))]";
     case "skipped":
-      return "border-l-gray-300 bg-gray-50/80 opacity-70";
+      return "border-l-[var(--cw-hairline-strong)] bg-[var(--cw-raised)] opacity-70";
     default:
-      return "border-l-[#1d9c35]/40 bg-white";
+      return "border-l-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] bg-[var(--cw-surface)]";
   }
 }
 
 function statusBadge(status) {
   const s = String(status || "pending");
   const map = {
-    pending: "bg-[#e8f7eb] text-[#146b24]",
-    processing: "bg-amber-100 text-amber-900",
-    done: "bg-emerald-100 text-emerald-900",
-    failed: "bg-red-100 text-red-800",
-    skipped: "bg-gray-100 text-gray-600",
+    pending: "bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] text-[var(--cw-neon)]",
+    processing: "bg-[color-mix(in_srgb,var(--cw-caution)_14%,var(--cw-surface))] text-[var(--cw-caution)]",
+    done: "bg-[color-mix(in_srgb,var(--cw-neon)_16%,var(--cw-surface))] text-[var(--cw-neon)]",
+    failed: "bg-[color-mix(in_srgb,var(--cw-danger)_14%,var(--cw-surface))] text-[var(--cw-danger)]",
+    skipped: "bg-[var(--cw-raised)] text-[var(--cw-ink-muted)]",
   };
   return (
     <span className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${map[s] || map.pending}`}>
@@ -330,7 +331,7 @@ export default function ExcelQueuePanel({
 
   if (!siteLink) {
     return (
-      <p className="text-sm text-gray-600">Select a site to manage the Excel campaign queue.</p>
+      <p className="text-sm text-[var(--cw-ink-muted)]">Select a site to manage the Excel campaign queue.</p>
     );
   }
 
@@ -344,42 +345,42 @@ export default function ExcelQueuePanel({
 
   return (
     <div className="space-y-5">
-      <div className="relative overflow-hidden rounded-2xl border border-[#1d9c35]/20 bg-gradient-to-br from-[#f3faf4] via-white to-[#eef6f0] p-5">
+      <div className="relative overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--cw-neon)_22%,var(--cw-hairline))] bg-gradient-to-br from-[color-mix(in_srgb,var(--cw-neon)_10%,var(--cw-surface))] via-[var(--cw-surface)] to-[var(--cw-raised)] p-5">
         <div
           className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full opacity-30"
-          style={{ background: "radial-gradient(circle, #1d9c35 0%, transparent 70%)" }}
+          style={{ background: "radial-gradient(circle, var(--cw-neon) 0%, transparent 70%)" }}
         />
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-xl">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#1d9c35]">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--cw-neon)]">
               Campaign queue
             </p>
-            <h3 className="mt-1 font-serif text-2xl tracking-tight text-gray-900">
+            <h3 className="mt-1 font-serif text-2xl tracking-tight text-[var(--cw-ink)]">
               Excel → one social post per interval
             </h3>
-            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+            <p className="mt-2 text-sm leading-relaxed text-[var(--cw-ink-muted)]">
               Upload any .xlsx / .xls / .csv (max {maxRows} rows). Set how often a row runs, see which
               row is scheduled today, then enable Auto. Posts land as pending Approvals.
             </p>
           </div>
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-            <label className="inline-flex items-center gap-2 text-xs text-gray-600">
+            <label className="inline-flex items-center gap-2 text-xs text-[var(--cw-ink-muted)]">
               <input
                 type="checkbox"
                 checked={useAi}
                 onChange={(e) => setUseAi(e.target.checked)}
-                className="rounded border-gray-300 text-[#1d9c35] focus:ring-[#1d9c35]"
+                className="rounded border-[var(--cw-hairline)] text-[var(--cw-neon)] focus:ring-[var(--cw-neon)]"
               />
               AI column mapping
             </label>
             <a
               href="/api/admin/post-automation/site/excel/template"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 shadow-sm transition hover:border-[#1d9c35]/40"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--cw-ink-dim)] shadow-sm transition hover:border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] hover:bg-[var(--cw-overlay)]"
             >
               <FiDownload />
               Download template
             </a>
-            <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#1d9c35] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#178c2e] disabled:opacity-50">
+            <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--cw-neon)] px-4 py-2.5 text-sm font-semibold text-[var(--cw-neon-ink)] shadow-sm transition hover:bg-[var(--cw-neon-deep)] disabled:opacity-50">
               {uploading ? <FiRefreshCw className="animate-spin" /> : <FiUpload />}
               {uploading ? "Importing…" : "Upload spreadsheet"}
               <input
@@ -403,33 +404,33 @@ export default function ExcelQueuePanel({
         <div
           className={`rounded-2xl border px-4 py-4 ${
             schedule?.scheduledForToday || schedule?.due
-              ? "border-[#1d9c35]/40 bg-[#f3faf4]"
-              : "border-gray-200 bg-white"
+              ? "border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_9%,var(--cw-surface))]"
+              : "border-[var(--cw-hairline)] bg-[var(--cw-raised)]"
           }`}
         >
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[#dff7de] text-[#1d9c35]">
+            <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--cw-neon)_14%,var(--cw-surface))] text-[var(--cw-neon)]">
               <FiCalendar className="h-4 w-4" />
             </span>
             <div className="min-w-0 flex-1">
               <p className={labelClass}>Scheduled for today</p>
               {todaysNum != null && (schedule?.scheduledForToday || schedule?.due || schedule?.todaysRowId) ? (
                 <>
-                  <p className="mt-1 text-lg font-semibold text-gray-900 truncate">
+                  <p className="mt-1 text-lg font-semibold text-[var(--cw-ink)] truncate">
                     Row {todaysNum}
                     {todaysTopic ? ` · ${todaysTopic}` : ""}
                   </p>
-                  <p className="mt-1 text-xs text-gray-600">
+                  <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
                     {schedule?.statusLabel || "—"}
                     {schedule?.todaysStatus ? ` · status ${schedule.todaysStatus}` : ""}
                   </p>
                 </>
               ) : schedule?.nextRowIndex != null ? (
                 <>
-                  <p className="mt-1 text-lg font-semibold text-gray-900 truncate">
+                  <p className="mt-1 text-lg font-semibold text-[var(--cw-ink)] truncate">
                     No row due today
                   </p>
-                  <p className="mt-1 text-xs text-gray-600">
+                  <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
                     Next up: Row {schedule.nextRowIndex + 1}
                     {schedule.nextTopic ? ` · ${schedule.nextTopic}` : ""} ·{" "}
                     {formatNextRun(schedule.nextRunAt, schedule.due)}
@@ -437,13 +438,13 @@ export default function ExcelQueuePanel({
                 </>
               ) : (
                 <>
-                  <p className="mt-1 text-lg font-semibold text-gray-900">Nothing queued</p>
-                  <p className="mt-1 text-xs text-gray-600">
+                  <p className="mt-1 text-lg font-semibold text-[var(--cw-ink)]">Nothing queued</p>
+                  <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
                     {schedule?.statusLabel || "Upload a spreadsheet or wait for pending rows."}
                   </p>
                 </>
               )}
-              <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-gray-500">
+              <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-[var(--cw-ink-muted)]">
                 <FiClock className="h-3.5 w-3.5" />
                 Next run: {formatNextRun(schedule?.nextRunAt, schedule?.due)} · Last:{" "}
                 {formatWhen(schedule?.lastAutoAt || siteConfig?.lastAutoAt)}
@@ -453,7 +454,7 @@ export default function ExcelQueuePanel({
                   type="button"
                   onClick={cancelRunningAutomation}
                   disabled={cancellingRun}
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] px-3 py-1.5 text-xs font-semibold text-[var(--cw-danger)] hover:bg-[color-mix(in_srgb,var(--cw-danger)_18%,var(--cw-surface))] disabled:opacity-50"
                 >
                   {cancellingRun ? <FiRefreshCw className="animate-spin" /> : <FiXCircle />}
                   Cancel running automation
@@ -463,10 +464,10 @@ export default function ExcelQueuePanel({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white px-4 py-4 space-y-3">
+        <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-4 space-y-3">
           <div>
             <p className={labelClass}>Excel run frequency</p>
-            <p className="mt-0.5 text-xs text-gray-500">How often the next pending row is processed.</p>
+            <p className="mt-0.5 text-xs text-[var(--cw-ink-muted)]">How often the next pending row is processed.</p>
           </div>
           <select
             className={inputClass}
@@ -489,7 +490,7 @@ export default function ExcelQueuePanel({
               type="button"
               onClick={saveExcelSchedule}
               disabled={savingSchedule}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1d9c35] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cw-neon)] px-3 py-2 text-xs font-semibold text-[var(--cw-neon-ink)] hover:bg-[var(--cw-neon-deep)] disabled:opacity-50"
             >
               {savingSchedule ? <FiRefreshCw className="animate-spin" /> : <FiSave />}
               Save frequency
@@ -500,66 +501,66 @@ export default function ExcelQueuePanel({
               disabled={savingSchedule}
               className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50 ${
                 siteConfig?.autoEnabled
-                  ? "border-[#1d9c35]/40 bg-[#dff7de] text-[#145c22]"
-                  : "border-gray-200 bg-white text-gray-700"
+                  ? "border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] text-[var(--cw-neon)]"
+                  : "border-[var(--cw-hairline)] bg-[var(--cw-raised)] text-[var(--cw-ink-dim)] hover:bg-[var(--cw-overlay)]"
               }`}
             >
               {siteConfig?.autoEnabled ? <FiPause /> : <FiPlay />}
               Auto {siteConfig?.autoEnabled ? "on" : "paused"}
             </button>
           </div>
-          <p className="text-[11px] text-gray-500">
+          <p className="text-[11px] text-[var(--cw-ink-muted)]">
             Source locked to <strong>Excel queue</strong> when you save here · {intervalLabel}
           </p>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+        <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-3">
           <p className={labelClass}>Auto source</p>
-          <p className="mt-1 text-sm font-semibold text-gray-900">
+          <p className="mt-1 text-sm font-semibold text-[var(--cw-ink)]">
             {(siteConfig?.autoSource || schedule?.autoSource) === "excel" ? "Excel queue" : "Seed prompt"}
           </p>
-          <p className="mt-1 text-xs text-gray-500">Saving frequency sets Excel as source.</p>
+          <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">Saving frequency sets Excel as source.</p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+        <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-3">
           <p className={labelClass}>Queue progress</p>
-          <p className="mt-1 text-sm font-semibold text-gray-900">
+          <p className="mt-1 text-sm font-semibold text-[var(--cw-ink)]">
             {doneCount}/{rows.length || 0} done · {pendingCount} pending
           </p>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100">
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--cw-overlay)]">
             <div
-              className="h-full rounded-full bg-[#1d9c35] transition-all duration-500"
+              className="h-full rounded-full bg-[var(--cw-neon)] transition-all duration-500"
               style={{ width: `${progressPct}%` }}
             />
           </div>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+        <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-3">
           <p className={labelClass}>Active file</p>
-          <p className="mt-1 truncate text-sm font-semibold text-gray-900">
+          <p className="mt-1 truncate text-sm font-semibold text-[var(--cw-ink)]">
             {campaign?.fileName || "No campaign yet"}
           </p>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
             {campaign ? `Uploaded ${formatWhen(campaign.createdAt)}` : "Upload to begin"}
           </p>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center gap-2 text-sm text-[var(--cw-ink-muted)]">
           <FiRefreshCw className="animate-spin" /> Loading queue…
         </div>
       ) : !campaign ? (
-        <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50/80 px-6 py-12 text-center">
-          <FiUpload className="mx-auto h-8 w-8 text-[#1d9c35]" />
-          <p className="mt-3 text-sm font-semibold text-gray-800">No spreadsheet campaign yet</p>
-          <p className="mx-auto mt-1 max-w-md text-xs text-gray-500">
+        <div className="rounded-2xl border border-dashed border-[var(--cw-hairline-strong)] bg-[var(--cw-raised)] px-6 py-12 text-center">
+          <FiUpload className="mx-auto h-8 w-8 text-[var(--cw-neon)]" />
+          <p className="mt-3 text-sm font-semibold text-[var(--cw-ink-dim)]">No spreadsheet campaign yet</p>
+          <p className="mx-auto mt-1 max-w-md text-xs text-[var(--cw-ink-muted)]">
             Download the template if you don’t have a sheet, or upload your own. Columns can be
             anything — Angle, Keywords, Caption brief, Image direction, Platform, CTA… The interpreter maps them.
           </p>
           <a
             href="/api/admin/post-automation/site/excel/template"
-            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-800 hover:border-[#1d9c35]/40"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 text-xs font-semibold text-[var(--cw-ink-dim)] hover:border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] hover:bg-[var(--cw-overlay)]"
           >
             <FiDownload /> Download Excel template
           </a>
@@ -567,7 +568,7 @@ export default function ExcelQueuePanel({
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[var(--cw-ink-muted)]">
               Showing {visible.length} of {rows.length}
               {!showAll && rows.length > 10 ? " · top 10 by default" : ""}
               {todaysRowId ? " · today’s row highlighted" : ""}
@@ -577,7 +578,7 @@ export default function ExcelQueuePanel({
                 <button
                   type="button"
                   onClick={() => setShowAll((v) => !v)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:border-[#1d9c35]/40"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-1.5 text-xs font-semibold text-[var(--cw-ink-dim)] hover:border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] hover:bg-[var(--cw-overlay)]"
                 >
                   {showAll ? <FiChevronUp /> : <FiChevronDown />}
                   {showAll ? "Show top 10" : `Show all ${rows.length}`}
@@ -586,7 +587,7 @@ export default function ExcelQueuePanel({
               <button
                 type="button"
                 onClick={load}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-1.5 text-xs font-semibold text-[var(--cw-ink-dim)] hover:bg-[var(--cw-overlay)]"
               >
                 <FiRefreshCw /> Refresh
               </button>
@@ -594,7 +595,7 @@ export default function ExcelQueuePanel({
                 type="button"
                 onClick={saveEdits}
                 disabled={!dirty || saving}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#1d9c35] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cw-neon)] px-3 py-1.5 text-xs font-semibold text-[var(--cw-neon-ink)] hover:bg-[var(--cw-neon-deep)] disabled:opacity-40"
               >
                 {saving ? <FiRefreshCw className="animate-spin" /> : dirty ? <FiSave /> : <FiCheck />}
                 {dirty ? "Save cell edits" : "Saved"}
@@ -602,12 +603,12 @@ export default function ExcelQueuePanel({
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
                 <thead>
-                  <tr className="bg-[#f7faf8] text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                    <th className="sticky left-0 z-10 bg-[#f7faf8] px-3 py-3 w-14">#</th>
+                  <tr className="bg-[var(--cw-raised)] text-[10px] font-bold uppercase tracking-wider text-[var(--cw-ink-faint)]">
+                    <th className="sticky left-0 z-10 bg-[var(--cw-raised)] px-3 py-3 w-14">#</th>
                     <th className="px-2 py-3 w-28">Status</th>
                     {COLUMNS.map((c) => (
                       <th key={c.key} className={`px-2 py-3 ${c.wide ? "min-w-[180px]" : "min-w-[120px]"}`}>
@@ -625,13 +626,13 @@ export default function ExcelQueuePanel({
                     return (
                       <tr
                         key={row.id}
-                        className={`border-t border-gray-100 border-l-4 align-top transition-colors ${rowTone(row.status, isToday)}`}
+                        className={`border-t border-[var(--cw-hairline)] border-l-4 align-top transition-colors ${rowTone(row.status, isToday)}`}
                       >
-                        <td className="sticky left-0 z-10 bg-inherit px-3 py-2 font-mono text-xs text-gray-500">
+                        <td className="sticky left-0 z-10 bg-inherit px-3 py-2 font-mono text-xs text-[var(--cw-ink-muted)]">
                           <div className="flex flex-col gap-1">
                             <span>{row.rowIndex + 1}</span>
                             {isToday && (
-                              <span className="inline-flex w-fit rounded bg-[#1d9c35] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                              <span className="inline-flex w-fit rounded bg-[var(--cw-neon)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--cw-neon-ink)]">
                                 Today
                               </span>
                             )}
@@ -640,7 +641,7 @@ export default function ExcelQueuePanel({
                         <td className="px-2 py-2">
                           {statusBadge(row.status)}
                           {row.errorMessage && (
-                            <p className="mt-1 flex items-start gap-1 text-[10px] text-red-600 max-w-[120px]">
+                            <p className="mt-1 flex items-start gap-1 text-[10px] text-[var(--cw-danger)] max-w-[120px]">
                               <FiAlertCircle className="mt-0.5 shrink-0" />
                               <span className="line-clamp-2">{row.errorMessage}</span>
                             </p>
@@ -675,7 +676,7 @@ export default function ExcelQueuePanel({
                                 />
                               )
                             ) : (
-                              <p className="text-xs text-gray-700 whitespace-pre-wrap line-clamp-4 px-1">
+                              <p className="text-xs text-[var(--cw-ink-dim)] whitespace-pre-wrap line-clamp-4 px-1">
                                 {d[c.key] || "—"}
                               </p>
                             )}
@@ -687,7 +688,7 @@ export default function ExcelQueuePanel({
                               type="button"
                               title="Skip this row"
                               onClick={() => skipRow(row)}
-                              className="rounded-lg border border-gray-200 p-1.5 text-gray-500 hover:border-amber-300 hover:text-amber-700"
+                              className="rounded-lg border border-[var(--cw-hairline)] p-1.5 text-[var(--cw-ink-muted)] hover:border-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))] hover:text-[var(--cw-caution)]"
                             >
                               <FiSkipForward className="h-3.5 w-3.5" />
                             </button>

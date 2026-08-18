@@ -12,8 +12,9 @@ import {
 } from "react-icons/fi";
 
 const inputClass =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1d9c35]/30 focus:border-[#1d9c35]";
-const labelClass = "text-xs font-semibold uppercase tracking-wide text-gray-500";
+  "w-full border border-[var(--cw-hairline)] rounded-lg px-3 py-2 text-sm bg-[var(--cw-raised)] text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)] focus:border-[var(--cw-neon)]";
+const labelClass =
+  "text-xs font-semibold uppercase tracking-wide text-[var(--cw-ink-faint)]";
 
 function formatWhen(iso) {
   if (!iso) return "—";
@@ -161,7 +162,7 @@ export default function AutoschedulePanel({
 
   if (!selectedSite) {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+      <div className="rounded-xl border border-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_10%,var(--cw-surface))] p-5 text-sm text-[var(--cw-caution)]">
         Select a client site in the dashboard header to configure the autoscheduler.
       </div>
     );
@@ -169,7 +170,7 @@ export default function AutoschedulePanel({
 
   if (loading || !config) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-8 text-sm text-gray-500 flex items-center gap-2">
+      <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-8 text-sm text-[var(--cw-ink-muted)] flex items-center gap-2">
         <FiRefreshCw className="animate-spin" /> Loading autoscheduler…
       </div>
     );
@@ -179,28 +180,28 @@ export default function AutoschedulePanel({
 
   return (
     <div className="space-y-4 max-w-3xl">
-      <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(29,156,53,0.10),_transparent_55%),linear-gradient(135deg,#ffffff_0%,#f4fbf4_100%)]" />
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 shadow-sm">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(14,255,42,0.10),_transparent_55%),linear-gradient(135deg,var(--cw-surface)_0%,var(--cw-raised)_100%)]" />
         <div className="relative">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#1d9c35]">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--cw-neon)]">
                 {kind === "blog" ? "Blog" : "Post"} Autoscheduler
               </p>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900">{title}</h1>
-              <p className="mt-1 text-sm text-gray-600 max-w-xl">{subtitle}</p>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--cw-ink)]">{title}</h1>
+              <p className="mt-1 text-sm text-[var(--cw-ink-muted)] max-w-xl">{subtitle}</p>
             </div>
             <button
               type="button"
               onClick={() => patch({ enabled: !config.enabled })}
               className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                 config.enabled
-                  ? "border-[#1d9c35]/40 bg-[#dff7de] text-[#145c22]"
-                  : "border-gray-200 bg-white text-gray-600"
+                  ? "border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_9%,var(--cw-surface))] text-[var(--cw-neon)]"
+                  : "border-[var(--cw-hairline)] bg-[var(--cw-surface)] text-[var(--cw-ink-muted)]"
               }`}
             >
               {config.enabled ? (
-                <FiToggleRight className="h-5 w-5 text-[#1d9c35]" />
+                <FiToggleRight className="h-5 w-5 text-[var(--cw-neon)]" />
               ) : (
                 <FiToggleLeft className="h-5 w-5" />
               )}
@@ -211,8 +212,8 @@ export default function AutoschedulePanel({
             <p
               className={`mt-3 text-sm rounded-lg px-3 py-2 border ${
                 message.ok
-                  ? "text-emerald-800 bg-emerald-50 border-emerald-100"
-                  : "text-red-700 bg-red-50 border-red-100"
+                  ? "text-[var(--cw-neon)] bg-[color-mix(in_srgb,var(--cw-neon)_9%,var(--cw-surface))] border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))]"
+                  : "text-[var(--cw-danger)] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))]"
               }`}
             >
               {message.text}
@@ -221,8 +222,8 @@ export default function AutoschedulePanel({
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-4">
-        <p className="text-sm text-gray-600">
+      <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 shadow-sm space-y-4">
+        <p className="text-sm text-[var(--cw-ink-muted)]">
           Fills blank schedule dates only — Mon–Fri days that don’t already have a{" "}
           {kind === "blog" ? "blog" : "post"} for this site. Edit or clear dates anytime in Content
           Calendar.
@@ -270,7 +271,7 @@ export default function AutoschedulePanel({
             type="button"
             onClick={save}
             disabled={saving}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#1d9c35] px-3 py-2 text-sm font-semibold text-white hover:bg-[#178a2e] disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--cw-neon)] px-3 py-2 text-sm font-semibold text-[var(--cw-canvas)] hover:bg-[color-mix(in_srgb,var(--cw-neon)_85%,#000)] disabled:opacity-50"
           >
             {saving ? <FiRefreshCw className="animate-spin" /> : <FiSave />}
             Save
@@ -279,7 +280,7 @@ export default function AutoschedulePanel({
             type="button"
             onClick={runNow}
             disabled={running}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 hover:border-[#1d9c35]/40 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-3 py-2 text-sm font-semibold text-[var(--cw-ink-dim)] hover:border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] disabled:opacity-50"
           >
             {running ? <FiRefreshCw className="animate-spin" /> : <FiPlay />}
             Run now
@@ -287,58 +288,58 @@ export default function AutoschedulePanel({
           <button
             type="button"
             onClick={load}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-3 py-2 text-sm font-semibold text-[var(--cw-ink-muted)] hover:bg-[var(--cw-overlay)]"
           >
             <FiRefreshCw /> Refresh preview
           </button>
         </div>
 
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-[var(--cw-ink-muted)]">
           Last run: {formatWhen(config.lastRunAt)} · When enabled, cron fills gaps automatically.
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+        <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-3">
           <p className={labelClass}>Unscheduled pool</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">{preview?.poolCount ?? 0}</p>
-          <p className="text-xs text-gray-500">draft / pending / edited / approved</p>
+          <p className="mt-1 text-2xl font-bold text-[var(--cw-ink)]">{preview?.poolCount ?? 0}</p>
+          <p className="text-xs text-[var(--cw-ink-muted)]">draft / pending / edited / approved</p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+        <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-3">
           <p className={labelClass}>Free weekdays</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
+          <p className="mt-1 text-2xl font-bold text-[var(--cw-ink)]">
             {preview?.freeWeekdays?.length ?? 0}
           </p>
-          <p className="text-xs text-gray-500">in horizon · no existing item</p>
+          <p className="text-xs text-[var(--cw-ink-muted)]">in horizon · no existing item</p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+        <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-3">
           <p className={labelClass}>Next assignments</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">{proposals.length}</p>
-          <p className="text-xs text-gray-500">would be written on Run</p>
+          <p className="mt-1 text-2xl font-bold text-[var(--cw-ink)]">{proposals.length}</p>
+          <p className="text-xs text-[var(--cw-ink-muted)]">would be written on Run</p>
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-4 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
-          <FiCalendar className="text-[#1d9c35]" />
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <FiCalendar className="text-[var(--cw-neon)]" />
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--cw-ink-faint)]">
             Proposed schedule
           </p>
         </div>
         {proposals.length === 0 ? (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-[var(--cw-ink-muted)]">
             Nothing to assign right now. Add unscheduled items or free up a weekday.
           </p>
         ) : (
-          <ul className="divide-y divide-gray-50">
+          <ul className="divide-y divide-[var(--cw-hairline)]">
             {proposals.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{p.title}</p>
-                  <p className="text-[11px] text-gray-500 uppercase">{p.status}</p>
+                  <p className="text-sm font-semibold text-[var(--cw-ink)] truncate">{p.title}</p>
+                  <p className="text-[11px] text-[var(--cw-ink-faint)] uppercase">{p.status}</p>
                 </div>
-                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">
-                  <FiClock className="h-3.5 w-3.5 text-[#1d9c35]" />
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--cw-ink-dim)] bg-[var(--cw-raised)] border border-[var(--cw-hairline)] rounded-lg px-2.5 py-1">
+                  <FiClock className="h-3.5 w-3.5 text-[var(--cw-neon)]" />
                   {formatWhen(p.scheduledFor)}
                 </span>
               </li>

@@ -7,14 +7,14 @@ import { formatScheduleShort } from "../../lib/timezone";
 
 function statusChip(status) {
   const map = {
-    draft: "bg-slate-100 text-slate-700",
-    future: "bg-sky-50 text-sky-900",
-    pending: "bg-amber-50 text-amber-900",
-    publish: "bg-emerald-50 text-emerald-900",
-    private: "bg-violet-50 text-violet-900",
-    trash: "bg-red-50 text-red-800",
+    draft: "bg-[var(--cw-raised)] text-[var(--cw-ink-dim)]",
+    future: "bg-[color-mix(in_srgb,var(--cw-info)_14%,var(--cw-surface))] text-[var(--cw-info)]",
+    pending: "bg-[color-mix(in_srgb,var(--cw-caution)_14%,var(--cw-surface))] text-[var(--cw-caution)]",
+    publish: "bg-[color-mix(in_srgb,var(--cw-neon)_14%,var(--cw-surface))] text-[var(--cw-neon)]",
+    private: "bg-[var(--cw-overlay)] text-[var(--cw-ink)]",
+    trash: "bg-[color-mix(in_srgb,var(--cw-danger)_14%,var(--cw-surface))] text-[var(--cw-danger)]",
   };
-  return map[status] || "bg-slate-100 text-slate-700";
+  return map[status] || "bg-[var(--cw-raised)] text-[var(--cw-ink-dim)]";
 }
 
 function stripHtml(html) {
@@ -245,7 +245,7 @@ export default function WordpressPullChooser({
 
   const modal = (
     <div
-      className="fixed inset-0 z-[220] flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
+      className="fixed inset-0 z-[220] flex items-end justify-center bg-black/70 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="wp-pull-chooser-title"
@@ -254,16 +254,16 @@ export default function WordpressPullChooser({
         if (e.target === e.currentTarget && !pulling && !loading) onClose?.();
       }}
     >
-      <div className="flex h-[100dvh] w-full max-w-5xl flex-col overflow-hidden bg-white shadow-2xl sm:h-[min(90vh,840px)] sm:rounded-2xl sm:ring-1 sm:ring-black/10">
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
+      <div className="flex h-[100dvh] w-full max-w-5xl flex-col overflow-hidden bg-[var(--cw-surface)] shadow-2xl sm:h-[min(90vh,840px)] sm:rounded-2xl sm:ring-1 sm:ring-[var(--cw-hairline)]">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--cw-hairline)] px-4 py-3 sm:px-5">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cw-ink-faint)]">
               WordPress pull
             </p>
-            <h2 id="wp-pull-chooser-title" className="text-lg font-semibold text-slate-900">
+            <h2 id="wp-pull-chooser-title" className="text-lg font-semibold text-[var(--cw-ink)]">
               Choose blogs to import
             </h2>
-            <p className="mt-0.5 truncate text-xs text-slate-500">
+            <p className="mt-0.5 truncate text-xs text-[var(--cw-ink-muted)]">
               {siteLink || "No site selected"}
               {onlyScheduled ? " · scheduled only" : ""}
               {includeTrash ? " · including trash" : ""}
@@ -274,7 +274,7 @@ export default function WordpressPullChooser({
               type="button"
               onClick={load}
               disabled={loading || pulling}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--cw-hairline)] px-2.5 py-1.5 text-xs font-semibold text-[var(--cw-ink-dim)] disabled:opacity-50"
             >
               <FiRefreshCw className={loading ? "animate-spin" : ""} />
               {loading ? "Loading…" : "Refresh"}
@@ -283,7 +283,7 @@ export default function WordpressPullChooser({
               type="button"
               onClick={onClose}
               disabled={pulling}
-              className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-lg border border-[var(--cw-hairline)] p-2 text-[var(--cw-ink-muted)] hover:bg-[var(--cw-overlay)] disabled:opacity-50"
               aria-label="Close"
             >
               <FiX className="h-4 w-4" />
@@ -292,21 +292,21 @@ export default function WordpressPullChooser({
         </header>
 
         {error ? (
-          <div className="shrink-0 border-b border-red-100 bg-red-50 px-4 py-3 sm:px-5">
-            <p className="text-sm font-medium text-red-800">{error}</p>
+          <div className="shrink-0 border-b border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] px-4 py-3 sm:px-5">
+            <p className="text-sm font-medium text-[var(--cw-danger)]">{error}</p>
             <button
               type="button"
               onClick={load}
               disabled={loading}
-              className="mt-2 text-xs font-semibold text-red-700 underline disabled:opacity-50"
+              className="mt-2 text-xs font-semibold text-[var(--cw-danger)] underline disabled:opacity-50"
             >
               Try again
             </button>
           </div>
         ) : null}
 
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-2.5 sm:px-5">
-          <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--cw-hairline)] px-4 py-2.5 sm:px-5">
+          <label className="inline-flex items-center gap-2 text-xs font-medium text-[var(--cw-ink-muted)]">
             <input
               type="checkbox"
               checked={hideInQueue}
@@ -315,31 +315,31 @@ export default function WordpressPullChooser({
             />
             Hide already in Crossway
           </label>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-[var(--cw-ink-muted)]">
             {loading
               ? "Fetching from WordPress…"
               : `${selected.size} selected · ${visible.length} shown${meta?.total != null ? ` · ${meta.total} found` : ""}`}
           </p>
         </div>
 
-        <div className="relative min-h-0 flex-1 overflow-hidden bg-slate-50/40">
+        <div className="relative min-h-0 flex-1 overflow-hidden bg-[var(--cw-canvas)]">
           {loading ? (
             <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-4 px-6 text-center">
               <div className="relative flex h-14 w-14 items-center justify-center">
-                <span className="absolute inset-0 rounded-full border-2 border-emerald-100" />
-                <FiLoader className="h-7 w-7 animate-spin text-[#1d9c35]" />
+                <span className="absolute inset-0 rounded-full border-2 border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))]" />
+                <FiLoader className="h-7 w-7 animate-spin text-[var(--cw-neon)]" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-800">
+                <p className="text-sm font-semibold text-[var(--cw-ink-dim)]">
                   Loading pullable blogs from WordPress…
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
                   This can take a few seconds while we fetch drafts
                   {onlyScheduled ? " and scheduled posts" : ", future, and pending posts"}.
                   {elapsedSec > 0 ? ` (${elapsedSec}s)` : ""}
                 </p>
                 {elapsedSec >= 8 ? (
-                  <p className="mt-2 text-xs text-amber-700">
+                  <p className="mt-2 text-xs text-[var(--cw-caution)]">
                     Still working — large sites or slow WordPress hosts can take longer.
                   </p>
                 ) : null}
@@ -347,43 +347,43 @@ export default function WordpressPullChooser({
             </div>
           ) : visible.length === 0 ? (
             <div className="flex h-full min-h-[280px] flex-col items-center justify-center gap-3 px-6 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--cw-raised)] text-[var(--cw-ink-faint)]">
                 <FiImage className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-800">No pullable blogs found</p>
-                <p className="mt-1 max-w-md text-xs leading-relaxed text-slate-500">
+                <p className="text-sm font-semibold text-[var(--cw-ink-dim)]">No pullable blogs found</p>
+                <p className="mt-1 max-w-md text-xs leading-relaxed text-[var(--cw-ink-muted)]">
                   {meta?.diagnosis ||
                     "Nothing matched this filter. Confirm WordPress credentials are saved, try Include trash, or use Pull by post ID."}
                 </p>
                 {statusSummary ? (
-                  <p className="mt-2 text-xs text-slate-500">WP returned — {statusSummary}</p>
+                  <p className="mt-2 text-xs text-[var(--cw-ink-muted)]">WP returned — {statusSummary}</p>
                 ) : null}
               </div>
               <button
                 type="button"
                 onClick={load}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-3 py-2 text-xs font-semibold text-[var(--cw-ink-dim)]"
               >
                 <FiRefreshCw /> Refresh list
               </button>
             </div>
           ) : (
             <div className="grid h-full min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <div className="min-h-0 overflow-y-auto border-b border-slate-200 bg-white lg:border-b-0 lg:border-r">
-                <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-slate-100 bg-white/95 px-3 py-2 backdrop-blur">
+              <div className="min-h-0 overflow-y-auto border-b border-[var(--cw-hairline)] bg-[var(--cw-surface)] lg:border-b-0 lg:border-r">
+                <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-3 py-2 backdrop-blur">
                   <button
                     type="button"
                     onClick={toggleAllVisible}
-                    className="text-xs font-semibold text-[#167a2a] hover:underline"
+                    className="text-xs font-semibold text-[var(--cw-neon)] hover:underline"
                   >
                     {allVisibleSelected ? "Deselect all" : "Select all shown"}
                   </button>
                   {statusSummary ? (
-                    <span className="truncate text-[11px] text-slate-400">{statusSummary}</span>
+                    <span className="truncate text-[11px] text-[var(--cw-ink-faint)]">{statusSummary}</span>
                   ) : null}
                 </div>
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-[var(--cw-hairline)]">
                   {visible.map((c) => {
                     const id = String(c.externalId);
                     const active = String(preview?.externalId) === id;
@@ -392,7 +392,9 @@ export default function WordpressPullChooser({
                       <li key={id}>
                         <div
                           className={`flex items-start gap-3 px-3 py-3 transition ${
-                            active ? "bg-emerald-50/70" : "hover:bg-slate-50"
+                            active
+                              ? "bg-[color-mix(in_srgb,var(--cw-neon)_9%,var(--cw-surface))]"
+                              : "hover:bg-[var(--cw-overlay)]"
                           }`}
                         >
                           <input
@@ -408,7 +410,7 @@ export default function WordpressPullChooser({
                             className="min-w-0 flex-1 text-left"
                           >
                             <div className="flex items-start justify-between gap-2">
-                              <p className="truncate text-sm font-semibold text-slate-900">
+                              <p className="truncate text-sm font-semibold text-[var(--cw-ink)]">
                                 {c.title || `Post #${id}`}
                               </p>
                               <span
@@ -417,19 +419,19 @@ export default function WordpressPullChooser({
                                 {c.status}
                               </span>
                             </div>
-                            <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                            <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-[var(--cw-ink-muted)]">
                               <span>WP #{id}</span>
                               {c.isScheduled && c.scheduledFor ? (
-                                <span className="inline-flex items-center gap-1 text-sky-800">
+                                <span className="inline-flex items-center gap-1 text-[var(--cw-info)]">
                                   <FiClock /> {formatScheduleShort(c.scheduledFor)}
                                 </span>
                               ) : null}
                               {c.alreadyInQueue ? (
-                                <span className="text-amber-800">
+                                <span className="text-[var(--cw-caution)]">
                                   In queue{c.crosswayStatus ? ` (${c.crosswayStatus})` : ""}
                                 </span>
                               ) : (
-                                <span className="text-emerald-700">New</span>
+                                <span className="text-[var(--cw-neon)]">New</span>
                               )}
                             </div>
                           </button>
@@ -440,10 +442,10 @@ export default function WordpressPullChooser({
                 </ul>
               </div>
 
-              <aside className="min-h-0 overflow-y-auto bg-[linear-gradient(180deg,#f8faf8_0%,#f1f5f2_100%)]">
+              <aside className="min-h-0 overflow-y-auto bg-[var(--cw-canvas)]">
                 {preview ? (
                   <article className="space-y-3 px-5 py-5">
-                    <div className="overflow-hidden rounded-xl bg-white ring-1 ring-slate-200">
+                    <div className="overflow-hidden rounded-xl bg-[var(--cw-surface)] ring-1 ring-[var(--cw-hairline)]">
                       {preview.featuredImageUrl ? (
                         <img
                           src={preview.featuredImageUrl}
@@ -454,33 +456,33 @@ export default function WordpressPullChooser({
                           }}
                         />
                       ) : (
-                        <div className="flex aspect-[16/9] items-center justify-center gap-2 text-sm text-slate-400">
+                        <div className="flex aspect-[16/9] items-center justify-center gap-2 text-sm text-[var(--cw-ink-faint)]">
                           <FiImage /> No featured image
                         </div>
                       )}
                     </div>
-                    <h3 className="text-xl font-semibold text-slate-900">
+                    <h3 className="text-xl font-semibold text-[var(--cw-ink)]">
                       {preview.title || `Post #${preview.externalId}`}
                     </h3>
                     {preview.excerpt ? (
-                      <p className="text-sm leading-relaxed text-slate-600">
+                      <p className="text-sm leading-relaxed text-[var(--cw-ink-dim)]">
                         {stripHtml(preview.excerpt)}
                       </p>
                     ) : (
-                      <p className="text-sm italic text-slate-400">No excerpt provided.</p>
+                      <p className="text-sm italic text-[var(--cw-ink-faint)]">No excerpt provided.</p>
                     )}
                     <dl className="grid grid-cols-2 gap-3 text-xs">
                       <div>
-                        <dt className="font-semibold uppercase tracking-wide text-slate-400">
+                        <dt className="font-semibold uppercase tracking-wide text-[var(--cw-ink-faint)]">
                           WP status
                         </dt>
-                        <dd className="mt-0.5 text-slate-800">{preview.status}</dd>
+                        <dd className="mt-0.5 text-[var(--cw-ink-dim)]">{preview.status}</dd>
                       </div>
                       <div>
-                        <dt className="font-semibold uppercase tracking-wide text-slate-400">
+                        <dt className="font-semibold uppercase tracking-wide text-[var(--cw-ink-faint)]">
                           Schedule
                         </dt>
-                        <dd className="mt-0.5 text-slate-800">
+                        <dd className="mt-0.5 text-[var(--cw-ink-dim)]">
                           {preview.scheduledFor
                             ? formatScheduleShort(preview.scheduledFor)
                             : "Unscheduled"}
@@ -488,7 +490,7 @@ export default function WordpressPullChooser({
                       </div>
                       {preview.link ? (
                         <div className="col-span-2">
-                          <dt className="font-semibold uppercase tracking-wide text-slate-400">
+                          <dt className="font-semibold uppercase tracking-wide text-[var(--cw-ink-faint)]">
                             Link
                           </dt>
                           <dd className="mt-0.5 truncate">
@@ -496,7 +498,7 @@ export default function WordpressPullChooser({
                               href={preview.link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[#167a2a] underline"
+                              className="text-[var(--cw-neon)] underline"
                             >
                               {preview.link}
                             </a>
@@ -511,17 +513,17 @@ export default function WordpressPullChooser({
           )}
 
           {pulling ? (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-white/80 backdrop-blur-[1px]">
-              <FiLoader className="h-8 w-8 animate-spin text-[#1d9c35]" />
-              <p className="text-sm font-semibold text-slate-800">
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[color-mix(in_srgb,var(--cw-canvas)_80%,transparent)] backdrop-blur-[1px]">
+              <FiLoader className="h-8 w-8 animate-spin text-[var(--cw-neon)]" />
+              <p className="text-sm font-semibold text-[var(--cw-ink-dim)]">
                 Pulling {selected.size} blog{selected.size === 1 ? "" : "s"} into Crossway…
               </p>
             </div>
           ) : null}
         </div>
 
-        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-white px-4 py-3 sm:px-5">
-          <p className="text-xs text-slate-500">
+        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-3 sm:px-5">
+          <p className="text-xs text-[var(--cw-ink-muted)]">
             Selected posts import (or refresh) into the Crossway approval queue.
           </p>
           <div className="flex flex-wrap gap-2">
@@ -529,7 +531,7 @@ export default function WordpressPullChooser({
               type="button"
               onClick={onClose}
               disabled={pulling}
-              className="rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
+              className="rounded-xl border border-[var(--cw-hairline)] px-3.5 py-2 text-sm font-semibold text-[var(--cw-ink-dim)] disabled:opacity-50"
             >
               Cancel
             </button>
@@ -537,7 +539,7 @@ export default function WordpressPullChooser({
               type="button"
               onClick={pullSelected}
               disabled={pulling || selected.size === 0 || loading}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#1d9c35] px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--cw-neon)] px-3.5 py-2 text-sm font-semibold text-[var(--cw-neon-ink)] hover:bg-[var(--cw-neon-deep)] disabled:opacity-50"
             >
               {pulling ? (
                 <>

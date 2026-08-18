@@ -26,8 +26,8 @@ function ToolbarButton({ active, disabled, onClick, title, children }) {
       onClick={onClick}
       className={`inline-flex h-8 w-8 items-center justify-center rounded-md border text-sm transition-colors ${
         active
-          ? "border-gray-900 bg-gray-900 text-white"
-          : "border-transparent text-gray-700 hover:bg-gray-100"
+          ? "border-[color-mix(in_srgb,var(--cw-neon)_35%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_14%,var(--cw-surface))] text-[var(--cw-neon)]"
+          : "border-transparent text-[var(--cw-ink-dim)] hover:bg-[var(--cw-overlay)]"
       } disabled:opacity-40`}
     >
       {children}
@@ -62,7 +62,7 @@ export default function BlogRichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none focus:outline-none px-3 py-2 text-gray-900 [&_p]:my-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-[#1d9c35] [&_a]:underline",
+          "prose prose-sm prose-invert max-w-none focus:outline-none px-3 py-2 bg-[var(--cw-canvas)] text-[var(--cw-ink)] prose-headings:text-[var(--cw-ink)] prose-p:text-[var(--cw-ink-dim)] prose-li:text-[var(--cw-ink-dim)] prose-strong:text-[var(--cw-ink)] prose-a:text-[var(--cw-neon)] prose-img:rounded-lg prose-hr:border-[var(--cw-hairline)] prose-blockquote:text-[var(--cw-ink-muted)] [&_p]:my-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--cw-hairline-strong)] [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-[var(--cw-neon)] [&_a]:underline",
         style: `min-height: ${minHeight}px`,
         "aria-label": ariaLabel,
       },
@@ -93,15 +93,15 @@ export default function BlogRichTextEditor({
   if (!editor) {
     return (
       <div
-        className="rounded-lg border border-gray-200 bg-gray-50 animate-pulse"
+        className="rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] animate-pulse"
         style={{ minHeight }}
       />
     );
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-      <div className="flex flex-wrap items-center gap-1 border-b border-gray-200 bg-gray-50 px-2 py-1.5">
+    <div className="rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-surface)] overflow-hidden">
+      <div className="flex flex-wrap items-center gap-1 border-b border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-2 py-1.5">
         <ToolbarButton
           title="Bold"
           active={editor.isActive("bold")}
@@ -123,7 +123,7 @@ export default function BlogRichTextEditor({
         >
           <FiUnderline className="h-4 w-4" />
         </ToolbarButton>
-        <span className="mx-1 h-5 w-px bg-gray-300" />
+        <span className="mx-1 h-5 w-px bg-[var(--cw-hairline-strong)]" />
         <ToolbarButton
           title="Heading 2"
           active={editor.isActive("heading", { level: 2 })}
@@ -138,7 +138,7 @@ export default function BlogRichTextEditor({
         >
           <span className="text-[11px] font-bold">H3</span>
         </ToolbarButton>
-        <span className="mx-1 h-5 w-px bg-gray-300" />
+        <span className="mx-1 h-5 w-px bg-[var(--cw-hairline-strong)]" />
         <ToolbarButton
           title="Bullet list"
           active={editor.isActive("bulletList")}
@@ -163,7 +163,7 @@ export default function BlogRichTextEditor({
         <ToolbarButton title="Insert link" active={editor.isActive("link")} onClick={setLink}>
           <FiLink className="h-4 w-4" />
         </ToolbarButton>
-        <span className="mx-1 h-5 w-px bg-gray-300" />
+        <span className="mx-1 h-5 w-px bg-[var(--cw-hairline-strong)]" />
         <ToolbarButton
           title="Undo"
           disabled={!editor.can().chain().focus().undo().run()}

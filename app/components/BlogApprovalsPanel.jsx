@@ -50,14 +50,37 @@ const TABS = [
   { id: "schedule", label: "Schedule" },
 ];
 
+/* Status pills: the accent tinted into the card surface. Written out in full
+   because Tailwind only emits classes it can read literally in the source. */
 function statusMeta(status) {
   const map = {
-    pending: { label: "Pending", className: "bg-amber-50 text-amber-900 ring-amber-200" },
-    approved: { label: "Approved", className: "bg-emerald-50 text-emerald-900 ring-emerald-200" },
-    declined: { label: "Declined", className: "bg-red-50 text-red-900 ring-red-200" },
-    edited: { label: "Edited", className: "bg-sky-50 text-sky-900 ring-sky-200" },
+    pending: {
+      label: "Pending",
+      className:
+        "bg-[color-mix(in_srgb,var(--cw-caution)_14%,var(--cw-surface))] text-[var(--cw-caution)] ring-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))]",
+    },
+    approved: {
+      label: "Approved",
+      className:
+        "bg-[color-mix(in_srgb,var(--cw-neon)_14%,var(--cw-surface))] text-[var(--cw-neon)] ring-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))]",
+    },
+    declined: {
+      label: "Declined",
+      className:
+        "bg-[color-mix(in_srgb,var(--cw-danger)_14%,var(--cw-surface))] text-[var(--cw-danger)] ring-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))]",
+    },
+    edited: {
+      label: "Edited",
+      className:
+        "bg-[color-mix(in_srgb,var(--cw-info)_14%,var(--cw-surface))] text-[var(--cw-info)] ring-[color-mix(in_srgb,var(--cw-info)_35%,var(--cw-hairline))]",
+    },
   };
-  return map[status] || { label: status || "Unknown", className: "bg-slate-50 text-slate-700 ring-slate-200" };
+  return (
+    map[status] || {
+      label: status || "Unknown",
+      className: "bg-[var(--cw-raised)] text-[var(--cw-ink-muted)] ring-[var(--cw-hairline)]",
+    }
+  );
 }
 
 function stripHtml(html) {
@@ -385,13 +408,13 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
-          <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--cw-ink-faint)]" />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search title, site, excerpt…"
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none ring-[#1d9c35]/30 focus:ring-2"
+            className="w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] py-2.5 pl-9 pr-3 text-sm text-[var(--cw-ink)] outline-none ring-[color-mix(in_srgb,var(--cw-neon)_30%,transparent)] placeholder:text-[var(--cw-ink-faint)] focus:ring-2"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -411,8 +434,8 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                 onClick={() => setStatusFilter(s.id)}
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition ${
                   active
-                    ? "bg-[#1d9c35] text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    ? "bg-[var(--cw-neon)] text-[var(--cw-neon-ink)]"
+                    : "bg-[var(--cw-raised)] text-[var(--cw-ink-muted)] hover:bg-[var(--cw-overlay)]"
                 }`}
               >
                 {s.label}
@@ -422,7 +445,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
           <button
             type="button"
             onClick={load}
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--cw-ink-dim)] hover:bg-[var(--cw-overlay)]"
           >
             <FiRefreshCw /> Refresh
           </button>
@@ -430,7 +453,9 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
       </div>
 
       {error && !activeId ? (
-        <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <p className="rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] px-3 py-2 text-sm text-[var(--cw-danger)]">
+          {error}
+        </p>
       ) : null}
 
       {filtered.length === 0 ? (
@@ -444,8 +469,8 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          <ul className="divide-y divide-slate-100">
+        <div className="overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)]">
+          <ul className="divide-y divide-[var(--cw-hairline)]">
             {filtered.map((blog) => {
               const meta = statusMeta(blog.status);
               const title = blog.userEditedTitle || blog.title || "Untitled";
@@ -455,9 +480,9 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                   <button
                     type="button"
                     onClick={() => openBlog(blog)}
-                    className="group flex w-full items-stretch gap-4 px-4 py-3.5 text-left transition hover:bg-slate-50/80 focus:bg-slate-50 focus:outline-none"
+                    className="group flex w-full items-stretch gap-4 px-4 py-3.5 text-left transition hover:bg-[var(--cw-raised)] focus:bg-[var(--cw-raised)] focus:outline-none"
                   >
-                    <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
+                    <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-[var(--cw-canvas)] ring-1 ring-[var(--cw-hairline)]">
                       {blog.featuredImagePath ? (
                         <img
                           src={publicMediaUrl(blog.featuredImagePath, {
@@ -471,7 +496,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                           onError={onMediaImgError}
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-slate-400">
+                        <div className="flex h-full w-full items-center justify-center text-[var(--cw-ink-faint)]">
                           <FiImage className="h-5 w-5" />
                         </div>
                       )}
@@ -479,10 +504,10 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <h3 className="truncate text-sm font-semibold text-slate-900 group-hover:text-[#167a2a]">
+                          <h3 className="truncate text-sm font-semibold text-[var(--cw-ink)] group-hover:text-[var(--cw-neon)]">
                             {title}
                           </h3>
-                          <p className="mt-0.5 truncate text-xs text-slate-500">{blog.siteLink}</p>
+                          <p className="mt-0.5 truncate text-xs text-[var(--cw-ink-faint)]">{blog.siteLink}</p>
                         </div>
                         <span
                           className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${meta.className}`}
@@ -491,9 +516,9 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                         </span>
                       </div>
                       {excerpt ? (
-                        <p className="mt-1.5 line-clamp-2 text-sm text-slate-600">{excerpt}</p>
+                        <p className="mt-1.5 line-clamp-2 text-sm text-[var(--cw-ink-muted)]">{excerpt}</p>
                       ) : null}
-                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[var(--cw-ink-faint)]">
                         {blog.scheduledFor ? (
                           <span className="inline-flex items-center gap-1">
                             <FiClock /> {formatScheduleShort(blog.scheduledFor)}
@@ -502,7 +527,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                           <span>No schedule set</span>
                         )}
                         {blog.status === "declined" && blog.publishError ? (
-                          <span className="text-red-600">Declined: {blog.publishError}</span>
+                          <span className="text-[var(--cw-danger)]">Declined: {blog.publishError}</span>
                         ) : null}
                       </div>
                     </div>
@@ -517,7 +542,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
       {portalReady && activeId && activeBlog
         ? createPortal(
         <div
-          className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
+          className="fixed inset-0 z-[200] flex items-end justify-center bg-black/70 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="blog-review-title"
@@ -525,20 +550,20 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
             if (e.target === e.currentTarget) closeReview();
           }}
         >
-          <div className="flex h-[100dvh] w-full max-w-6xl flex-col overflow-hidden bg-white shadow-2xl sm:h-[min(92vh,920px)] sm:rounded-2xl sm:ring-1 sm:ring-black/10">
+          <div className="flex h-[100dvh] w-full max-w-6xl flex-col overflow-hidden bg-[var(--cw-surface)] shadow-[var(--cw-shadow-lg)] sm:h-[min(92vh,920px)] sm:rounded-2xl sm:ring-1 sm:ring-[var(--cw-hairline)]">
             {/* Header */}
-            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--cw-hairline)] px-4 py-3 sm:px-5">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--cw-ink-faint)]">
                   Blog review
                 </p>
                 <h2
                   id="blog-review-title"
-                  className="mt-0.5 truncate text-lg font-semibold text-slate-900"
+                  className="mt-0.5 truncate text-lg font-semibold text-[var(--cw-ink)]"
                 >
                   {draft.editedTitle || activeBlog.title || "Untitled"}
                 </h2>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--cw-ink-faint)]">
                   <span>{activeBlog.siteLink}</span>
                   <span
                     className={`rounded-full px-2 py-0.5 font-semibold ring-1 ${statusMeta(activeBlog.status).className}`}
@@ -558,8 +583,8 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                   onClick={() => setShowPreview((v) => !v)}
                   className={`hidden items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold sm:inline-flex ${
                     showPreview
-                      ? "border-[#1d9c35]/40 bg-emerald-50 text-emerald-900"
-                      : "border-slate-200 text-slate-600"
+                      ? "border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] text-[var(--cw-neon)]"
+                      : "border-[var(--cw-hairline)] text-[var(--cw-ink-muted)] hover:bg-[var(--cw-overlay)]"
                   }`}
                 >
                   <FiEye /> Preview
@@ -567,7 +592,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                 <button
                   type="button"
                   onClick={closeReview}
-                  className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50"
+                  className="rounded-lg border border-[var(--cw-hairline)] p-2 text-[var(--cw-ink-muted)] hover:bg-[var(--cw-overlay)]"
                   aria-label="Close"
                 >
                   <FiX className="h-4 w-4" />
@@ -576,7 +601,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
             </header>
 
             {/* Tabs */}
-            <div className="shrink-0 border-b border-slate-200 px-4 sm:px-5">
+            <div className="shrink-0 border-b border-[var(--cw-hairline)] px-4 sm:px-5">
               <nav className="-mb-px flex gap-1 overflow-x-auto" aria-label="Review sections">
                 {TABS.map((t) => (
                   <button
@@ -585,8 +610,8 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                     onClick={() => setTab(t.id)}
                     className={`shrink-0 border-b-2 px-3 py-2.5 text-sm font-semibold transition ${
                       tab === t.id
-                        ? "border-[#1d9c35] text-[#167a2a]"
-                        : "border-transparent text-slate-500 hover:text-slate-800"
+                        ? "border-[var(--cw-neon)] text-[var(--cw-neon)]"
+                        : "border-transparent text-[var(--cw-ink-muted)] hover:text-[var(--cw-ink)]"
                     }`}
                   >
                     {t.label}
@@ -596,12 +621,12 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
             </div>
 
             {error ? (
-              <p className="shrink-0 border-b border-red-100 bg-red-50 px-4 py-2 text-sm text-red-700 sm:px-5">
+              <p className="shrink-0 border-b border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] px-4 py-2 text-sm text-[var(--cw-danger)] sm:px-5">
                 {error}
               </p>
             ) : null}
             {activeBlog.status === "declined" && activeBlog.publishError ? (
-              <p className="shrink-0 border-b border-amber-100 bg-amber-50 px-4 py-2 text-sm text-amber-900 sm:px-5">
+              <p className="shrink-0 border-b border-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_10%,var(--cw-surface))] px-4 py-2 text-sm text-[var(--cw-caution)] sm:px-5">
                 Previous decline reason: {activeBlog.publishError}
               </p>
             ) : null}
@@ -616,33 +641,33 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                 <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-5">
                   {tab === "content" ? (
                     <div className="space-y-4">
-                      <label className="block text-sm font-medium text-slate-700">
+                      <label className="block text-sm font-medium text-[var(--cw-ink-dim)]">
                         Title
                         <input
-                          className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#1d9c35] focus:ring-2 focus:ring-[#1d9c35]/20"
+                          className="mt-1.5 w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-sm text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
                           value={draft.editedTitle}
                           onChange={(e) => setDraft((d) => ({ ...d, editedTitle: e.target.value }))}
                         />
                       </label>
-                      <label className="block text-sm font-medium text-slate-700">
+                      <label className="block text-sm font-medium text-[var(--cw-ink-dim)]">
                         Slug
                         <input
-                          className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 font-mono text-sm outline-none focus:border-[#1d9c35] focus:ring-2 focus:ring-[#1d9c35]/20"
+                          className="mt-1.5 w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 font-mono text-sm text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
                           value={draft.editedSlug}
                           onChange={(e) => setDraft((d) => ({ ...d, editedSlug: e.target.value }))}
                         />
                       </label>
-                      <label className="block text-sm font-medium text-slate-700">
+                      <label className="block text-sm font-medium text-[var(--cw-ink-dim)]">
                         Excerpt
                         <textarea
-                          className="mt-1.5 min-h-[72px] w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#1d9c35] focus:ring-2 focus:ring-[#1d9c35]/20"
+                          className="mt-1.5 min-h-[72px] w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-sm text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
                           value={draft.editedExcerpt}
                           onChange={(e) => setDraft((d) => ({ ...d, editedExcerpt: e.target.value }))}
                         />
                       </label>
                       <div>
                         <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-sm font-medium text-slate-700">Content</span>
+                          <span className="text-sm font-medium text-[var(--cw-ink-dim)]">Content</span>
                           <HumanizeTextButton
                             type="blog"
                             text={draft.editedContent}
@@ -692,7 +717,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                           }}
                         />
                       ) : (
-                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                        <div className="overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)]">
                           {featuredPreviewUrl ? (
                             <img
                               src={featuredPreviewUrl}
@@ -703,7 +728,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                               onError={onMediaImgError}
                             />
                           ) : (
-                            <div className="flex h-52 items-center justify-center gap-2 text-sm text-slate-400">
+                            <div className="flex h-52 items-center justify-center gap-2 text-sm text-[var(--cw-ink-faint)]">
                               <FiImage className="h-5 w-5" /> No featured image yet
                             </div>
                           )}
@@ -725,7 +750,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3.5 py-2 text-sm font-semibold text-[var(--cw-ink)] hover:bg-[var(--cw-overlay)]"
                         >
                           <FiUpload /> {featuredPreviewUrl ? "Replace image" : "Choose image"}
                         </button>
@@ -733,7 +758,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                           type="button"
                           disabled={imageBusy || !canSaveImage}
                           onClick={saveFeaturedImage}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--cw-neon)] px-3.5 py-2 text-sm font-semibold text-[var(--cw-neon-ink)] hover:bg-[var(--cw-neon-deep)] disabled:opacity-40"
                         >
                           <FiSave /> {imageBusy ? "Saving…" : "Save image"}
                         </button>
@@ -744,7 +769,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                               setFeaturedFile(null);
                               if (fileInputRef.current) fileInputRef.current.value = "";
                             }}
-                            className="rounded-xl border border-slate-200 px-3.5 py-2 text-sm text-slate-700"
+                            className="rounded-xl border border-[var(--cw-hairline)] px-3.5 py-2 text-sm text-[var(--cw-ink-dim)] hover:bg-[var(--cw-overlay)]"
                           >
                             Clear selection
                           </button>
@@ -752,15 +777,15 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                       </div>
 
                       {featuredFile ? (
-                        <p className="text-xs font-medium text-amber-800">
+                        <p className="text-xs font-medium text-[var(--cw-caution)]">
                           Unsaved selection: {featuredFile.name}
                         </p>
                       ) : null}
 
-                      <label className="block text-sm font-medium text-slate-700">
+                      <label className="block text-sm font-medium text-[var(--cw-ink-dim)]">
                         Alt text
                         <input
-                          className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#1d9c35] focus:ring-2 focus:ring-[#1d9c35]/20"
+                          className="mt-1.5 w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-sm text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
                           value={draft.featuredImageAlt}
                           onChange={(e) => {
                             setDraft((d) => ({ ...d, featuredImageAlt: e.target.value }));
@@ -771,11 +796,11 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                       </label>
 
                       {imageMessage ? (
-                        <p className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                        <p className="rounded-xl border border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_9%,var(--cw-surface))] px-3 py-2 text-sm text-[var(--cw-neon)]">
                           {imageMessage}
                         </p>
                       ) : (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-[var(--cw-ink-faint)]">
                           JPEG, PNG, WebP, or GIF — max 8&nbsp;MB. Click Save image after choosing a file.
                         </p>
                       )}
@@ -784,28 +809,28 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
 
                   {tab === "seo" ? (
                     <div className="space-y-4">
-                      <label className="block text-sm font-medium text-slate-700">
+                      <label className="block text-sm font-medium text-[var(--cw-ink-dim)]">
                         SEO title
                         <input
-                          className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#1d9c35] focus:ring-2 focus:ring-[#1d9c35]/20"
+                          className="mt-1.5 w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-sm text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
                           value={draft.seoTitle}
                           onChange={(e) => setDraft((d) => ({ ...d, seoTitle: e.target.value }))}
                         />
                       </label>
-                      <label className="block text-sm font-medium text-slate-700">
+                      <label className="block text-sm font-medium text-[var(--cw-ink-dim)]">
                         Meta description
                         <textarea
-                          className="mt-1.5 min-h-[96px] w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#1d9c35] focus:ring-2 focus:ring-[#1d9c35]/20"
+                          className="mt-1.5 min-h-[96px] w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-sm text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
                           value={draft.metaDescription}
                           onChange={(e) =>
                             setDraft((d) => ({ ...d, metaDescription: e.target.value }))
                           }
                         />
                       </label>
-                      <label className="block text-sm font-medium text-slate-700">
+                      <label className="block text-sm font-medium text-[var(--cw-ink-dim)]">
                         Focus keyword
                         <input
-                          className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#1d9c35] focus:ring-2 focus:ring-[#1d9c35]/20"
+                          className="mt-1.5 w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-sm text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
                           value={draft.focusKeyword}
                           onChange={(e) => setDraft((d) => ({ ...d, focusKeyword: e.target.value }))}
                         />
@@ -815,18 +840,18 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
 
                   {tab === "schedule" ? (
                     <div className="space-y-4">
-                      <label className="block text-sm font-medium text-slate-700">
+                      <label className="block text-sm font-medium text-[var(--cw-ink-dim)]">
                         Publish schedule ({timezoneShortLabel()})
                         <input
                           type="datetime-local"
-                          className="mt-1.5 w-full max-w-sm rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#1d9c35] focus:ring-2 focus:ring-[#1d9c35]/20"
+                          className="mt-1.5 w-full max-w-sm rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-sm text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
                           value={draft.scheduledFor}
                           onChange={(e) =>
                             setDraft((d) => ({ ...d, scheduledFor: e.target.value }))
                           }
                         />
                       </label>
-                      <p className="max-w-lg text-sm leading-relaxed text-slate-500">
+                      <p className="max-w-lg text-sm leading-relaxed text-[var(--cw-ink-muted)]">
                         Approving with a future time syncs that schedule to WordPress. If the time is
                         already due, admins publish live immediately.
                       </p>
@@ -835,9 +860,9 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                 </div>
 
                 {showPreview ? (
-                  <aside className="hidden min-h-0 overflow-y-auto border-l border-slate-200 bg-[linear-gradient(180deg,#f8faf8_0%,#f1f5f2_100%)] lg:block">
-                    <div className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/80 px-4 py-2.5 backdrop-blur">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <aside className="hidden min-h-0 overflow-y-auto border-l border-[var(--cw-hairline)] bg-[var(--cw-canvas)] lg:block">
+                    <div className="sticky top-0 z-10 border-b border-[var(--cw-hairline)] bg-[color-mix(in_srgb,var(--cw-surface)_88%,transparent)] px-4 py-2.5 backdrop-blur">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--cw-ink-faint)]">
                         Live preview
                       </p>
                     </div>
@@ -846,20 +871,22 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                         <img
                           src={featuredPreviewUrl}
                           alt=""
-                          className="aspect-[16/9] w-full rounded-xl object-cover ring-1 ring-slate-200"
+                          className="aspect-[16/9] w-full rounded-xl object-cover ring-1 ring-[var(--cw-hairline)]"
                           decoding="async"
                           referrerPolicy="no-referrer"
                           onError={onMediaImgError}
                         />
                       ) : null}
-                      <h3 className="text-2xl font-semibold tracking-tight text-slate-900">
+                      <h3 className="font-heading text-2xl font-semibold tracking-tight text-[var(--cw-ink)]">
                         {draft.editedTitle || "Untitled"}
                       </h3>
                       {draft.editedExcerpt ? (
-                        <p className="text-sm leading-relaxed text-slate-600">{draft.editedExcerpt}</p>
+                        <p className="text-sm leading-relaxed text-[var(--cw-ink-muted)]">
+                          {draft.editedExcerpt}
+                        </p>
                       ) : null}
                       <div
-                        className="prose prose-sm max-w-none text-slate-800 prose-a:text-[#1d9c35] prose-headings:text-slate-900"
+                        className="prose prose-sm prose-invert max-w-none prose-headings:font-heading prose-headings:text-[var(--cw-ink)] prose-p:text-[var(--cw-ink-dim)] prose-li:text-[var(--cw-ink-dim)] prose-strong:text-[var(--cw-ink)] prose-a:text-[var(--cw-neon)] prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg prose-hr:border-[var(--cw-hairline)] prose-blockquote:border-l-[var(--cw-neon)] prose-blockquote:text-[var(--cw-ink-muted)]"
                         dangerouslySetInnerHTML={{
                           __html: draft.editedContent || "<p><em>No content yet.</em></p>",
                         }}
@@ -872,11 +899,11 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
 
             {/* Decline inline */}
             {declineOpen ? (
-              <div className="shrink-0 border-t border-red-100 bg-red-50 px-4 py-3 sm:px-5">
-                <label className="block text-sm font-medium text-red-900">
+              <div className="shrink-0 border-t border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] px-4 py-3 sm:px-5">
+                <label className="block text-sm font-medium text-[var(--cw-danger)]">
                   Decline reason
                   <textarea
-                    className="mt-1.5 min-h-[72px] w-full rounded-xl border border-red-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-200"
+                    className="mt-1.5 min-h-[72px] w-full rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[var(--cw-raised)] px-3 py-2 text-sm text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-danger)_30%,transparent)]"
                     value={declineReason}
                     onChange={(e) => setDeclineReason(e.target.value)}
                     placeholder="Tell the writer exactly what to change — it rewrites automatically…"
@@ -884,7 +911,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                   />
                 </label>
                 <div className="mt-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-red-800">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--cw-danger)]">
                     Route this feedback to
                   </p>
                   <div className="mt-1.5 grid grid-cols-3 gap-2">
@@ -901,14 +928,14 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                           onClick={() => setDeclineTarget(opt.id)}
                           className={`rounded-xl border px-3 py-2 text-center text-sm font-semibold transition ${
                             active
-                              ? "border-red-700 bg-red-700 text-white shadow-sm"
-                              : "border-red-200 bg-white text-red-800 hover:border-red-300"
+                              ? "border-[var(--cw-danger)] bg-[var(--cw-danger)] text-[#2b0808] shadow-sm"
+                              : "border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[var(--cw-raised)] text-[var(--cw-danger)] hover:border-[var(--cw-danger)]"
                           }`}
                         >
                           {opt.label}
                           <span
                             className={`block text-[0.68rem] font-medium ${
-                              active ? "text-red-100" : "text-red-400"
+                              active ? "text-[#2b0808]/75" : "text-[var(--cw-ink-muted)]"
                             }`}
                           >
                             {opt.hint}
@@ -917,7 +944,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                       );
                     })}
                   </div>
-                  <p className="mt-1.5 text-xs text-red-700/80">
+                  <p className="mt-1.5 text-xs text-[var(--cw-ink-muted)]">
                     The writer rewrites the copy, the image agent regenerates the visual, or both —
                     a fresh draft is queued automatically.
                   </p>
@@ -927,7 +954,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                     type="button"
                     disabled={busy}
                     onClick={submitDecline}
-                    className="rounded-xl bg-red-700 px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    className="rounded-xl bg-[var(--cw-danger)] px-3.5 py-2 text-sm font-semibold text-[#2b0808] disabled:opacity-50"
                   >
                     Confirm decline
                   </button>
@@ -938,7 +965,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                       setDeclineReason("");
                       setDeclineTarget("both");
                     }}
-                    className="rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-semibold text-red-800"
+                    className="rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[var(--cw-raised)] px-3.5 py-2 text-sm font-semibold text-[var(--cw-danger)]"
                   >
                     Cancel
                   </button>
@@ -947,13 +974,13 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
             ) : null}
 
             {/* Actions */}
-            <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-white px-4 py-3 sm:px-5">
+            <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-3 sm:px-5">
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => remove(activeId)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] px-3 py-2 text-sm font-semibold text-[var(--cw-danger)] hover:bg-[color-mix(in_srgb,var(--cw-danger)_14%,var(--cw-surface))] disabled:opacity-50"
                 >
                   <FiTrash2 /> Delete
                 </button>
@@ -962,7 +989,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                     type="button"
                     disabled={busy}
                     onClick={() => resendForApproval(activeId)}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--cw-caution)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_12%,var(--cw-surface))] px-3 py-2 text-sm font-semibold text-[var(--cw-caution)] disabled:opacity-50"
                   >
                     <FiRefreshCw /> Resend for approval
                   </button>
@@ -972,7 +999,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                 <button
                   type="button"
                   onClick={closeReview}
-                  className="rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700"
+                  className="rounded-xl border border-[var(--cw-hairline)] px-3.5 py-2 text-sm font-semibold text-[var(--cw-ink-dim)] hover:bg-[var(--cw-overlay)]"
                 >
                   Close
                 </button>
@@ -980,7 +1007,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                   type="button"
                   disabled={busy}
                   onClick={() => act(activeId, "edit")}
-                  className="rounded-xl bg-slate-900 px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  className="rounded-xl border border-[var(--cw-hairline-strong)] bg-[var(--cw-raised)] px-3.5 py-2 text-sm font-semibold text-[var(--cw-ink)] hover:bg-[var(--cw-overlay)] disabled:opacity-50"
                 >
                   Save edits
                 </button>
@@ -990,7 +1017,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                       type="button"
                       disabled={busy}
                       onClick={() => setDeclineOpen(true)}
-                      className="rounded-xl border border-red-200 px-3.5 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                      className="rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] px-3.5 py-2 text-sm font-semibold text-[var(--cw-danger)] hover:bg-[color-mix(in_srgb,var(--cw-danger)_14%,var(--cw-surface))] disabled:opacity-50"
                     >
                       Decline
                     </button>
@@ -998,7 +1025,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                       type="button"
                       disabled={busy}
                       onClick={() => act(activeId, "approve")}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#1d9c35] px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--cw-neon)] px-3.5 py-2 text-sm font-semibold text-[var(--cw-neon-ink)] hover:bg-[var(--cw-neon-deep)] disabled:opacity-50"
                     >
                       <FiCheck /> {busy ? "Approving…" : "Approve"}
                     </button>

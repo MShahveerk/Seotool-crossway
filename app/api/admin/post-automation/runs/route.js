@@ -1,6 +1,7 @@
 import { requireAdminRoute } from "../../../../../lib/adminAuth";
 
 import prisma from "@/lib/prisma";
+import { POST_AGENT_TITLES, toStageSummary } from "@/lib/studioRunSummary";
 
 export const runtime = "nodejs";
 
@@ -27,9 +28,16 @@ export async function GET(req) {
         finishedAt: true,
         createdAt: true,
         draftPreviewJson: true,
+        stagesJson: true,
       },
     });
-    return Response.json({ runs });
+
+    return Response.json({
+      runs: runs.map(({ stagesJson, ...run }) => ({
+        ...run,
+        stageSummary: toStageSummary(stagesJson, POST_AGENT_TITLES),
+      })),
+    });
   } catch (error) {
     return Response.json(
       { error: error.message || "Failed to list runs." },

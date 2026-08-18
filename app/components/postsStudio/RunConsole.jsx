@@ -10,7 +10,7 @@ import { buildPipelineSteps } from "../studioShared/runFormat";
  * Post Studio run console — adapter onto the shared AgentPipeline cockpit.
  */
 
-const POST_PIPELINE = [
+export const POST_PIPELINE = [
   { id: "interpreter", title: "Interpreter", subtitle: "Document → post seeds", optional: true },
   { id: "agent1", title: "Strategist", subtitle: "Hook · angle · hashtags" },
   { id: "agent2", title: "Copywriter", subtitle: "Title + caption" },

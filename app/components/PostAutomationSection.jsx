@@ -9,19 +9,29 @@ import {
   FiRefreshCw,
   FiSend,
   FiCpu,
-  FiUpload,
   FiXCircle,
   FiInfo,
   FiRotateCcw,
+  FiEdit3,
+  FiGrid,
+  FiList,
+  FiSettings,
+  FiLayers,
+  FiImage,
+  FiClock,
+  FiExternalLink,
 } from "react-icons/fi";
-import AgentRoster from "./postsStudio/AgentRoster";
 import RunConsole from "./postsStudio/RunConsole";
+import RunLibrary from "./postsStudio/RunLibrary";
 import ExcelQueuePanel from "./postsStudio/ExcelQueuePanel";
+import PipelinePreview from "./postsStudio/PipelinePreview";
 import ModelCombobox from "./studioShared/ModelCombobox";
 import StudioReferenceImages from "./studioShared/StudioReferenceImages";
 import StudioBrandKit from "./studioShared/StudioBrandKit";
 import TabRail from "./ui-shared/TabRail";
+import Btn from "./ui-shared/Btn";
 import LiveRunDock from "./studioShared/LiveRunDock";
+import { isLiveStatus } from "./studioShared/runFormat";
 import { POST_STUDIO_DEFAULT_PROMPTS } from "../../lib/postsStudio/defaults";
 import {
   INTERVAL_OPTIONS,
@@ -36,19 +46,34 @@ import {
   formatWhen,
 } from "./postsStudio/studioConstants";
 
-const TABS = [
-  { id: "run", label: "Run" },
-  { id: "agents", label: "Agents" },
-  { id: "seeds", label: "Seeds" },
-  { id: "excel", label: "Excel queue" },
-  { id: "brand", label: "Brand kit" },
-  { id: "assets", label: "Assets" },
-  { id: "schedule", label: "Schedule" },
-  { id: "external", label: "External" },
+const ZONES = [
+  { id: "compose", label: "Compose", icon: FiEdit3 },
+  { id: "library", label: "Library", icon: FiList },
+  { id: "setup", label: "Setup", icon: FiSettings },
 ];
 
+const SOURCES = [
+  { id: "topic", label: "Topic", icon: FiEdit3 },
+  { id: "excel", label: "Excel queue", icon: FiGrid },
+];
+
+const SETUP_TABS = [
+  { id: "voice", label: "Voice & Seeds", icon: FiZap },
+  { id: "brand", label: "Brand kit", icon: FiLayers },
+  { id: "assets", label: "Assets", icon: FiImage },
+  { id: "schedule", label: "Autopilot", icon: FiClock },
+  { id: "agents", label: "Agents", icon: FiCpu },
+  { id: "external", label: "External", icon: FiExternalLink },
+];
+
+const surfaceCard = "rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5";
+const raisedCard = "rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-4";
+const helpText = "text-sm text-[var(--cw-ink-muted)]";
+
 export default function PostAutomationSection({ selectedSite = "" }) {
-  const [tab, setTab] = useState("run");
+  const [zone, setZone] = useState("compose");
+  const [source, setSource] = useState("topic");
+  const [setupTab, setSetupTab] = useState("voice");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [engineMode, setEngineMode] = useState("external");
@@ -58,8 +83,16 @@ export default function PostAutomationSection({ selectedSite = "" }) {
   const [saveMessage, setSaveMessage] = useState(null);
   const [topic, setTopic] = useState("");
   const [running, setRunning] = useState(false);
-  const [activeRun, setActiveRun] = useState(null);
   const [runs, setRuns] = useState([]);
+  // The run in flight and the run you're reading are separate things: opening an
+  // old run from the Library must not tear down the live dock.
+  const [liveRun, setLiveRun] = useState(null);
+  const [selectedRunId, setSelectedRunId] = useState("");
+  const [selectedRunDetail, setSelectedRunDetail] = useState(null);
+  const [runDetailLoading, setRunDetailLoading] = useState(false);
+  const [runDetailError, setRunDetailError] = useState("");
+  const [runDetailNonce, setRunDetailNonce] = useState(0);
+  const [refreshingRuns, setRefreshingRuns] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
   const siteQ = useMemo(
@@ -93,11 +126,20 @@ export default function PostAutomationSection({ selectedSite = "" }) {
       return;
     }
     const res = await fetch(
-      `/api/admin/post-automation/runs?siteLink=${encodeURIComponent(selectedSite)}&limit=15`
+      `/api/admin/post-automation/runs?siteLink=${encodeURIComponent(selectedSite)}&limit=25`
     );
     const data = await res.json();
     if (res.ok) setRuns(Array.isArray(data.runs) ? data.runs : []);
   }, [selectedSite]);
+
+  const refreshRuns = useCallback(async () => {
+    setRefreshingRuns(true);
+    try {
+      await loadRuns();
+    } finally {
+      setRefreshingRuns(false);
+    }
+  }, [loadRuns]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -117,25 +159,102 @@ export default function PostAutomationSection({ selectedSite = "" }) {
     loadAll();
   }, [loadAll]);
 
+  // The run in flight, taken from the list so runs started elsewhere (Excel
+  // queue, autopilot, another tab) are picked up too.
+  const liveRunFromList = useMemo(() => runs.find((r) => isLiveStatus(r.status)) || null, [runs]);
+  const liveRunId = isLiveStatus(liveRun?.status) ? liveRun.id : liveRunFromList?.id || "";
+  const hasLiveAutomation = Boolean(liveRunId);
+
+  // Follow the live run closely — this is what feeds the dock and, when it's the
+  // run you have open, the cockpit.
   useEffect(() => {
-    if (!activeRun?.id) return undefined;
-    if (["succeeded", "failed", "cancelled"].includes(activeRun.status)) return undefined;
-    const t = setInterval(async () => {
+    if (!liveRunId) return undefined;
+    let cancelled = false;
+    const tick = async () => {
       try {
-        const res = await fetch(`/api/admin/post-automation/runs/${activeRun.id}`);
+        const res = await fetch(`/api/admin/post-automation/runs/${liveRunId}`);
         const data = await res.json();
-        if (res.ok && data.run) {
-          setActiveRun(data.run);
-          if (["succeeded", "failed", "cancelled"].includes(data.run.status)) {
-            loadRuns();
-          }
-        }
+        if (!cancelled && res.ok && data.run) setLiveRun(data.run);
       } catch {
         /* ignore poll errors */
       }
-    }, 2000);
+    };
+    tick();
+    const t = setInterval(tick, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [liveRunId]);
+
+  // Keep the library list itself moving while anything is live, so its cards
+  // report progress instead of going stale until someone hits Refresh.
+  useEffect(() => {
+    if (!hasLiveAutomation) return undefined;
+    const t = setInterval(() => {
+      loadRuns();
+    }, 4000);
     return () => clearInterval(t);
-  }, [activeRun?.id, activeRun?.status, loadRuns]);
+  }, [hasLiveAutomation, loadRuns]);
+
+  // Whichever run the dock follows is already polled, so the Library reads it
+  // off that object rather than fetching the same run twice.
+  const selectedIsLiveRun =
+    Boolean(selectedRunId) && (selectedRunId === liveRunId || selectedRunId === liveRun?.id);
+
+  // The run you selected in the Library, for every run that isn't the live one.
+  useEffect(() => {
+    if (!selectedRunId || selectedIsLiveRun) {
+      setRunDetailLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    let timer = null;
+
+    const load = async (initial) => {
+      if (initial) {
+        setRunDetailLoading(true);
+        setRunDetailError("");
+      }
+      try {
+        const res = await fetch(`/api/admin/post-automation/runs/${selectedRunId}`);
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) throw new Error(data.error || "Failed to load this run.");
+        setSelectedRunDetail(data.run);
+        // A run can be live without being *the* live run (a queued Excel batch).
+        if (isLiveStatus(data.run?.status)) timer = setTimeout(() => load(false), 2500);
+      } catch (err) {
+        if (!cancelled && initial) setRunDetailError(err.message || "Failed to load this run.");
+      } finally {
+        if (!cancelled && initial) setRunDetailLoading(false);
+      }
+    };
+
+    load(true);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [selectedRunId, selectedIsLiveRun, runDetailNonce]);
+
+  const selectedRun =
+    selectedRunId && liveRun?.id === selectedRunId ? liveRun : selectedRunDetail;
+
+  const selectRun = useCallback((id) => {
+    const runId = String(id || "");
+    if (!runId) return;
+    setSelectedRunId(runId);
+    setSelectedRunDetail(null);
+    setRunDetailError("");
+    setZone("library");
+  }, []);
+
+  const closeRun = useCallback(() => {
+    setSelectedRunId("");
+    setSelectedRunDetail(null);
+    setRunDetailError("");
+  }, []);
 
   const patchSite = useCallback(
     (patch) => setSiteConfig((c) => (c ? { ...c, ...patch } : c)),
@@ -189,12 +308,13 @@ export default function PostAutomationSection({ selectedSite = "" }) {
 
   const startRun = async () => {
     if (!selectedSite) {
-      setSaveMessage({ ok: false, text: "Select a site in the header first." });
+      setSaveMessage({ ok: false, text: "Select an account in the header first." });
       return;
     }
     setRunning(true);
     setSaveMessage(null);
     try {
+      // Persist current compose fields before run
       await saveSiteConfig();
       const res = await fetch(`/api/admin/post-automation/site/run${siteQ}`, {
         method: "POST",
@@ -203,9 +323,11 @@ export default function PostAutomationSection({ selectedSite = "" }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start run.");
-      setActiveRun(data.run);
-      setTab("run");
-      setSaveMessage({ ok: true, text: "Studio run queued — lands as pending Approval." });
+      if (data.run) {
+        setLiveRun(data.run);
+        selectRun(data.run.id);
+      }
+      setSaveMessage({ ok: true, text: "Run queued — following it in the Library." });
       loadRuns();
     } catch (err) {
       setSaveMessage({ ok: false, text: err.message });
@@ -214,15 +336,8 @@ export default function PostAutomationSection({ selectedSite = "" }) {
     }
   };
 
-  const liveRuns = useMemo(
-    () => runs.filter((r) => r.status === "queued" || r.status === "running"),
-    [runs]
-  );
-  const hasLiveAutomation =
-    liveRuns.length > 0 || ["queued", "running"].includes(String(activeRun?.status || ""));
-
   const cancelRun = async (runId) => {
-    const id = runId || activeRun?.id || liveRuns[0]?.id;
+    const id = runId || liveRunId;
     if (!selectedSite) return;
     setCancelling(true);
     setSaveMessage(null);
@@ -235,7 +350,10 @@ export default function PostAutomationSection({ selectedSite = "" }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to cancel.");
       const cancelled = data.run || data.runs?.[0] || null;
-      if (cancelled) setActiveRun(cancelled);
+      if (cancelled) {
+        if (liveRun?.id === cancelled.id) setLiveRun(cancelled);
+        if (selectedRunId === cancelled.id) setSelectedRunDetail(cancelled);
+      }
       setSaveMessage({
         ok: true,
         text:
@@ -263,7 +381,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to cancel.");
-      if (data.runs?.[0]) setActiveRun(data.runs[0]);
+      if (data.runs?.[0]) setLiveRun(data.runs[0]);
       setSaveMessage({
         ok: true,
         text:
@@ -293,69 +411,72 @@ export default function PostAutomationSection({ selectedSite = "" }) {
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-8 text-sm text-gray-500 flex items-center gap-2">
+      <div className="flex items-center gap-2 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-8 text-sm text-[var(--cw-ink-muted)]">
         <FiRefreshCw className="animate-spin" /> Loading Post Automation Studio…
       </div>
     );
   }
 
-  return (
-    <div className="space-y-4 max-w-[1400px]">
-      <div className="relative">
-        <div className="relative">
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-[var(--cw-hairline)] pb-4">
-            <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-              <h1 className="font-heading inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-[var(--cw-ink)]">
-                <FiZap className="h-4 w-4 text-[var(--cw-neon)]" />
-                Post Studio
-              </h1>
-              <span className="truncate font-mono text-[11px] text-[var(--cw-ink-faint)]">
-                {selectedSite || "No account selected"}
-              </span>
-              <span className="hidden text-xs text-[var(--cw-ink-muted)] xl:inline">
-                Two agents plus a feed image, straight into the SMM approve → publish flow.
-              </span>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <TabRail
-                size="sm"
-                tabs={[
-                  { id: "internal", label: "Internal Studio" },
-                  { id: "external", label: "External" },
-                ]}
-                value={isInternal ? "internal" : "external"}
-                onChange={(id) => saveEngine(id)}
-                ariaLabel="Automation engine"
-              />
-            </div>
-          </div>
+  const goAgents = () => {
+    setZone("setup");
+    setSetupTab("agents");
+  };
 
-          {loadError && (
-            <p className="mt-3 text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-              {loadError}
-            </p>
-          )}
-          {saveMessage && (
-            <p
-              className={`mt-3 text-sm rounded-lg px-3 py-2 border ${
-                saveMessage.ok
-                  ? "text-emerald-800 bg-emerald-50 border-emerald-100"
-                  : "text-red-700 bg-red-50 border-red-100"
-              }`}
-            >
-              {saveMessage.text}
-            </p>
-          )}
+  // The dock is a pointer to the live run; in the Library with that run open
+  // there is nothing left for it to point at.
+  const dockedRun =
+    zone === "library" && selectedRunId && selectedRunId === liveRun?.id ? null : liveRun;
+
+  return (
+    <div className="space-y-4">
+      {/* Header + engine switch */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-[var(--cw-hairline)] pb-4">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h1 className="font-heading inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-[var(--cw-ink)]">
+            <FiZap className="h-4 w-4 text-[var(--cw-neon)]" />
+            Post Studio
+          </h1>
+          <span className="truncate font-mono text-[11px] text-[var(--cw-ink-faint)]">
+            {selectedSite || "No account selected"}
+          </span>
         </div>
+        <TabRail
+          size="sm"
+          tabs={[
+            { id: "internal", label: "Internal Studio" },
+            { id: "external", label: "External" },
+          ]}
+          value={isInternal ? "internal" : "external"}
+          onChange={(id) => saveEngine(id)}
+          ariaLabel="Automation engine"
+        />
       </div>
 
+      {loadError && (
+        <p className="rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] px-3 py-2 text-sm text-[var(--cw-danger)]">
+          {loadError}
+        </p>
+      )}
+      {saveMessage && String(saveMessage.text || "").trim() ? (
+        <p
+          className={`rounded-xl border px-3 py-2 text-sm ${
+            saveMessage.ok
+              ? "border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_9%,var(--cw-surface))] text-[var(--cw-neon)]"
+              : "border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] text-[var(--cw-danger)]"
+          }`}
+        >
+          {String(saveMessage.text).trim()}
+        </p>
+      ) : null}
+
+      {/* External-mode brand kit still available */}
       {siteConfig && selectedSite && !isInternal ? (
         <div className="space-y-2">
-          <p className="text-sm text-gray-600">
+          <p className={helpText}>
             AI Brand kit is available here even in External mode. Switch to{" "}
             <button
               type="button"
-              className="font-semibold text-[#1d9c35] hover:underline"
+              className="font-semibold text-[var(--cw-neon)] hover:underline"
               onClick={() => saveEngine("internal")}
             >
               Internal Studio
@@ -368,9 +489,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
             onConfig={setSiteConfig}
             onMessage={(msg) =>
               setSaveMessage(
-                typeof msg === "string"
-                  ? { ok: !/fail|error|missing/i.test(msg), text: msg }
-                  : msg
+                typeof msg === "string" ? { ok: !/fail|error|missing/i.test(msg), text: msg } : msg
               )
             }
             onPatchLocal={(brandKitJson) => patchSite({ brandKitJson })}
@@ -378,572 +497,526 @@ export default function PostAutomationSection({ selectedSite = "" }) {
         </div>
       ) : null}
 
+      {/* External engine: the ingest paths that generate posts instead. */}
+      {!isInternal && (
+        <div className={`${surfaceCard} max-w-2xl space-y-3`}>
+          <div className="flex items-center gap-2 text-[var(--cw-neon)]">
+            <FiInfo />
+            <h2 className="text-sm font-bold uppercase tracking-wide">External mode active</h2>
+          </div>
+          <p className={helpText}>
+            Inbound API, Meta pull, and email ingest remain the generators. Switch to{" "}
+            <strong className="text-[var(--cw-ink)]">Internal Studio</strong> above to schedule
+            Strategist + Copywriter + image runs that create pending Approvals.
+          </p>
+        </div>
+      )}
+
       {isInternal && siteConfig && (
         <>
-          <AgentRoster config={siteConfig} onPatchSite={patchSite} />
-
+          {/* Primary zone nav + always-available run controls */}
           <div className="flex flex-wrap items-center gap-3">
             <TabRail
-              tabs={TABS.map((t) =>
-                t.id === "run" && hasLiveAutomation ? { ...t, live: true } : t
+              tabs={ZONES.map((z) =>
+                z.id === "library"
+                  ? { ...z, live: hasLiveAutomation, badge: runs.length || undefined }
+                  : z
               )}
-              value={tab}
-              onChange={setTab}
-              ariaLabel="Post studio sections"
+              value={zone}
+              onChange={setZone}
+              ariaLabel="Post studio"
               className="min-w-0 flex-1"
             />
             <div className="ml-auto flex items-center gap-2">
               {hasLiveAutomation && (
-                <button
-                  type="button"
-                  onClick={cancelAllLive}
-                  disabled={cancelling}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
-                >
-                  {cancelling ? (
-                    <FiRefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <FiXCircle className="h-3.5 w-3.5" />
-                  )}
-                  Cancel automation
-                </button>
+                <Btn variant="danger" size="sm" icon={cancelling ? FiRefreshCw : FiXCircle} onClick={cancelAllLive} disabled={cancelling}>
+                  {cancelling ? "Cancelling…" : "Cancel run"}
+                </Btn>
               )}
-              <button
-                type="button"
+              <Btn
+                variant={siteConfig.autoEnabled ? "outline" : "secondary"}
+                size="sm"
+                icon={siteConfig.autoEnabled ? FiPlay : FiPause}
                 onClick={toggleAuto}
-                className={`inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 border ${
-                  siteConfig.autoEnabled
-                    ? "bg-[#dff7de] border-[#1d9c35]/40 text-[#145c22]"
-                    : "bg-white border-gray-200 text-gray-600"
-                }`}
               >
-                {siteConfig.autoEnabled ? (
-                  <FiPlay className="h-3.5 w-3.5" />
-                ) : (
-                  <FiPause className="h-3.5 w-3.5" />
-                )}
                 Auto {siteConfig.autoEnabled ? "on" : "paused"}
-              </button>
-              <button
-                type="button"
-                onClick={saveSiteConfig}
-                disabled={saving}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 bg-[#1d9c35] text-white hover:bg-[#178a2e] disabled:opacity-50"
-              >
-                <FiSave className="h-3.5 w-3.5" />
+              </Btn>
+              <Btn variant="primary" size="sm" icon={FiSave} onClick={saveSiteConfig} loading={saving}>
                 Save
-              </button>
+              </Btn>
             </div>
           </div>
 
-          {/* A live run docks here on every tab, minimised. It self-hides when
-              nothing is running, so it never costs space it hasn't earned. */}
+          {/* Live run docks on every zone, minimised, self-hiding — except in the
+              Library with that same run already open, where it would only be
+              pointing at what you're looking at. */}
           <LiveRunDock
-            run={activeRun}
+            run={dockedRun}
             label="Post"
-            onCancel={() => cancelRun(activeRun?.id)}
+            onCancel={() => cancelRun(liveRun?.id)}
+            onOpen={liveRun?.id ? () => selectRun(liveRun.id) : undefined}
+            openLabel="Open in Library"
             cancelling={cancelling}
           >
-            <RunConsole
-              run={activeRun}
-              onCancel={() => cancelRun(activeRun?.id)}
-              cancelling={cancelling}
-            />
+            <RunConsole run={liveRun} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />
           </LiveRunDock>
 
-          <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5">
-            {tab === "run" && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelClass}>Topic / angle for this run</label>
-                    <input
-                      className={`${inputClass} mt-1`}
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
-                      placeholder="e.g. Behind the scenes: packing a cross-border shipment"
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Hooks / keywords (rotating)</label>
-                    <textarea
-                      className={`${inputClass} mt-1 font-mono text-xs min-h-[84px]`}
-                      value={siteConfig.hooksOrKeywords || ""}
-                      onChange={(e) => patchSite({ hooksOrKeywords: e.target.value })}
-                      placeholder={"hook or keyword one\nhook or keyword two"}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className={labelClass}>General / seed prompt</label>
-                  <textarea
-                    className={`${inputClass} mt-1 min-h-[100px]`}
-                    value={siteConfig.seedPrompt || ""}
-                    onChange={(e) => patchSite({ seedPrompt: e.target.value })}
-                    placeholder="Standing brief: brand voice, audience, what every post should reinforce…"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={startRun}
-                  disabled={running || !selectedSite}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#1d9c35] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#178a2e] disabled:opacity-50"
-                >
-                  {running ? <FiRefreshCw className="animate-spin" /> : <FiSend />}
-                  Generate pending post
-                </button>
+          {/* ── COMPOSE ─────────────────────────────────────────────── */}
+          {zone === "compose" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <TabRail size="sm" tabs={SOURCES} value={source} onChange={setSource} ariaLabel="Content source" />
+                <span className="hidden text-xs text-[var(--cw-ink-faint)] sm:inline">
+                  Where the next post comes from
+                </span>
               </div>
-            )}
 
-            {tab === "agents" && (
-              <div className="space-y-6">
-                <p className="text-sm text-gray-600">
-                  Strategist → Copywriter → required Image. Image provider: OpenAI or OpenRouter
-                  (Flux, Gemini Image, GPT Image…). Claude cannot generate images.
-                </p>
-                {[
-                  ["agent1", "Strategist", "agent1Provider", "agent1Model", "agent1Prompt", "chat"],
-                  ["agent2", "Copywriter", "agent2Provider", "agent2Model", "agent2Prompt", "chat"],
-                  ["image", "Image", "imageProvider", "imageModel", "imagePromptSystem", "image"],
-                ].map(([id, title, pKey, mKey, promptKey, kind]) => {
-                  const providerList = kind === "image" ? IMAGE_PROVIDERS : PROVIDERS;
-                  const providerValue = siteConfig[pKey] || "openai";
-                  const modelList = modelsForProvider(providerValue, {
-                    kind,
-                    current: siteConfig[mKey] || "",
-                  });
-                  return (
-                    <div key={id} className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2">
-                          <FiCpu className="text-[#1d9c35]" />
-                          <h3 className="text-sm font-bold text-gray-900">{title}</h3>
-                        </div>
-                        {POST_STUDIO_DEFAULT_PROMPTS[promptKey] ? (
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700"
-                            onClick={() =>
-                              patchSite({ [promptKey]: POST_STUDIO_DEFAULT_PROMPTS[promptKey] })
-                            }
-                          >
-                            <FiRotateCcw className="w-3.5 h-3.5" /> Revert prompt
-                          </button>
-                        ) : null}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                        <div>
-                          <label className={labelClass}>Provider</label>
-                          <select
-                            className={`${inputClass} mt-1`}
-                            value={providerValue}
-                            onChange={(e) => {
-                              const nextProvider = e.target.value;
-                              const nextModel = defaultModelForProvider(
-                                nextProvider,
-                                kind === "image" ? "image" : "chat"
-                              );
-                              patchSite({ [pKey]: nextProvider, [mKey]: nextModel });
-                            }}
-                          >
-                            {providerList.map((p) => (
-                              <option key={p.value} value={p.value}>
-                                {p.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className={labelClass}>Model</label>
-                          <ModelCombobox
-                            id={`post-agents-tab-${id}`}
-                            className={`${inputClass} mt-1 text-sm font-semibold border-[#1d9c35]/35`}
-                            value={siteConfig[mKey] || modelList[0]?.value || ""}
-                            options={modelList}
-                            onChange={(v) => patchSite({ [mKey]: v })}
-                          />
-                          <p className="mt-1 text-[11px] text-gray-500">
-                            Suggestions for {providerValue} — or type any model id
-                          </p>
-                        </div>
-                      </div>
-                      <label className={labelClass}>System prompt</label>
-                      <textarea
-                        className={`${inputClass} mt-1 font-mono text-xs min-h-[160px]`}
-                        value={siteConfig[promptKey] || ""}
-                        onChange={(e) => patchSite({ [promptKey]: e.target.value })}
-                      />
-                    </div>
-                  );
-                })}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {[
-                    ["openaiApiKey", "OpenAI API key"],
-                    ["anthropicApiKey", "Anthropic API key"],
-                    ["openrouterApiKey", "OpenRouter API key"],
-                  ].map(([key, label]) => (
-                    <div key={key}>
-                      <label className={labelClass}>{label}</label>
+              {source === "topic" && (
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+                  <div className={`${surfaceCard} space-y-4`}>
+                    <div>
+                      <label className={labelClass}>Topic / angle for this post</label>
                       <input
-                        type="password"
                         className={`${inputClass} mt-1`}
-                        value={siteConfig[key] || ""}
-                        onChange={(e) => patchSite({ [key]: e.target.value })}
-                        placeholder="Leave masked to keep existing"
+                        value={topic}
+                        onChange={(e) => setTopic(e.target.value)}
+                        placeholder="e.g. Behind the scenes: packing a cross-border shipment"
                       />
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {tab === "seeds" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <p className="md:col-span-2 text-sm text-gray-600">
-                  Every filled Seeds field is injected into Strategist + Copywriter for{" "}
-                  <strong>manual Generate</strong> and <strong>auto</strong> (seed cadence and Excel).
-                  Excel rows add a topic brief on top — they do not wipe these standing Seeds.
-                </p>
-                <div className="md:col-span-2">
-                  <label className={labelClass}>General auto prompt</label>
-                  <textarea
-                    className={`${inputClass} mt-1 min-h-[100px]`}
-                    value={siteConfig.seedPrompt || ""}
-                    onChange={(e) => patchSite({ seedPrompt: e.target.value })}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className={labelClass}>Hooks / angles / keywords</label>
-                  <textarea
-                    className={`${inputClass} mt-1 min-h-[80px]`}
-                    value={siteConfig.hooksOrKeywords || ""}
-                    onChange={(e) => patchSite({ hooksOrKeywords: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Tone</label>
-                  <input
-                    className={`${inputClass} mt-1`}
-                    value={siteConfig.tone || ""}
-                    onChange={(e) => patchSite({ tone: e.target.value })}
-                    placeholder="Expert, warm, punchy…"
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Default platform</label>
-                  <select
-                    className={`${inputClass} mt-1`}
-                    value={siteConfig.defaultPlatform || "both"}
-                    onChange={(e) => patchSite({ defaultPlatform: e.target.value })}
-                  >
-                    {PLATFORM_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label className={labelClass}>Hashtag policy</label>
-                  <textarea
-                    className={`${inputClass} mt-1 min-h-[80px]`}
-                    value={siteConfig.hashtagPolicy || ""}
-                    onChange={(e) => patchSite({ hashtagPolicy: e.target.value })}
-                    placeholder="e.g. 3–8 relevant hashtags; mix brand + niche; no spammy tags"
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>CTA text</label>
-                  <input
-                    className={`${inputClass} mt-1`}
-                    value={siteConfig.ctaText || ""}
-                    onChange={(e) => patchSite({ ctaText: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>CTA URL</label>
-                  <input
-                    className={`${inputClass} mt-1`}
-                    value={siteConfig.ctaUrl || ""}
-                    onChange={(e) => patchSite({ ctaUrl: e.target.value })}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className={labelClass}>Brand notes</label>
-                  <textarea
-                    className={`${inputClass} mt-1 min-h-[80px]`}
-                    value={siteConfig.brandNotes || ""}
-                    onChange={(e) => patchSite({ brandNotes: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
-
-            {tab === "brand" && (
-              <StudioBrandKit
-                brandKit={siteConfig.brandKitJson}
-                apiUrl={`/api/admin/post-automation/site/brand-kit${siteQ}`}
-                onConfig={setSiteConfig}
-                onMessage={(msg) =>
-                  setSaveMessage(
-                    typeof msg === "string"
-                      ? { ok: !/fail|error|missing/i.test(msg), text: msg }
-                      : msg
-                  )
-                }
-                onPatchLocal={(brandKitJson) => patchSite({ brandKitJson })}
-              />
-            )}
-
-            {tab === "assets" && (
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600">
-                  Style reference images + visual guidelines. For matte/logo branding, use the{" "}
-                  <button
-                    type="button"
-                    className="font-semibold text-[#1d9c35] hover:underline"
-                    onClick={() => setTab("brand")}
-                  >
-                    AI Brand kit
-                  </button>{" "}
-                  tab. Image is required — runs fail without a successful feed creative.
-                </p>
-                <label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50/80 px-4 py-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="mt-1 rounded border-gray-300 text-[#1d9c35] focus:ring-[#1d9c35]"
-                    checked={Boolean(siteConfig.generateBackupImages)}
-                    onChange={(e) => patchSite({ generateBackupImages: e.target.checked })}
-                  />
-                  <span>
-                    <span className="text-sm font-semibold text-gray-900">Generate 3 backup images</span>
-                    <span className="block text-xs text-gray-500 mt-0.5">
-                      Adds alternate creatives you can switch to on SMM Post Approvals before approving.
-                      Uses extra image API cost when enabled.
-                    </span>
-                  </span>
-                </label>
-                <div>
-                  <label className={labelClass}>Image visual guidelines</label>
-                  <textarea
-                    className={`${inputClass} mt-1 min-h-[100px]`}
-                    value={siteConfig.imagePrompt || ""}
-                    onChange={(e) => patchSite({ imagePrompt: e.target.value })}
-                    placeholder="Brand look: colors, lighting, composition, what to avoid…"
-                  />
-                </div>
-                <StudioReferenceImages
-                  paths={siteConfig.referenceImagePaths || (siteConfig.referenceImagePath ? [siteConfig.referenceImagePath] : [])}
-                  uploadUrl={selectedSite ? `/api/admin/post-automation/site/asset${siteQ}` : ""}
-                  onConfig={setSiteConfig}
-                  onMessage={setSaveMessage}
-                />
-              </div>
-            )}
-
-            {tab === "excel" && (
-              <ExcelQueuePanel
-                siteLink={selectedSite}
-                siteConfig={siteConfig}
-                onPatchSite={patchSite}
-                onMessage={setSaveMessage}
-                onToggleAuto={toggleAuto}
-              />
-            )}
-
-            {tab === "schedule" && (
-              <div className="space-y-5 max-w-xl">
-                <p className="text-sm text-gray-600">
-                  Default cadence is every 12 hours. Pause anytime for a one-off manual topic without
-                  advancing the Excel queue.
-                </p>
-                <div>
-                  <label className={labelClass}>General prompt for auto</label>
-                  <textarea
-                    className={`${inputClass} mt-1 min-h-[120px]`}
-                    value={siteConfig.seedPrompt || ""}
-                    onChange={(e) => patchSite({ seedPrompt: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>How often</label>
-                  <select
-                    className={`${inputClass} mt-1`}
-                    value={siteConfig.autoIntervalMinutes || 720}
-                    onChange={(e) => patchSite({ autoIntervalMinutes: Number(e.target.value) })}
-                  >
-                    {INTERVAL_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Topic source</label>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                    {AUTO_SOURCE_OPTIONS.map((opt) => {
-                      const active = (siteConfig.autoSource || "seed") === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => patchSite({ autoSource: opt.value })}
-                          className={`rounded-xl border px-3 py-3 text-left transition ${
-                            active
-                              ? "border-[#1d9c35] bg-[#f3faf4] shadow-sm"
-                              : "border-gray-200 bg-white hover:border-gray-300"
-                          }`}
-                        >
-                          <p className="text-sm font-semibold text-gray-900">{opt.label}</p>
-                          <p className="mt-1 text-xs text-gray-500 leading-snug">{opt.hint}</p>
-                        </button>
-                      );
-                    })}
+                    <div>
+                      <label className={labelClass}>Hooks / keywords (rotating)</label>
+                      <textarea
+                        className={`${inputClass} mt-1 min-h-[72px] font-mono text-xs`}
+                        value={siteConfig.hooksOrKeywords || ""}
+                        onChange={(e) => patchSite({ hooksOrKeywords: e.target.value })}
+                        placeholder={"hook or keyword one\nhook or keyword two"}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>General / seed prompt</label>
+                      <textarea
+                        className={`${inputClass} mt-1 min-h-[96px]`}
+                        value={siteConfig.seedPrompt || ""}
+                        onChange={(e) => patchSite({ seedPrompt: e.target.value })}
+                        placeholder="Standing brief: brand voice, audience, what every post should reinforce…"
+                      />
+                      <p className="mt-1 text-xs text-[var(--cw-ink-faint)]">
+                        Standing seeds (tone, platform, hashtags, CTA) live in Setup → Voice & Seeds and apply
+                        automatically.
+                      </p>
+                    </div>
+                    <Btn variant="primary" size="lg" icon={running ? FiRefreshCw : FiSend} onClick={startRun} disabled={running || !selectedSite}>
+                      {running ? "Queueing…" : "Generate post"}
+                    </Btn>
                   </div>
-                  {siteConfig.autoSource === "excel" && (
-                    <button
-                      type="button"
-                      onClick={() => setTab("excel")}
-                      className="mt-2 text-xs font-semibold text-[#1d9c35] hover:underline"
-                    >
-                      Open Excel queue →
-                    </button>
-                  )}
+                  <div className="space-y-4">
+                    <PipelinePreview config={siteConfig} onConfigure={goAgents} />
+                    <div className={`${raisedCard} space-y-1`}>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">
+                        Tips
+                      </p>
+                      <p className="text-xs text-[var(--cw-ink-muted)]">
+                        Leave the topic blank to let the Strategist pick from your hooks. The image is
+                        required — a run without a successful feed creative fails rather than shipping a
+                        caption on its own.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500">
-                  Last auto: {formatWhen(siteConfig.lastAutoAt)} · Status:{" "}
-                  <strong>{siteConfig.autoEnabled ? "Running" : "Paused"}</strong>
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={toggleAuto}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                  >
-                    {siteConfig.autoEnabled ? <FiPause /> : <FiPlay />}
-                    {siteConfig.autoEnabled ? "Pause auto" : "Enable auto"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={saveSiteConfig}
-                    disabled={saving}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#1d9c35] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                  >
-                    <FiSave /> Save schedule
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
 
-            {tab === "external" && (
-              <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-5 space-y-3 max-w-2xl">
-                <div className="flex items-start gap-2 text-[#1d9c35]">
-                  <FiInfo className="mt-0.5 shrink-0" />
-                  <h3 className="text-sm font-bold text-gray-900">External ingest path</h3>
+              {source === "excel" && (
+                <div className={surfaceCard}>
+                  <ExcelQueuePanel
+                    siteLink={selectedSite}
+                    siteConfig={siteConfig}
+                    onPatchSite={patchSite}
+                    onMessage={setSaveMessage}
+                    onToggleAuto={toggleAuto}
+                  />
                 </div>
-                <p className="text-sm text-gray-600">
-                  With Engine set to <strong>External</strong>, Post Studio auto generation is disabled.
-                  Posts still arrive through the existing paths:
-                </p>
-                <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
-                  <li>
-                    Inbound API — <code className="text-xs bg-white border px-1 rounded">POST /api/posts/inbound</code>
-                  </li>
-                  <li>Meta / page pull and email ingest (unchanged)</li>
-                  <li>Manual Create Post and Post Board</li>
-                </ul>
-                <p className="text-sm text-gray-600">
-                  Switch to Internal Studio when you want scheduled Strategist → Copywriter → Image runs
-                  to create pending Approvals for this site. Notes:{" "}
-                  {globalConfig.notes || "(none saved)"}
-                </p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
-          {/* While a run is live the docked cockpit above owns it — showing a
-              second copy here would just be the same thing twice. */}
-          {!hasLiveAutomation ? (
-            <RunConsole
-              run={activeRun}
-              onCancel={() => cancelRun(activeRun?.id)}
+          {/* ── LIBRARY ─────────────────────────────────────────────── */}
+          {zone === "library" && (
+            <RunLibrary
+              runs={runs}
+              selectedRunId={selectedRunId}
+              selectedRun={selectedRun}
+              detailLoading={runDetailLoading}
+              detailError={runDetailError}
+              liveRunId={liveRunId}
+              refreshing={refreshingRuns}
               cancelling={cancelling}
+              onSelect={selectRun}
+              onClose={closeRun}
+              onRefresh={refreshRuns}
+              onRetryDetail={() => setRunDetailNonce((n) => n + 1)}
+              onCancel={cancelRun}
+              onGoCompose={() => setZone("compose")}
             />
-          ) : null}
+          )}
 
-          {runs.length > 0 && (
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Recent runs
-                </p>
-                {hasLiveAutomation && (
-                  <button
-                    type="button"
-                    onClick={cancelAllLive}
-                    disabled={cancelling}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 hover:underline disabled:opacity-50"
-                  >
-                    <FiXCircle /> Cancel running automation
-                  </button>
+          {/* ── SETUP ───────────────────────────────────────────────── */}
+          {zone === "setup" && (
+            <div className="space-y-4">
+              <TabRail size="sm" tabs={SETUP_TABS} value={setupTab} onChange={setSetupTab} ariaLabel="Studio setup" />
+
+              <div className={surfaceCard}>
+                {setupTab === "voice" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <p className={`md:col-span-2 ${helpText}`}>
+                      Every filled field is injected into the Strategist and Copywriter for{" "}
+                      <strong className="text-[var(--cw-ink)]">manual Generate</strong> and{" "}
+                      <strong className="text-[var(--cw-ink)]">auto</strong> runs. Excel rows add a topic brief
+                      on top — they never wipe these standing seeds.
+                    </p>
+                    <div className="md:col-span-2">
+                      <label className={labelClass}>General auto prompt</label>
+                      <textarea
+                        className={`${inputClass} mt-1 min-h-[100px]`}
+                        value={siteConfig.seedPrompt || ""}
+                        onChange={(e) => patchSite({ seedPrompt: e.target.value })}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className={labelClass}>Hooks / angles / keywords</label>
+                      <textarea
+                        className={`${inputClass} mt-1 min-h-[80px]`}
+                        value={siteConfig.hooksOrKeywords || ""}
+                        onChange={(e) => patchSite({ hooksOrKeywords: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Tone</label>
+                      <input
+                        className={`${inputClass} mt-1`}
+                        value={siteConfig.tone || ""}
+                        onChange={(e) => patchSite({ tone: e.target.value })}
+                        placeholder="Expert, warm, punchy…"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Default platform</label>
+                      <select
+                        className={`${inputClass} mt-1`}
+                        value={siteConfig.defaultPlatform || "both"}
+                        onChange={(e) => patchSite({ defaultPlatform: e.target.value })}
+                      >
+                        {PLATFORM_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className={labelClass}>Hashtag policy</label>
+                      <textarea
+                        className={`${inputClass} mt-1 min-h-[80px]`}
+                        value={siteConfig.hashtagPolicy || ""}
+                        onChange={(e) => patchSite({ hashtagPolicy: e.target.value })}
+                        placeholder="e.g. 3–8 relevant hashtags; mix brand + niche; no spammy tags"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>CTA text</label>
+                      <input
+                        className={`${inputClass} mt-1`}
+                        value={siteConfig.ctaText || ""}
+                        onChange={(e) => patchSite({ ctaText: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>CTA URL</label>
+                      <input
+                        className={`${inputClass} mt-1`}
+                        value={siteConfig.ctaUrl || ""}
+                        onChange={(e) => patchSite({ ctaUrl: e.target.value })}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className={labelClass}>Brand notes</label>
+                      <textarea
+                        className={`${inputClass} mt-1 min-h-[80px]`}
+                        value={siteConfig.brandNotes || ""}
+                        onChange={(e) => patchSite({ brandNotes: e.target.value })}
+                      />
+                    </div>
+                  </div>
                 )}
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-gray-500 border-b">
-                      <th className="py-2 pr-3">When</th>
-                      <th className="py-2 pr-3">Topic</th>
-                      <th className="py-2 pr-3">Status</th>
-                      <th className="py-2 pr-3">Cost</th>
-                      <th className="py-2 pr-3">Trigger</th>
-                      <th className="py-2"> </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {runs.map((r) => {
-                      const live = r.status === "queued" || r.status === "running";
-                      return (
-                        <tr
-                          key={r.id}
-                          className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer"
-                          onClick={async () => {
-                            const res = await fetch(`/api/admin/post-automation/runs/${r.id}`);
-                            const data = await res.json();
-                            if (res.ok) setActiveRun(data.run);
+
+                {setupTab === "brand" && (
+                  <StudioBrandKit
+                    brandKit={siteConfig.brandKitJson}
+                    apiUrl={`/api/admin/post-automation/site/brand-kit${siteQ}`}
+                    onConfig={setSiteConfig}
+                    onMessage={(msg) =>
+                      setSaveMessage(
+                        typeof msg === "string" ? { ok: !/fail|error|missing/i.test(msg), text: msg } : msg
+                      )
+                    }
+                    onPatchLocal={(brandKitJson) => patchSite({ brandKitJson })}
+                  />
+                )}
+
+                {setupTab === "assets" && (
+                  <div className="space-y-4">
+                    <p className={helpText}>
+                      Style reference images + visual guidelines. For matte/logo branding, use the{" "}
+                      <button
+                        type="button"
+                        className="font-semibold text-[var(--cw-neon)] hover:underline"
+                        onClick={() => setSetupTab("brand")}
+                      >
+                        AI Brand kit
+                      </button>{" "}
+                      tab. Image is required — runs fail without a successful feed creative.
+                    </p>
+                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-3">
+                      <input
+                        type="checkbox"
+                        className="mt-1 rounded border-[var(--cw-hairline)] text-[var(--cw-neon)] focus:ring-[var(--cw-neon)]"
+                        checked={Boolean(siteConfig.generateBackupImages)}
+                        onChange={(e) => patchSite({ generateBackupImages: e.target.checked })}
+                      />
+                      <span>
+                        <span className="text-sm font-semibold text-[var(--cw-ink)]">Generate 3 backup images</span>
+                        <span className="mt-0.5 block text-xs text-[var(--cw-ink-muted)]">
+                          Adds alternate creatives you can switch to on SMM Post Approvals before approving.
+                          Uses extra image API cost when enabled.
+                        </span>
+                      </span>
+                    </label>
+                    <div>
+                      <label className={labelClass}>Image visual guidelines</label>
+                      <textarea
+                        className={`${inputClass} mt-1 min-h-[100px]`}
+                        value={siteConfig.imagePrompt || ""}
+                        onChange={(e) => patchSite({ imagePrompt: e.target.value })}
+                        placeholder="Brand look: colors, lighting, composition, what to avoid…"
+                      />
+                    </div>
+                    <StudioReferenceImages
+                      paths={siteConfig.referenceImagePaths || (siteConfig.referenceImagePath ? [siteConfig.referenceImagePath] : [])}
+                      uploadUrl={selectedSite ? `/api/admin/post-automation/site/asset${siteQ}` : ""}
+                      onConfig={setSiteConfig}
+                      onMessage={setSaveMessage}
+                    />
+                  </div>
+                )}
+
+                {setupTab === "schedule" && (
+                  <div className="max-w-xl space-y-5">
+                    <p className={helpText}>
+                      Default cadence is every 12 hours. Pause anytime for a one-off manual topic without
+                      advancing the Excel queue.
+                    </p>
+                    <div>
+                      <label className={labelClass}>General prompt for auto</label>
+                      <textarea
+                        className={`${inputClass} mt-1 min-h-[120px]`}
+                        value={siteConfig.seedPrompt || ""}
+                        onChange={(e) => patchSite({ seedPrompt: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>How often</label>
+                      <select
+                        className={`${inputClass} mt-1`}
+                        value={siteConfig.autoIntervalMinutes || 720}
+                        onChange={(e) => patchSite({ autoIntervalMinutes: Number(e.target.value) })}
+                      >
+                        {INTERVAL_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1.5 text-xs text-[var(--cw-ink-faint)]">
+                        Excel mode processes one row per tick. Seed mode generates from your hooks each tick.
+                      </p>
+                    </div>
+                    <div>
+                      <label className={labelClass}>Topic source</label>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        {AUTO_SOURCE_OPTIONS.map((opt) => {
+                          const active = (siteConfig.autoSource || "seed") === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => patchSite({ autoSource: opt.value })}
+                              className={`rounded-xl border px-3 py-3 text-left transition ${
+                                active
+                                  ? "border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_9%,var(--cw-surface))] shadow-sm"
+                                  : "border-[var(--cw-hairline)] bg-[var(--cw-raised)] hover:border-[var(--cw-hairline-strong)]"
+                              }`}
+                            >
+                              <p className="text-sm font-semibold text-[var(--cw-ink)]">{opt.label}</p>
+                              <p className="mt-1 text-xs leading-snug text-[var(--cw-ink-muted)]">{opt.hint}</p>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {siteConfig.autoSource === "excel" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setZone("compose");
+                            setSource("excel");
                           }}
+                          className="mt-2 text-xs font-semibold text-[var(--cw-neon)] hover:underline"
                         >
-                          <td className="py-2 pr-3 text-xs text-gray-500 whitespace-nowrap">
-                            {formatWhen(r.createdAt)}
-                          </td>
-                          <td className="py-2 pr-3 max-w-[240px] truncate">{r.topic || "—"}</td>
-                          <td className="py-2 pr-3 font-semibold">{r.status}</td>
-                          <td className="py-2 pr-3 font-mono text-xs">
-                            {r.totalCostUsd != null ? `$${Number(r.totalCostUsd).toFixed(4)}` : "—"}
-                          </td>
-                          <td className="py-2 pr-3 text-xs text-gray-500">{r.trigger}</td>
-                          <td className="py-2 text-right">
-                            {live && (
-                              <button
-                                type="button"
-                                disabled={cancelling}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  cancelRun(r.id);
-                                }}
-                                className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                          Open Excel queue →
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-[var(--cw-ink-faint)]">
+                      Last auto: {formatWhen(siteConfig.lastAutoAt)} · Status:{" "}
+                      <strong className="text-[var(--cw-ink)]">{siteConfig.autoEnabled ? "Running" : "Paused"}</strong>
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Btn variant="secondary" size="md" icon={siteConfig.autoEnabled ? FiPause : FiPlay} onClick={toggleAuto}>
+                        {siteConfig.autoEnabled ? "Pause auto" : "Enable auto"}
+                      </Btn>
+                      <Btn variant="primary" size="md" icon={FiSave} onClick={saveSiteConfig} loading={saving}>
+                        Save schedule
+                      </Btn>
+                    </div>
+                  </div>
+                )}
+
+                {setupTab === "agents" && (
+                  <div className="space-y-6">
+                    <p className={helpText}>
+                      Advanced. Strategist → Copywriter → required Image. Image provider: OpenAI or OpenRouter
+                      (Flux, Gemini Image, GPT Image…). Claude cannot generate images.
+                    </p>
+                    {[
+                      ["agent1", "Strategist (Agent 1)", "agent1Provider", "agent1Model", "agent1Prompt", "chat"],
+                      ["agent2", "Copywriter (Agent 2)", "agent2Provider", "agent2Model", "agent2Prompt", "chat"],
+                      ["image", "Image", "imageProvider", "imageModel", "imagePromptSystem", "image"],
+                    ].map(([id, title, pKey, mKey, promptKey, kind]) => {
+                      const providerList = kind === "image" ? IMAGE_PROVIDERS : PROVIDERS;
+                      const providerValue = siteConfig[pKey] || "openai";
+                      const modelList = modelsForProvider(providerValue, {
+                        kind,
+                        current: siteConfig[mKey] || "",
+                      });
+                      return (
+                        <div key={id} className={raisedCard}>
+                          <div className="mb-3 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <FiCpu className="text-[var(--cw-neon)]" />
+                              <h3 className="text-sm font-bold text-[var(--cw-ink)]">{title}</h3>
+                            </div>
+                            {POST_STUDIO_DEFAULT_PROMPTS[promptKey] ? (
+                              <Btn
+                                variant="ghost"
+                                size="xs"
+                                icon={FiRotateCcw}
+                                onClick={() => patchSite({ [promptKey]: POST_STUDIO_DEFAULT_PROMPTS[promptKey] })}
                               >
-                                <FiXCircle className="h-3 w-3" />
-                                Cancel
-                              </button>
-                            )}
-                          </td>
-                        </tr>
+                                Revert prompt
+                              </Btn>
+                            ) : null}
+                          </div>
+                          <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <div>
+                              <label className={labelClass}>Provider</label>
+                              <select
+                                className={`${inputClass} mt-1`}
+                                value={providerValue}
+                                onChange={(e) => {
+                                  const nextProvider = e.target.value;
+                                  const nextModel = defaultModelForProvider(
+                                    nextProvider,
+                                    kind === "image" ? "image" : "chat"
+                                  );
+                                  patchSite({ [pKey]: nextProvider, [mKey]: nextModel });
+                                }}
+                              >
+                                {providerList.map((p) => (
+                                  <option key={p.value} value={p.value}>
+                                    {p.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className={labelClass}>Model</label>
+                              <ModelCombobox
+                                id={`post-agents-tab-${id}`}
+                                className={`${inputClass} mt-1 text-sm font-semibold`}
+                                value={siteConfig[mKey] || modelList[0]?.value || ""}
+                                options={modelList}
+                                onChange={(v) => patchSite({ [mKey]: v })}
+                              />
+                              <p className="mt-1 text-[11px] text-[var(--cw-ink-faint)]">
+                                Suggestions for {providerValue} — or type any model id
+                              </p>
+                            </div>
+                          </div>
+                          <label className={labelClass}>System prompt</label>
+                          <textarea
+                            className={`${inputClass} mt-1 min-h-[160px] font-mono text-xs`}
+                            value={siteConfig[promptKey] || ""}
+                            onChange={(e) => patchSite({ [promptKey]: e.target.value })}
+                          />
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                      {[
+                        ["openaiApiKey", "OpenAI API key"],
+                        ["anthropicApiKey", "Anthropic API key"],
+                        ["openrouterApiKey", "OpenRouter API key"],
+                      ].map(([key, label]) => (
+                        <div key={key}>
+                          <label className={labelClass}>{label}</label>
+                          <input
+                            type="password"
+                            className={`${inputClass} mt-1`}
+                            value={siteConfig[key] || ""}
+                            onChange={(e) => patchSite({ [key]: e.target.value })}
+                            placeholder="Leave masked to keep existing"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {setupTab === "external" && (
+                  <div className="max-w-2xl space-y-3">
+                    <div className="flex items-center gap-2 text-[var(--cw-neon)]">
+                      <FiInfo />
+                      <h3 className="text-sm font-bold uppercase tracking-wide">External ingest path</h3>
+                    </div>
+                    <p className={helpText}>
+                      With Engine set to <strong className="text-[var(--cw-ink)]">External</strong>, Post Studio
+                      auto generation is disabled. Posts still arrive through the existing paths:
+                    </p>
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-[var(--cw-ink-muted)]">
+                      <li>
+                        Inbound API —{" "}
+                        <code className="rounded border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-1 text-xs">
+                          POST /api/posts/inbound
+                        </code>
+                      </li>
+                      <li>Meta / page pull and email ingest (unchanged)</li>
+                      <li>Manual Create Post and Post Board</li>
+                    </ul>
+                    <p className={helpText}>
+                      Switch to Internal Studio when you want scheduled Strategist → Copywriter → Image runs to
+                      create pending Approvals for this account. Notes:{" "}
+                      {globalConfig.notes || "(none saved)"}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -951,22 +1024,8 @@ export default function PostAutomationSection({ selectedSite = "" }) {
       )}
 
       {isInternal && !selectedSite && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
-          Select a client site in the dashboard header to configure Internal Studio for that site.
-        </div>
-      )}
-
-      {!isInternal && (
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-3 max-w-2xl">
-          <div className="flex items-start gap-2 text-[#1d9c35]">
-            <FiInfo className="mt-0.5" />
-            <h2 className="text-sm font-bold uppercase tracking-wide">External mode active</h2>
-          </div>
-          <p className="text-sm text-gray-600">
-            Inbound API, Meta pull, and email ingest remain the generators. Switch to{" "}
-            <strong>Internal Studio</strong> above to schedule Strategist + Copywriter + required image
-            runs that create pending Approvals.
-          </p>
+        <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-5 text-sm text-amber-200">
+          Select a client account in the dashboard header to configure Internal Studio for that account.
         </div>
       )}
     </div>
