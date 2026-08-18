@@ -86,7 +86,7 @@ export default function SearchConsoleSection({ selectedSite = "" }) {
         : "";
 
   return (
-    <div className="min-h-[calc(100vh-2rem)] space-y-5 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 sm:p-6">
+    <div className="min-h-[calc(100vh-3.5rem)] space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-[var(--cw-hairline)] pb-4">
         <div className="flex min-w-0 items-baseline gap-3">
           <h1 className="font-heading text-lg font-semibold tracking-tight text-[var(--cw-ink)]">

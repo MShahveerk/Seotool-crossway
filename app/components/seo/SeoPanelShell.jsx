@@ -105,8 +105,9 @@ export default function SeoPanelShell({
   }
 
   return (
-    <div className="min-h-[calc(100vh-2rem)] space-y-5 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 sm:p-6">
-      {/* Compact header. The workspace rail above already says where you are,
+    <div className="min-h-[calc(100vh-3.5rem)] space-y-5">
+      {/* De-nested: content sits on the canvas (like the dashboard), not inside
+          a surface card. The workspace rail above already frames where you are,
           so this is a title line and its controls — not a landing banner. */}
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[var(--cw-hairline)] pb-4">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">

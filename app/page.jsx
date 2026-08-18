@@ -20,11 +20,8 @@ import PostAutomationSection from "./components/PostAutomationSection";
 import PostAutoscheduleSection from "./components/PostAutoscheduleSection";
 import BlogAutoscheduleSection from "./components/BlogAutoscheduleSection";
 import UrlInspectionSection from "./components/seo/UrlInspectionSection";
-import SiteHealthSection from "./components/seo/SiteHealthSection";
-import UnifiedSiteAuditSection from "./components/seo/UnifiedSiteAuditSection";
+import SiteIntelligenceSection from "./components/seo/SiteIntelligenceSection";
 import UnifiedKeywordResearchSection from "./components/seo/UnifiedKeywordResearchSection";
-import UnifiedSiteExplorerSection from "./components/seo/UnifiedSiteExplorerSection";
-import SerankingBacklinksSection from "./components/seranking/SerankingBacklinksSection";
 import ReportsStudioSection from "./components/ReportsStudioSection";
 import SeoAutopilotSection from "./components/SeoAutopilotSection";
 import HelpCenterSection from "./components/seo/HelpCenterSection";
@@ -230,14 +227,31 @@ export default function Home() {
       case "sitemap-health":
       case "seo-opportunities":
         return <SearchConsoleSection selectedSite={seoSite} />;
+      case "site-intelligence":
+      case "seranking-domain":
+        return (
+          <SiteIntelligenceSection selectedSite={seoSite} onNavigateSection={setActiveSection} />
+        );
       case "site-health":
       case "pagespeed-insights":
       case "domain-authority":
       case "link-index":
-        return <SiteHealthSection selectedSite={seoSite} />;
+        return (
+          <SiteIntelligenceSection
+            selectedSite={seoSite}
+            initialTab="authority"
+            onNavigateSection={setActiveSection}
+          />
+        );
       case "site-audit":
       case "seranking-audit":
-        return <UnifiedSiteAuditSection selectedSite={seoSite} onNavigateSection={setActiveSection} />;
+        return (
+          <SiteIntelligenceSection
+            selectedSite={seoSite}
+            initialTab="audit"
+            onNavigateSection={setActiveSection}
+          />
+        );
       case "keyword-research":
       case "ai-keyword-research":
       case "seranking-keywords":
@@ -246,12 +260,24 @@ export default function Home() {
         return <UrlInspectionSection selectedSite={seoSite} />;
       case "site-explorer":
       case "seranking-explorer":
-        return <UnifiedSiteExplorerSection selectedSite={seoSite} />;
-      case "seranking-domain":
-        return <SiteHealthSection selectedSite={seoSite} />;
+        return (
+          <SiteIntelligenceSection
+            selectedSite={seoSite}
+            initialTab="backlinks"
+            initialBacklinkMode="explorer"
+            onNavigateSection={setActiveSection}
+          />
+        );
       case "backlink-profile":
       case "seranking-backlinks":
-        return <SerankingBacklinksSection selectedSite={seoSite} />;
+        return (
+          <SiteIntelligenceSection
+            selectedSite={seoSite}
+            initialTab="backlinks"
+            initialBacklinkMode="profile"
+            onNavigateSection={setActiveSection}
+          />
+        );
       case "dataforseo-explorer":
         return <DataForSeoExplorerSection selectedSite={seoSite} />;
       case "google-ads-planner":
