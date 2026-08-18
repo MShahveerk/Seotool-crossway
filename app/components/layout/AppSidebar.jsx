@@ -10,6 +10,7 @@ import {
   Globe,
   HelpCircle,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   Megaphone,
   PenTool,
@@ -89,11 +90,13 @@ export default function AppSidebar({
   onSectionChange,
   selectedSite,
   onSelectedSiteChange,
+  onEnterClient,
+  onGoToPortfolio,
 }) {
   const { data: session } = useSession();
   const router = useRouter();
   const [availableSites, setAvailableSites] = useState([]);
-  const [superAdminPrimarySite, setSuperAdminPrimarySite] = useState("");
+  const [clientQuery, setClientQuery] = useState("");
   const [metaAccounts, setMetaAccounts] = useState([]);
   const [approvalAdminUnread, setApprovalAdminUnread] = useState(0);
   const [approvalUserUnread, setApprovalUserUnread] = useState(0);
@@ -128,29 +131,15 @@ export default function AppSidebar({
         if (!res.ok) {
           console.warn("Site integrations request failed:", data.error || res.status);
           setAvailableSites([]);
-          setSuperAdminPrimarySite("");
           return;
         }
         setAvailableSites(mergeClientAccountEntries(data.sites || []));
-        setSuperAdminPrimarySite(data.superAdminSite || "");
       })
       .catch((err) => {
         console.warn("Site integrations fetch error:", err?.message || err);
         setAvailableSites([]);
-        setSuperAdminPrimarySite("");
       });
   }, [hasGlobalSiteAccess]);
-
-  useEffect(() => {
-    if (!hasGlobalSiteAccess || selectedSite) return;
-    if (superAdminPrimarySite) {
-      onSelectedSiteChange?.(superAdminPrimarySite);
-      return;
-    }
-    if (availableSites.length > 0) {
-      onSelectedSiteChange?.(getClientAccountSelectValue(availableSites[0]));
-    }
-  }, [availableSites, hasGlobalSiteAccess, onSelectedSiteChange, selectedSite, superAdminPrimarySite]);
 
   useEffect(() => {
     if (!canSeeAdminApprovals) return undefined;
@@ -276,6 +265,17 @@ export default function AppSidebar({
     session?.user?.email?.slice(0, 2)?.toUpperCase() ||
     "CW";
 
+  const clientQ = clientQuery.trim().toLowerCase();
+  const filteredSites = clientQ
+    ? availableSites.filter((s) => {
+        const name = getPageDisplayName(s).toLowerCase();
+        const link = String(s.siteLink || "").toLowerCase();
+        return name.includes(clientQ) || link.includes(clientQ);
+      })
+    : availableSites;
+
+  const chooseClient = (val) => (onEnterClient || onSelectedSiteChange)?.(val);
+
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader className="border-b border-sidebar-border/80">
@@ -290,41 +290,78 @@ export default function AppSidebar({
         </div>
 
         {hasGlobalSiteAccess ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger
+          <div className="mt-2 space-y-1.5 group-data-[collapsible=icon]:hidden">
+            <button
+              type="button"
+              onClick={() => onGoToPortfolio?.()}
               className={cn(
-                "mt-2 flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 text-left text-sm transition-smooth group-data-[collapsible=icon]:hidden",
-                "hover:border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] hover:bg-[var(--cw-overlay)]"
+                "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-smooth",
+                activeSection === "portfolio"
+                  ? "border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_12%,transparent)] font-semibold text-[var(--cw-neon)]"
+                  : "border-[var(--cw-hairline)] bg-[var(--cw-raised)] text-[var(--cw-ink-dim)] hover:border-[var(--cw-hairline-strong)] hover:text-[var(--cw-ink)]"
               )}
             >
-              <span className="flex min-w-0 items-center gap-2">
-                <ClientAccountLogo entry={selectedSiteEntry} size="sm" />
-                <span className="truncate font-medium">
-                  {selectedSite ? getPageDisplayName(selectedSite) : "Select client"}
+              <LayoutGrid className="size-4 shrink-0" />
+              <span className="truncate">All clients</span>
+            </button>
+
+            <DropdownMenu onOpenChange={(open) => !open && setClientQuery("")}>
+              <DropdownMenuTrigger
+                className={cn(
+                  "flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 text-left text-sm transition-smooth",
+                  "hover:border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] hover:bg-[var(--cw-overlay)]"
+                )}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <ClientAccountLogo entry={selectedSiteEntry} size="sm" />
+                  <span className="truncate font-medium">
+                    {selectedSite ? getPageDisplayName(selectedSite) : "Select client"}
+                  </span>
                 </span>
-              </span>
-              <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64 max-h-72 overflow-y-auto">
-              {availableSites.map((siteEntry, index) => {
-                const val = getClientAccountSelectValue(siteEntry);
-                const isSelected = entryMatchesSelectValue(siteEntry, selectedSite);
-                return (
-                  <DropdownMenuItem
-                    key={`${val}-${index}`}
-                    onClick={() => onSelectedSiteChange?.(val)}
-                    className={cn(
-                      isSelected &&
-                        "bg-[color-mix(in_srgb,var(--cw-neon)_12%,transparent)] font-semibold text-[var(--cw-neon)]"
-                    )}
-                  >
-                    <ClientAccountLogo entry={siteEntry} size="sm" />
-                    {getPageDisplayName(siteEntry)}
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64 p-0">
+                <div className="border-b border-[var(--cw-hairline)] p-2">
+                  <div className="flex items-center gap-2 rounded-md border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-2 py-1.5">
+                    <Search className="size-3.5 shrink-0 text-[var(--cw-ink-faint)]" />
+                    <input
+                      autoFocus
+                      value={clientQuery}
+                      onChange={(e) => setClientQuery(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      placeholder="Search clients…"
+                      className="w-full bg-transparent text-xs text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="max-h-64 overflow-y-auto py-1">
+                  {filteredSites.length === 0 ? (
+                    <p className="px-3 py-4 text-center text-xs text-[var(--cw-ink-faint)]">
+                      No matching clients
+                    </p>
+                  ) : (
+                    filteredSites.map((siteEntry, index) => {
+                      const val = getClientAccountSelectValue(siteEntry);
+                      const isSelected = entryMatchesSelectValue(siteEntry, selectedSite);
+                      return (
+                        <DropdownMenuItem
+                          key={`${val}-${index}`}
+                          onClick={() => chooseClient(val)}
+                          className={cn(
+                            isSelected &&
+                              "bg-[color-mix(in_srgb,var(--cw-neon)_12%,transparent)] font-semibold text-[var(--cw-neon)]"
+                          )}
+                        >
+                          <ClientAccountLogo entry={siteEntry} size="sm" />
+                          {getPageDisplayName(siteEntry)}
+                        </DropdownMenuItem>
+                      );
+                    })
+                  )}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ) : (
           <div className="mt-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 group-data-[collapsible=icon]:hidden">
             <p className="text-[10px] font-bold tracking-[0.14em] text-[var(--cw-ink-faint)] uppercase">

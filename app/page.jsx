@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "./components/DashboardLayout";
 import DashboardSection from "./components/DashboardSection";
+import PortfolioDashboard from "./components/PortfolioDashboard";
 import SearchConsoleSection from "./components/SearchConsoleSection";
 import AdminSection from "./components/AdminSection";
 import AdminApprovalsSection from "./components/AdminApprovalsSection";
@@ -34,7 +35,7 @@ import LinkOpportunitiesSection from "./components/seo/LinkOpportunitiesSection"
 import KeywordOpportunitiesSection from "./components/seo/KeywordOpportunitiesSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
-import { sessionCanAccessSection } from "../lib/clientPermissions";
+import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "../lib/clientPermissions";
 import { LoadingSpinner } from "./components/ui-shared/LoadingBlock";
 import { SectionTransition } from "./components/ui-shared/Motion";
 
@@ -104,6 +105,38 @@ export default function Home() {
   const [selectedSite, setSelectedSite] = useState(() => readSiteFromUrl() || "");
   const [previousSection, setPreviousSection] = useState("dashboard");
   const [selectedHelpArticle, setSelectedHelpArticle] = useState("general-seo");
+  const [landingApplied, setLandingApplied] = useState(false);
+
+  const canSwitchClients = sessionHasGlobalSiteAccess(session);
+
+  // Enter a client's workspace. From the portfolio lobby this lands on the
+  // per-client dashboard; from anywhere else it just re-scopes the current tool.
+  const enterClient = (value) => {
+    setSelectedSite(value || "");
+    setActiveSection((prev) => (prev === "portfolio" ? "dashboard" : prev));
+  };
+
+  // Rise back above a single client to the portfolio.
+  const goToPortfolio = () => {
+    setSelectedSite("");
+    setActiveSection("portfolio");
+  };
+
+  // Agencies land in the portfolio, not force-dropped inside one client. Decided
+  // once during the first authenticated render (guarded by landingApplied) so we
+  // never setState from an effect. Only opens the lobby when nothing was
+  // deep-linked (no ?site / ?section).
+  if (!landingApplied && status === "authenticated") {
+    setLandingApplied(true);
+    if (
+      sessionHasGlobalSiteAccess(session) &&
+      !readSiteFromUrl() &&
+      !readSectionFromUrl() &&
+      !selectedSite
+    ) {
+      setActiveSection("portfolio");
+    }
+  }
 
   useEffect(() => {
     const handleNavigate = (e) => {
@@ -183,6 +216,12 @@ export default function Home() {
     }
 
     switch (activeSection) {
+      case "portfolio":
+        return canSwitchClients ? (
+          <PortfolioDashboard selectedSite={selectedSite} onEnterClient={enterClient} />
+        ) : (
+          <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />
+        );
       case "dashboard":
         return <DashboardSection selectedSite={selectedSite} onNavigate={setActiveSection} />;
       case "website-statistics":
@@ -323,6 +362,9 @@ export default function Home() {
       onSectionChange={setActiveSection}
       selectedSite={selectedSite}
       onSelectedSiteChange={setSelectedSite}
+      onEnterClient={enterClient}
+      onGoToPortfolio={goToPortfolio}
+      canSwitchClients={canSwitchClients}
     >
       <SectionTransition sectionKey={activeSection}>{renderSection()}</SectionTransition>
     </DashboardLayout>

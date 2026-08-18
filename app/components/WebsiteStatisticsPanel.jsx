@@ -558,29 +558,44 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
               onClick={() =>
                 setTimeSelection({ type: "preset", range: option.id })
               }
-              className={`px-3 py-1.5 text-xs border rounded inline-flex items-center gap-1 ${
+              className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-smooth ${
                 active
-                  ? "bg-[#d7efd4] border-[#b6ddb1] text-gray-900"
-                  : "bg-white border-gray-300 text-gray-600"
+                  ? "border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_16%,var(--cw-surface))] text-[var(--cw-ink)]"
+                  : "border-[var(--cw-hairline)] bg-[var(--cw-raised)] text-[var(--cw-ink-muted)] hover:border-[var(--cw-hairline-strong)] hover:text-[var(--cw-ink)]"
               }`}
             >
-              {active && <FiCheckSquare className="w-3 h-3 text-[#2fb54a]" />}
+              {active && <FiCheckSquare className="h-3 w-3 text-[var(--cw-neon)]" />}
               {option.label}
             </button>
           );
         })}
-        <button
-          type="button"
-          onClick={() => setDateModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium border border-gray-300 rounded bg-white text-[#000] hover:bg-gray-50"
-          title="Date range and comparison"
-        >
-          <FiSliders className="w-3.5 h-3.5 shrink-0 text-[#000]" />
-          <span className="max-w-[10rem] sm:max-w-[16rem] truncate text-left text-[#000]">
-            {timeSelectionLabel(timeSelection)}
-          </span>
-          <FiChevronDown className="w-3 h-3 shrink-0 text-[#000]" />
-        </button>
+        {(() => {
+          // The active selection lives in this trigger whenever it isn't one of
+          // the quick buttons above (e.g. the 3-month default). Highlight it so
+          // the chosen range is always visible instead of reading as plain text.
+          const triggerHoldsSelection = !(
+            timeSelection.type === "preset" &&
+            RANGE_OPTIONS.some((o) => o.id === timeSelection.range)
+          );
+          return (
+            <button
+              type="button"
+              onClick={() => setDateModalOpen(true)}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-smooth ${
+                triggerHoldsSelection
+                  ? "border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_16%,var(--cw-surface))] text-[var(--cw-ink)]"
+                  : "border-[var(--cw-hairline)] bg-[var(--cw-raised)] text-[var(--cw-ink-dim)] hover:border-[var(--cw-hairline-strong)] hover:text-[var(--cw-ink)]"
+              }`}
+              title="Date range and comparison"
+            >
+              <FiSliders className="h-3.5 w-3.5 shrink-0 opacity-80" />
+              <span className="max-w-[10rem] truncate text-left sm:max-w-[16rem]">
+                {timeSelectionLabel(timeSelection)}
+              </span>
+              <FiChevronDown className="h-3 w-3 shrink-0 opacity-70" />
+            </button>
+          );
+        })()}
         <WebsiteStatisticsDateRangeModal
           open={dateModalOpen}
           onClose={() => setDateModalOpen(false)}

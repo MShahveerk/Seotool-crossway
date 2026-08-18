@@ -14,10 +14,15 @@ export default function DashboardLayout({
   onSectionChange,
   selectedSite = "",
   onSelectedSiteChange,
+  onEnterClient,
+  onGoToPortfolio,
+  canSwitchClients = false,
 }) {
   const sectionLabel = getSectionLabel(activeSection);
   const isDashboard = activeSection === "dashboard";
+  const isPortfolio = activeSection === "portfolio";
   const isBoard = activeSection === "post-board" || activeSection === "blog-board";
+  const showPortfolioCrumb = canSwitchClients && !isPortfolio && Boolean(selectedSite);
 
   const siteLabel = selectedSite
     ? String(selectedSite).startsWith("http")
@@ -32,6 +37,8 @@ export default function DashboardLayout({
         onSectionChange={onSectionChange}
         selectedSite={selectedSite}
         onSelectedSiteChange={onSelectedSiteChange}
+        onEnterClient={onEnterClient}
+        onGoToPortfolio={onGoToPortfolio}
       />
       <SidebarInset className="mesh-bg cw-grid flex min-h-svh flex-col bg-[var(--cw-canvas)]">
         {/* Header: glass over the canvas, one hairline, nothing else. */}
@@ -43,9 +50,23 @@ export default function DashboardLayout({
           />
           <div className="min-w-0 flex-1" key={activeSection}>
             <FadeIn delay={0}>
-              <p className="font-heading truncate text-sm font-semibold text-[var(--cw-ink)]">
-                {sectionLabel}
-              </p>
+              <div className="flex min-w-0 items-center gap-1.5">
+                {showPortfolioCrumb ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onGoToPortfolio?.()}
+                      className="transition-smooth shrink-0 text-sm font-medium text-[var(--cw-ink-faint)] hover:text-[var(--cw-neon)]"
+                    >
+                      All clients
+                    </button>
+                    <span className="shrink-0 text-[var(--cw-ink-faint)]">/</span>
+                  </>
+                ) : null}
+                <p className="font-heading truncate text-sm font-semibold text-[var(--cw-ink)]">
+                  {sectionLabel}
+                </p>
+              </div>
             </FadeIn>
             {siteLabel ? (
               <FadeIn delay={40}>
