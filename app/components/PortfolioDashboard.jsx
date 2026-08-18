@@ -2,13 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  Activity,
   ArrowUpRight,
   Bell,
   FileText,
+  Gauge,
   Globe,
   Megaphone,
   Search,
   Send,
+  ShieldCheck,
+  TrendingDown,
+  TrendingUp,
   Users,
 } from "lucide-react";
 import {
@@ -18,7 +23,6 @@ import {
 } from "@/lib/clientAccountList";
 import { canonicalizeSiteKey, isMetaPageId } from "@/lib/siteAccess";
 import ClientAccountLogo from "./ui-shared/ClientAccountLogo";
-import CrosswayLogo from "./ui-shared/CrosswayLogo";
 import { FadeIn } from "./ui-shared/Motion";
 
 function siteHost(siteLink) {
@@ -38,7 +42,7 @@ function isWebsiteEntry(entry) {
   return Boolean(link && (link.startsWith("http") || link.startsWith("sc-domain:")));
 }
 
-/** Same normalisation on both sides so a stored siteLink matches a client. */
+/** Same normalisation on both sides so a stored siteLink matches a project. */
 function normalizeMatchKey(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -46,7 +50,7 @@ function normalizeMatchKey(value) {
   return canonicalizeSiteKey(raw) || raw.toLowerCase();
 }
 
-function clientMatchKeys(entry) {
+function projectMatchKeys(entry) {
   return [
     normalizeMatchKey(entry.siteLink),
     entry.facebookPageId ? String(entry.facebookPageId).trim() : "",
@@ -54,10 +58,10 @@ function clientMatchKeys(entry) {
   ].filter(Boolean);
 }
 
-function sumForClient(entry, countMap) {
+function sumForProject(entry, countMap) {
   let total = 0;
   const seen = new Set();
-  for (const key of clientMatchKeys(entry)) {
+  for (const key of projectMatchKeys(entry)) {
     if (seen.has(key)) continue;
     seen.add(key);
     total += countMap.get(key) || 0;
@@ -65,7 +69,16 @@ function sumForClient(entry, countMap) {
   return total;
 }
 
-/** `[{ siteLink, count }]` → Map keyed by the same normalisation clients use. */
+/** First row found across a project's identifiers — used for single-value facts. */
+function pickForProject(entry, rowMap) {
+  for (const key of projectMatchKeys(entry)) {
+    const hit = rowMap.get(key);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** `[{ siteLink, count }]` → Map keyed by the same normalisation projects use. */
 function toCountMap(rows) {
   const m = new Map();
   for (const row of rows || []) {
@@ -75,16 +88,25 @@ function toCountMap(rows) {
   return m;
 }
 
+function toRowMap(rows) {
+  const m = new Map();
+  for (const row of rows || []) {
+    const k = normalizeMatchKey(row.siteLink);
+    if (k && !m.has(k)) m.set(k, row);
+  }
+  return m;
+}
+
 /**
- * Follower rows come per site+platform. Dedupe per platform across a client's
- * identifiers (a client may have stats under both a URL and a page id) and sum
+ * Follower rows come per site+platform. Dedupe per platform across a project's
+ * identifiers (a project may have stats under both a URL and a page id) and sum
  * — the same shape the Social section / dashboard baseline produces. LinkedIn
  * is excluded to match them.
  */
-function followersForClient(entry, rowsByKey) {
+function followersForProject(entry, rowsByKey) {
   const perPlatform = new Map();
   const seen = new Set();
-  for (const key of clientMatchKeys(entry)) {
+  for (const key of projectMatchKeys(entry)) {
     if (seen.has(key)) continue;
     seen.add(key);
     for (const row of rowsByKey.get(key) || []) {
@@ -98,65 +120,351 @@ function followersForClient(entry, rowsByKey) {
   return total;
 }
 
+/**
+ * Daily reach for the card sparkline. Same dedupe rule as the headline number,
+ * applied per day: max per platform, then summed across platforms.
+ */
+function followerTrendForProject(entry, seriesByKey) {
+  const perDate = new Map();
+  const seen = new Set();
+  for (const key of projectMatchKeys(entry)) {
+    if (seen.has(key)) continue;
+    seen.add(key);
+    for (const row of seriesByKey.get(key) || []) {
+      const platform = String(row.platform || "").toLowerCase();
+      if (!platform || platform === "linkedin") continue;
+      const day = String(row.date).slice(0, 10);
+      if (!perDate.has(day)) perDate.set(day, new Map());
+      const platforms = perDate.get(day);
+      platforms.set(platform, Math.max(platforms.get(platform) || 0, Number(row.count) || 0));
+    }
+  }
+  return [...perDate.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, platforms]) => {
+      let total = 0;
+      for (const v of platforms.values()) total += v;
+      return { date, total };
+    });
+}
+
 function compactNum(n) {
   const v = Number(n) || 0;
   return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(v);
 }
 
-function Metric({ icon: Icon, label, value }) {
+/** Neon above 80, amber in the middle, red when a site needs real work. */
+function healthTone(score) {
+  if (score == null) return { color: "var(--cw-ink-faint)", label: "No audit" };
+  if (score >= 80) return { color: "var(--cw-neon)", label: "Healthy" };
+  if (score >= 50) return { color: "var(--cw-caution)", label: "Needs work" };
+  return { color: "var(--cw-danger)", label: "Critical" };
+}
+
+/** Compact progress donut. Falls back to a dim dashed ring when unaudited. */
+function HealthRing({ score, size = 56 }) {
+  const tone = healthTone(score);
+  const stroke = 5;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, Number(score) || 0));
+
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <Icon className="size-3.5 text-[var(--cw-ink-faint)]" aria-hidden />
-      <span className="text-[11px] text-[var(--cw-ink-muted)]">{label}</span>
-      <span className="text-[13px] font-bold tabular-nums text-[var(--cw-ink)]">{value}</span>
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="var(--cw-hairline)"
+          strokeWidth={stroke}
+          strokeDasharray={score == null ? "3 4" : undefined}
+        />
+        {score != null ? (
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke={tone.color}
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            strokeDasharray={c}
+            strokeDashoffset={c - (pct / 100) * c}
+            style={{ transition: "stroke-dashoffset .6s cubic-bezier(.2,.8,.2,1)" }}
+          />
+        ) : null}
+      </svg>
+      <span className="absolute inset-0 flex flex-col items-center justify-center">
+        <span
+          className="text-[15px] font-bold tabular-nums leading-none"
+          style={{ color: score == null ? "var(--cw-ink-faint)" : tone.color }}
+        >
+          {score == null ? "—" : Math.round(score)}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/** Reach over the last 30 days. Flat/absent data renders a calm baseline. */
+function Sparkline({ points, id, tone = "var(--cw-neon)" }) {
+  const values = points.map((p) => p.total);
+  const w = 120;
+  const h = 34;
+
+  if (values.length < 2) {
+    return (
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-8 w-full">
+        <line
+          x1="0"
+          y1={h / 2}
+          x2={w}
+          y2={h / 2}
+          stroke="var(--cw-hairline)"
+          strokeWidth="1.5"
+          strokeDasharray="3 4"
+        />
+      </svg>
+    );
+  }
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const step = w / (values.length - 1);
+  const coords = values.map((v, i) => [i * step, h - 3 - ((v - min) / span) * (h - 8)]);
+  const line = coords.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const area = `${line} L${w},${h} L0,${h} Z`;
+  const last = coords[coords.length - 1];
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-8 w-full overflow-visible">
+      <defs>
+        <linearGradient id={`spark-${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={tone} stopOpacity="0.32" />
+          <stop offset="100%" stopColor={tone} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#spark-${id})`} />
+      <path
+        d={line}
+        fill="none"
+        stroke={tone}
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+      <circle cx={last[0]} cy={last[1]} r="2.5" fill={tone} />
+    </svg>
+  );
+}
+
+function DeltaBadge({ value }) {
+  if (value === null || value === 0) {
+    return <span className="text-[11px] font-medium text-[var(--cw-ink-faint)]">No change</span>;
+  }
+  const up = value > 0;
+  const Icon = up ? TrendingUp : TrendingDown;
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[11px] font-bold tabular-nums"
+      style={{ color: up ? "var(--cw-neon)" : "var(--cw-danger)" }}
+    >
+      <Icon className="size-3" />
+      {up ? "+" : ""}
+      {value.toFixed(1)}%
     </span>
   );
 }
 
-function clientDisplayName(entry, metaAccounts) {
-  const metaMatch = metaAccounts.find(
-    (a) =>
-      a.facebookPageId &&
-      entry.facebookPageId &&
-      String(a.facebookPageId).trim() === String(entry.facebookPageId).trim()
+function MiniStat({ icon: Icon, label, value, title }) {
+  return (
+    <div className="min-w-0" title={title}>
+      <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--cw-ink-faint)]">
+        <Icon className="size-3" aria-hidden />
+        {label}
+      </span>
+      <span className="mt-0.5 block truncate text-[15px] font-bold tabular-nums text-[var(--cw-ink)]">
+        {value}
+      </span>
+    </div>
   );
-  if (metaMatch?.name) return metaMatch.name;
-  const name = entry.displayName || entry.userName || "";
-  if (name && !name.startsWith("http") && !/^\d+$/.test(String(name).trim())) return name;
-  return siteHost(entry.siteLink) || "Client account";
 }
 
-/** Point on an ellipse centred at (50,50), in 0–100 canvas percentages. */
-function polar(rx, ry, angleDeg) {
-  const a = (angleDeg * Math.PI) / 180;
-  return { x: 50 + rx * Math.cos(a), y: 50 + ry * Math.sin(a) };
+function SummaryTile({ icon: Icon, label, value, sub, accent = "var(--cw-neon)" }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-4">
+      <span
+        className="pointer-events-none absolute -right-6 -top-6 size-20 rounded-full opacity-20 blur-2xl"
+        style={{ background: accent }}
+      />
+      <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--cw-ink-faint)]">
+        <Icon className="size-3.5" style={{ color: accent }} aria-hidden />
+        {label}
+      </span>
+      <p className="mt-2 text-2xl font-bold tabular-nums leading-none text-[var(--cw-ink)]">{value}</p>
+      {sub ? <p className="mt-1.5 text-[11px] text-[var(--cw-ink-muted)]">{sub}</p> : null}
+    </div>
+  );
 }
+
+function ProjectCard({ project, isActive, onOpen, index }) {
+  const pending = project.pendingBlogs + project.pendingPosts;
+  const tone = healthTone(project.healthScore);
+  const coverage =
+    project.indexedTotal > 0 ? Math.round((project.indexedCount / project.indexedTotal) * 100) : null;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Open ${project.name}`}
+      className={`group relative flex w-full flex-col overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cw-neon)] ${
+        isActive
+          ? "border-[color-mix(in_srgb,var(--cw-neon)_55%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_7%,var(--cw-surface))] shadow-[0_0_30px_-10px_color-mix(in_srgb,var(--cw-neon)_65%,transparent)]"
+          : "border-[var(--cw-hairline)] bg-[var(--cw-surface)] hover:border-[color-mix(in_srgb,var(--cw-neon)_38%,var(--cw-hairline))] hover:shadow-[var(--cw-shadow-lg)]"
+      }`}
+      style={{ animation: `cwCardIn .45s cubic-bezier(.2,.8,.2,1) ${Math.min(index, 11) * 40}ms both` }}
+    >
+      {/* Sheen that tracks the hover, kept behind the content. */}
+      <span className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-[color-mix(in_srgb,var(--cw-neon)_60%,transparent)] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+      <div className="flex items-start gap-3">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)]">
+          <ClientAccountLogo entry={project.entry} size="md" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className="truncate text-[15px] font-bold text-[var(--cw-ink)]">{project.name}</p>
+            {isActive ? (
+              <span className="shrink-0 rounded-full bg-[var(--cw-neon)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-[var(--cw-neon-ink)]">
+                Live
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-0.5 truncate text-[11px] text-[var(--cw-ink-faint)]">
+            {project.host || (project.social ? "Social only" : "No domain linked")}
+          </p>
+          <div className="mt-1.5 flex items-center gap-1">
+            {project.website ? (
+              <span className="inline-flex items-center gap-1 rounded-md border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--cw-ink-muted)]">
+                <Globe className="size-2.5" /> Web
+              </span>
+            ) : null}
+            {project.social ? (
+              <span className="inline-flex items-center gap-1 rounded-md border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[var(--cw-ink-muted)]">
+                <Megaphone className="size-2.5" /> Social
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] opacity-0 transition-all duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+          <ArrowUpRight className="size-3.5 text-[var(--cw-neon)]" />
+        </span>
+      </div>
+
+      {/* Health + reach: the two things worth knowing at a glance. */}
+      <div className="mt-4 flex items-center gap-4 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)]/50 p-3">
+        <div className="flex items-center gap-2.5">
+          <HealthRing score={project.healthScore} />
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--cw-ink-faint)]">
+              Health
+            </p>
+            <p className="text-[11px] font-semibold" style={{ color: tone.color }}>
+              {tone.label}
+            </p>
+            {project.criticalCount > 0 ? (
+              <p className="text-[10px] text-[var(--cw-ink-muted)]">
+                {project.criticalCount} critical
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--cw-ink-faint)]">
+              Reach 30d
+            </span>
+            <DeltaBadge value={project.followerDelta} />
+          </div>
+          <p className="text-[15px] font-bold tabular-nums leading-tight text-[var(--cw-ink)]">
+            {project.followers ? compactNum(project.followers) : "—"}
+          </p>
+          <Sparkline points={project.trend} id={project.sparkId} />
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <MiniStat
+          icon={ShieldCheck}
+          label="Indexed"
+          value={coverage == null ? "—" : `${coverage}%`}
+          title={
+            coverage == null
+              ? "No URL inspection run yet"
+              : `${project.indexedCount} of ${project.indexedTotal} URLs indexed`
+          }
+        />
+        <MiniStat
+          icon={FileText}
+          label="Blogs"
+          value={compactNum(project.totalBlogs)}
+          title={`${project.recentBlogs} published in the last 30 days`}
+        />
+        <MiniStat
+          icon={Send}
+          label="Posts"
+          value={compactNum(project.totalPosts)}
+          title={`${project.recentPosts} published in the last 30 days`}
+        />
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--cw-hairline)] pt-3">
+        {pending > 0 ? (
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--cw-caution)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_12%,transparent)] px-2 py-1 text-[11px] font-bold text-[var(--cw-caution)]">
+            <Bell className="size-3" />
+            {pending} awaiting review
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--cw-ink-faint)]">
+            <Activity className="size-3" />
+            {project.recentBlogs + project.recentPosts} shipped in 30d
+          </span>
+        )}
+        <span className="text-[11px] font-bold text-[var(--cw-ink-faint)] transition-colors group-hover:text-[var(--cw-neon)]">
+          Open
+        </span>
+      </div>
+    </button>
+  );
+}
+
+const SORTS = [
+  { id: "attention", label: "Needs attention" },
+  { id: "name", label: "Name" },
+  { id: "reach", label: "Reach" },
+  { id: "health", label: "Lowest health" },
+  { id: "activity", label: "Most active" },
+];
+
+const FILTERS = [
+  { id: "all", label: "All" },
+  { id: "attention", label: "Needs attention" },
+  { id: "website", label: "Websites" },
+  { id: "social", label: "Social" },
+];
 
 /**
- * Positions for `n` client nodes around the hub. One ring for small portfolios,
- * two concentric rings once it gets busy so nothing overlaps the centre.
- */
-function layoutPositions(n) {
-  if (n <= 0) return [];
-  const out = [];
-  if (n <= 10) {
-    const rx = n <= 3 ? 30 : 42;
-    const ry = n <= 3 ? 24 : 34;
-    for (let i = 0; i < n; i++) out.push(polar(rx, ry, -90 + (360 / n) * i));
-    return out;
-  }
-  const inner = Math.floor(n * 0.4);
-  const outer = n - inner;
-  for (let i = 0; i < inner; i++) out.push(polar(23, 19, -90 + (360 / inner) * i));
-  for (let i = 0; i < outer; i++)
-    out.push(polar(44, 36, -90 + (360 / outer) * i + 180 / outer));
-  return out;
-}
-
-/**
- * Portfolio (the "all clients" lobby), rendered as an interactive constellation:
- * an agency hub at the centre with each client orbiting as a node. Nothing is
- * scoped to a single client here — picking a node enters that workspace.
+ * Portfolio — the "all projects" lobby.
+ *
+ * A dashboard of project cards rather than a picker: each card carries the
+ * numbers you'd otherwise have to enter the project to see (site health, index
+ * coverage, 30-day reach trend, content volume, what's waiting on you), so the
+ * grid answers "where do I need to look today" before anyone clicks anything.
  */
 export default function PortfolioDashboard({ selectedSite = "", onEnterClient }) {
   const [sites, setSites] = useState([]);
@@ -166,11 +474,17 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
     blogs: [],
     totalPosts: [],
     totalBlogs: [],
+    recentPosts: [],
+    recentBlogs: [],
     followers: [],
+    health: [],
+    indexed: [],
+    followerSeries: [],
   });
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [hovered, setHovered] = useState(-1);
+  const [sort, setSort] = useState("attention");
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -180,14 +494,20 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
       fetch("/api/portfolio/overview").then((r) => r.json()).catch(() => ({})),
     ]).then(([integrations, meta, ov]) => {
       if (cancelled) return;
+      const arr = (v) => (Array.isArray(v) ? v : []);
       setSites(mergeClientAccountEntries(integrations?.sites || []));
-      setMetaAccounts(Array.isArray(meta?.accounts) ? meta.accounts : []);
+      setMetaAccounts(arr(meta?.accounts));
       setOverview({
-        posts: Array.isArray(ov?.posts) ? ov.posts : [],
-        blogs: Array.isArray(ov?.blogs) ? ov.blogs : [],
-        totalPosts: Array.isArray(ov?.totalPosts) ? ov.totalPosts : [],
-        totalBlogs: Array.isArray(ov?.totalBlogs) ? ov.totalBlogs : [],
-        followers: Array.isArray(ov?.followers) ? ov.followers : [],
+        posts: arr(ov?.posts),
+        blogs: arr(ov?.blogs),
+        totalPosts: arr(ov?.totalPosts),
+        totalBlogs: arr(ov?.totalBlogs),
+        recentPosts: arr(ov?.recentPosts),
+        recentBlogs: arr(ov?.recentBlogs),
+        followers: arr(ov?.followers),
+        health: arr(ov?.health),
+        indexed: arr(ov?.indexed),
+        followerSeries: arr(ov?.followerSeries),
       });
       setLoading(false);
     });
@@ -200,6 +520,10 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
   const blogMap = useMemo(() => toCountMap(overview.blogs), [overview.blogs]);
   const totalPostMap = useMemo(() => toCountMap(overview.totalPosts), [overview.totalPosts]);
   const totalBlogMap = useMemo(() => toCountMap(overview.totalBlogs), [overview.totalBlogs]);
+  const recentPostMap = useMemo(() => toCountMap(overview.recentPosts), [overview.recentPosts]);
+  const recentBlogMap = useMemo(() => toCountMap(overview.recentBlogs), [overview.recentBlogs]);
+  const healthMap = useMemo(() => toRowMap(overview.health), [overview.health]);
+  const indexedMap = useMemo(() => toRowMap(overview.indexed), [overview.indexed]);
 
   const followerRowsByKey = useMemo(() => {
     const m = new Map();
@@ -212,305 +536,287 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
     return m;
   }, [overview.followers]);
 
-  const clients = useMemo(() => {
-    const q = query.trim().toLowerCase();
+  const followerSeriesByKey = useMemo(() => {
+    const m = new Map();
+    for (const row of overview.followerSeries || []) {
+      const k = normalizeMatchKey(row.siteLink);
+      if (!k) continue;
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(row);
+    }
+    return m;
+  }, [overview.followerSeries]);
+
+  const allProjects = useMemo(() => {
     return sites
-      .map((entry) => {
+      .map((entry, i) => {
         const host = siteHost(entry.siteLink);
+        const trend = followerTrendForProject(entry, followerSeriesByKey);
+        const first = trend.length > 1 ? trend[0].total : 0;
+        const last = trend.length > 1 ? trend[trend.length - 1].total : 0;
+        const health = pickForProject(entry, healthMap);
+        const indexed = pickForProject(entry, indexedMap);
         return {
           entry,
           value: getClientAccountSelectValue(entry),
-          name: clientDisplayName(entry, metaAccounts),
+          sparkId: `p${i}`,
+          name: projectDisplayName(entry, metaAccounts),
           host,
           website: isWebsiteEntry(entry),
           social: Boolean(entry.facebookPageId),
-          pendingPosts: sumForClient(entry, postMap),
-          pendingBlogs: sumForClient(entry, blogMap),
-          totalPosts: sumForClient(entry, totalPostMap),
-          totalBlogs: sumForClient(entry, totalBlogMap),
-          followers: followersForClient(entry, followerRowsByKey),
+          pendingPosts: sumForProject(entry, postMap),
+          pendingBlogs: sumForProject(entry, blogMap),
+          totalPosts: sumForProject(entry, totalPostMap),
+          totalBlogs: sumForProject(entry, totalBlogMap),
+          recentPosts: sumForProject(entry, recentPostMap),
+          recentBlogs: sumForProject(entry, recentBlogMap),
+          followers: followersForProject(entry, followerRowsByKey),
+          trend,
+          followerDelta: first > 0 ? ((last - first) / first) * 100 : null,
+          healthScore: health?.score ?? null,
+          criticalCount: health?.critical || 0,
+          indexedCount: indexed?.indexed || 0,
+          indexedTotal: indexed?.total || 0,
         };
       })
-      .filter((c) => c.value)
-      .filter((c) => !q || c.name.toLowerCase().includes(q) || c.host.toLowerCase().includes(q))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .filter((p) => p.value);
   }, [
     sites,
     metaAccounts,
-    query,
     postMap,
     blogMap,
     totalPostMap,
     totalBlogMap,
+    recentPostMap,
+    recentBlogMap,
     followerRowsByKey,
+    followerSeriesByKey,
+    healthMap,
+    indexedMap,
   ]);
 
-  const totalAlerts = useMemo(
-    () => clients.reduce((s, c) => s + c.pendingPosts + c.pendingBlogs, 0),
-    [clients]
-  );
+  const projects = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const rows = allProjects
+      .filter((p) => !q || p.name.toLowerCase().includes(q) || p.host.toLowerCase().includes(q))
+      .filter((p) => {
+        if (filter === "attention") return p.pendingBlogs + p.pendingPosts > 0;
+        if (filter === "website") return p.website;
+        if (filter === "social") return p.social;
+        return true;
+      });
 
-  const positions = useMemo(() => layoutPositions(clients.length), [clients.length]);
-  const total = useMemo(() => sites.filter((s) => getClientAccountSelectValue(s)).length, [sites]);
+    const pendingOf = (p) => p.pendingBlogs + p.pendingPosts;
+    const sorters = {
+      // Default view is a worklist: whoever is waiting on you floats up, and
+      // unaudited sites sink rather than pretending to score zero.
+      attention: (a, b) => pendingOf(b) - pendingOf(a) || a.name.localeCompare(b.name),
+      name: (a, b) => a.name.localeCompare(b.name),
+      reach: (a, b) => b.followers - a.followers || a.name.localeCompare(b.name),
+      health: (a, b) => (a.healthScore ?? 999) - (b.healthScore ?? 999) || a.name.localeCompare(b.name),
+      activity: (a, b) =>
+        b.recentBlogs + b.recentPosts - (a.recentBlogs + a.recentPosts) || a.name.localeCompare(b.name),
+    };
+    return [...rows].sort(sorters[sort] || sorters.name);
+  }, [allProjects, query, filter, sort]);
 
-  const activeIndex = useMemo(
-    () => clients.findIndex((c) => entryMatchesSelectValue(c.entry, selectedSite)),
-    [clients, selectedSite]
+  const stats = useMemo(() => {
+    const pending = allProjects.reduce((s, p) => s + p.pendingBlogs + p.pendingPosts, 0);
+    const reach = allProjects.reduce((s, p) => s + p.followers, 0);
+    const scored = allProjects.filter((p) => p.healthScore != null);
+    const avgHealth = scored.length
+      ? Math.round(scored.reduce((s, p) => s + p.healthScore, 0) / scored.length)
+      : null;
+    const shipped = allProjects.reduce((s, p) => s + p.recentBlogs + p.recentPosts, 0);
+    const attention = allProjects.filter((p) => p.pendingBlogs + p.pendingPosts > 0).length;
+    return { pending, reach, avgHealth, scored: scored.length, shipped, attention };
+  }, [allProjects]);
+
+  const counts = useMemo(
+    () => ({
+      all: allProjects.length,
+      attention: allProjects.filter((p) => p.pendingBlogs + p.pendingPosts > 0).length,
+      website: allProjects.filter((p) => p.website).length,
+      social: allProjects.filter((p) => p.social).length,
+    }),
+    [allProjects]
   );
-  // The HUD card defaults to the live client (or the first) so metrics are
-  // visible without interaction, and follows whichever node you hover/focus.
-  const detail = clients[hovered] || clients[activeIndex] || clients[0] || null;
 
   return (
-    <div className="mx-auto w-full max-w-[1360px]">
+    <div className="mx-auto w-full max-w-[1440px]">
       <style>{`
-        @keyframes cwNodeFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-        @keyframes cwHubPulse { 0% { transform: scale(1); opacity: .45; } 70% { opacity: 0; } 100% { transform: scale(1.9); opacity: 0; } }
-        @keyframes cwDash { to { stroke-dashoffset: -12; } }
+        @keyframes cwCardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
         @media (prefers-reduced-motion: reduce) {
-          .cw-node-float, .cw-hub-pulse { animation: none !important; }
+          [style*="cwCardIn"] { animation: none !important; }
         }
       `}</style>
 
-      {/* Header */}
       <FadeIn>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-1 text-[11px] font-medium text-[var(--cw-ink-muted)]">
               <Users className="size-3.5 text-[var(--cw-neon)]" />
-              Portfolio · {total} {total === 1 ? "client" : "clients"}
+              Portfolio · {counts.all} {counts.all === 1 ? "project" : "projects"}
             </div>
             <h1 className="font-heading text-2xl font-bold tracking-tight text-[var(--cw-ink)] sm:text-3xl">
-              Choose a client
+              Projects
             </h1>
             <p className="mt-1.5 max-w-xl text-sm text-[var(--cw-ink-muted)]">
-              Each node is a client. Tap one to open its workspace — every SEO tool, studio and
-              approval scopes to it. Jump back here any time.
+              Every project at a glance — health, reach and what&rsquo;s waiting on you. Open one to
+              scope every project tool to it; Toolkit research stays available either way.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {totalAlerts > 0 ? (
-              <span
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--cw-caution)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_12%,var(--cw-surface))] px-3 py-2 text-xs font-semibold text-[var(--cw-caution)]"
-                title="Blog and post approvals awaiting review across all clients"
-              >
-                <Bell className="size-3.5" />
-                {totalAlerts} pending
-              </span>
-            ) : null}
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)]/60 px-3 py-2 focus-within:border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))]">
               <Search className="size-4 shrink-0 text-[var(--cw-ink-faint)]" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search clients…"
-                className="w-40 bg-transparent text-sm text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] focus:outline-none sm:w-56"
+                placeholder="Search projects…"
+                className="w-40 bg-transparent text-sm text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] focus:outline-none sm:w-52"
               />
             </div>
+            {/* Native option lists ignore the trigger's colours on most
+                platforms, so they're themed explicitly or they render light. */}
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              aria-label="Sort projects"
+              className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 text-sm font-medium text-[var(--cw-ink-dim)] focus:border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))] focus:outline-none [&_option]:bg-[var(--cw-surface)] [&_option]:text-[var(--cw-ink)]"
+            >
+              {SORTS.map((s) => (
+                <option key={s.id} value={s.id}>
+                  Sort: {s.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </FadeIn>
 
-      {/* Constellation canvas */}
-      <FadeIn delay={60}>
-        <div className="relative mt-5 aspect-[16/10] max-h-[68vh] min-h-[440px] w-full overflow-hidden rounded-3xl border border-[var(--cw-hairline)] bg-[radial-gradient(circle_at_50%_45%,color-mix(in_srgb,var(--cw-neon)_10%,var(--cw-surface))_0%,var(--cw-surface)_55%,var(--cw-canvas)_100%)]">
-          {/* faint grid texture */}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.4]"
-            style={{
-              backgroundImage:
-                "linear-gradient(var(--cw-hairline) 1px, transparent 1px), linear-gradient(90deg, var(--cw-hairline) 1px, transparent 1px)",
-              backgroundSize: "44px 44px",
-              maskImage: "radial-gradient(circle at 50% 50%, #000 30%, transparent 78%)",
-            }}
+      <FadeIn delay={50}>
+        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <SummaryTile
+            icon={Users}
+            label="Projects"
+            value={counts.all}
+            sub={`${counts.website} with a website · ${counts.social} social`}
           />
-
-          {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="size-24 animate-pulse rounded-full border border-[var(--cw-hairline)] bg-[var(--cw-raised)]" />
-            </div>
-          ) : clients.length === 0 ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <Globe className="size-8 text-[var(--cw-ink-faint)]" />
-              <p className="mt-3 text-sm font-medium text-[var(--cw-ink)]">
-                {query ? "No clients match your search" : "No clients linked yet"}
-              </p>
-              <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
-                {query
-                  ? "Try a different name or domain."
-                  : "Link a site or Meta page to get started."}
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Connectors: hub → each node. Non-scaling stroke keeps them crisp. */}
-              <svg
-                className="pointer-events-none absolute inset-0 h-full w-full"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-              >
-                {positions.map((p, i) => {
-                  const isActive = entryMatchesSelectValue(clients[i]?.entry, selectedSite);
-                  const lit = hovered === i || isActive;
-                  return (
-                    <line
-                      key={`line-${i}`}
-                      x1="50"
-                      y1="50"
-                      x2={p.x}
-                      y2={p.y}
-                      stroke={lit ? "var(--cw-neon)" : "var(--cw-hairline-strong)"}
-                      strokeWidth={lit ? 1.6 : 1}
-                      strokeOpacity={lit ? 0.9 : 0.35}
-                      strokeDasharray={lit ? "4 4" : undefined}
-                      vectorEffect="non-scaling-stroke"
-                      style={lit ? { animation: "cwDash 0.6s linear infinite" } : undefined}
-                    />
-                  );
-                })}
-              </svg>
-
-              {/* Hub */}
-              <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
-                <span className="cw-hub-pulse absolute inset-0 -z-10 rounded-full bg-[color-mix(in_srgb,var(--cw-neon)_40%,transparent)]" style={{ animation: "cwHubPulse 3.4s ease-out infinite" }} />
-                <span className="cw-hub-pulse absolute inset-0 -z-10 rounded-full bg-[color-mix(in_srgb,var(--cw-neon)_40%,transparent)]" style={{ animation: "cwHubPulse 3.4s ease-out 1.7s infinite" }} />
-                <div className="flex size-20 flex-col items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] bg-[var(--cw-raised)] shadow-[0_0_36px_-6px_color-mix(in_srgb,var(--cw-neon)_55%,transparent)]">
-                  <CrosswayLogo variant="dark" size={30} />
-                  <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">
-                    Agency
-                  </span>
-                </div>
-              </div>
-
-              {/* Nodes */}
-              {clients.map((c, i) => {
-                const p = positions[i] || { x: 50, y: 50 };
-                const isActive = entryMatchesSelectValue(c.entry, selectedSite);
-                const isHover = hovered === i;
-                const alertCount = c.pendingBlogs + c.pendingPosts;
-                return (
-                  <button
-                    key={`${c.value}-${i}`}
-                    type="button"
-                    onClick={() => onEnterClient?.(c.value)}
-                    onMouseEnter={() => setHovered(i)}
-                    onMouseLeave={() => setHovered((h) => (h === i ? -1 : h))}
-                    onFocus={() => setHovered(i)}
-                    onBlur={() => setHovered((h) => (h === i ? -1 : h))}
-                    aria-label={`Open ${c.name}`}
-                    className="group absolute z-20 -translate-x-1/2 -translate-y-1/2 focus:outline-none"
-                    style={{ left: `${p.x}%`, top: `${p.y}%` }}
-                  >
-                    <span
-                      className="cw-node-float flex flex-col items-center"
-                      style={{ animation: `cwNodeFloat ${5 + (i % 4)}s ease-in-out ${(i % 6) * 0.35}s infinite` }}
-                    >
-                      <span
-                        className={`relative flex size-14 items-center justify-center rounded-2xl border bg-[var(--cw-surface)] transition-all duration-200 group-hover:-translate-y-0.5 group-hover:scale-110 group-focus-visible:scale-110 ${
-                          isActive
-                            ? "border-[var(--cw-neon)] shadow-[0_0_26px_-4px_color-mix(in_srgb,var(--cw-neon)_70%,transparent)]"
-                            : isHover
-                              ? "border-[color-mix(in_srgb,var(--cw-neon)_55%,var(--cw-hairline))] shadow-[0_0_22px_-6px_color-mix(in_srgb,var(--cw-neon)_55%,transparent)]"
-                              : "border-[var(--cw-hairline)]"
-                        }`}
-                      >
-                        <ClientAccountLogo entry={c.entry} size="md" />
-                        {alertCount > 0 ? (
-                          <span
-                            className="absolute -left-2 -top-2 flex min-w-[18px] items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--cw-caution)_55%,transparent)] bg-[var(--cw-caution)] px-1 text-[9px] font-bold text-[var(--cw-canvas)] shadow-[0_0_10px_-1px_var(--cw-caution)]"
-                            title={`${c.pendingBlogs} blog${c.pendingBlogs === 1 ? "" : "s"} · ${c.pendingPosts} post${c.pendingPosts === 1 ? "" : "s"} awaiting review`}
-                          >
-                            {alertCount > 9 ? "9+" : alertCount}
-                          </span>
-                        ) : null}
-                        {isActive ? (
-                          <span className="absolute -right-1.5 -top-1.5 rounded-full bg-[var(--cw-neon)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-[var(--cw-canvas)]">
-                            Live
-                          </span>
-                        ) : null}
-                        <span className="pointer-events-none absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border border-[var(--cw-hairline)] bg-[var(--cw-raised)] opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-                          <ArrowUpRight className="size-3 text-[var(--cw-neon)]" />
-                        </span>
-                      </span>
-                      <span
-                        className={`mt-2 max-w-[7rem] truncate rounded-md px-1.5 text-center text-[11px] font-medium transition-colors ${
-                          isActive || isHover
-                            ? "bg-[var(--cw-raised)] text-[var(--cw-ink)]"
-                            : "text-[var(--cw-ink-dim)]"
-                        }`}
-                      >
-                        {c.name}
-                      </span>
-                      <span className="mt-1 flex items-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-                        {c.pendingBlogs > 0 ? (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[var(--cw-caution)]">
-                            <FileText className="size-3" /> {c.pendingBlogs}
-                          </span>
-                        ) : null}
-                        {c.pendingPosts > 0 ? (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[var(--cw-caution)]">
-                            <Send className="size-3" /> {c.pendingPosts}
-                          </span>
-                        ) : null}
-                        {alertCount === 0 ? (
-                          <>
-                            {c.website ? (
-                              <Globe className="size-3 text-[var(--cw-ink-faint)]" />
-                            ) : null}
-                            {c.social ? (
-                              <Megaphone className="size-3 text-[var(--cw-ink-faint)]" />
-                            ) : null}
-                          </>
-                        ) : null}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-
-              {/* Metric HUD: a glass card with the focused client's general
-                  metrics. Defaults to the live/first client, follows hover. */}
-              {detail ? (
-                <div className="pointer-events-none absolute inset-x-3 bottom-3 z-30 flex justify-center">
-                  <div className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 rounded-2xl border border-[var(--cw-hairline)] bg-[color-mix(in_srgb,var(--cw-surface)_88%,transparent)] px-4 py-3 shadow-[0_12px_44px_-14px_rgba(0,0,0,0.65)] backdrop-blur-md">
-                    <div className="flex min-w-0 items-center gap-2.5 sm:pr-3">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)]">
-                        <ClientAccountLogo entry={detail.entry} size="sm" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[var(--cw-ink)]">{detail.name}</p>
-                        <p className="truncate text-[11px] text-[var(--cw-ink-faint)]">
-                          {detail.host || (detail.social ? "Social account" : "—")}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="hidden h-8 w-px bg-[var(--cw-hairline)] sm:block" />
-                    <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1.5">
-                      <Metric
-                        icon={Users}
-                        label="Followers"
-                        value={detail.followers ? compactNum(detail.followers) : "—"}
-                      />
-                      <Metric icon={FileText} label="Blogs" value={compactNum(detail.totalBlogs)} />
-                      <Metric icon={Send} label="Posts" value={compactNum(detail.totalPosts)} />
-                      {detail.pendingBlogs + detail.pendingPosts > 0 ? (
-                        <span className="inline-flex items-center gap-1 rounded-lg border border-[color-mix(in_srgb,var(--cw-caution)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_12%,transparent)] px-2 py-1 text-[11px] font-semibold text-[var(--cw-caution)]">
-                          <Bell className="size-3" /> {detail.pendingBlogs + detail.pendingPosts} pending
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </>
-          )}
+          <SummaryTile
+            icon={Bell}
+            label="Awaiting review"
+            value={stats.pending}
+            sub={
+              stats.attention > 0
+                ? `across ${stats.attention} ${stats.attention === 1 ? "project" : "projects"}`
+                : "Everything is cleared"
+            }
+            accent="var(--cw-caution)"
+          />
+          <SummaryTile
+            icon={Megaphone}
+            label="Total reach"
+            value={compactNum(stats.reach)}
+            sub="Followers across all platforms"
+            accent="var(--cw-info)"
+          />
+          <SummaryTile
+            icon={Gauge}
+            label="Avg site health"
+            value={stats.avgHealth == null ? "—" : stats.avgHealth}
+            sub={
+              stats.scored > 0
+                ? `${stats.scored} ${stats.scored === 1 ? "site" : "sites"} audited · ${stats.shipped} shipped in 30d`
+                : "No audits run yet"
+            }
+            accent={healthTone(stats.avgHealth).color}
+          />
         </div>
       </FadeIn>
 
-      <p className="mt-3 text-center text-[11px] text-[var(--cw-ink-faint)]">
-        Hover a node to see its metrics in the card below · amber badge = approvals awaiting review ·
-        click to enter the workspace
-      </p>
+      <FadeIn delay={90}>
+        <div className="mt-5 flex flex-wrap items-center gap-1.5">
+          {FILTERS.map((f) => {
+            const n = counts[f.id];
+            const active = filter === f.id;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFilter(f.id)}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-smooth ${
+                  active
+                    ? "border-[color-mix(in_srgb,var(--cw-neon)_50%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_12%,transparent)] text-[var(--cw-neon)]"
+                    : "border-[var(--cw-hairline)] bg-[var(--cw-raised)] text-[var(--cw-ink-dim)] hover:border-[var(--cw-hairline-strong)] hover:text-[var(--cw-ink)]"
+                }`}
+              >
+                {f.label}
+                <span className="tabular-nums opacity-70">{n}</span>
+              </button>
+            );
+          })}
+        </div>
+      </FadeIn>
+
+      {loading ? (
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-[268px] animate-pulse rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)]"
+            />
+          ))}
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="mt-4 flex flex-col items-center justify-center rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-6 py-20 text-center">
+          <Globe className="size-8 text-[var(--cw-ink-faint)]" />
+          <p className="mt-3 text-sm font-medium text-[var(--cw-ink)]">
+            {query || filter !== "all" ? "No projects match" : "No projects linked yet"}
+          </p>
+          <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
+            {query || filter !== "all"
+              ? "Try a different name, domain or filter."
+              : "Link a site or Meta page to get started."}
+          </p>
+          {query || filter !== "all" ? (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setFilter("all");
+              }}
+              className="mt-4 rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-1.5 text-xs font-semibold text-[var(--cw-ink-dim)] transition-smooth hover:text-[var(--cw-ink)]"
+            >
+              Clear filters
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {projects.map((p, i) => (
+            <ProjectCard
+              key={p.value}
+              project={p}
+              index={i}
+              isActive={entryMatchesSelectValue(p.entry, selectedSite)}
+              onOpen={() => onEnterClient?.(p.value)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
+}
+
+function projectDisplayName(entry, metaAccounts) {
+  const metaMatch = metaAccounts.find(
+    (a) =>
+      a.facebookPageId &&
+      entry.facebookPageId &&
+      String(a.facebookPageId).trim() === String(entry.facebookPageId).trim()
+  );
+  if (metaMatch?.name) return metaMatch.name;
+  const name = entry.displayName || entry.userName || "";
+  if (name && !name.startsWith("http") && !/^\d+$/.test(String(name).trim())) return name;
+  return siteHost(entry.siteLink) || "Untitled project";
 }
