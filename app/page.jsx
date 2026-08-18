@@ -21,7 +21,7 @@ import PostAutoscheduleSection from "./components/PostAutoscheduleSection";
 import BlogAutoscheduleSection from "./components/BlogAutoscheduleSection";
 import UrlInspectionSection from "./components/seo/UrlInspectionSection";
 import SiteIntelligenceSection from "./components/seo/SiteIntelligenceSection";
-import UnifiedKeywordResearchSection from "./components/seo/UnifiedKeywordResearchSection";
+import KeywordWorkbenchSection from "./components/seo/KeywordWorkbenchSection";
 import ReportsStudioSection from "./components/ReportsStudioSection";
 import SeoAutopilotSection from "./components/SeoAutopilotSection";
 import HelpCenterSection from "./components/seo/HelpCenterSection";
@@ -29,7 +29,6 @@ import DataForSeoExplorerSection from "./components/seo/DataForSeoExplorerSectio
 import GoogleAdsKeywordPlannerSection from "./components/seo/GoogleAdsKeywordPlannerSection";
 import SerpAnalysisSection from "./components/seo/SerpAnalysisSection";
 import LinkOpportunitiesSection from "./components/seo/LinkOpportunitiesSection";
-import KeywordOpportunitiesSection from "./components/seo/KeywordOpportunitiesSection";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
 import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "../lib/clientPermissions";
@@ -255,7 +254,7 @@ export default function Home() {
       case "keyword-research":
       case "ai-keyword-research":
       case "seranking-keywords":
-        return <UnifiedKeywordResearchSection selectedSite={seoSite} />;
+        return <KeywordWorkbenchSection selectedSite={seoSite} initialTab="research" />;
       case "url-inspection":
         return <UrlInspectionSection selectedSite={seoSite} />;
       case "site-explorer":
@@ -288,7 +287,7 @@ export default function Home() {
       case "link-opportunities":
         return <LinkOpportunitiesSection selectedSite={seoSite} />;
       case "keyword-opportunities":
-        return <KeywordOpportunitiesSection selectedSite={seoSite} />;
+        return <KeywordWorkbenchSection selectedSite={seoSite} initialTab="ideas" />;
       case "smm-statistics":
         return <SmmStatisticsSection selectedSite={selectedSite} />;
       case "calendar":

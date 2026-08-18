@@ -98,7 +98,7 @@ export default function SerankingBacklinksSection({ selectedSite = "" }) {
       expiresAt={expiresAt || metaStatus?.snapshots?.backlinks_summary?.expiresAt}
       onRefresh={() => load(true)}
       refreshing={refreshing}
-      refreshDisabled={(credits?.remaining ?? 0) < 100}
+      refreshDisabled={false}
       refreshLabel="Refresh (100 cr)"
     >
       {hasMetrics ? (

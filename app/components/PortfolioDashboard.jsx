@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Bell, FileText, Globe, Megaphone, Search, Send, Users } from "lucide-react";
+import {
+  ArrowUpRight,
+  Bell,
+  FileText,
+  Gauge,
+  Globe,
+  Link2,
+  Megaphone,
+  Search,
+  Send,
+  Users,
+} from "lucide-react";
 import {
   entryMatchesSelectValue,
   getClientAccountSelectValue,
@@ -56,6 +67,41 @@ function sumForClient(entry, countMap) {
   return total;
 }
 
+/** `[{ siteLink, count }]` → Map keyed by the same normalisation clients use. */
+function toCountMap(rows) {
+  const m = new Map();
+  for (const row of rows || []) {
+    const k = normalizeMatchKey(row.siteLink);
+    if (k) m.set(k, (m.get(k) || 0) + Number(row.count || 0));
+  }
+  return m;
+}
+
+/** Authority snapshots are keyed by bare domain; match against a client host. */
+function toAuthorityMap(rows) {
+  const m = new Map();
+  for (const row of rows || []) {
+    const k = String(row.domain || "").toLowerCase().replace(/^www\./, "");
+    if (k && !m.has(k)) m.set(k, row);
+  }
+  return m;
+}
+
+function compactNum(n) {
+  const v = Number(n) || 0;
+  return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(v);
+}
+
+function Metric({ icon: Icon, label, value }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <Icon className="size-3.5 text-[var(--cw-ink-faint)]" aria-hidden />
+      <span className="text-[11px] text-[var(--cw-ink-muted)]">{label}</span>
+      <span className="text-[13px] font-bold tabular-nums text-[var(--cw-ink)]">{value}</span>
+    </span>
+  );
+}
+
 function clientDisplayName(entry, metaAccounts) {
   const metaMatch = metaAccounts.find(
     (a) =>
@@ -104,7 +150,14 @@ function layoutPositions(n) {
 export default function PortfolioDashboard({ selectedSite = "", onEnterClient }) {
   const [sites, setSites] = useState([]);
   const [metaAccounts, setMetaAccounts] = useState([]);
-  const [overview, setOverview] = useState({ posts: [], blogs: [] });
+  const [overview, setOverview] = useState({
+    posts: [],
+    blogs: [],
+    publishedPosts: [],
+    publishedBlogs: [],
+    authority: [],
+    followers: [],
+  });
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [hovered, setHovered] = useState(-1);
@@ -122,6 +175,10 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
       setOverview({
         posts: Array.isArray(ov?.posts) ? ov.posts : [],
         blogs: Array.isArray(ov?.blogs) ? ov.blogs : [],
+        publishedPosts: Array.isArray(ov?.publishedPosts) ? ov.publishedPosts : [],
+        publishedBlogs: Array.isArray(ov?.publishedBlogs) ? ov.publishedBlogs : [],
+        authority: Array.isArray(ov?.authority) ? ov.authority : [],
+        followers: Array.isArray(ov?.followers) ? ov.followers : [],
       });
       setLoading(false);
     });
@@ -130,41 +187,39 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
     };
   }, []);
 
-  const postMap = useMemo(() => {
-    const m = new Map();
-    for (const row of overview.posts) {
-      const k = normalizeMatchKey(row.siteLink);
-      if (k) m.set(k, (m.get(k) || 0) + Number(row.count || 0));
-    }
-    return m;
-  }, [overview.posts]);
-
-  const blogMap = useMemo(() => {
-    const m = new Map();
-    for (const row of overview.blogs) {
-      const k = normalizeMatchKey(row.siteLink);
-      if (k) m.set(k, (m.get(k) || 0) + Number(row.count || 0));
-    }
-    return m;
-  }, [overview.blogs]);
+  const postMap = useMemo(() => toCountMap(overview.posts), [overview.posts]);
+  const blogMap = useMemo(() => toCountMap(overview.blogs), [overview.blogs]);
+  const pubPostMap = useMemo(() => toCountMap(overview.publishedPosts), [overview.publishedPosts]);
+  const pubBlogMap = useMemo(() => toCountMap(overview.publishedBlogs), [overview.publishedBlogs]);
+  const followerMap = useMemo(() => toCountMap(overview.followers), [overview.followers]);
+  const authorityMap = useMemo(() => toAuthorityMap(overview.authority), [overview.authority]);
 
   const clients = useMemo(() => {
     const q = query.trim().toLowerCase();
     return sites
-      .map((entry) => ({
-        entry,
-        value: getClientAccountSelectValue(entry),
-        name: clientDisplayName(entry, metaAccounts),
-        host: siteHost(entry.siteLink),
-        website: isWebsiteEntry(entry),
-        social: Boolean(entry.facebookPageId),
-        pendingPosts: sumForClient(entry, postMap),
-        pendingBlogs: sumForClient(entry, blogMap),
-      }))
+      .map((entry) => {
+        const host = siteHost(entry.siteLink);
+        const auth = host ? authorityMap.get(host.toLowerCase()) : null;
+        return {
+          entry,
+          value: getClientAccountSelectValue(entry),
+          name: clientDisplayName(entry, metaAccounts),
+          host,
+          website: isWebsiteEntry(entry),
+          social: Boolean(entry.facebookPageId),
+          pendingPosts: sumForClient(entry, postMap),
+          pendingBlogs: sumForClient(entry, blogMap),
+          publishedPosts: sumForClient(entry, pubPostMap),
+          publishedBlogs: sumForClient(entry, pubBlogMap),
+          followers: sumForClient(entry, followerMap),
+          authority: auth?.score != null ? Math.round(auth.score) : null,
+          referringDomains: auth?.referringDomains ?? null,
+        };
+      })
       .filter((c) => c.value)
       .filter((c) => !q || c.name.toLowerCase().includes(q) || c.host.toLowerCase().includes(q))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [sites, metaAccounts, query, postMap, blogMap]);
+  }, [sites, metaAccounts, query, postMap, blogMap, pubPostMap, pubBlogMap, followerMap, authorityMap]);
 
   const totalAlerts = useMemo(
     () => clients.reduce((s, c) => s + c.pendingPosts + c.pendingBlogs, 0),
@@ -173,6 +228,14 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
 
   const positions = useMemo(() => layoutPositions(clients.length), [clients.length]);
   const total = useMemo(() => sites.filter((s) => getClientAccountSelectValue(s)).length, [sites]);
+
+  const activeIndex = useMemo(
+    () => clients.findIndex((c) => entryMatchesSelectValue(c.entry, selectedSite)),
+    [clients, selectedSite]
+  );
+  // The HUD card defaults to the live client (or the first) so metrics are
+  // visible without interaction, and follows whichever node you hover/focus.
+  const detail = clients[hovered] || clients[activeIndex] || clients[0] || null;
 
   return (
     <div className="mx-auto w-full max-w-[1360px]">
@@ -380,14 +443,55 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
                   </button>
                 );
               })}
+
+              {/* Metric HUD: a glass card with the focused client's general
+                  metrics. Defaults to the live/first client, follows hover. */}
+              {detail ? (
+                <div className="pointer-events-none absolute inset-x-3 bottom-3 z-30 flex justify-center">
+                  <div className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 rounded-2xl border border-[var(--cw-hairline)] bg-[color-mix(in_srgb,var(--cw-surface)_88%,transparent)] px-4 py-3 shadow-[0_12px_44px_-14px_rgba(0,0,0,0.65)] backdrop-blur-md">
+                    <div className="flex min-w-0 items-center gap-2.5 sm:pr-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)]">
+                        <ClientAccountLogo entry={detail.entry} size="sm" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--cw-ink)]">{detail.name}</p>
+                        <p className="truncate text-[11px] text-[var(--cw-ink-faint)]">
+                          {detail.host || (detail.social ? "Social account" : "—")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="hidden h-8 w-px bg-[var(--cw-hairline)] sm:block" />
+                    <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-1.5">
+                      <Metric icon={Gauge} label="Authority" value={detail.authority != null ? detail.authority : "—"} />
+                      <Metric
+                        icon={Link2}
+                        label="Ref. domains"
+                        value={detail.referringDomains != null ? compactNum(detail.referringDomains) : "—"}
+                      />
+                      <Metric
+                        icon={Users}
+                        label="Followers"
+                        value={detail.followers ? compactNum(detail.followers) : "—"}
+                      />
+                      <Metric icon={FileText} label="Blogs" value={compactNum(detail.publishedBlogs)} />
+                      <Metric icon={Send} label="Posts" value={compactNum(detail.publishedPosts)} />
+                      {detail.pendingBlogs + detail.pendingPosts > 0 ? (
+                        <span className="inline-flex items-center gap-1 rounded-lg border border-[color-mix(in_srgb,var(--cw-caution)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_12%,transparent)] px-2 py-1 text-[11px] font-semibold text-[var(--cw-caution)]">
+                          <Bell className="size-3" /> {detail.pendingBlogs + detail.pendingPosts} pending
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </>
           )}
         </div>
       </FadeIn>
 
       <p className="mt-3 text-center text-[11px] text-[var(--cw-ink-faint)]">
-        Amber badge = blog / post approvals awaiting review · hover a node to trace its link · click to
-        enter the workspace
+        Hover a node to see its metrics in the card below · amber badge = approvals awaiting review ·
+        click to enter the workspace
       </p>
     </div>
   );

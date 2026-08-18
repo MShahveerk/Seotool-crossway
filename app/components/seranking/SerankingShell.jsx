@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { RefreshCw, Coins, Clock, AlertCircle } from "lucide-react";
+import { RefreshCw, Clock, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import PageHeader from "../ui-shared/PageHeader";
 import Btn from "../ui-shared/Btn";
@@ -28,36 +28,10 @@ function formatDate(iso) {
   }
 }
 
-export function SerankingCreditBar({ credits, compact = false }) {
-  if (!credits) return null;
-  const pct = credits.percentUsed ?? 0;
-  // Budget pressure is the message — colour only escalates as it runs out.
-  const tone =
-    pct >= 90
-      ? "text-[var(--cw-danger)] border-[color-mix(in_srgb,var(--cw-danger)_35%,transparent)] bg-[color-mix(in_srgb,var(--cw-danger)_8%,transparent)]"
-      : pct >= 70
-        ? "text-[var(--cw-caution)] border-[color-mix(in_srgb,var(--cw-caution)_35%,transparent)] bg-[color-mix(in_srgb,var(--cw-caution)_8%,transparent)]"
-        : "text-[var(--cw-ink-dim)] border-[var(--cw-hairline)] bg-[var(--cw-raised)]";
-
-  return (
-    <div
-      className={`flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 ${tone} ${compact ? "text-xs" : "text-sm"}`}
-    >
-      <Coins className="size-3.5 shrink-0" aria-hidden />
-      <span className="font-mono font-semibold tabular-nums">
-        {credits.remaining?.toLocaleString()} / {credits.budget?.toLocaleString()}
-      </span>
-      <span className="text-[var(--cw-ink-faint)]">credits</span>
-      <span className="rounded-full bg-[color-mix(in_srgb,currentColor_14%,transparent)] px-1.5 py-0.5 font-mono text-[10px] font-bold tabular-nums">
-        {pct}% used
-      </span>
-      {!compact ? (
-        <span className="text-xs text-[var(--cw-ink-faint)]">
-          Refresh reserve: {credits.reserve?.toLocaleString()}
-        </span>
-      ) : null}
-    </div>
-  );
+export function SerankingCreditBar() {
+  // The internal credit cap has been removed — your real SE Ranking account is
+  // the only limit, so there is nothing to display here.
+  return null;
 }
 
 export default function SerankingShell({

@@ -161,7 +161,7 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
       configured
       onRefresh={activeTarget ? () => load(activeTarget, { refresh: true }) : undefined}
       refreshing={refreshing}
-      refreshDisabled={!activeTarget || (credits?.remaining ?? 0) < exploreCost}
+      refreshDisabled={!activeTarget}
       refreshLabel={payload?.fromCache && !payload?.stale ? "Force refresh (~300 cr)" : `Refresh (~${exploreCost} cr)`}
     >
       <div className="space-y-6">
@@ -343,7 +343,7 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
                   variant="outline"
                   size="sm"
                   onClick={startAudit}
-                  disabled={startingAudit || audit?.status === "running" || (credits?.remaining ?? 0) < auditCost}
+                  disabled={startingAudit || audit?.status === "running"}
                 >
                   {audit?.status === "running" ? "Audit running…" : `Run site audit (~${auditCost} cr)`}
                 </Button>

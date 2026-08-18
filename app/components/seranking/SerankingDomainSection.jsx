@@ -106,7 +106,7 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
       expiresAt={metaStatus?.snapshots?.domain_overview?.expiresAt}
       onRefresh={() => load(true, false)}
       refreshing={refreshing}
-      refreshDisabled={(credits?.remaining ?? 0) < refreshCost}
+      refreshDisabled={false}
       refreshLabel={`Refresh (~${refreshCost} cr)`}
     >
       <div className="space-y-6">
@@ -171,7 +171,7 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={loadingAi || (credits?.remaining ?? 0) < aiCost}
+                disabled={loadingAi}
                 onClick={() => load(false, true)}
               >
                 {loadingAi ? "Loading…" : `Load AI metrics (~${aiCost} cr)`}

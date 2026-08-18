@@ -617,7 +617,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
                       type="button"
                       className="h-11 px-6"
                       onClick={() => runSearch(false)}
-                      disabled={searchLoading || !query.trim() || (credits?.remaining ?? 0) < creditCost}
+                      disabled={searchLoading || !query.trim()}
                     >
                       {searchLoading ? "Searching…" : `Search (~${creditCost} cr)`}
                     </Button>
@@ -627,7 +627,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
                         variant="outline"
                         className="h-11"
                         onClick={() => runSearch(true)}
-                        disabled={searchLoading || !query.trim() || (credits?.remaining ?? 0) < creditCost}
+                        disabled={searchLoading || !query.trim()}
                       >
                         Refresh
                       </Button>

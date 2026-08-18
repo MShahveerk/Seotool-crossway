@@ -34,8 +34,6 @@ export default function SerankingAuditSection({
     description ||
     `Technical site crawl (max ${auditMaxPages} pages ≈ ${auditCost} credits). Each issue includes full details and step-by-step fix guidance.`;
 
-  const creditsKnown = credits != null && credits.remaining != null;
-  const creditsTooLow = creditsKnown && Number(credits.remaining) < auditCost;
   const isRunning = runStatus === "running";
 
   const load = useCallback(async () => {
@@ -131,7 +129,7 @@ export default function SerankingAuditSection({
       expiresAt={expiresAt}
       onRefresh={startAudit}
       refreshing={refreshing}
-      refreshDisabled={creditsTooLow}
+      refreshDisabled={false}
       refreshLabel={
         isRunning
           ? `Force new audit (~${auditCost} cr)`
@@ -140,17 +138,6 @@ export default function SerankingAuditSection({
             : `Run audit (~${auditCost} cr)`
       }
     >
-      {creditsTooLow ? (
-        <Card className="border-amber-200 bg-amber-50/50 shadow-sm mb-4">
-          <CardContent className="p-4">
-            <p className="text-sm text-amber-950">
-              Not enough audit credits to force a new crawl (need ~{auditCost}). Showing the cached
-              report until credits are available.
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
-
       {fromCache && !isRunning && report?.score != null ? (
         <Card className="border-violet-200 bg-violet-50/40 shadow-sm mb-4">
           <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
