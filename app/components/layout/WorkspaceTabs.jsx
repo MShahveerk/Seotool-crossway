@@ -32,6 +32,7 @@ export default function WorkspaceTabs({ activeSection, onSectionChange, selected
   const sections = visibleSections(workspace, {
     canAccess: (id) => sessionCanAccessSection(session, id),
     isWebsiteSelected,
+    isProjectSelected: Boolean(effectiveSite),
   });
 
   if (!workspace || sections.length < 2) return null;

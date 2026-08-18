@@ -1,54 +1,44 @@
 "use client";
 
-import { useState } from "react";
-import { Shield } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import EmptyState from "../ui-shared/EmptyState";
 import { useSerankingStatus } from "../seranking/SerankingShell";
 import SerankingAuditSection from "../seranking/SerankingAuditSection";
-import SiteAuditSection from "../SiteAuditSection";
 
-export default function UnifiedSiteAuditSection({ selectedSite = "", onNavigateSection }) {
+/**
+ * SE Ranking is the only audit anyone sees.
+ *
+ * There used to be a toggle here between SE Ranking and our own crawler. Two
+ * sources meant two different health scores for the same site depending on which
+ * screen you happened to be on, and no way to tell which one a client had been
+ * shown. The internal crawler still runs and still feeds Autopilot's reasoning,
+ * but it no longer reaches a display.
+ */
+export default function UnifiedSiteAuditSection({ selectedSite = "" }) {
   const { status } = useSerankingStatus(selectedSite);
-  const seConfigured = status?.configured !== false;
-  const [mode, setMode] = useState("se");
 
-  const showSe = seConfigured && mode !== "internal";
-  const showInternal = !seConfigured || mode === "internal";
+  if (status?.configured === false) {
+    return (
+      <Card className="border-border/80 shadow-sm">
+        <CardContent className="p-6 sm:p-8">
+          <EmptyState
+            icon={AlertCircle}
+            title="Site audit not configured"
+            description="Site audits come from SE Ranking. Ask an administrator to add SE Ranking credentials in Admin → Data sources to turn this on."
+          />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-2rem)]">
-      {seConfigured ? (
-        <div className="mb-4 flex flex-wrap gap-2 border-b border-gray-100 pb-3 px-1">
-          <button
-            type="button"
-            onClick={() => setMode("se")}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-              showSe ? "bg-violet-100 text-violet-900" : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <Shield className="size-4" aria-hidden />
-            Full audit
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("internal")}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-              showInternal && seConfigured ? "bg-emerald-100 text-emerald-900" : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            Internal crawl
-          </button>
-          <span className="self-center text-xs text-gray-500">Full audit is primary when available; internal crawl is the fallback.</span>
-        </div>
-      ) : null}
-
-      {showSe ? (
-        <SerankingAuditSection
-          selectedSite={selectedSite}
-          title="Site Audit"
-          description="Technical SEO crawl — each issue includes full details and step-by-step fix guidance. Switch to Internal crawl for our built-in crawler."
-        />
-      ) : null}
-      {showInternal ? <SiteAuditSection selectedSite={selectedSite} onNavigateSection={onNavigateSection} /> : null}
+      <SerankingAuditSection
+        selectedSite={selectedSite}
+        title="Site Audit"
+        description="Technical SEO crawl — each issue includes full details and step-by-step fix guidance."
+      />
     </div>
   );
 }

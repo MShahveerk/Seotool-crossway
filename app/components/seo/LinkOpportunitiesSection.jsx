@@ -485,6 +485,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       title="Link Opportunities"
       description="Sites you could get a link from for a keyword — found by reading who already links to whoever ranks, then sorted by how gettable each one is."
       selectedSite={selectedSite}
+      requiresProject={false}
       loading={false}
       error={error}
     >

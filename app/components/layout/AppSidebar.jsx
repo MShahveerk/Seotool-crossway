@@ -5,12 +5,16 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
+  ChevronRight,
   Compass,
   FileText,
   Globe,
   HelpCircle,
+  KeyRound,
   LayoutDashboard,
   LayoutGrid,
+  Link2,
+  ListOrdered,
   LogOut,
   Megaphone,
   PenTool,
@@ -44,7 +48,9 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,6 +73,9 @@ const WORKSPACE_ICONS = {
   shield: Shield,
   workflow: Workflow,
   toolkit: Wrench,
+  keywords: KeyRound,
+  serp: ListOrdered,
+  links: Link2,
   /* The two studios get their own glyphs — a writing machine and a broadcast
      machine — so they're never mistaken for the domains they feed. */
   blogStudio: PenTool,
@@ -98,6 +107,7 @@ export default function AppSidebar({
 }) {
   const { data: session } = useSession();
   const router = useRouter();
+  const { state: sidebarState } = useSidebar();
   const [availableSites, setAvailableSites] = useState([]);
   const [clientQuery, setClientQuery] = useState("");
   const [metaAccounts, setMetaAccounts] = useState([]);
@@ -196,6 +206,9 @@ export default function AppSidebar({
         (!isMetaPageId(effectiveSiteForSeo) &&
           (selectedSiteEntry?.siteLink?.startsWith("http") || String(effectiveSiteForSeo).includes("."))))
   );
+  /* Blogs, Social and Reports work for a Meta-only project too — they need
+     *something* selected, just not necessarily a website. */
+  const isProjectSelected = Boolean(effectiveSiteForSeo);
 
   const getPageDisplayName = (siteEntryOrVal) => {
     if (!siteEntryOrVal) return "No Account Selected";
@@ -234,7 +247,7 @@ export default function AppSidebar({
   // The whole nav is derived: workspaces the user can reach, each carrying the
   // tabs that will appear on the page. One source of truth, shared with
   // WorkspaceTabs so the sidebar and the tab rail can never disagree.
-  const workspaceGroups = visibleWorkspaceGroups({ canAccess, isWebsiteSelected })
+  const workspaceGroups = visibleWorkspaceGroups({ canAccess, isWebsiteSelected, isProjectSelected })
     .map((group) => ({
       ...group,
       entries: group.entries.filter(
@@ -244,9 +257,22 @@ export default function AppSidebar({
     .filter((group) => group.entries.length > 0);
 
   const activeWorkspace = workspaceForSection(activeSection);
-  /* Inside the Toolkit the switcher is dead weight: nothing on screen reads it.
+  /* Inside a global tool the switcher is dead weight: nothing on screen reads it.
      Dimming it beats hiding it — the selection is still there when you go back. */
   const inGlobalWorkspace = activeWorkspace?.scope === SCOPES.GLOBAL;
+
+  /* The Toolkit rail folds away, because it's a shelf you go to rather than
+     something you watch. It opens itself whenever you're standing in it, and
+     stays open in icon mode where a closed group would hide its icons entirely. */
+  const [openGroups, setOpenGroups] = useState({});
+  const activeGroupId = activeWorkspace?.group;
+  useEffect(() => {
+    if (!activeGroupId) return;
+    setOpenGroups((prev) => (prev[activeGroupId] ? prev : { ...prev, [activeGroupId]: true }));
+  }, [activeGroupId]);
+
+  const isGroupOpen = (group) =>
+    !group.collapsible || sidebarState === "collapsed" || openGroups[group.id] === true;
 
   // Coming back to a workspace should resume the tab you were last on, not
   // dump you at the first one. A ref, so remembering doesn't cause a render.
@@ -390,42 +416,93 @@ export default function AppSidebar({
       <SidebarContent>
         {/* Workspaces, not a tool inventory. Clicking one lands on its first
             tab; the rest of its tools appear as a rail on the page itself. */}
-        {/* Two rails: what belongs to the selected project, then research that
-            belongs to none. The label is the whole point of the split. */}
-        {workspaceGroups.map((group) => (
-          <SidebarGroup key={group.id}>
-            {group.label ? (
-              <SidebarGroupLabel className="text-[10px] font-bold tracking-[0.14em] text-[var(--cw-ink-faint)] uppercase">
-                {group.label}
-              </SidebarGroupLabel>
-            ) : null}
+        {/* Two rails: what belongs to the selected project, then the benches that
+            belong to none. The label is the whole point of the split. */}
+
+        {/* With nothing selected the project rail is empty by design. Say so,
+            rather than leaving a gap that reads as a broken menu. */}
+        {hasGlobalSiteAccess && !isProjectSelected ? (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] font-bold tracking-[0.14em] text-[var(--cw-ink-faint)] uppercase">
+              Project
+            </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {group.entries.map(({ workspace, sections }) => {
-                  const Icon = WORKSPACE_ICONS[workspace.icon] || Compass;
-                  const isActive = activeWorkspace?.id === workspace.id;
-                  const badge = workspaceBadge(workspace);
-                  return (
-                    <SidebarMenuItem key={workspace.id}>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        data-accent={workspace.accent || undefined}
-                        onClick={() => openWorkspace(workspace, sections)}
-                        tooltip={workspace.label}
-                      >
-                        <Icon className="size-4" />
-                        <span>{workspace.label}</span>
-                      </SidebarMenuButton>
-                      {badge > 0 ? (
-                        <SidebarMenuBadge>{badge > 9 ? "9+" : String(badge)}</SidebarMenuBadge>
-                      ) : null}
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
+              <p className="px-2 py-1.5 text-[11px] leading-relaxed text-[var(--cw-ink-faint)] group-data-[collapsible=icon]:hidden">
+                Pick a project above to open its dashboard, blogs, social and reports.
+              </p>
             </SidebarGroupContent>
           </SidebarGroup>
-        ))}
+        ) : null}
+
+        {workspaceGroups.map((group) => {
+          const open = isGroupOpen(group);
+          const menu = (
+            <SidebarMenu>
+              {group.entries.map(({ workspace, sections }) => {
+                const Icon = WORKSPACE_ICONS[workspace.icon] || Compass;
+                const isActive = activeWorkspace?.id === workspace.id;
+                const badge = workspaceBadge(workspace);
+                return (
+                  <SidebarMenuItem key={workspace.id}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      data-accent={workspace.accent || undefined}
+                      onClick={() => openWorkspace(workspace, sections)}
+                      tooltip={workspace.label}
+                    >
+                      <Icon className="size-4" />
+                      <span>{workspace.label}</span>
+                    </SidebarMenuButton>
+                    {badge > 0 ? (
+                      <SidebarMenuBadge>{badge > 9 ? "9+" : String(badge)}</SidebarMenuBadge>
+                    ) : null}
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          );
+
+          if (!group.collapsible) {
+            return (
+              <SidebarGroup key={group.id}>
+                {group.label ? (
+                  <SidebarGroupLabel className="text-[10px] font-bold tracking-[0.14em] text-[var(--cw-ink-faint)] uppercase">
+                    {group.label}
+                  </SidebarGroupLabel>
+                ) : null}
+                <SidebarGroupContent>{menu}</SidebarGroupContent>
+              </SidebarGroup>
+            );
+          }
+
+          const GroupIcon = WORKSPACE_ICONS.toolkit;
+          return (
+            <Collapsible
+              key={group.id}
+              open={open}
+              onOpenChange={(next) => setOpenGroups((prev) => ({ ...prev, [group.id]: next }))}
+              className="group/nav-group"
+            >
+              <SidebarGroup>
+                <CollapsibleTrigger asChild>
+                  <SidebarGroupLabel
+                    className={cn(
+                      "flex w-full cursor-pointer items-center gap-1.5 rounded-md text-[10px] font-bold tracking-[0.14em] uppercase transition-smooth",
+                      "text-[var(--cw-ink-faint)] hover:bg-[var(--cw-raised)] hover:text-[var(--cw-ink-dim)]"
+                    )}
+                  >
+                    <GroupIcon className="size-3.5 shrink-0" />
+                    <span className="flex-1 text-left">{group.label}</span>
+                    <ChevronRight className="size-3.5 shrink-0 transition-transform duration-200 group-data-[state=open]/nav-group:rotate-90" />
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>{menu}</SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+          );
+        })}
 
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>

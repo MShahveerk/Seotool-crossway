@@ -400,10 +400,19 @@ function sortRows(rows, field, dir) {
   });
 }
 
+function siteHostLabel(url) {
+  try {
+    return new URL(String(url).startsWith("http") ? url : `https://${url}`).hostname.replace(/^www\./, "");
+  } catch {
+    return String(url || "").replace(/^https?:\/\//, "").split("/")[0] || "";
+  }
+}
+
 export default function SerankingKeywordsSection({ selectedSite = "" }) {
   const { data: session } = useSession();
   const hasGlobalAccess = session?.user?.role === "super_admin" || session?.user?.role === "smm";
-  const { credits, status: metaStatus } = useSerankingStatus(selectedSite);
+  /* Toolkit tool: the status probe must not require a selected project. */
+  const { credits, status: metaStatus } = useSerankingStatus(selectedSite, { siteOptional: true });
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -536,6 +545,8 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
       title="Keyword Explorer"
       description="Full keyword metrics — volume, KD, CPC, competition, traffic potential, intent, and 12-month trends. Separate from AI Keyword Research."
       selectedSite={selectedSite}
+      requireWebsite={false}
+      siteBadge={activeSite ? siteHostLabel(activeSite) : "No project — type a domain"}
       loading={loading}
       error={error}
       credits={credits}

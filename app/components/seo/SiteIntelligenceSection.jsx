@@ -56,9 +56,7 @@ export default function SiteIntelligenceSection({
 
       {tab === "authority" ? <SiteHealthSection selectedSite={selectedSite} /> : null}
 
-      {tab === "audit" ? (
-        <UnifiedSiteAuditSection selectedSite={selectedSite} onNavigateSection={onNavigateSection} />
-      ) : null}
+      {tab === "audit" ? <UnifiedSiteAuditSection selectedSite={selectedSite} /> : null}
 
       {tab === "backlinks" ? (
         <div className="space-y-4">

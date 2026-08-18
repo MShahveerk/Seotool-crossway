@@ -219,6 +219,7 @@ export default function KeywordOpportunitiesSection({ selectedSite = "" }) {
       title="Keyword Opportunities"
       description="The keywords actually worth working on for any domain — ranked by reward against effort, not by what already wins."
       selectedSite={selectedSite}
+      requiresProject={false}
       loading={false}
       error={error}
     >

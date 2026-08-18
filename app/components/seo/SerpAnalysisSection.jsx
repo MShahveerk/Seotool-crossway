@@ -1070,6 +1070,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
       title="SERP Analysis"
       description="Enter a keyword to pull the live Google SERP, see exactly where you rank, and get full side-by-side detail on your direct competitors and the page-1 leaders — content, keywords, and the backlinks behind their rank."
       selectedSite={selectedSite}
+      requiresProject={false}
       loading={false}
       error={error}
     >

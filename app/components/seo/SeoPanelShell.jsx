@@ -46,8 +46,15 @@ export default function SeoPanelShell({
   eyebrow = "SEO Tools",
   siteUrl,
   embedded = false,
+  /* Toolkit tools start from a keyword or a typed domain, so they must render
+     with nothing selected. Only project-scoped panels gate on the selection. */
+  requiresProject = true,
 }) {
-  if (!embedded && (!selectedSite || (!String(selectedSite).startsWith("http") && !/^\d+$/.test(String(selectedSite))))) {
+  const missingProject =
+    !selectedSite ||
+    (!String(selectedSite).startsWith("http") && !/^\d+$/.test(String(selectedSite)));
+
+  if (requiresProject && !embedded && missingProject) {
     return (
       <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-6 shadow-sm sm:p-8">
         <EmptyState

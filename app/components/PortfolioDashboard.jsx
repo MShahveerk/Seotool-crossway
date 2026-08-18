@@ -9,6 +9,7 @@ import {
   Gauge,
   Globe,
   Megaphone,
+  MousePointerClick,
   Search,
   Send,
   ShieldCheck,
@@ -69,13 +70,27 @@ function sumForProject(entry, countMap) {
   return total;
 }
 
-/** First row found across a project's identifiers — used for single-value facts. */
-function pickForProject(entry, rowMap) {
-  for (const key of projectMatchKeys(entry)) {
-    const hit = rowMap.get(key);
-    if (hit) return hit;
+/**
+ * Bare host, for facts that arrive keyed by whatever URL the provider stored.
+ *
+ * Content rows key off our own `siteLink` and match exactly, but SE Ranking,
+ * Search Console and URL inspection each record the site in their own shape
+ * (`example.com`, `https://www.example.com`, `sc-domain:example.com`). Matching
+ * on the host is the only key all four agree on.
+ */
+function hostKey(value) {
+  const host = siteHost(value);
+  return host ? host.replace(/^www\./, "").toLowerCase() : "";
+}
+
+/** `[{ siteLink|domain, ... }]` → Map keyed by host, newest row winning. */
+function toHostMap(rows) {
+  const m = new Map();
+  for (const row of rows || []) {
+    const k = hostKey(row.domain || row.siteLink);
+    if (k && !m.has(k)) m.set(k, row);
   }
-  return null;
+  return m;
 }
 
 /** `[{ siteLink, count }]` → Map keyed by the same normalisation projects use. */
@@ -84,15 +99,6 @@ function toCountMap(rows) {
   for (const row of rows || []) {
     const k = normalizeMatchKey(row.siteLink);
     if (k) m.set(k, (m.get(k) || 0) + Number(row.count || 0));
-  }
-  return m;
-}
-
-function toRowMap(rows) {
-  const m = new Map();
-  for (const row of rows || []) {
-    const k = normalizeMatchKey(row.siteLink);
-    if (k && !m.has(k)) m.set(k, row);
   }
   return m;
 }
@@ -317,6 +323,54 @@ function ProjectCard({ project, isActive, onOpen, index }) {
   const coverage =
     project.indexedTotal > 0 ? Math.round((project.indexedCount / project.indexedTotal) * 100) : null;
 
+  /* Search traffic is the headline where it exists — it's the number a client
+     asks about first. Social-only projects have none, so reach takes the slot
+     rather than leaving the hero empty. */
+  const hero = project.hasClicks
+    ? {
+        label: "Clicks 28d",
+        value: compactNum(project.clicks),
+        delta: project.clicksDelta,
+        points: project.clicksTrend,
+        tone: "var(--cw-neon)",
+      }
+    : {
+        label: "Reach 30d",
+        value: project.followers ? compactNum(project.followers) : "—",
+        delta: project.followerDelta,
+        points: project.trend,
+        tone: "var(--cw-info)",
+      };
+
+  /* Built as a list so the grid can be 3 or 4 wide without a second layout:
+     reach only earns a cell when search clicks already took the hero slot. */
+  const stats = [
+    project.hasClicks && project.followers
+      ? { icon: Megaphone, label: "Reach", value: compactNum(project.followers) }
+      : null,
+    {
+      icon: ShieldCheck,
+      label: "Indexed",
+      value: coverage == null ? "—" : `${coverage}%`,
+      title:
+        coverage == null
+          ? "No URL inspection run yet"
+          : `${project.indexedCount} of ${project.indexedTotal} URLs indexed`,
+    },
+    {
+      icon: FileText,
+      label: "Blogs",
+      value: compactNum(project.totalBlogs),
+      title: `${project.recentBlogs} published in the last 30 days`,
+    },
+    {
+      icon: Send,
+      label: "Posts",
+      value: compactNum(project.totalPosts),
+      title: `${project.recentPosts} published in the last 30 days`,
+    },
+  ].filter(Boolean);
+
   return (
     <button
       type="button"
@@ -366,7 +420,7 @@ function ProjectCard({ project, isActive, onOpen, index }) {
         </span>
       </div>
 
-      {/* Health + reach: the two things worth knowing at a glance. */}
+      {/* Health + traffic: the two things worth knowing at a glance. */}
       <div className="mt-4 flex items-center gap-4 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)]/50 p-3">
         <div className="flex items-center gap-2.5">
           <HealthRing score={project.healthScore} />
@@ -387,40 +441,21 @@ function ProjectCard({ project, isActive, onOpen, index }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--cw-ink-faint)]">
-              Reach 30d
+              {hero.label}
             </span>
-            <DeltaBadge value={project.followerDelta} />
+            <DeltaBadge value={hero.delta} />
           </div>
           <p className="text-[15px] font-bold tabular-nums leading-tight text-[var(--cw-ink)]">
-            {project.followers ? compactNum(project.followers) : "—"}
+            {hero.value}
           </p>
-          <Sparkline points={project.trend} id={project.sparkId} />
+          <Sparkline points={hero.points} id={project.sparkId} tone={hero.tone} />
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <MiniStat
-          icon={ShieldCheck}
-          label="Indexed"
-          value={coverage == null ? "—" : `${coverage}%`}
-          title={
-            coverage == null
-              ? "No URL inspection run yet"
-              : `${project.indexedCount} of ${project.indexedTotal} URLs indexed`
-          }
-        />
-        <MiniStat
-          icon={FileText}
-          label="Blogs"
-          value={compactNum(project.totalBlogs)}
-          title={`${project.recentBlogs} published in the last 30 days`}
-        />
-        <MiniStat
-          icon={Send}
-          label="Posts"
-          value={compactNum(project.totalPosts)}
-          title={`${project.recentPosts} published in the last 30 days`}
-        />
+      <div className={`mt-3 grid gap-2 ${stats.length === 4 ? "grid-cols-4" : "grid-cols-3"}`}>
+        {stats.map((s) => (
+          <MiniStat key={s.label} icon={s.icon} label={s.label} value={s.value} title={s.title} />
+        ))}
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--cw-hairline)] pt-3">
@@ -446,6 +481,7 @@ function ProjectCard({ project, isActive, onOpen, index }) {
 const SORTS = [
   { id: "attention", label: "Needs attention" },
   { id: "name", label: "Name" },
+  { id: "clicks", label: "Search clicks" },
   { id: "reach", label: "Reach" },
   { id: "health", label: "Lowest health" },
   { id: "activity", label: "Most active" },
@@ -480,6 +516,7 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
     health: [],
     indexed: [],
     followerSeries: [],
+    clicks: [],
   });
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -508,6 +545,7 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
         health: arr(ov?.health),
         indexed: arr(ov?.indexed),
         followerSeries: arr(ov?.followerSeries),
+        clicks: arr(ov?.clicks),
       });
       setLoading(false);
     });
@@ -522,8 +560,9 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
   const totalBlogMap = useMemo(() => toCountMap(overview.totalBlogs), [overview.totalBlogs]);
   const recentPostMap = useMemo(() => toCountMap(overview.recentPosts), [overview.recentPosts]);
   const recentBlogMap = useMemo(() => toCountMap(overview.recentBlogs), [overview.recentBlogs]);
-  const healthMap = useMemo(() => toRowMap(overview.health), [overview.health]);
-  const indexedMap = useMemo(() => toRowMap(overview.indexed), [overview.indexed]);
+  const healthMap = useMemo(() => toHostMap(overview.health), [overview.health]);
+  const indexedMap = useMemo(() => toHostMap(overview.indexed), [overview.indexed]);
+  const clicksMap = useMemo(() => toHostMap(overview.clicks), [overview.clicks]);
 
   const followerRowsByKey = useMemo(() => {
     const m = new Map();
@@ -554,8 +593,11 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
         const trend = followerTrendForProject(entry, followerSeriesByKey);
         const first = trend.length > 1 ? trend[0].total : 0;
         const last = trend.length > 1 ? trend[trend.length - 1].total : 0;
-        const health = pickForProject(entry, healthMap);
-        const indexed = pickForProject(entry, indexedMap);
+        const key = hostKey(entry.siteLink);
+        const health = key ? healthMap.get(key) : null;
+        const indexed = key ? indexedMap.get(key) : null;
+        const clicks = key ? clicksMap.get(key) : null;
+        const prevClicks = clicks?.prevClicks;
         return {
           entry,
           value: getClientAccountSelectValue(entry),
@@ -577,6 +619,13 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
           criticalCount: health?.critical || 0,
           indexedCount: indexed?.indexed || 0,
           indexedTotal: indexed?.total || 0,
+          hasClicks: Boolean(clicks),
+          clicks: clicks?.clicks || 0,
+          impressions: clicks?.impressions || 0,
+          // Sparkline speaks one shape; clicks arrive under their own key.
+          clicksTrend: (clicks?.series || []).map((d) => ({ date: d.date, total: d.clicks })),
+          clicksDelta:
+            prevClicks > 0 ? ((clicks.clicks - prevClicks) / prevClicks) * 100 : null,
         };
       })
       .filter((p) => p.value);
@@ -593,6 +642,7 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
     followerSeriesByKey,
     healthMap,
     indexedMap,
+    clicksMap,
   ]);
 
   const projects = useMemo(() => {
@@ -612,6 +662,7 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
       // unaudited sites sink rather than pretending to score zero.
       attention: (a, b) => pendingOf(b) - pendingOf(a) || a.name.localeCompare(b.name),
       name: (a, b) => a.name.localeCompare(b.name),
+      clicks: (a, b) => b.clicks - a.clicks || a.name.localeCompare(b.name),
       reach: (a, b) => b.followers - a.followers || a.name.localeCompare(b.name),
       health: (a, b) => (a.healthScore ?? 999) - (b.healthScore ?? 999) || a.name.localeCompare(b.name),
       activity: (a, b) =>
@@ -623,13 +674,15 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
   const stats = useMemo(() => {
     const pending = allProjects.reduce((s, p) => s + p.pendingBlogs + p.pendingPosts, 0);
     const reach = allProjects.reduce((s, p) => s + p.followers, 0);
+    const clicks = allProjects.reduce((s, p) => s + p.clicks, 0);
+    const tracked = allProjects.filter((p) => p.hasClicks).length;
     const scored = allProjects.filter((p) => p.healthScore != null);
     const avgHealth = scored.length
       ? Math.round(scored.reduce((s, p) => s + p.healthScore, 0) / scored.length)
       : null;
     const shipped = allProjects.reduce((s, p) => s + p.recentBlogs + p.recentPosts, 0);
     const attention = allProjects.filter((p) => p.pendingBlogs + p.pendingPosts > 0).length;
-    return { pending, reach, avgHealth, scored: scored.length, shipped, attention };
+    return { pending, reach, clicks, tracked, avgHealth, scored: scored.length, shipped, attention };
   }, [allProjects]);
 
   const counts = useMemo(
@@ -714,10 +767,14 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
             accent="var(--cw-caution)"
           />
           <SummaryTile
-            icon={Megaphone}
-            label="Total reach"
-            value={compactNum(stats.reach)}
-            sub="Followers across all platforms"
+            icon={MousePointerClick}
+            label="Search clicks 28d"
+            value={compactNum(stats.clicks)}
+            sub={
+              stats.tracked > 0
+                ? `${stats.tracked} ${stats.tracked === 1 ? "site" : "sites"} in Search Console · ${compactNum(stats.reach)} followers`
+                : `No Search Console data · ${compactNum(stats.reach)} followers`
+            }
             accent="var(--cw-info)"
           />
           <SummaryTile

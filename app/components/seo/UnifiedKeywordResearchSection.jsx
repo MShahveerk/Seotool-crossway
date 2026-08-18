@@ -7,7 +7,9 @@ import SerankingKeywordsSection from "../seranking/SerankingKeywordsSection";
 import KeywordResearchHubSection from "./KeywordResearchHubSection";
 
 export default function UnifiedKeywordResearchSection({ selectedSite = "" }) {
-  const { status } = useSerankingStatus(selectedSite);
+  /* Keyword research is project-optional, so the status probe asks globally
+     when nothing is selected rather than reporting "not configured". */
+  const { status } = useSerankingStatus(selectedSite, { siteOptional: true });
   const seConfigured = status?.configured !== false;
   const [fallbackOpen, setFallbackOpen] = useState(false);
 
@@ -19,25 +21,30 @@ export default function UnifiedKeywordResearchSection({ selectedSite = "" }) {
     <div className="space-y-6">
       <SerankingKeywordsSection selectedSite={selectedSite} />
 
-      <div className="mx-5 rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] shadow-sm">
         <button
           type="button"
           onClick={() => setFallbackOpen((o) => !o)}
-          className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+          className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-smooth hover:bg-[var(--cw-raised)]"
         >
           <div className="flex items-start gap-3">
-            <Sparkles className="mt-0.5 size-5 shrink-0 text-indigo-600" aria-hidden />
+            <Sparkles className="mt-0.5 size-5 shrink-0 text-[var(--cw-neon)]" aria-hidden />
             <div>
-              <p className="font-semibold text-gray-900">AI &amp; GSC keyword tools</p>
-              <p className="mt-0.5 text-sm text-gray-500">
-                Fallback when you need Search Console rankings, AI topic analysis, or autocomplete discovery without using API credits.
+              <p className="font-semibold text-[var(--cw-ink)]">AI &amp; GSC keyword tools</p>
+              <p className="mt-0.5 text-sm text-[var(--cw-ink-muted)]">
+                Fallback when you need Search Console rankings, AI topic analysis, or autocomplete
+                discovery without using API credits. Search Console rankings need a project selected.
               </p>
             </div>
           </div>
-          {fallbackOpen ? <ChevronUp className="size-5 text-gray-400" /> : <ChevronDown className="size-5 text-gray-400" />}
+          {fallbackOpen ? (
+            <ChevronUp className="size-5 shrink-0 text-[var(--cw-ink-faint)]" />
+          ) : (
+            <ChevronDown className="size-5 shrink-0 text-[var(--cw-ink-faint)]" />
+          )}
         </button>
         {fallbackOpen ? (
-          <div className="border-t border-gray-100 px-2 pb-4 pt-2">
+          <div className="border-t border-[var(--cw-hairline)] px-2 pb-4 pt-2">
             <KeywordResearchHubSection selectedSite={selectedSite} />
           </div>
         ) : null}
