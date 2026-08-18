@@ -60,7 +60,7 @@ async function validateBlogQuickAction(id, token) {
   return { blog };
 }
 
-async function processBlogDecline(blog, reason) {
+async function processBlogDecline(blog, reason, revisionTarget = "both") {
   const trimmedReason = String(reason || "").trim();
   if (!trimmedReason) {
     return {
@@ -99,6 +99,18 @@ async function processBlogDecline(blog, reason) {
     await revertDeclinedBlogToDraft(blog);
   } catch (err) {
     console.error(`[blog] decline revert failed for ${blog.id}: ${err.message}`);
+  }
+
+  // Feed the remarks straight back into the studio for an immediate revision run.
+  try {
+    const { enqueueBlogRevisionFromDecline } = await import("../../../../lib/studioRevision.js");
+    await enqueueBlogRevisionFromDecline({
+      blogPostId: blog.id,
+      remarks: trimmedReason,
+      target: revisionTarget,
+    });
+  } catch (err) {
+    console.warn(`[blog] revision run enqueue failed for ${blog.id}: ${err.message}`);
   }
 
   return {
@@ -209,6 +221,7 @@ export async function POST(req) {
     let token;
     let action;
     let reason;
+    let revisionTarget = "both";
 
     if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
       const form = await req.formData();
@@ -216,12 +229,14 @@ export async function POST(req) {
       token = String(form.get("token") || "");
       action = String(form.get("action") || "");
       reason = String(form.get("reason") || "");
+      revisionTarget = String(form.get("revisionTarget") || "both");
     } else {
       const body = await req.json();
       id = String(body.id || "");
       token = String(body.token || "");
       action = String(body.action || "");
       reason = String(body.reason || "");
+      revisionTarget = String(body.revisionTarget || "both");
     }
 
     if (action !== "decline") {
@@ -236,7 +251,7 @@ export async function POST(req) {
     const validated = await validateBlogQuickAction(id, token);
     if (validated.error) return validated.error;
 
-    const result = await processBlogDecline(validated.blog, reason);
+    const result = await processBlogDecline(validated.blog, reason, revisionTarget);
     if (result.error) return result.error;
     return result.page;
   } catch (error) {

@@ -47,7 +47,7 @@ async function validateQuickAction(id, token) {
   return { approval };
 }
 
-async function processDecline(approval, reason) {
+async function processDecline(approval, reason, revisionTarget = "both") {
   const trimmedReason = String(reason || "").trim();
   if (!trimmedReason) {
     return {
@@ -96,6 +96,18 @@ async function processDecline(approval, reason) {
     );
   } catch (err) {
     console.error("Failed to send decline notification email", err);
+  }
+
+  // Feed the remarks straight back into the studio for an immediate revision run.
+  try {
+    const { enqueuePostRevisionFromDecline } = await import("../../../../lib/studioRevision.js");
+    await enqueuePostRevisionFromDecline({
+      approvalId: approval.id,
+      remarks: trimmedReason,
+      target: revisionTarget,
+    });
+  } catch (err) {
+    console.warn(`[approvals] revision run enqueue failed for ${approval.id}: ${err.message}`);
   }
 
   return {
@@ -200,6 +212,7 @@ export async function POST(req) {
     let token;
     let action;
     let reason;
+    let revisionTarget = "both";
 
     if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
       const form = await req.formData();
@@ -207,12 +220,14 @@ export async function POST(req) {
       token = String(form.get("token") || "");
       action = String(form.get("action") || "");
       reason = String(form.get("reason") || "");
+      revisionTarget = String(form.get("revisionTarget") || "both");
     } else {
       const body = await req.json();
       id = String(body.id || "");
       token = String(body.token || "");
       action = String(body.action || "");
       reason = String(body.reason || "");
+      revisionTarget = String(body.revisionTarget || "both");
     }
 
     if (action !== "decline") {
@@ -222,7 +237,7 @@ export async function POST(req) {
     const validated = await validateQuickAction(id, token);
     if (validated.error) return validated.error;
 
-    const result = await processDecline(validated.approval, reason);
+    const result = await processDecline(validated.approval, reason, revisionTarget);
     if (result.error) return result.error;
     return result.page;
   } catch (error) {

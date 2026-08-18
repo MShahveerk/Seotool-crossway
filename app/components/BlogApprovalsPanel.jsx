@@ -101,6 +101,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
   const [statusFilter, setStatusFilter] = useState("open");
   const [declineOpen, setDeclineOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
+  const [declineTarget, setDeclineTarget] = useState("both");
   const [portalReady, setPortalReady] = useState(false);
   const [activeSnapshot, setActiveSnapshot] = useState(null);
   const fileInputRef = useRef(null);
@@ -373,7 +374,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
       setError("Please enter a decline reason.");
       return;
     }
-    await act(activeId, "decline", { declineReason: reason });
+    await act(activeId, "decline", { declineReason: reason, revisionTarget: declineTarget });
   };
 
   if (loading) {
@@ -878,11 +879,50 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                     className="mt-1.5 min-h-[72px] w-full rounded-xl border border-red-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-200"
                     value={declineReason}
                     onChange={(e) => setDeclineReason(e.target.value)}
-                    placeholder="Tell the team what needs to change…"
+                    placeholder="Tell the writer exactly what to change — it rewrites automatically…"
                     autoFocus
                   />
                 </label>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-red-800">
+                    Route this feedback to
+                  </p>
+                  <div className="mt-1.5 grid grid-cols-3 gap-2">
+                    {[
+                      { id: "text", label: "Wording", hint: "text only" },
+                      { id: "image", label: "Image", hint: "visual only" },
+                      { id: "both", label: "Both", hint: "full redo" },
+                    ].map((opt) => {
+                      const active = declineTarget === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setDeclineTarget(opt.id)}
+                          className={`rounded-xl border px-3 py-2 text-center text-sm font-semibold transition ${
+                            active
+                              ? "border-red-700 bg-red-700 text-white shadow-sm"
+                              : "border-red-200 bg-white text-red-800 hover:border-red-300"
+                          }`}
+                        >
+                          {opt.label}
+                          <span
+                            className={`block text-[0.68rem] font-medium ${
+                              active ? "text-red-100" : "text-red-400"
+                            }`}
+                          >
+                            {opt.hint}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1.5 text-xs text-red-700/80">
+                    The writer rewrites the copy, the image agent regenerates the visual, or both —
+                    a fresh draft is queued automatically.
+                  </p>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
                     disabled={busy}
@@ -896,6 +936,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                     onClick={() => {
                       setDeclineOpen(false);
                       setDeclineReason("");
+                      setDeclineTarget("both");
                     }}
                     className="rounded-xl border border-red-200 bg-white px-3.5 py-2 text-sm font-semibold text-red-800"
                   >
