@@ -18,25 +18,25 @@ import UnifiedSiteExplorerSection from "./UnifiedSiteExplorerSection";
 import SerankingBacklinksSection from "../seranking/SerankingBacklinksSection";
 
 const TABS = [
-  { id: "authority", label: "Authority & Performance" },
-  { id: "audit", label: "Technical Audit" },
+  { id: "audit", label: "Site Audit" },
+  { id: "authority", label: "Performance Metrics" },
   { id: "backlinks", label: "Backlinks & Explorer" },
 ];
 
 const BACKLINK_MODES = [
-  { id: "explorer", label: "Explorer" },
   { id: "profile", label: "Backlink profile" },
+  { id: "explorer", label: "Explorer" },
 ];
 
 export default function SiteIntelligenceSection({
   selectedSite = "",
-  initialTab = "authority",
-  initialBacklinkMode = "explorer",
+  initialTab = "audit",
+  initialBacklinkMode = "profile",
   onNavigateSection,
 }) {
-  const [tab, setTab] = useState(TABS.some((t) => t.id === initialTab) ? initialTab : "authority");
+  const [tab, setTab] = useState(TABS.some((t) => t.id === initialTab) ? initialTab : "audit");
   const [blMode, setBlMode] = useState(
-    BACKLINK_MODES.some((m) => m.id === initialBacklinkMode) ? initialBacklinkMode : "explorer"
+    BACKLINK_MODES.some((m) => m.id === initialBacklinkMode) ? initialBacklinkMode : "profile"
   );
 
   return (

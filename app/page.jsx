@@ -227,9 +227,16 @@ export default function Home() {
       case "seo-opportunities":
         return <SearchConsoleSection selectedSite={seoSite} />;
       case "site-intelligence":
-      case "seranking-domain":
         return (
           <SiteIntelligenceSection selectedSite={seoSite} onNavigateSection={setActiveSection} />
+        );
+      case "seranking-domain":
+        return (
+          <SiteIntelligenceSection
+            selectedSite={seoSite}
+            initialTab="authority"
+            onNavigateSection={setActiveSection}
+          />
         );
       case "site-health":
       case "pagespeed-insights":

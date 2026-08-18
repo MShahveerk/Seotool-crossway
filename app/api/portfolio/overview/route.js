@@ -10,13 +10,11 @@ export const runtime = "nodejs";
  * Lightweight, agency-wide metrics + alert counts for the portfolio
  * constellation. All grouped/distinct queries (no per-client fan-out):
  *   - pending blog + post approvals, keyed by siteLink (the amber alert)
- *   - published blog + post volume, keyed by siteLink (produced content)
+ *   - total blog + post volume per siteLink (unambiguous content count)
  *   - latest authority snapshot per domain (score + referring domains)
  *   - latest non-zero follower count per site+platform (social reach)
  * The client matches these to each node's site equivalents.
  */
-const LIVE = ["approved", "scheduled", "published", "posted"];
-
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -25,7 +23,7 @@ export async function GET() {
     }
     if (!hasGlobalSiteAccess(session.user)) {
       return Response.json(
-        { posts: [], blogs: [], publishedPosts: [], publishedBlogs: [], authority: [], followers: [] },
+        { posts: [], blogs: [], totalPosts: [], totalBlogs: [], authority: [], followers: [] },
         { status: 200 }
       );
     }
@@ -35,19 +33,11 @@ export async function GET() {
       hiddenFromAssignee: false,
     };
 
-    const [posts, blogs, pubPosts, pubBlogs, authRows, followerRows] = await Promise.all([
+    const [posts, blogs, allPosts, allBlogs, authRows, followerRows] = await Promise.all([
       prisma.approval.groupBy({ by: ["siteLink"], where: pendingWhere, _count: { _all: true } }),
       prisma.blogPost.groupBy({ by: ["siteLink"], where: pendingWhere, _count: { _all: true } }),
-      prisma.approval.groupBy({
-        by: ["siteLink"],
-        where: { status: { in: LIVE } },
-        _count: { _all: true },
-      }),
-      prisma.blogPost.groupBy({
-        by: ["siteLink"],
-        where: { status: { in: LIVE } },
-        _count: { _all: true },
-      }),
+      prisma.approval.groupBy({ by: ["siteLink"], _count: { _all: true } }),
+      prisma.blogPost.groupBy({ by: ["siteLink"], _count: { _all: true } }),
       prisma.authoritySnapshot.findMany({
         orderBy: [{ domain: "asc" }, { fetchedDate: "desc" }],
         distinct: ["domain"],
@@ -57,7 +47,7 @@ export async function GET() {
         where: { followers: { gt: 0 } },
         orderBy: [{ siteLink: "asc" }, { platform: "asc" }, { statDate: "desc" }],
         distinct: ["siteLink", "platform"],
-        select: { siteLink: true, followers: true },
+        select: { siteLink: true, platform: true, followers: true },
       }),
     ]);
 
@@ -66,20 +56,19 @@ export async function GET() {
         .filter((r) => r.siteLink)
         .map((r) => ({ siteLink: r.siteLink, count: r._count?._all || 0 }));
 
-    // Sum the latest per-platform follower counts back down to one per site.
-    const followerBySite = new Map();
-    for (const row of followerRows) {
-      if (!row.siteLink) continue;
-      followerBySite.set(row.siteLink, (followerBySite.get(row.siteLink) || 0) + (row.followers || 0));
-    }
-    const followers = Array.from(followerBySite, ([siteLink, count]) => ({ siteLink, count }));
+    // One row per site+platform (latest non-zero). The client dedupes per
+    // platform across a client's identifiers so followers are never counted
+    // twice when Meta wrote the same platform under both a URL and a page id.
+    const followers = followerRows
+      .filter((r) => r.siteLink)
+      .map((r) => ({ siteLink: r.siteLink, platform: r.platform, count: r.followers || 0 }));
 
     return Response.json(
       {
         posts: shape(posts),
         blogs: shape(blogs),
-        publishedPosts: shape(pubPosts),
-        publishedBlogs: shape(pubBlogs),
+        totalPosts: shape(allPosts),
+        totalBlogs: shape(allBlogs),
         authority: authRows.map((r) => ({
           domain: r.domain,
           score: r.score,
@@ -95,8 +84,8 @@ export async function GET() {
         error: error?.message || "Failed to load portfolio overview.",
         posts: [],
         blogs: [],
-        publishedPosts: [],
-        publishedBlogs: [],
+        totalPosts: [],
+        totalBlogs: [],
         authority: [],
         followers: [],
       },

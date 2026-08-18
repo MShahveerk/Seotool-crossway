@@ -77,6 +77,29 @@ function toCountMap(rows) {
   return m;
 }
 
+/**
+ * Follower rows come per site+platform. Dedupe per platform across a client's
+ * identifiers (a client may have stats under both a URL and a page id) and sum
+ * — the same shape the Social section / dashboard baseline produces. LinkedIn
+ * is excluded to match them.
+ */
+function followersForClient(entry, rowsByKey) {
+  const perPlatform = new Map();
+  const seen = new Set();
+  for (const key of clientMatchKeys(entry)) {
+    if (seen.has(key)) continue;
+    seen.add(key);
+    for (const row of rowsByKey.get(key) || []) {
+      const platform = String(row.platform || "").toLowerCase();
+      if (!platform || platform === "linkedin") continue;
+      perPlatform.set(platform, Math.max(perPlatform.get(platform) || 0, Number(row.count) || 0));
+    }
+  }
+  let total = 0;
+  for (const v of perPlatform.values()) total += v;
+  return total;
+}
+
 /** Authority snapshots are keyed by bare domain; match against a client host. */
 function toAuthorityMap(rows) {
   const m = new Map();
@@ -153,8 +176,8 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
   const [overview, setOverview] = useState({
     posts: [],
     blogs: [],
-    publishedPosts: [],
-    publishedBlogs: [],
+    totalPosts: [],
+    totalBlogs: [],
     authority: [],
     followers: [],
   });
@@ -175,8 +198,8 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
       setOverview({
         posts: Array.isArray(ov?.posts) ? ov.posts : [],
         blogs: Array.isArray(ov?.blogs) ? ov.blogs : [],
-        publishedPosts: Array.isArray(ov?.publishedPosts) ? ov.publishedPosts : [],
-        publishedBlogs: Array.isArray(ov?.publishedBlogs) ? ov.publishedBlogs : [],
+        totalPosts: Array.isArray(ov?.totalPosts) ? ov.totalPosts : [],
+        totalBlogs: Array.isArray(ov?.totalBlogs) ? ov.totalBlogs : [],
         authority: Array.isArray(ov?.authority) ? ov.authority : [],
         followers: Array.isArray(ov?.followers) ? ov.followers : [],
       });
@@ -189,10 +212,20 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
 
   const postMap = useMemo(() => toCountMap(overview.posts), [overview.posts]);
   const blogMap = useMemo(() => toCountMap(overview.blogs), [overview.blogs]);
-  const pubPostMap = useMemo(() => toCountMap(overview.publishedPosts), [overview.publishedPosts]);
-  const pubBlogMap = useMemo(() => toCountMap(overview.publishedBlogs), [overview.publishedBlogs]);
-  const followerMap = useMemo(() => toCountMap(overview.followers), [overview.followers]);
+  const totalPostMap = useMemo(() => toCountMap(overview.totalPosts), [overview.totalPosts]);
+  const totalBlogMap = useMemo(() => toCountMap(overview.totalBlogs), [overview.totalBlogs]);
   const authorityMap = useMemo(() => toAuthorityMap(overview.authority), [overview.authority]);
+
+  const followerRowsByKey = useMemo(() => {
+    const m = new Map();
+    for (const row of overview.followers || []) {
+      const k = normalizeMatchKey(row.siteLink);
+      if (!k) continue;
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(row);
+    }
+    return m;
+  }, [overview.followers]);
 
   const clients = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -209,9 +242,9 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
           social: Boolean(entry.facebookPageId),
           pendingPosts: sumForClient(entry, postMap),
           pendingBlogs: sumForClient(entry, blogMap),
-          publishedPosts: sumForClient(entry, pubPostMap),
-          publishedBlogs: sumForClient(entry, pubBlogMap),
-          followers: sumForClient(entry, followerMap),
+          totalPosts: sumForClient(entry, totalPostMap),
+          totalBlogs: sumForClient(entry, totalBlogMap),
+          followers: followersForClient(entry, followerRowsByKey),
           authority: auth?.score != null ? Math.round(auth.score) : null,
           referringDomains: auth?.referringDomains ?? null,
         };
@@ -219,7 +252,7 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
       .filter((c) => c.value)
       .filter((c) => !q || c.name.toLowerCase().includes(q) || c.host.toLowerCase().includes(q))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [sites, metaAccounts, query, postMap, blogMap, pubPostMap, pubBlogMap, followerMap, authorityMap]);
+  }, [sites, metaAccounts, query, postMap, blogMap, totalPostMap, totalBlogMap, followerRowsByKey, authorityMap]);
 
   const totalAlerts = useMemo(
     () => clients.reduce((s, c) => s + c.pendingPosts + c.pendingBlogs, 0),
@@ -473,8 +506,8 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
                         label="Followers"
                         value={detail.followers ? compactNum(detail.followers) : "—"}
                       />
-                      <Metric icon={FileText} label="Blogs" value={compactNum(detail.publishedBlogs)} />
-                      <Metric icon={Send} label="Posts" value={compactNum(detail.publishedPosts)} />
+                      <Metric icon={FileText} label="Blogs" value={compactNum(detail.totalBlogs)} />
+                      <Metric icon={Send} label="Posts" value={compactNum(detail.totalPosts)} />
                       {detail.pendingBlogs + detail.pendingPosts > 0 ? (
                         <span className="inline-flex items-center gap-1 rounded-lg border border-[color-mix(in_srgb,var(--cw-caution)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_12%,transparent)] px-2 py-1 text-[11px] font-semibold text-[var(--cw-caution)]">
                           <Bell className="size-3" /> {detail.pendingBlogs + detail.pendingPosts} pending
