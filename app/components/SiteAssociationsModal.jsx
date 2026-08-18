@@ -120,28 +120,28 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+      <div className="bg-[var(--cw-surface)] border border-[var(--cw-hairline)] rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-6 border-b border-[var(--cw-hairline)]">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <FiGlobe className="w-5 h-5 text-gray-900 dark:text-white" />
+            <div className="h-10 w-10 rounded-xl bg-[var(--cw-raised)] flex items-center justify-center">
+              <FiGlobe className="w-5 h-5 text-[var(--cw-ink)]" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Manage Site Associations</h2>
-              <p className="text-sm text-gray-500">Configure global website metrics and Social Media bindings</p>
+              <h2 className="text-xl font-bold text-[var(--cw-ink)]">Manage Site Associations</h2>
+              <p className="text-sm text-[var(--cw-ink-muted)]">Configure global website metrics and Social Media bindings</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-gray-800 rounded-xl transition-colors"
+            className="p-2 text-[var(--cw-ink-faint)] hover:text-[var(--cw-ink)] hover:bg-[var(--cw-overlay)] rounded-xl transition-colors"
           >
             <FiX className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1 bg-gray-50 dark:bg-gray-900/50">
+        <div className="p-6 overflow-y-auto flex-1 bg-[var(--cw-canvas)]">
           {error && (
-            <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-start gap-3 border border-red-100">
+            <div className="mb-6 p-4 bg-[color-mix(in_srgb,var(--cw-danger)_12%,var(--cw-surface))] text-[var(--cw-danger)] rounded-xl flex items-start gap-3 border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))]">
               <FiAlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-sm">Something went wrong</p>
@@ -151,11 +151,11 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
           )}
 
           <div className="mb-6 flex justify-between items-center">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Registered Sites</h3>
+            <h3 className="text-sm font-bold text-[var(--cw-ink)] uppercase tracking-wider">Registered Sites</h3>
             {editingId !== "new" && (
               <button
                 onClick={handleCreateNew}
-                className="flex items-center gap-2 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg text-sm font-semibold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--cw-neon)] text-[var(--cw-neon-ink)] rounded-lg text-sm font-semibold hover:bg-[var(--cw-neon-deep)] transition-colors"
               >
                 <FiPlus className="w-4 h-4" />
                 Onboard Website
@@ -165,30 +165,30 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
 
           <div className="space-y-4">
             {editingId === "new" && (
-              <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-[#0EFF2A]/50 shadow-sm ring-1 ring-[#0EFF2A]/20">
+              <div className="bg-[var(--cw-surface)] p-5 rounded-xl border border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))] shadow-sm ring-1 ring-[color-mix(in_srgb,var(--cw-neon)_25%,transparent)]">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Website URL *</label>
+                    <label className="block text-xs font-bold text-[var(--cw-ink-faint)] mb-1 uppercase tracking-wider">Website URL *</label>
                     <input
                       type="url"
                       value={formData.siteUrl}
                       onChange={(e) => setFormData({ ...formData, siteUrl: e.target.value })}
                       placeholder="https://example.com"
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                      className="w-full px-3 py-2 border border-[var(--cw-hairline)] rounded-lg bg-[var(--cw-raised)] text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] focus:ring-2 focus:ring-[var(--cw-neon)] focus:border-[var(--cw-neon)]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">GTM Container ID</label>
+                    <label className="block text-xs font-bold text-[var(--cw-ink-faint)] mb-1 uppercase tracking-wider">GTM Container ID</label>
                     <input
                       type="text"
                       value={formData.gtmContainerId}
                       onChange={(e) => setFormData({ ...formData, gtmContainerId: e.target.value })}
                       placeholder="GTM-XXXXXXX"
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                      className="w-full px-3 py-2 border border-[var(--cw-hairline)] rounded-lg bg-[var(--cw-raised)] text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] focus:ring-2 focus:ring-[var(--cw-neon)] focus:border-[var(--cw-neon)]"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Link Meta Page Account</label>
+                    <label className="block text-xs font-bold text-[var(--cw-ink-faint)] mb-1 uppercase tracking-wider">Link Meta Page Account</label>
                     <select
                       value={metaAccounts.find(a => a.facebookPageId === formData.facebookPageId)?.id || ""}
                       onChange={(e) => {
@@ -208,7 +208,7 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
                           });
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent text-sm"
+                      className="w-full px-3 py-2 border border-[var(--cw-hairline)] rounded-lg bg-[var(--cw-raised)] text-[var(--cw-ink)] focus:ring-2 focus:ring-[var(--cw-neon)] focus:border-[var(--cw-neon)] text-sm"
                     >
                       <option value="">-- No Linked Meta Page --</option>
                       {metaAccounts.map((acc) => (
@@ -219,9 +219,9 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
                     </select>
                   </div>
                 </div>
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-                  <button onClick={handleCancel} className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">Cancel</button>
-                  <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-[#0EFF2A] text-black rounded-lg text-sm font-bold hover:bg-[#0EFF2A]/90 transition-colors">
+                <div className="flex justify-end gap-3 pt-4 border-t border-[var(--cw-hairline)]">
+                  <button onClick={handleCancel} className="px-4 py-2 text-sm font-semibold text-[var(--cw-ink-muted)] hover:text-[var(--cw-ink)]">Cancel</button>
+                  <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-[var(--cw-neon)] text-[var(--cw-neon-ink)] rounded-lg text-sm font-bold hover:bg-[var(--cw-neon-deep)] transition-colors">
                     <FiSave className="w-4 h-4" /> Save
                   </button>
                 </div>
@@ -229,37 +229,37 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
             )}
 
             {loading && sites.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">Loading sites...</div>
+              <div className="text-center py-8 text-[var(--cw-ink-muted)]">Loading sites...</div>
             ) : sites.length === 0 && editingId !== "new" ? (
-              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                <FiGlobe className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No websites onboarded yet.</p>
+              <div className="text-center py-12 bg-[var(--cw-surface)] rounded-xl border border-[var(--cw-hairline)]">
+                <FiGlobe className="w-12 h-12 text-[var(--cw-ink-faint)] mx-auto mb-4" />
+                <p className="text-[var(--cw-ink-muted)]">No websites onboarded yet.</p>
               </div>
             ) : (
               sites.map((site) => (
                 editingId === site.id ? (
-                  <div key={site.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-[#0EFF2A]/50 shadow-sm ring-1 ring-[#0EFF2A]/20">
+                  <div key={site.id} className="bg-[var(--cw-surface)] p-5 rounded-xl border border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))] shadow-sm ring-1 ring-[color-mix(in_srgb,var(--cw-neon)_25%,transparent)]">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Website URL *</label>
+                        <label className="block text-xs font-bold text-[var(--cw-ink-faint)] mb-1 uppercase tracking-wider">Website URL *</label>
                         <input
                           type="url"
                           value={formData.siteUrl}
                           onChange={(e) => setFormData({ ...formData, siteUrl: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                          className="w-full px-3 py-2 border border-[var(--cw-hairline)] rounded-lg bg-[var(--cw-raised)] text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] focus:ring-2 focus:ring-[var(--cw-neon)] focus:border-[var(--cw-neon)]"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">GTM Container ID</label>
+                        <label className="block text-xs font-bold text-[var(--cw-ink-faint)] mb-1 uppercase tracking-wider">GTM Container ID</label>
                         <input
                           type="text"
                           value={formData.gtmContainerId}
                           onChange={(e) => setFormData({ ...formData, gtmContainerId: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                          className="w-full px-3 py-2 border border-[var(--cw-hairline)] rounded-lg bg-[var(--cw-raised)] text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] focus:ring-2 focus:ring-[var(--cw-neon)] focus:border-[var(--cw-neon)]"
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wider">Link Meta Page Account</label>
+                        <label className="block text-xs font-bold text-[var(--cw-ink-faint)] mb-1 uppercase tracking-wider">Link Meta Page Account</label>
                         <select
                           value={metaAccounts.find(a => a.facebookPageId === formData.facebookPageId)?.id || ""}
                           onChange={(e) => {
@@ -279,7 +279,7 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
                               });
                             }
                           }}
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-[var(--cw-hairline)] rounded-lg bg-[var(--cw-raised)] text-[var(--cw-ink)] focus:ring-2 focus:ring-[var(--cw-neon)] focus:border-[var(--cw-neon)] text-sm"
                         >
                           <option value="">-- No Linked Meta Page --</option>
                           {metaAccounts.map((acc) => (
@@ -290,23 +290,23 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
                         </select>
                       </div>
                     </div>
-                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-                      <button onClick={handleCancel} className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">Cancel</button>
-                      <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-[#0EFF2A] text-black rounded-lg text-sm font-bold hover:bg-[#0EFF2A]/90 transition-colors">
+                    <div className="flex justify-end gap-3 pt-4 border-t border-[var(--cw-hairline)]">
+                      <button onClick={handleCancel} className="px-4 py-2 text-sm font-semibold text-[var(--cw-ink-muted)] hover:text-[var(--cw-ink)]">Cancel</button>
+                      <button onClick={handleSave} className="flex items-center gap-2 px-4 py-2 bg-[var(--cw-neon)] text-[var(--cw-neon-ink)] rounded-lg text-sm font-bold hover:bg-[var(--cw-neon-deep)] transition-colors">
                         <FiCheck className="w-4 h-4" /> Update
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div key={site.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-gray-300 transition-colors">
+                  <div key={site.id} className="bg-[var(--cw-surface)] p-5 rounded-xl border border-[var(--cw-hairline)] flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-[var(--cw-hairline-strong)] transition-colors">
                     <div className="flex-1">
-                      <h4 className="font-bold text-gray-900 dark:text-white text-lg">{site.siteUrl}</h4>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs font-mono text-gray-600 dark:text-gray-400">
+                      <h4 className="font-bold text-[var(--cw-ink)] text-lg">{site.siteUrl}</h4>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs font-mono text-[var(--cw-ink-muted)]">
                         {site.gtmContainerId ? (
-                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">GTM: {site.gtmContainerId}</span>
+                          <span className="px-2 py-1 bg-[var(--cw-raised)] rounded">GTM: {site.gtmContainerId}</span>
                         ) : null}
                         {site.facebookPageId ? (
-                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
+                          <span className="px-2 py-1 bg-[var(--cw-raised)] rounded">
                             FB Page: {(() => {
                               const match = metaAccounts.find(a => a.facebookPageId === site.facebookPageId);
                               return match ? match.name : site.facebookPageId;
@@ -314,24 +314,24 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
                           </span>
                         ) : null}
                         {site.instagramUserId ? (
-                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">IG Account</span>
+                          <span className="px-2 py-1 bg-[var(--cw-raised)] rounded">IG Account</span>
                         ) : null}
                         {!site.gtmContainerId && !site.facebookPageId && !site.instagramUserId && (
-                          <span className="text-gray-400 italic">No tracking IDs configured</span>
+                          <span className="text-[var(--cw-ink-faint)] italic">No tracking IDs configured</span>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => handleEdit(site)}
-                        className="p-2 text-gray-500 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        className="p-2 text-[var(--cw-ink-muted)] hover:text-[var(--cw-ink)] hover:bg-[var(--cw-overlay)] rounded-lg transition-colors"
                         title="Edit"
                       >
                         <FiEdit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(site.id)}
-                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        className="p-2 text-[var(--cw-danger)] hover:bg-[color-mix(in_srgb,var(--cw-danger)_18%,var(--cw-surface))] rounded-lg transition-colors"
                         title="Delete"
                       >
                         <FiTrash2 className="w-4 h-4" />

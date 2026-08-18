@@ -59,11 +59,11 @@ export default function ModulePermissionPicker({ value, onChange, role, disabled
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-300 p-4 space-y-4 bg-white/80">
+    <div className="rounded-xl border border-[var(--cw-hairline)] p-4 space-y-4 bg-[var(--cw-surface)]">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-bold text-gray-900 dark:text-gray-900">Module permissions</p>
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="text-sm font-bold text-[var(--cw-ink)]">Module permissions</p>
+          <p className="text-xs text-[var(--cw-ink-muted)] mt-1">
             Choose Search Console, SEO, Social, Blog, and Report Studio access. Admin settings remain super admin only.
           </p>
         </div>
@@ -71,7 +71,7 @@ export default function ModulePermissionPicker({ value, onChange, role, disabled
           type="button"
           onClick={applyRoleDefaults}
           disabled={disabled}
-          className="text-xs font-semibold text-[#0a9e22] hover:underline disabled:opacity-50"
+          className="text-xs font-semibold text-[var(--cw-neon)] hover:text-[var(--cw-neon-deep)] hover:underline disabled:opacity-50"
         >
           Reset to role defaults
         </button>
@@ -87,7 +87,7 @@ export default function ModulePermissionPicker({ value, onChange, role, disabled
           return (
             <div
               key={module}
-              className="rounded-lg border border-gray-200 bg-gray-50/80 p-3 space-y-2"
+              className="rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-3 space-y-2"
             >
               <label className="flex items-center gap-2 cursor-pointer">
                 <IndeterminateCheckbox
@@ -95,19 +95,19 @@ export default function ModulePermissionPicker({ value, onChange, role, disabled
                   indeterminate={someSelected}
                   onChange={() => toggleModuleAll(module)}
                   disabled={disabled}
-                  className="w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                  className="w-4 h-4 text-[var(--cw-neon)] accent-[var(--cw-neon)] border-[var(--cw-hairline)] bg-[var(--cw-raised)] rounded focus:ring-[var(--cw-neon)]"
                 />
-                <span className="text-sm font-semibold text-gray-800">{MODULE_LABELS[module]}</span>
+                <span className="text-sm font-semibold text-[var(--cw-ink)]">{MODULE_LABELS[module]}</span>
               </label>
               <div className="pl-6 space-y-1.5">
                 {items.map((item) => (
-                  <label key={item.id} className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                  <label key={item.id} className="flex items-center gap-2 cursor-pointer text-sm text-[var(--cw-ink-dim)] hover:text-[var(--cw-ink)]">
                     <input
                       type="checkbox"
                       checked={selected.includes(item.id)}
                       onChange={() => toggleSection(module, item.id)}
                       disabled={disabled}
-                      className="w-3.5 h-3.5 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                      className="w-3.5 h-3.5 text-[var(--cw-neon)] accent-[var(--cw-neon)] border-[var(--cw-hairline)] bg-[var(--cw-raised)] rounded focus:ring-[var(--cw-neon)]"
                     />
                     <span>{item.label}</span>
                   </label>

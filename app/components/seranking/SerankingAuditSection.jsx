@@ -139,9 +139,9 @@ export default function SerankingAuditSection({
       }
     >
       {fromCache && !isRunning && report?.score != null ? (
-        <Card className="border-violet-200 bg-violet-50/40 shadow-sm mb-4">
+        <Card className="border-[color-mix(in_srgb,#b184ff_32%,var(--cw-hairline))] bg-[color-mix(in_srgb,#b184ff_10%,var(--cw-surface))] shadow-sm mb-4">
           <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-violet-950">
+            <p className="text-sm text-[var(--cw-ink-dim)]">
               Showing cached audit
               {fetchedAt ? ` from ${new Date(fetchedAt).toLocaleString()}` : ""}. Use{" "}
               <span className="font-semibold">Force new audit</span> above to crawl again (~
@@ -152,16 +152,16 @@ export default function SerankingAuditSection({
       ) : null}
 
       {isRunning ? (
-        <Card className="border-amber-200 bg-amber-50/50 shadow-sm mb-4">
+        <Card className="border-[color-mix(in_srgb,var(--cw-caution)_32%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_10%,var(--cw-surface))] shadow-sm mb-4">
           <CardContent className="p-4 space-y-2">
-            <p className="text-sm font-medium text-amber-950">
+            <p className="text-sm font-medium text-[var(--cw-ink-dim)]">
               Crawl in progress — this page auto-refreshes every 30s. Previous results stay visible
               until the new run finishes. You can force another start if this looks stuck.
             </p>
             {progress != null ? (
-              <div className="h-2 w-full rounded-full bg-amber-200/80 overflow-hidden">
+              <div className="h-2 w-full rounded-full bg-[var(--cw-overlay)] overflow-hidden">
                 <div
-                  className="h-full bg-amber-600 transition-all"
+                  className="h-full bg-[var(--cw-caution)] transition-all"
                   style={{ width: `${Math.min(100, Math.max(0, Number(progress)))}%` }}
                 />
               </div>

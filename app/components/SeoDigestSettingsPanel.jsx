@@ -78,14 +78,14 @@ export default function SeoDigestSettingsPanel() {
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-      <div className="px-4 sm:px-6 py-5 border-b border-gray-200 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] overflow-hidden">
+      <div className="px-4 sm:px-6 py-5 border-b border-[var(--cw-hairline)] flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <FiMail className="w-5 h-5 text-[#1d9c35]" />
-            <h2 className="text-xl font-bold text-gray-900">Weekly staff digests</h2>
+            <FiMail className="w-5 h-5 text-[var(--cw-neon)]" />
+            <h2 className="text-xl font-bold text-[var(--cw-ink)]">Weekly staff digests</h2>
           </div>
-          <p className="text-sm text-gray-600 mt-1 max-w-2xl">
+          <p className="text-sm text-[var(--cw-ink-muted)] mt-1 max-w-2xl">
             Landscape PDF digests for users with <strong>Weekly staff digest</strong> enabled (per user in Admin).
             Super admins always receive digests for every site. Global recipient lists have been removed.
           </p>
@@ -94,7 +94,7 @@ export default function SeoDigestSettingsPanel() {
           type="button"
           onClick={load}
           disabled={loading}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--cw-hairline)] text-sm font-semibold text-[var(--cw-ink-dim)] hover:bg-[var(--cw-overlay)]"
         >
           <FiRefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
@@ -103,22 +103,22 @@ export default function SeoDigestSettingsPanel() {
 
       <div className="px-4 sm:px-6 py-5 space-y-5">
         {error ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+          <div className="rounded-lg border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_12%,var(--cw-surface))] px-3 py-2 text-sm text-[var(--cw-danger)]">{error}</div>
         ) : null}
         {message ? (
-          <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          <div className="rounded-lg border border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] px-3 py-2 text-sm text-[var(--cw-neon)]">
             {message}
           </div>
         ) : null}
 
         {loading ? (
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-[var(--cw-ink-muted)]">Loading…</p>
         ) : (
           <>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-gray-100 bg-gray-50/80 px-4 py-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-gray-900">Weekly digest sends</p>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-sm font-semibold text-[var(--cw-ink)]">Weekly digest sends</p>
+                <p className="text-xs text-[var(--cw-ink-muted)] mt-0.5">
                   Mondays 06:00 · {digestUsers.length} user(s) · global kill-switch
                 </p>
               </div>
@@ -133,20 +133,20 @@ export default function SeoDigestSettingsPanel() {
                   persistEnabled(next);
                 }}
                 className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors ${
-                  enabled ? "bg-[#1d9c35]" : "bg-gray-300"
+                  enabled ? "bg-[var(--cw-neon)]" : "bg-[var(--cw-hairline-strong)]"
                 }`}
               >
                 <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow mt-1 transition ${
+                  className={`inline-block h-5 w-5 transform rounded-full bg-[var(--cw-ink)] shadow mt-1 transition ${
                     enabled ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
               </button>
             </div>
 
-            <div className="rounded-xl border border-gray-100 px-4 py-4 space-y-3">
-              <p className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                <FiSend className="w-4 h-4 text-[#1d9c35]" />
+            <div className="rounded-xl border border-[var(--cw-hairline)] px-4 py-4 space-y-3">
+              <p className="text-sm font-semibold text-[var(--cw-ink)] flex items-center gap-2">
+                <FiSend className="w-4 h-4 text-[var(--cw-neon)]" />
                 Send digests now
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -155,13 +155,13 @@ export default function SeoDigestSettingsPanel() {
                   value={manualSiteKey}
                   onChange={(e) => setManualSiteKey(e.target.value)}
                   placeholder="Optional site key filter"
-                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  className="flex-1 px-3 py-2 border border-[var(--cw-hairline)] bg-[var(--cw-raised)] text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] rounded-lg text-sm"
                 />
                 <button
                   type="button"
                   disabled={sending}
                   onClick={sendNow}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[var(--cw-neon)] text-[var(--cw-neon-ink)] text-sm font-semibold hover:bg-[var(--cw-neon-deep)] disabled:opacity-50"
                 >
                   <FiMail className="w-4 h-4" />
                   {sending ? "Sending…" : "Send digests"}
@@ -171,14 +171,14 @@ export default function SeoDigestSettingsPanel() {
 
             {digestUsers.length > 0 ? (
               <div>
-                <p className="text-sm font-semibold text-gray-900 mb-2">Digest recipients (from user prefs)</p>
-                <ul className="max-h-48 overflow-y-auto divide-y divide-gray-100 rounded-lg border border-gray-200 text-xs">
+                <p className="text-sm font-semibold text-[var(--cw-ink)] mb-2">Digest recipients (from user prefs)</p>
+                <ul className="max-h-48 overflow-y-auto divide-y divide-[var(--cw-hairline)] rounded-lg border border-[var(--cw-hairline)] text-xs">
                   {digestUsers.slice(0, 60).map((u) => (
                     <li key={u.email} className="px-3 py-2 flex justify-between gap-2">
-                      <span className="text-gray-700 truncate">
-                        {u.email} <span className="text-gray-400">({u.role})</span>
+                      <span className="text-[var(--cw-ink-dim)] truncate">
+                        {u.email} <span className="text-[var(--cw-ink-faint)]">({u.role})</span>
                       </span>
-                      <span className="text-gray-500 truncate max-w-[45%]">
+                      <span className="text-[var(--cw-ink-muted)] truncate max-w-[45%]">
                         {u.sites?.length ? `${u.sites.length} site(s)` : "all / none"}
                       </span>
                     </li>

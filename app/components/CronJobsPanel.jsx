@@ -15,11 +15,11 @@ function Toggle({ checked, disabled, onChange, label }) {
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition-colors ${
-        checked ? "bg-[#1d9c35]" : "bg-gray-300"
+        checked ? "bg-[var(--cw-neon)]" : "bg-[var(--cw-hairline-strong)]"
       } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
     >
       <span
-        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow mt-1 transition ${
+        className={`inline-block h-5 w-5 transform rounded-full bg-[var(--cw-ink)] shadow mt-1 transition ${
           checked ? "translate-x-6" : "translate-x-1"
         }`}
       />
@@ -30,13 +30,13 @@ function Toggle({ checked, disabled, onChange, label }) {
 function statusChip(job) {
   if (job.effectiveEnabled) {
     return (
-      <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-800 border border-green-200">
+      <span className="inline-flex items-center rounded-full bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] px-2 py-0.5 text-[11px] font-semibold text-[var(--cw-neon)] border border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))]">
         Running
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 border border-gray-200">
+    <span className="inline-flex items-center rounded-full bg-[var(--cw-raised)] px-2 py-0.5 text-[11px] font-semibold text-[var(--cw-ink-muted)] border border-[var(--cw-hairline)]">
       Off
     </span>
   );
@@ -108,14 +108,14 @@ export default function CronJobsPanel({ onNavigate } = {}) {
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden mb-6">
-      <div className="px-4 sm:px-6 py-5 border-b border-gray-200 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] overflow-hidden mb-6">
+      <div className="px-4 sm:px-6 py-5 border-b border-[var(--cw-hairline)] flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <FiClock className="w-5 h-5 text-[#1d9c35]" />
-            <h2 className="text-xl font-bold text-gray-900">Cron jobs</h2>
+            <FiClock className="w-5 h-5 text-[var(--cw-neon)]" />
+            <h2 className="text-xl font-bold text-[var(--cw-ink)]">Cron jobs</h2>
           </div>
-          <p className="text-sm text-gray-600 mt-1 max-w-3xl">
+          <p className="text-sm text-[var(--cw-ink-muted)] mt-1 max-w-3xl">
             Master switches for every scheduled job. Jobs marked &quot;Also configured elsewhere&quot;
             still need their section toggles — this global switch can stop them cold, and you can
             clear per-site enables from here.
@@ -125,7 +125,7 @@ export default function CronJobsPanel({ onNavigate } = {}) {
           type="button"
           onClick={load}
           disabled={loading}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--cw-hairline)] text-sm font-semibold text-[var(--cw-ink-dim)] hover:bg-[var(--cw-overlay)]"
         >
           <FiRefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
@@ -134,22 +134,22 @@ export default function CronJobsPanel({ onNavigate } = {}) {
 
       <div className="px-4 sm:px-6 py-5 space-y-5">
         {error ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="rounded-lg border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_12%,var(--cw-surface))] px-3 py-2 text-sm text-[var(--cw-danger)]">
             {error}
           </div>
         ) : null}
         {message ? (
-          <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+          <div className="rounded-lg border border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] px-3 py-2 text-sm text-[var(--cw-neon)]">
             {message}
           </div>
         ) : null}
 
         {loading ? (
-          <p className="text-sm text-gray-500">Loading cron schedules…</p>
+          <p className="text-sm text-[var(--cw-ink-muted)]">Loading cron schedules…</p>
         ) : (
           grouped.map((group) => (
             <section key={group.id} className="space-y-3">
-              <h3 className="text-sm font-bold uppercase tracking-wide text-gray-500">
+              <h3 className="text-sm font-bold uppercase tracking-wide text-[var(--cw-ink-faint)]">
                 {group.label}
               </h3>
               <div className="space-y-2">
@@ -161,21 +161,21 @@ export default function CronJobsPanel({ onNavigate } = {}) {
                   return (
                     <div
                       key={job.id}
-                      className="rounded-xl border border-gray-100 bg-gray-50/70 px-4 py-3 flex flex-col gap-3"
+                      className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-3 flex flex-col gap-3"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div className="min-w-0 space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-semibold text-gray-900">{job.label}</p>
+                            <p className="text-sm font-semibold text-[var(--cw-ink)]">{job.label}</p>
                             {statusChip(job)}
                             {dep ? (
-                              <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-900 border border-amber-200">
+                              <span className="inline-flex items-center rounded-full bg-[color-mix(in_srgb,var(--cw-caution)_12%,var(--cw-surface))] px-2 py-0.5 text-[11px] font-semibold text-[var(--cw-caution)] border border-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))]">
                                 Also configured elsewhere
                               </span>
                             ) : null}
                           </div>
-                          <p className="text-xs text-gray-600">{job.description}</p>
-                          <p className="text-[11px] text-gray-500 font-mono">
+                          <p className="text-xs text-[var(--cw-ink-muted)]">{job.description}</p>
+                          <p className="text-[11px] text-[var(--cw-ink-faint)] font-mono">
                             {job.when} · <span className="opacity-70">{job.schedule}</span>
                             {job.envFallback ? (
                               <span>
@@ -186,12 +186,12 @@ export default function CronJobsPanel({ onNavigate } = {}) {
                             ) : null}
                           </p>
                           {dep ? (
-                            <div className="mt-1 rounded-lg border border-amber-100 bg-amber-50/80 px-3 py-2 text-xs text-amber-950 space-y-1">
+                            <div className="mt-1 rounded-lg border border-[color-mix(in_srgb,var(--cw-caution)_30%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_10%,var(--cw-raised))] px-3 py-2 text-xs text-[var(--cw-caution)] space-y-1">
                               <p>
                                 <span className="font-semibold">Depends on:</span>{" "}
                                 {dep.sectionLabel}
                               </p>
-                              <p className="text-amber-900/90">{dep.note}</p>
+                              <p className="text-[var(--cw-ink-muted)]">{dep.note}</p>
                               {depStat ? (
                                 <p>
                                   Per-site status:{" "}
@@ -206,7 +206,7 @@ export default function CronJobsPanel({ onNavigate } = {}) {
                                   <button
                                     type="button"
                                     onClick={() => onNavigate(dep.section)}
-                                    className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-semibold text-amber-950 hover:bg-amber-50"
+                                    className="inline-flex items-center gap-1 rounded-md border border-[color-mix(in_srgb,var(--cw-caution)_40%,var(--cw-hairline))] bg-[var(--cw-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--cw-caution)] hover:bg-[var(--cw-overlay)]"
                                   >
                                     Open section <FiExternalLink className="w-3 h-3" />
                                   </button>
@@ -225,7 +225,7 @@ export default function CronJobsPanel({ onNavigate } = {}) {
                                       }
                                       persist(job.id, { disableAllSites: true });
                                     }}
-                                    className="inline-flex items-center rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] font-semibold text-amber-950 hover:bg-amber-50 disabled:opacity-40"
+                                    className="inline-flex items-center rounded-md border border-[color-mix(in_srgb,var(--cw-caution)_40%,var(--cw-hairline))] bg-[var(--cw-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--cw-caution)] hover:bg-[var(--cw-overlay)] disabled:opacity-40"
                                   >
                                     Disable all sites
                                   </button>
@@ -235,7 +235,7 @@ export default function CronJobsPanel({ onNavigate } = {}) {
                           ) : null}
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
-                          <span className="text-xs text-gray-500 sm:hidden">
+                          <span className="text-xs text-[var(--cw-ink-muted)] sm:hidden">
                             {toggleOn ? "On" : "Off"}
                           </span>
                           <Toggle

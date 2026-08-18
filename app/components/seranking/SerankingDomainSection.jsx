@@ -19,10 +19,10 @@ import { HoverLift } from "../ui-shared/Motion";
 
 function Kpi({ icon: Icon, label, value, sub, accent = "sky" }) {
   const accents = {
-    sky: "border-sky-100 bg-gradient-to-br from-sky-50/70 to-white",
-    violet: "border-violet-100 bg-gradient-to-br from-violet-50/70 to-white",
-    emerald: "border-emerald-100 bg-gradient-to-br from-emerald-50/70 to-white",
-    amber: "border-amber-100 bg-gradient-to-br from-amber-50/70 to-white",
+    sky: "border-[color-mix(in_srgb,var(--cw-info)_32%,var(--cw-hairline))] bg-gradient-to-br from-[color-mix(in_srgb,var(--cw-info)_12%,var(--cw-surface))] to-[var(--cw-surface)]",
+    violet: "border-[color-mix(in_srgb,#b184ff_32%,var(--cw-hairline))] bg-gradient-to-br from-[color-mix(in_srgb,#b184ff_12%,var(--cw-surface))] to-[var(--cw-surface)]",
+    emerald: "border-[color-mix(in_srgb,var(--cw-neon)_32%,var(--cw-hairline))] bg-gradient-to-br from-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] to-[var(--cw-surface)]",
+    amber: "border-[color-mix(in_srgb,var(--cw-caution)_32%,var(--cw-hairline))] bg-gradient-to-br from-[color-mix(in_srgb,var(--cw-caution)_12%,var(--cw-surface))] to-[var(--cw-surface)]",
   };
   return (
     <HoverLift>
@@ -147,7 +147,7 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
         </div>
 
         {overview?.trafficShareUs != null ? (
-          <Card className="shadow-sm border-sky-100">
+          <Card className="shadow-sm border-[color-mix(in_srgb,var(--cw-info)_32%,var(--cw-hairline))]">
             <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-bold uppercase text-muted-foreground">US traffic share</p>
@@ -160,10 +160,10 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
           </Card>
         ) : null}
 
-        <Card className="shadow-sm border-violet-100">
+        <Card className="shadow-sm border-[color-mix(in_srgb,#b184ff_32%,var(--cw-hairline))]">
           <CardHeader className="pb-2 flex flex-row items-center justify-between gap-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <Bot className="size-4 text-violet-600" />
+              <Bot className="size-4 text-[#b184ff]" />
               AI Search Visibility
             </CardTitle>
             {!ai?.hasData ? (
@@ -196,7 +196,7 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
                 {Object.entries(aiEngines).map(([engine, row]) => (
                   <span
                     key={engine}
-                    className="inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50/60 px-3 py-1.5 text-xs"
+                    className="inline-flex items-center gap-2 rounded-lg border border-[color-mix(in_srgb,#b184ff_32%,var(--cw-hairline))] bg-[color-mix(in_srgb,#b184ff_12%,var(--cw-surface))] px-3 py-1.5 text-xs"
                   >
                     <span className="font-bold uppercase">{engine.replace("-", " ")}</span>
                     <span className="tabular-nums">{row.visibility ?? "—"} visibility</span>
@@ -211,7 +211,7 @@ export default function SerankingDomainSection({ selectedSite = "" }) {
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <Users className="size-4 text-violet-600" />
+                <Users className="size-4 text-[#b184ff]" />
                 Organic competitors
               </CardTitle>
             </CardHeader>

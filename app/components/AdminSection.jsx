@@ -8,7 +8,6 @@ import {
   FiUserPlus, 
   FiEdit, 
   FiTrash2, 
-  FiEye, 
   FiEyeOff,
   FiSave,
   FiX,
@@ -20,8 +19,12 @@ import {
   FiCheckCircle,
   FiRefreshCw,
   FiMoreVertical,
-  FiFilter,
   FiAlertCircle,
+  FiUsers,
+  FiFileText,
+  FiDatabase,
+  FiChevronLeft,
+  FiChevronRight,
 } from "react-icons/fi";
 
 const ROLES = {
@@ -31,6 +34,73 @@ const ROLES = {
   SMM: "smm",
   APPROVER: "approver",
 };
+
+/**
+ * The console used to be one long scroll of unrelated settings cards with the
+ * user table buried at the bottom. Grouping them into tabs puts people first
+ * and keeps each concern a click away instead of a scroll away.
+ */
+const ADMIN_TABS = [
+  { id: "people", label: "People", icon: FiUsers },
+  { id: "reports", label: "Reports", icon: FiFileText },
+  { id: "sources", label: "Data sources", icon: FiDatabase },
+  { id: "automation", label: "Automation", icon: FiClock },
+];
+
+/**
+ * Role presentation, written out as literal class strings — Tailwind can't see
+ * colours assembled at runtime.
+ */
+const ROLE_META = {
+  [ROLES.SUPER_ADMIN]: {
+    label: "Super admin",
+    pill: "border-[color-mix(in_srgb,#b184ff_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,#b184ff_16%,var(--cw-surface))] text-[#c9a9ff]",
+  },
+  [ROLES.USER]: {
+    label: "User",
+    pill: "border-[color-mix(in_srgb,var(--cw-info)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-info)_14%,var(--cw-surface))] text-[var(--cw-info)]",
+  },
+  [ROLES.VIEWER]: {
+    label: "Viewer",
+    pill: "border-[var(--cw-hairline-strong)] bg-[var(--cw-overlay)] text-[var(--cw-ink-dim)]",
+  },
+  [ROLES.SMM]: {
+    label: "SMM",
+    pill: "border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_14%,var(--cw-surface))] text-[var(--cw-neon)]",
+  },
+  [ROLES.APPROVER]: {
+    label: "Approver",
+    pill: "border-[color-mix(in_srgb,var(--cw-caution)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_14%,var(--cw-surface))] text-[var(--cw-caution)]",
+  },
+};
+
+const ROLE_FILTERS = [
+  { id: "all", label: "Everyone" },
+  { id: ROLES.SUPER_ADMIN, label: "Super admins" },
+  { id: ROLES.USER, label: "Users" },
+  { id: ROLES.VIEWER, label: "Viewers" },
+  { id: ROLES.SMM, label: "SMM" },
+  { id: ROLES.APPROVER, label: "Approvers" },
+];
+
+/** Initials for the avatar chip, falling back to the email's first letter. */
+function userInitials(user) {
+  const source = String(user?.name || "").trim() || String(user?.email || "").trim();
+  if (!source) return "?";
+  const parts = source.replace(/@.*$/, "").split(/[\s._-]+/).filter(Boolean);
+  const letters = parts.slice(0, 2).map((p) => p[0]);
+  return (letters.join("") || source[0]).toUpperCase();
+}
+
+const fieldClass =
+  "w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-2 text-sm text-[var(--cw-ink)] transition-smooth placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)] disabled:opacity-60";
+
+const labelClass = "mb-2 block text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]";
+
+const checkboxClass =
+  "h-4 w-4 shrink-0 rounded border-[var(--cw-hairline-strong)] bg-[var(--cw-raised)] text-[var(--cw-neon)] accent-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]";
+
+const cardClass = "rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)]";
 
 const DEFAULT_SMM_BASELINES = [
   { platform: "facebook", accountHandle: "", followers: "" },
@@ -76,6 +146,8 @@ export default function AdminSection({ onNavigate } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [adminTab, setAdminTab] = useState("people");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({ ...EMPTY_USER_FORM });
@@ -114,7 +186,7 @@ export default function AdminSection({ onNavigate } = {}) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, roleFilter]);
 
   useEffect(() => {
     if (showCreateModal || editingUser) {
@@ -750,24 +822,28 @@ export default function AdminSection({ onNavigate } = {}) {
       return {
         label: "Inactive",
         icon: FiEyeOff,
-        classes: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+        classes:
+          "border-[color-mix(in_srgb,var(--cw-danger)_38%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_14%,var(--cw-surface))] text-[var(--cw-danger)]",
       };
     }
     if (!user.emailVerified && user.status === "pending") {
       return {
-        label: "Pending verification",
+        label: "Pending",
         icon: FiClock,
-        classes: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+        classes:
+          "border-[color-mix(in_srgb,var(--cw-caution)_38%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_14%,var(--cw-surface))] text-[var(--cw-caution)]",
       };
     }
     return {
       label: "Active",
       icon: FiCheckCircle,
-      classes: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      classes:
+        "border-[color-mix(in_srgb,var(--cw-neon)_38%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_14%,var(--cw-surface))] text-[var(--cw-neon)]",
     };
   };
 
   const filteredUsers = users.filter((user) => {
+    if (roleFilter !== "all" && (user.role || "user") !== roleFilter) return false;
     const searchLower = searchTerm.toLowerCase();
     return (
       user.email.toLowerCase().includes(searchLower) ||
@@ -780,6 +856,14 @@ export default function AdminSection({ onNavigate } = {}) {
     return (a.name || a.email || "").localeCompare(b.name || b.email || "");
   });
 
+  const userStats = {
+    total: users.length,
+    active: users.filter((u) => u.isActive !== false).length,
+    pending: users.filter((u) => u.isActive !== false && !u.emailVerified && u.status === "pending")
+      .length,
+    inactive: users.filter((u) => u.isActive === false).length,
+  };
+
   const USERS_PER_PAGE = 12;
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PER_PAGE));
   const paginatedUsers = filteredUsers.slice(
@@ -787,22 +871,11 @@ export default function AdminSection({ onNavigate } = {}) {
     currentPage * USERS_PER_PAGE
   );
 
-  const getRoleBadgeColor = (role) => {
-    switch (role) {
-      case ROLES.SUPER_ADMIN:
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-      case ROLES.USER:
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case ROLES.VIEWER:
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      case ROLES.SMM:
-        return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200";
-      case ROLES.APPROVER:
-        return "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
-    }
-  };
+  const roleMeta = (role) =>
+    ROLE_META[role] || {
+      label: role || "user",
+      pill: "border-[var(--cw-hairline-strong)] bg-[var(--cw-overlay)] text-[var(--cw-ink-dim)]",
+    };
 
   const getUserSiteLabels = (user) => {
     const sites = Array.isArray(user.accessibleSites)
@@ -828,284 +901,395 @@ export default function AdminSection({ onNavigate } = {}) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-16">
         <div className="text-center">
-          <div className="inline-block h-8 w-8 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-          <p className="mt-2 text-sm text-gray-600">Loading users...</p>
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-[var(--cw-neon)] border-t-transparent" />
+          <p className="mt-3 text-sm text-[var(--cw-ink-muted)]">Loading users…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Error Message */}
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--cw-neon)]">
+            Admin
+          </p>
+          <h1 className="mt-1 font-heading text-3xl tracking-tight text-[var(--cw-ink)]">Console</h1>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--cw-ink-muted)]">
+            People and access, report delivery, data sources and the scheduled jobs behind them.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowSiteAssociations(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--cw-ink-dim)] transition-smooth hover:border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink)]"
+        >
+          <FiLink className="h-4 w-4" />
+          Manage sites &amp; tracking
+        </button>
+      </div>
+
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-xl">
-          {error}
+        <div className="flex items-start gap-2 rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_38%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_12%,var(--cw-surface))] px-4 py-3 text-sm text-[var(--cw-danger)]">
+          <FiAlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Success Message */}
       {successMessage && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 px-4 py-3 rounded-xl">
-          {successMessage}
+        <div className="flex items-start gap-2 rounded-xl border border-[color-mix(in_srgb,var(--cw-neon)_38%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] px-4 py-3 text-sm text-[var(--cw-neon)]">
+          <FiCheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{successMessage}</span>
         </div>
       )}
 
-      <DataForSeoSettingsPanel />
-
-      <SeoDigestSettingsPanel />
-
-      <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-sm text-emerald-900 mb-4">
-        Deck filters (hide slides/stats) and downloads live under{" "}
-        <span className="font-semibold">Reports → Report Studio</span>. Delivery controls below still work;
-        they send each site using that site&apos;s saved studio template.
-      </div>
-      <ReportsManagementPanel />
-
-      <CronJobsPanel onNavigate={onNavigate} />
-
-      {/* Users Table */}
-      <div className="rounded-xl border border-gray-200 bg-[#ffffff] overflow-hidden">
-        <div className="px-4 sm:px-6 pb-4 border-b border-gray-200 py-5 flex items-start justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Manage users, roles, and site access
-            </p>
-          </div>
-          <button
-            onClick={() => setShowSiteAssociations(true)}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold bg-white text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
-          >
-            Manage Sites & Tracking
-          </button>
-        </div>
-        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="text-sm text-gray-700 font-semibold">All Users <span className="text-gray-500 font-medium">{filteredUsers.length}</span></div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-44 pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
-              />
-            </div>
-            <button className="inline-flex items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 bg-white">
-              <FiFilter className="w-4 h-4" />
-              Filters
-            </button>
+      <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-1.5">
+        {ADMIN_TABS.map((tab) => {
+          const Icon = tab.icon;
+          const active = adminTab === tab.id;
+          return (
             <button
-              onClick={() => {
-                setShowCreateModal(true);
-                setEditingUser(null);
-                setShowAdvancedSettings(false);
-                setFormData({
-                  ...EMPTY_USER_FORM,
-                  modulePermissions: getDefaultModulePermissionsForRole("user"),
-                });
-                setSiteIntegrationForm({
-                  userId: "",
-                  siteUrl: "",
-                  propertyId: "",
-                  emailOrVerification: "",
-                });
-                setIntegrationPreview(null);
-                setSmmBaselines(
-                  DEFAULT_SMM_BASELINES.map((row) => ({
-                    ...row,
-                    accountHandle: "",
-                    followers: "",
-                  }))
-                );
-                setSmmFetchStatusByPlatform({});
-              }}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm bg-black text-white"
+              key={tab.id}
+              type="button"
+              onClick={() => setAdminTab(tab.id)}
+              aria-current={active ? "page" : undefined}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-smooth ${
+                active
+                  ? "bg-[var(--cw-neon)] text-[var(--cw-neon-ink)]"
+                  : "text-[var(--cw-ink-dim)] hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink)]"
+              }`}
             >
-              Add user +
+              <Icon className="h-4 w-4" />
+              {tab.label}
+              {tab.id === "people" && (
+                <span
+                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+                    active
+                      ? "bg-[color-mix(in_srgb,var(--cw-neon-ink)_18%,transparent)] text-[var(--cw-neon-ink)]"
+                      : "bg-[var(--cw-overlay)] text-[var(--cw-ink-muted)]"
+                  }`}
+                >
+                  {userStats.total}
+                </span>
+              )}
             </button>
+          );
+        })}
+      </div>
+
+      {adminTab === "people" && (
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { label: "Total accounts", value: userStats.total, tone: "text-[var(--cw-ink)]" },
+              { label: "Active", value: userStats.active, tone: "text-[var(--cw-neon)]" },
+              { label: "Pending", value: userStats.pending, tone: "text-[var(--cw-caution)]" },
+              { label: "Inactive", value: userStats.inactive, tone: "text-[var(--cw-danger)]" },
+            ].map((stat) => (
+              <div key={stat.label} className={`${cardClass} px-4 py-3`}>
+                <p className={labelClass}>{stat.label}</p>
+                <p className={`font-heading text-2xl tabular-nums ${stat.tone}`}>{stat.value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className={`${cardClass} overflow-hidden`}>
+            <div className="flex flex-col gap-3 border-b border-[var(--cw-hairline)] px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="font-heading text-lg tracking-tight text-[var(--cw-ink)]">
+                  All users
+                </h2>
+                <p className="mt-0.5 text-xs text-[var(--cw-ink-muted)]">
+                  {filteredUsers.length}
+                  {filteredUsers.length === 1 ? " account" : " accounts"} match
+                  {filteredUsers.length === 1 ? "es" : ""} the current filter
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--cw-ink-faint)]" />
+                  <input
+                    type="text"
+                    placeholder="Search name, email or role"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] py-2 pl-9 pr-3 text-sm text-[var(--cw-ink)] transition-smooth placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)] sm:w-64"
+                  />
+                </div>
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  aria-label="Filter by role"
+                  className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 text-sm font-semibold text-[var(--cw-ink-dim)] transition-smooth focus:border-[var(--cw-neon)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
+                >
+                  {ROLE_FILTERS.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={fetchUsers}
+                  title="Reload users"
+                  aria-label="Reload users"
+                  className="inline-flex items-center justify-center rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-2.5 text-[var(--cw-ink-muted)] transition-smooth hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink)]"
+                >
+                  <FiRefreshCw className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCreateModal(true);
+                    setEditingUser(null);
+                    setShowAdvancedSettings(false);
+                    setFormData({
+                      ...EMPTY_USER_FORM,
+                      modulePermissions: getDefaultModulePermissionsForRole("user"),
+                    });
+                    setSiteIntegrationForm({
+                      userId: "",
+                      siteUrl: "",
+                      propertyId: "",
+                      emailOrVerification: "",
+                    });
+                    setIntegrationPreview(null);
+                    setSmmBaselines(
+                      DEFAULT_SMM_BASELINES.map((row) => ({
+                        ...row,
+                        accountHandle: "",
+                        followers: "",
+                      }))
+                    );
+                    setSmmFetchStatusByPlatform({});
+                  }}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[var(--cw-neon)] px-4 py-2.5 text-sm font-semibold text-[var(--cw-neon-ink)] transition-smooth hover:bg-[var(--cw-neon-deep)]"
+                >
+                  <FiUserPlus className="h-4 w-4" />
+                  Add user
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[820px] text-left text-sm">
+                <thead>
+                  <tr className="bg-[var(--cw-raised)] text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">
+                    <th className="px-4 py-3 sm:px-5">User</th>
+                    <th className="px-4 py-3">Role</th>
+                    <th className="px-4 py-3">Sites</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right sm:px-5">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-4 py-16 text-center">
+                        <FiUsers className="mx-auto h-8 w-8 text-[var(--cw-ink-faint)]" />
+                        <p className="mt-3 text-sm font-semibold text-[var(--cw-ink-dim)]">
+                          No users match this view
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
+                          Try a different search term or role filter.
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedUsers.map((user) => {
+                      const role = roleMeta(user.role);
+                      const badge = getStatusBadge(user);
+                      const BadgeIcon = badge.icon;
+                      const sites = getUserSiteLabels(user);
+                      const isSelf = user.id === session?.user?.id;
+                      return (
+                        <tr
+                          key={user.id}
+                          className="border-t border-[var(--cw-hairline)] align-middle transition-smooth hover:bg-[var(--cw-raised)]"
+                        >
+                          <td className="px-4 py-3 sm:px-5">
+                            <div className="flex items-center gap-3">
+                              <span
+                                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[color-mix(in_srgb,var(--cw-neon)_25%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] text-xs font-bold text-[var(--cw-neon)]"
+                                aria-hidden="true"
+                              >
+                                {userInitials(user)}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--cw-ink)]">
+                                  {user.name || "No name"}
+                                  {isSelf && (
+                                    <span className="rounded bg-[var(--cw-overlay)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[var(--cw-ink-muted)]">
+                                      You
+                                    </span>
+                                  )}
+                                </p>
+                                <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-[var(--cw-ink-muted)]">
+                                  <FiMail className="h-3 w-3 shrink-0" />
+                                  {user.email}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${role.pill}`}
+                            >
+                              {user.role === ROLES.SUPER_ADMIN && <FiShield className="h-3 w-3" />}
+                              {role.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {!sites.length ? (
+                              <span className="text-xs text-[var(--cw-ink-faint)]">No site assigned</span>
+                            ) : sites.length === 1 ? (
+                              <span className="flex items-center gap-1.5 text-sm text-[var(--cw-ink-dim)]">
+                                <FiLink className="h-3.5 w-3.5 shrink-0 text-[var(--cw-ink-faint)]" />
+                                <span className="max-w-[220px] truncate">{sites[0]}</span>
+                              </span>
+                            ) : (
+                              <div>
+                                <p className="text-xs font-semibold text-[var(--cw-ink-dim)]">
+                                  {sites.length} assigned sites
+                                </p>
+                                <p className="mt-0.5 max-w-[220px] truncate text-xs text-[var(--cw-ink-muted)]">
+                                  {sites.slice(0, 2).join(", ")}
+                                </p>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${badge.classes}`}
+                            >
+                              <BadgeIcon className="h-3 w-3" />
+                              {badge.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right sm:px-5">
+                            <div className="relative inline-block text-left">
+                              <button
+                                onClick={() =>
+                                  setActiveActionMenuUserId((prev) =>
+                                    prev === user.id ? null : user.id
+                                  )
+                                }
+                                className="rounded-lg p-2 text-[var(--cw-ink-muted)] transition-smooth hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink)]"
+                                aria-label="Open actions"
+                              >
+                                <FiMoreVertical className="h-4 w-4" />
+                              </button>
+                              {activeActionMenuUserId === user.id && (
+                                <div className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-overlay)] shadow-[var(--cw-shadow-lg)]">
+                                  <button
+                                    onClick={() => {
+                                      setActiveActionMenuUserId(null);
+                                      handleEdit(user);
+                                    }}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--cw-ink-dim)] transition-smooth hover:bg-[var(--cw-raised)] hover:text-[var(--cw-ink)]"
+                                  >
+                                    <FiEdit className="h-3.5 w-3.5" />
+                                    Edit details
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setActiveActionMenuUserId(null);
+                                      handleEdit(user);
+                                    }}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--cw-ink-dim)] transition-smooth hover:bg-[var(--cw-raised)] hover:text-[var(--cw-ink)]"
+                                  >
+                                    <FiShield className="h-3.5 w-3.5" />
+                                    Change permissions
+                                  </button>
+                                  {!isSelf && (
+                                    <button
+                                      onClick={() => {
+                                        setActiveActionMenuUserId(null);
+                                        handleDeleteUser(user.id);
+                                      }}
+                                      className="flex w-full items-center gap-2 border-t border-[var(--cw-hairline)] px-3 py-2 text-left text-sm text-[var(--cw-danger)] transition-smooth hover:bg-[color-mix(in_srgb,var(--cw-danger)_14%,var(--cw-surface))]"
+                                    >
+                                      <FiTrash2 className="h-3.5 w-3.5" />
+                                      Delete user
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-1.5 border-t border-[var(--cw-hairline)] px-4 py-3 text-sm">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[var(--cw-ink-muted)] transition-smooth hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink)] disabled:pointer-events-none disabled:opacity-40"
+                >
+                  <FiChevronLeft className="h-4 w-4" />
+                  Back
+                </button>
+                {Array.from({ length: Math.min(5, totalPages) }).map((_, idx) => {
+                  const page = idx + 1;
+                  const active = currentPage === page;
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`h-8 w-8 rounded-lg text-xs font-bold tabular-nums transition-smooth ${
+                        active
+                          ? "bg-[var(--cw-neon)] text-[var(--cw-neon-ink)]"
+                          : "text-[var(--cw-ink-muted)] hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink)]"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+                {totalPages > 5 && (
+                  <span className="px-1 text-xs text-[var(--cw-ink-faint)]">… {totalPages}</span>
+                )}
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[var(--cw-ink-muted)] transition-smooth hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink)] disabled:pointer-events-none disabled:opacity-40"
+                >
+                  Next
+                  <FiChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-white border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Username
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Site Link
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-300">
-              {paginatedUsers.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
-                    No users found
-                  </td>
-                </tr>
-              ) : (
-                paginatedUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {user.name || "No name"}
-                        </p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getRoleBadgeColor(
-                          user.role
-                        )}`}
-                      >
-                        {user.role === ROLES.SUPER_ADMIN && <FiShield className="w-3 h-3 mr-1" />}
-                        {user.role || "user"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {(() => {
-                        const sites = getUserSiteLabels(user);
-                        if (!sites.length) {
-                          return <span className="text-xs text-gray-400">No site assigned</span>;
-                        }
-                        if (sites.length === 1) {
-                          return (
-                            <div className="flex items-center space-x-1 text-sm text-gray-700 dark:text-gray-800">
-                              <FiLink className="w-4 h-4 shrink-0" />
-                              <span className="truncate max-w-xs">{sites[0]}</span>
-                            </div>
-                          );
-                        }
-                        return (
-                          <div className="space-y-1">
-                            <p className="text-xs font-semibold text-gray-700">{sites.length} assigned sites</p>
-                            <p className="text-xs text-gray-500 truncate max-w-xs">{sites.slice(0, 2).join(", ")}</p>
-                          </div>
-                        );
-                      })()}
-                    </td>
-                    <td className="px-6 py-4">
-                      {(() => {
-                        const badge = getStatusBadge(user);
-                        const BadgeIcon = badge.icon;
-                        return (
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${badge.classes}`}
-                          >
-                            <BadgeIcon className="w-3 h-3 mr-1" />
-                            {badge.label}
-                          </span>
-                        );
-                      })()}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="relative inline-block">
-                        <button
-                          onClick={() =>
-                            setActiveActionMenuUserId((prev) => (prev === user.id ? null : user.id))
-                          }
-                          className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
-                          aria-label="Open actions"
-                        >
-                          <FiMoreVertical className="w-4 h-4" />
-                        </button>
-                        {activeActionMenuUserId === user.id && (
-                          <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                            <button
-                              onClick={() => {
-                                setActiveActionMenuUserId(null);
-                                handleEdit(user);
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                            >
-                              View profile
-                            </button>
-                            <button
-                              onClick={() => {
-                                setActiveActionMenuUserId(null);
-                                handleEdit(user);
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                            >
-                              Change permission
-                            </button>
-                            <button
-                              onClick={() => {
-                                setActiveActionMenuUserId(null);
-                                handleEdit(user);
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                            >
-                              Edit details
-                            </button>
-                            {user.id !== session?.user?.id && (
-                              <button
-                                onClick={() => {
-                                  setActiveActionMenuUserId(null);
-                                  handleDeleteUser(user.id);
-                                }}
-                                className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                              >
-                                Delete user
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      )}
+
+      {adminTab === "reports" && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-[color-mix(in_srgb,var(--cw-info)_32%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-info)_10%,var(--cw-surface))] px-4 py-3 text-sm text-[var(--cw-ink-dim)]">
+            Deck filters (hide slides/stats) and downloads live under{" "}
+            <span className="font-semibold text-[var(--cw-ink)]">Reports → Report Studio</span>.
+            Delivery controls below still work; they send each site using that site&apos;s saved studio
+            template.
+          </div>
+          <ReportsManagementPanel />
         </div>
-        <div className="px-4 sm:px-6 py-3 border-t border-gray-200 flex items-center justify-center gap-2 text-sm">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="px-2 py-1 text-gray-500 disabled:opacity-40"
-          >
-            Back
-          </button>
-          {Array.from({ length: Math.min(5, totalPages) }).map((_, idx) => {
-            const page = idx + 1;
-            return (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`h-7 w-7 rounded ${currentPage === page ? "bg-black text-white" : "text-gray-600 hover:bg-gray-100"}`}
-              >
-                {page}
-              </button>
-            );
-          })}
-          {totalPages > 5 && <span className="text-gray-500">... {totalPages}</span>}
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="px-2 py-1 text-gray-500 disabled:opacity-40"
-          >
-            Next
-          </button>
+      )}
+
+      {adminTab === "sources" && (
+        <div className="space-y-4">
+          <DataForSeoSettingsPanel />
+          <SeoDigestSettingsPanel />
         </div>
-      </div>
+      )}
+
+      {adminTab === "automation" && <CronJobsPanel onNavigate={onNavigate} />}
 
       {/* Create/Edit Modal — portaled so section transforms cannot clip it */}
       {portalReady && (showCreateModal || editingUser)
@@ -1118,88 +1302,87 @@ export default function AdminSection({ onNavigate } = {}) {
               onClick={closeUserModal}
             >
               <div
-                className="bg-white dark:bg-gray-50 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] shadow-[var(--cw-shadow-lg)]"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="p-6 border-b border-gray-200 dark:border-gray-300 flex items-center justify-between gap-3">
-                  <h3 id="user-modal-title" className="text-xl font-bold text-gray-900 dark:text-black">
-                    {editingUser ? "Edit User" : "Create New User"}
-                  </h3>
+                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--cw-hairline)] px-6 py-5">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--cw-neon)]">
+                      {editingUser ? "Edit account" : "New account"}
+                    </p>
+                    <h3
+                      id="user-modal-title"
+                      className="mt-1 font-heading text-xl tracking-tight text-[var(--cw-ink)]"
+                    >
+                      {editingUser ? formData.name || formData.email || "Edit user" : "Create user"}
+                    </h3>
+                  </div>
                   <button
                     type="button"
                     onClick={closeUserModal}
-                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                    className="rounded-lg p-2 text-[var(--cw-ink-muted)] transition-smooth hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink)]"
                     aria-label="Close"
                   >
-                    <FiX className="w-5 h-5" />
+                    <FiX className="h-5 w-5" />
                   </button>
                 </div>
                 <form
+                  id="admin-user-form"
                   onSubmit={editingUser ? handleUpdateUser : handleCreateUser}
-                  className="p-6 space-y-4"
+                  className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6"
                 >
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
-                  Email
-                </label>
+                <label className={labelClass}>Email</label>
                 <input
                   type="email"
                   required={!editingUser}
                   disabled={!!editingUser}
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black disabled:bg-gray-100 dark:disabled:bg-gray-200"
+                  className={fieldClass}
                 />
               </div>
 
               {!editingUser ? (
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
-                    Password
-                  </label>
+                  <label className={labelClass}>Password</label>
                   <input
                     type="password"
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black"
+                    className={fieldClass}
                   />
                 </div>
               ) : (
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
-                    New password (optional)
-                  </label>
+                  <label className={labelClass}>New password (optional)</label>
                   <input
                     type="password"
                     autoComplete="new-password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="Leave blank to keep current password"
-                    className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black"
+                    className={fieldClass}
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1.5 text-xs text-[var(--cw-ink-muted)]">
                     Only fill this in if you want to reset the user&apos;s password.
                   </p>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
-                  Name
-                </label>
+                <label className={labelClass}>Name</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black"
+                  className={fieldClass}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
-                  Role
-                </label>
+                <label className={labelClass}>Role</label>
                 <select
                   value={formData.role}
                   onChange={(e) => {
@@ -1212,7 +1395,7 @@ export default function AdminSection({ onNavigate } = {}) {
                     });
                   }}
                   disabled={editingUser?.role === ROLES.SUPER_ADMIN}
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black"
+                  className={fieldClass}
                 >
                   {editingUser?.role === ROLES.SUPER_ADMIN && (
                     <option value="super_admin">Super Admin</option>
@@ -1232,62 +1415,66 @@ export default function AdminSection({ onNavigate } = {}) {
                 />
               )}
 
-              <div className="col-span-1 md:col-span-2 rounded-xl border border-gray-200 p-4 space-y-3 bg-white/80">
+              <div className="col-span-1 space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-4 md:col-span-2">
                 <div>
-                  <p className="text-sm font-bold text-gray-900">Reports</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-sm font-bold text-[var(--cw-ink)]">Reports</p>
+                  <p className="mt-0.5 text-xs text-[var(--cw-ink-muted)]">
                     Weekly digests and client PDFs for this user&apos;s assigned sites. Super admins always
                     receive all reports.
                   </p>
                 </div>
-                <label className="flex items-start gap-2 text-sm text-gray-800 cursor-pointer">
+                <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--cw-ink-dim)]">
                   <input
                     type="checkbox"
                     checked={Boolean(formData.weeklyDigestEnabled)}
                     onChange={(e) => setFormData({ ...formData, weeklyDigestEnabled: e.target.checked })}
-                    className="mt-0.5 w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                    className={`mt-0.5 ${checkboxClass}`}
                   />
                   <span>
-                    <span className="font-medium">Weekly staff digest</span>
-                    <span className="block text-xs text-gray-500">
+                    <span className="font-semibold text-[var(--cw-ink)]">Weekly staff digest</span>
+                    <span className="block text-xs text-[var(--cw-ink-muted)]">
                       Site-scoped website + social performance deck emailed Mondays
                     </span>
                   </span>
                 </label>
-                <label className="flex items-start gap-2 text-sm text-gray-800 cursor-pointer">
+                <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--cw-ink-dim)]">
                   <input
                     type="checkbox"
                     checked={Boolean(formData.receiveWebsiteReport)}
                     onChange={(e) => setFormData({ ...formData, receiveWebsiteReport: e.target.checked })}
-                    className="mt-0.5 w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                    className={`mt-0.5 ${checkboxClass}`}
                   />
                   <span>
-                    <span className="font-medium">Website monthly report</span>
-                    <span className="block text-xs text-gray-500">GSC, keywords, backlinks, audit, audience map</span>
+                    <span className="font-semibold text-[var(--cw-ink)]">Website monthly report</span>
+                    <span className="block text-xs text-[var(--cw-ink-muted)]">
+                      GSC, keywords, backlinks, audit, audience map
+                    </span>
                   </span>
                 </label>
-                <label className="flex items-start gap-2 text-sm text-gray-800 cursor-pointer">
+                <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--cw-ink-dim)]">
                   <input
                     type="checkbox"
                     checked={Boolean(formData.receiveSmmReport)}
                     onChange={(e) => setFormData({ ...formData, receiveSmmReport: e.target.checked })}
-                    className="mt-0.5 w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                    className={`mt-0.5 ${checkboxClass}`}
                   />
                   <span>
-                    <span className="font-medium">Social media monthly report</span>
-                    <span className="block text-xs text-gray-500">Platform KPIs and content performance</span>
+                    <span className="font-semibold text-[var(--cw-ink)]">Social media monthly report</span>
+                    <span className="block text-xs text-[var(--cw-ink-muted)]">
+                      Platform KPIs and content performance
+                    </span>
                   </span>
                 </label>
-                <label className="flex items-start gap-2 text-sm text-gray-800 cursor-pointer">
+                <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--cw-ink-dim)]">
                   <input
                     type="checkbox"
                     checked={Boolean(formData.receiveCombinedReport)}
                     onChange={(e) => setFormData({ ...formData, receiveCombinedReport: e.target.checked })}
-                    className="mt-0.5 w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                    className={`mt-0.5 ${checkboxClass}`}
                   />
                   <span>
-                    <span className="font-medium">Combined deck</span>
-                    <span className="block text-xs text-gray-500">
+                    <span className="font-semibold text-[var(--cw-ink)]">Combined deck</span>
+                    <span className="block text-xs text-[var(--cw-ink-muted)]">
                       One PDF with website + social. Each checked report type is emailed as its own attachment.
                     </span>
                   </span>
@@ -1295,20 +1482,22 @@ export default function AdminSection({ onNavigate } = {}) {
               </div>
 
               {(!editingUser || (editingUser && editingUser.role !== ROLES.SUPER_ADMIN)) && (
-                <div className="col-span-1 md:col-span-2 rounded-lg border border-[#0EFF2A]/20 bg-[#0EFF2A]/5 p-4 dark:border-[#0EFF2A]/10 dark:bg-[#0EFF2A]/5">
-                  <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">
-                    Link Meta Account (Facebook & Instagram)
+                <div className="col-span-1 rounded-xl border border-[color-mix(in_srgb,var(--cw-neon)_22%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_8%,var(--cw-surface))] p-4 md:col-span-2">
+                  <label className="mb-1 block text-sm font-bold text-[var(--cw-ink)]">
+                    Link Meta account (Facebook &amp; Instagram)
                   </label>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                  <p className="mb-3 text-xs text-[var(--cw-ink-muted)]">
                     Select a Facebook Page linked to your Meta Token. This will automatically set the Facebook Page ID and Instagram User ID for publishing.
                   </p>
 
                   {loadingMetaAccounts ? (
-                    <div className="text-xs text-gray-500 animate-pulse">Loading connected Meta accounts...</div>
+                    <div className="animate-pulse text-xs text-[var(--cw-ink-muted)]">
+                      Loading connected Meta accounts…
+                    </div>
                   ) : metaAccounts.length > 0 ? (
                     <div className="space-y-2">
                       {metaAccountsError ? (
-                        <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                        <div className="rounded-lg border border-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_12%,var(--cw-surface))] p-2 text-xs text-[var(--cw-caution)]">
                           {metaAccountsError}
                         </div>
                       ) : null}
@@ -1324,7 +1513,7 @@ export default function AdminSection({ onNavigate } = {}) {
                             instagramUserId: account ? account.instagramUserId : ""
                           });
                         }}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white text-gray-900 shadow-sm"
+                        className={fieldClass}
                       >
                         <option value="">-- Select a Meta Account --</option>
                         {metaAccounts.map((acc) => (
@@ -1337,15 +1526,17 @@ export default function AdminSection({ onNavigate } = {}) {
                       </select>
                     </div>
                   ) : (
-                    <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200 space-y-1">
-                      <p>{metaAccountsError || "No Meta accounts found."}</p>
+                    <div className="space-y-1.5 rounded-lg border border-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_12%,var(--cw-surface))] p-3 text-xs text-[var(--cw-ink-dim)]">
+                      <p className="font-semibold text-[var(--cw-caution)]">
+                        {metaAccountsError || "No Meta accounts found."}
+                      </p>
                       <p>
-                        On Render, set <code>META_PAGE_ACCESS_TOKEN</code> (Page or System User token from Meta for
-                        Developers), save, and restart the service. You can also type a Facebook Page ID manually below
-                        if needed.
+                        On Render, set <code className="font-mono text-[var(--cw-ink)]">META_PAGE_ACCESS_TOKEN</code>{" "}
+                        (Page or System User token from Meta for Developers), save, and restart the service. You can
+                        also type a Facebook Page ID manually below if needed.
                       </p>
                       <div className="pt-1">
-                        <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                        <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--cw-ink-faint)]">
                           Facebook Page ID (manual)
                         </label>
                         <input
@@ -1358,11 +1549,11 @@ export default function AdminSection({ onNavigate } = {}) {
                             })
                           }
                           placeholder="e.g. 123456789012345"
-                          className="w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm"
+                          className={fieldClass}
                         />
                       </div>
                       <div className="pt-1">
-                        <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                        <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--cw-ink-faint)]">
                           Instagram User ID (optional)
                         </label>
                         <input
@@ -1375,7 +1566,7 @@ export default function AdminSection({ onNavigate } = {}) {
                             })
                           }
                           placeholder="Optional Instagram business account ID"
-                          className="w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm"
+                          className={fieldClass}
                         />
                       </div>
                     </div>
@@ -1384,22 +1575,29 @@ export default function AdminSection({ onNavigate } = {}) {
               )}
 
               {(formData.role === "smm" || formData.role === "approver" || formData.role === "viewer") && (
-                <div className="col-span-1 md:col-span-2 rounded-xl border border-gray-200 p-4 space-y-3 bg-gray-50/50">
-                  <label className="block text-sm font-bold text-gray-800 dark:text-gray-900">
-                    Assign Accessible Client Sites / Pages
+                <div className="col-span-1 space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-4 md:col-span-2">
+                  <label className="block text-sm font-bold text-[var(--cw-ink)]">
+                    Assign accessible client sites / pages
                   </label>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-[var(--cw-ink-muted)]">
                     Select the client sites or Meta pages this user is allowed to access and manage.
                   </p>
                   {availableIntegrations.length > 0 ? (
-                    <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-white">
+                    <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-2">
                       {availableIntegrations.map((integration) => {
                         const val = integration.facebookPageId || integration.siteLink;
                         const metaMatch = metaAccounts.find((a) => a.facebookPageId === val);
                         const label = metaMatch ? metaMatch.name : integration.userName || val;
                         const isChecked = integrationIsAssigned(integration, formData.accessibleSites);
                         return (
-                          <label key={val} className="flex items-center space-x-2.5 py-1 hover:bg-gray-50 rounded px-1.5 cursor-pointer">
+                          <label
+                            key={val}
+                            className={`flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 transition-smooth ${
+                              isChecked
+                                ? "bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))]"
+                                : "hover:bg-[var(--cw-overlay)]"
+                            }`}
+                          >
                             <input
                               type="checkbox"
                               checked={isChecked}
@@ -1411,44 +1609,62 @@ export default function AdminSection({ onNavigate } = {}) {
                                   : current.filter((x) => !toggleKeys.includes(x));
                                 setFormData({ ...formData, accessibleSites: nextList });
                               }}
-                              className="w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                              className={checkboxClass}
                             />
-                            <span className="text-sm text-gray-700">{label}</span>
+                            <span
+                              className={`truncate text-sm ${
+                                isChecked
+                                  ? "font-semibold text-[var(--cw-ink)]"
+                                  : "text-[var(--cw-ink-dim)]"
+                              }`}
+                            >
+                              {label}
+                            </span>
                           </label>
                         );
                       })}
                     </div>
                   ) : (
-                    <div className="text-xs text-gray-500">No integrated sites or Meta pages found.</div>
+                    <div className="text-xs text-[var(--cw-ink-muted)]">
+                      No integrated sites or Meta pages found.
+                    </div>
                   )}
                 </div>
               )}
 
-              <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+              <div className="border-t border-[var(--cw-hairline)] pt-3">
                 <button
                   type="button"
                   onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-                  className="text-xs font-semibold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors flex items-center gap-1"
+                  className="flex items-center gap-1 text-xs font-bold uppercase tracking-[0.12em] text-[var(--cw-ink-faint)] transition-smooth hover:text-[var(--cw-neon)]"
                 >
-                  {showAdvancedSettings ? "Hide Advanced Tracking Settings" : "Show Advanced Tracking Settings (Site Link)"}
+                  {showAdvancedSettings
+                    ? "Hide advanced tracking settings"
+                    : "Show advanced tracking settings (site link)"}
                 </button>
               </div>
 
               {showFullUserSetup && (
-                <div className="space-y-4 pt-2">
-                  <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                    <div className="flex items-start gap-2 mb-2">
-                      <FiAlertCircle className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-                      <p className="text-sm text-blue-800">
-                        <span className="font-semibold">Heads up:</span> Tracking IDs (GTM, Facebook, Instagram) are now configured globally in the <button type="button" onClick={() => setShowSiteAssociations(true)} className="underline font-semibold hover:text-blue-900">Manage Sites & Tracking</button> modal.
-                        You only need to set the Site Link here for this user.
+                <div className="space-y-4 pt-1">
+                  <div className="rounded-xl border border-[color-mix(in_srgb,var(--cw-info)_32%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-info)_10%,var(--cw-surface))] p-4">
+                    <div className="flex items-start gap-2">
+                      <FiAlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--cw-info)]" />
+                      <p className="text-sm text-[var(--cw-ink-dim)]">
+                        <span className="font-semibold text-[var(--cw-ink)]">Heads up:</span> Tracking IDs
+                        (GTM, Facebook, Instagram) are now configured globally in the{" "}
+                        <button
+                          type="button"
+                          onClick={() => setShowSiteAssociations(true)}
+                          className="font-semibold text-[var(--cw-neon)] underline transition-smooth hover:text-[var(--cw-neon-soft)]"
+                        >
+                          Manage sites &amp; tracking
+                        </button>{" "}
+                        modal. You only need to set the Site Link here for this user.
                       </p>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-800 mb-2">
-                      Site Link
-                    </label>
+                    <label className={labelClass}>Site link</label>
                     <input
                       type="url"
                       value={formData.siteLink}
@@ -1458,23 +1674,23 @@ export default function AdminSection({ onNavigate } = {}) {
                         setSiteIntegrationForm((prev) => ({ ...prev, siteUrl: v }));
                       }}
                       placeholder="https://example.com"
-                      className="w-full px-4 py-2 border border-gray-200 dark:border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white dark:bg-gray-50 text-gray-900 dark:text-black"
+                      className={fieldClass}
                     />
                   </div>
                 </div>
               )}
 
               {showFullUserSetup && (
-                <div className="rounded-xl border border-gray-200 p-4 space-y-3">
-                  <p className="text-sm font-semibold text-gray-900">Site Integration</p>
+                <div className="space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-4">
+                  <p className="text-sm font-bold text-[var(--cw-ink)]">Site integration</p>
                   {!editingUser && (
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-[var(--cw-ink-muted)]">
                       If you fill Site URL or Property ID, integration is saved automatically when you click Create.
                     </p>
                   )}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      User Name / Email (optional for verification)
+                    <label className={labelClass}>
+                      User name / email (optional for verification)
                     </label>
                     <input
                       type="text"
@@ -1487,13 +1703,11 @@ export default function AdminSection({ onNavigate } = {}) {
                         formData.email ||
                         "user@example.com or google-site-verification=..."
                       }
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white text-gray-900"
+                      className={fieldClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Site URL
-                    </label>
+                    <label className={labelClass}>Site URL</label>
                     <input
                       type="url"
                       value={siteIntegrationForm.siteUrl}
@@ -1503,13 +1717,11 @@ export default function AdminSection({ onNavigate } = {}) {
                         setFormData((prev) => ({ ...prev, siteLink: v }));
                       }}
                       placeholder="https://example.com"
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white text-gray-900"
+                      className={fieldClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Property ID
-                    </label>
+                    <label className={labelClass}>Property ID</label>
                     <input
                       type="text"
                       value={siteIntegrationForm.propertyId}
@@ -1517,68 +1729,67 @@ export default function AdminSection({ onNavigate } = {}) {
                         setSiteIntegrationForm((prev) => ({ ...prev, propertyId: e.target.value }))
                       }
                       placeholder="sc-domain:example.com"
-                      className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent bg-white text-gray-900"
+                      className={fieldClass}
                     />
                   </div>
                   <button
                     type="button"
                     onClick={handleSaveSiteIntegrationForUser}
                     disabled={integratingSite || !editingUser}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-xl font-semibold disabled:opacity-60"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--cw-neon)] px-4 py-2.5 text-sm font-semibold text-[var(--cw-neon-ink)] transition-smooth hover:bg-[var(--cw-neon-deep)] disabled:opacity-50"
                   >
-                    <FiSave className="w-4 h-4" />
-                    {integratingSite ? "Saving..." : "Save Integration"}
+                    <FiSave className="h-4 w-4" />
+                    {integratingSite ? "Saving…" : "Save integration"}
                   </button>
                   {integrationPreview && (
-                    <div className="grid grid-cols-2 gap-3 text-sm pt-1">
-                      <div className="rounded-lg border border-gray-200 px-3 py-2">
-                        <p className="text-gray-500">Clicks</p>
-                        <p className="font-semibold text-gray-900">{integrationPreview.totalClicks}</p>
-                      </div>
-                      <div className="rounded-lg border border-gray-200 px-3 py-2">
-                        <p className="text-gray-500">Impressions</p>
-                        <p className="font-semibold text-gray-900">{integrationPreview.totalImpressions}</p>
-                      </div>
-                      <div className="rounded-lg border border-gray-200 px-3 py-2">
-                        <p className="text-gray-500">Avg CTR</p>
-                        <p className="font-semibold text-gray-900">
-                          {(integrationPreview.averageCtr * 100).toFixed(2)}%
-                        </p>
-                      </div>
-                      <div className="rounded-lg border border-gray-200 px-3 py-2">
-                        <p className="text-gray-500">Avg Position</p>
-                        <p className="font-semibold text-gray-900">
-                          {integrationPreview.averagePosition.toFixed(1)}
-                        </p>
-                      </div>
+                    <div className="grid grid-cols-2 gap-2 pt-1 text-sm">
+                      {[
+                        { label: "Clicks", value: integrationPreview.totalClicks },
+                        { label: "Impressions", value: integrationPreview.totalImpressions },
+                        { label: "Avg CTR", value: `${(integrationPreview.averageCtr * 100).toFixed(2)}%` },
+                        { label: "Avg position", value: integrationPreview.averagePosition.toFixed(1) },
+                      ].map((stat) => (
+                        <div
+                          key={stat.label}
+                          className="rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-3 py-2"
+                        >
+                          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--cw-ink-faint)]">
+                            {stat.label}
+                          </p>
+                          <p className="mt-0.5 font-semibold tabular-nums text-[var(--cw-ink)]">
+                            {stat.value}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   )}
-                  <div className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                    Send GTM-collected platform metrics to <span className="font-mono">/api/smm/collect</span> with this
+                  <div className="rounded-lg bg-[var(--cw-surface)] px-3 py-2 text-xs text-[var(--cw-ink-muted)]">
+                    Send GTM-collected platform metrics to{" "}
+                    <span className="font-mono text-[var(--cw-ink-dim)]">/api/smm/collect</span> with this
                     user&apos;s GTM ID and site URL.
                   </div>
                 </div>
               )}
 
               {showFullUserSetup && (
-                <div className="rounded-xl border border-gray-200 p-4 space-y-3">
-                  <p className="text-sm font-semibold text-gray-900">SMM Baseline Setup (Followers)</p>
-                  <p className="text-xs text-gray-600">
+                <div className="space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-4">
+                  <p className="text-sm font-bold text-[var(--cw-ink)]">SMM baseline setup (followers)</p>
+                  <p className="text-xs text-[var(--cw-ink-muted)]">
                     Optional quick-start: enter current followers so SMM cards show numbers immediately before GTM events start.
                   </p>
                   {!editingUser && (
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-[var(--cw-ink-muted)]">
                       Baseline values are saved when you click Create (needs Site Link or integrated site URL). Use Edit
                       after creation to fetch counts from handles.
                     </p>
                   )}
                   {loadingSmmBaseline && (
-                    <p className="text-xs text-gray-500">Loading saved SMM baseline...</p>
+                    <p className="text-xs text-[var(--cw-ink-faint)]">Loading saved SMM baseline…</p>
                   )}
                   {smmBaselines.map((row) => (
                     <div key={row.platform} className="space-y-1.5">
                       <div className="grid grid-cols-1 md:grid-cols-[120px_1fr_140px] gap-2">
-                      <div className="px-3 py-2 rounded border border-gray-200 bg-gray-50 text-sm text-gray-700">
+                      <div className="flex items-center rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-3 py-2 text-sm font-semibold text-[var(--cw-ink-dim)]">
                         {SMM_BASELINE_PLATFORM_LABEL[row.platform] || row.platform}
                       </div>
                       <input
@@ -1590,7 +1801,7 @@ export default function AdminSection({ onNavigate } = {}) {
                             ? "@tiktokuser or https://www.tiktok.com/@user"
                             : "@handle or profile link (optional)"
                         }
-                        className="px-3 py-2 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                        className={fieldClass}
                       />
                       <input
                         type="number"
@@ -1598,23 +1809,23 @@ export default function AdminSection({ onNavigate } = {}) {
                         value={row.followers}
                         onChange={(e) => handleSmmBaselineChange(row.platform, "followers", e.target.value)}
                         placeholder="Followers"
-                        className="px-3 py-2 border border-gray-200 rounded text-sm focus:ring-2 focus:ring-[#0EFF2A] focus:border-transparent"
+                        className={fieldClass}
                       />
                       </div>
                       {smmFetchStatusByPlatform[row.platform] && (
                         <div className="flex items-center gap-2 pl-1">
                           <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
                               smmFetchStatusByPlatform[row.platform].status === "resolved"
-                                ? "bg-green-100 text-green-700"
+                                ? "bg-[color-mix(in_srgb,var(--cw-neon)_16%,var(--cw-surface))] text-[var(--cw-neon)]"
                                 : smmFetchStatusByPlatform[row.platform].status === "loading"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-amber-100 text-amber-700"
+                                  ? "bg-[color-mix(in_srgb,var(--cw-info)_16%,var(--cw-surface))] text-[var(--cw-info)]"
+                                  : "bg-[color-mix(in_srgb,var(--cw-caution)_16%,var(--cw-surface))] text-[var(--cw-caution)]"
                             }`}
                           >
                             {smmFetchStatusByPlatform[row.platform].status}
                           </span>
-                          <span className="text-[11px] text-gray-600">
+                          <span className="text-[11px] text-[var(--cw-ink-muted)]">
                             {smmFetchStatusByPlatform[row.platform].reason}
                           </span>
                         </div>
@@ -1625,70 +1836,70 @@ export default function AdminSection({ onNavigate } = {}) {
                     type="button"
                     onClick={handleFetchSmmFromHandles}
                     disabled={fetchingSmmFromHandles || !editingUser}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-800 bg-white rounded-xl font-semibold disabled:opacity-60"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--cw-ink-dim)] transition-smooth hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink)] disabled:opacity-50"
                   >
-                    <FiRefreshCw className={`w-4 h-4 ${fetchingSmmFromHandles ? "animate-spin" : ""}`} />
-                    {fetchingSmmFromHandles ? "Fetching from handles..." : "Fetch from Handles"}
+                    <FiRefreshCw className={`h-4 w-4 ${fetchingSmmFromHandles ? "animate-spin" : ""}`} />
+                    {fetchingSmmFromHandles ? "Fetching from handles…" : "Fetch from handles"}
                   </button>
                   <button
                     type="button"
                     onClick={handleSaveSmmBaseline}
                     disabled={savingSmmBaseline || !editingUser}
-                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-xl font-semibold disabled:opacity-60"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--cw-neon)] px-4 py-2.5 text-sm font-semibold text-[var(--cw-neon-ink)] transition-smooth hover:bg-[var(--cw-neon-deep)] disabled:opacity-50"
                   >
-                    <FiSave className="w-4 h-4" />
-                    {savingSmmBaseline ? "Saving baseline..." : "Save SMM Baseline"}
+                    <FiSave className="h-4 w-4" />
+                    {savingSmmBaseline ? "Saving baseline…" : "Save SMM baseline"}
                   </button>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-[var(--cw-ink-muted)]">
                     Auto-fetch uses YouTube, Meta (Facebook/Instagram), and TikTok (TIKTOK_CLIENT_KEY/SECRET in .env.local). TikTok rows: @handle or tiktok.com profile URL only.
                   </p>
                 </div>
               )}
 
               {editingUser && editingUser.role === ROLES.SUPER_ADMIN && (
-                <div className="rounded-xl border border-gray-200 p-4">
-                  <p className="text-sm text-gray-600">
-                    Site Integration fields are hidden for Super Admin accounts.
+                <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-4">
+                  <p className="text-sm text-[var(--cw-ink-muted)]">
+                    Site integration fields are hidden for super admin accounts.
                   </p>
                 </div>
               )}
 
-              <div>
-                <label className="flex items-center space-x-2">
+              <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-4">
+                <label className="flex cursor-pointer items-center gap-2.5">
                   <input
                     type="checkbox"
                     checked={formData.isActive === true}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4 text-[#0EFF2A] border-gray-300 rounded focus:ring-[#0EFF2A]"
+                    className={checkboxClass}
                   />
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-800">Active</span>
+                  <span className="text-sm font-semibold text-[var(--cw-ink)]">Active</span>
                 </label>
                 {!editingUser && (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1.5 text-xs text-[var(--cw-ink-muted)]">
                     New accounts are ready to sign in immediately (no verification email). Uncheck only if you want
                     this user blocked from logging in.
                   </p>
                 )}
               </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="submit"
-                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-[#0EFF2A] hover:bg-[#0BCC22] text-white rounded-xl font-semibold transition-colors"
-                >
-                  <FiSave className="w-4 h-4" />
-                  <span>{editingUser ? "Update" : "Create"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={closeUserModal}
-                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-200 hover:bg-gray-200 dark:hover:bg-gray-300 text-gray-700 dark:text-gray-800 rounded-xl font-semibold transition-colors"
-                >
-                  <FiX className="w-4 h-4" />
-                  <span>Cancel</span>
-                </button>
-              </div>
             </form>
+            <div className="flex shrink-0 gap-3 border-t border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-6 py-4">
+              <button
+                type="submit"
+                form="admin-user-form"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--cw-neon)] px-4 py-2.5 text-sm font-semibold text-[var(--cw-neon-ink)] transition-smooth hover:bg-[var(--cw-neon-deep)]"
+              >
+                <FiSave className="h-4 w-4" />
+                {editingUser ? "Update user" : "Create user"}
+              </button>
+              <button
+                type="button"
+                onClick={closeUserModal}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--cw-ink-dim)] transition-smooth hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink)]"
+              >
+                <FiX className="h-4 w-4" />
+                Cancel
+              </button>
+            </div>
           </div>
         </div>,
             document.body

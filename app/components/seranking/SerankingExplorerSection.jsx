@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function Kpi({ icon: Icon, label, value, sub }) {
   return (
-    <Card className="shadow-sm border-sky-100 bg-gradient-to-br from-sky-50/70 to-white">
+    <Card className="shadow-sm border-[color-mix(in_srgb,var(--cw-info)_32%,var(--cw-hairline))] bg-gradient-to-br from-[color-mix(in_srgb,var(--cw-info)_12%,var(--cw-surface))] to-[var(--cw-surface)]">
       <CardContent className="p-4">
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
           {Icon ? <Icon className="size-4 opacity-70" /> : null}
@@ -187,13 +187,13 @@ export default function SerankingExplorerSection({ selectedSite = "" }) {
             <p className="text-sm text-muted-foreground">
               Showing data for <span className="font-semibold text-foreground">{activeTarget}</span>
               {payload?.fromCache && !payload?.creditsSpent ? (
-                <span className="ml-2 text-emerald-700 font-medium">· loaded from cache (0 credits)</span>
+                <span className="ml-2 text-[var(--cw-neon)] font-medium">· loaded from cache (0 credits)</span>
               ) : payload?.creditsSpent ? (
                 <span className="ml-2">· {payload.creditsSpent} credits spent this load</span>
               ) : null}
             </p>
             {payload?.fetchedAt ? (
-              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-sky-100 bg-sky-50/70 px-4 py-3 text-sm text-sky-950">
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[color-mix(in_srgb,var(--cw-info)_32%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-info)_12%,var(--cw-surface))] px-4 py-3 text-sm text-[var(--cw-ink-dim)]">
                 <Globe2 className="size-4 shrink-0 opacity-70" aria-hidden />
                 <span>
                   Last saved: <strong>{formatFetchedAt(payload.fetchedAt)}</strong>

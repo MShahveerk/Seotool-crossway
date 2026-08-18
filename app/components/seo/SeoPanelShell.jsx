@@ -73,7 +73,7 @@ export default function SeoPanelShell({
                     onClick={() => onRangeChange(r.id)}
                     className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
                       range === r.id
-                        ? "bg-background text-foreground shadow-sm"
+                        ? "bg-[color-mix(in_srgb,var(--cw-neon)_14%,var(--cw-surface))] text-[var(--cw-neon)]"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >

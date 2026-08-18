@@ -165,7 +165,7 @@ function AuditIssueRow({ check, auditId, defaultOpen = false }) {
                         href={u}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-violet-700 hover:underline inline-flex items-center gap-1 max-w-full"
+                        className="text-[#b184ff] hover:underline inline-flex items-center gap-1 max-w-full"
                         title={u}
                       >
                         <span className="truncate">{u}</span>
@@ -296,7 +296,7 @@ export default function SerankingAuditReport({ report, auditId = null, pages = [
     <div className="space-y-6">
       {report.score != null ? (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <Card className="shadow-sm border-emerald-100 bg-emerald-50/40">
+          <Card className="shadow-sm border-[color-mix(in_srgb,var(--cw-neon)_32%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_10%,var(--cw-surface))]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
                 <Shield className="size-4" />
@@ -337,7 +337,7 @@ export default function SerankingAuditReport({ report, auditId = null, pages = [
           <Card className="shadow-sm">
             <CardContent className="p-4">
               <p className="text-xs font-bold uppercase text-muted-foreground">Passed checks</p>
-              <p className="mt-2 text-3xl font-bold tabular-nums text-emerald-700">
+              <p className="mt-2 text-3xl font-bold tabular-nums text-[var(--cw-neon)]">
                 {formatSerankingNum(report.totalPassed)}
               </p>
             </CardContent>
@@ -354,7 +354,7 @@ export default function SerankingAuditReport({ report, auditId = null, pages = [
           <Card key={sec.uid || sec.name} className="shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                <AlertTriangle className="size-4 text-amber-600" />
+                <AlertTriangle className="size-4 text-[var(--cw-caution)]" />
                 {sec.name || sec.uid}
                 {sec.checks?.length ? (
                   <Badge variant="secondary" className="ml-auto tabular-nums font-normal">

@@ -9,9 +9,9 @@ import { HoverLift } from "../ui-shared/Motion";
 
 function Kpi({ icon: Icon, label, value, sub, accent = "violet" }) {
   const accents = {
-    violet: "border-violet-100 bg-gradient-to-br from-violet-50/80 to-white",
-    sky: "border-sky-100 bg-gradient-to-br from-sky-50/80 to-white",
-    emerald: "border-emerald-100 bg-gradient-to-br from-emerald-50/80 to-white",
+    violet: "border-[color-mix(in_srgb,#b184ff_32%,var(--cw-hairline))] bg-gradient-to-br from-[color-mix(in_srgb,#b184ff_12%,var(--cw-surface))] to-[var(--cw-surface)]",
+    sky: "border-[color-mix(in_srgb,var(--cw-info)_32%,var(--cw-hairline))] bg-gradient-to-br from-[color-mix(in_srgb,var(--cw-info)_12%,var(--cw-surface))] to-[var(--cw-surface)]",
+    emerald: "border-[color-mix(in_srgb,var(--cw-neon)_32%,var(--cw-hairline))] bg-gradient-to-br from-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] to-[var(--cw-surface)]",
   };
   return (
     <HoverLift>

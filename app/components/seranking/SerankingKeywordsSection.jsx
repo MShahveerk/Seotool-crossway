@@ -52,7 +52,7 @@ function TrendSparkline({ trend, id = "trend" }) {
     .join(" ");
   return (
     <svg width={w} height={h} className="overflow-visible" aria-hidden>
-      <polyline fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-500" points={coords} />
+      <polyline fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--cw-neon)]" points={coords} />
     </svg>
   );
 }
@@ -60,14 +60,14 @@ function TrendSparkline({ trend, id = "trend" }) {
 function TrendBadge({ direction }) {
   if (direction === "rising") {
     return (
-      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-700">
+      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[var(--cw-neon)]">
         <TrendingUp className="size-3" /> Rising
       </span>
     );
   }
   if (direction === "declining") {
     return (
-      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-600">
+      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[var(--cw-danger)]">
         <TrendingDown className="size-3" /> Declining
       </span>
     );
@@ -82,7 +82,12 @@ function TrendBadge({ direction }) {
 function DifficultyCell({ value }) {
   const n = Number(value);
   if (!Number.isFinite(n)) return <span className="text-muted-foreground">—</span>;
-  const tone = n >= 70 ? "text-red-700 bg-red-50" : n >= 40 ? "text-amber-800 bg-amber-50" : "text-emerald-700 bg-emerald-50";
+  const tone =
+    n >= 70
+      ? "text-[var(--cw-danger)] bg-[color-mix(in_srgb,var(--cw-danger)_14%,var(--cw-surface))]"
+      : n >= 40
+        ? "text-[var(--cw-caution)] bg-[color-mix(in_srgb,var(--cw-caution)_14%,var(--cw-surface))]"
+        : "text-[var(--cw-neon)] bg-[color-mix(in_srgb,var(--cw-neon)_14%,var(--cw-surface))]";
   return (
     <span className={`inline-flex min-w-[2rem] justify-center rounded-md px-2 py-0.5 text-xs font-bold tabular-nums ${tone}`}>
       {n}
@@ -106,12 +111,12 @@ function IntentBadges({ intents }) {
 function SeedKeywordCard({ row, fromCache, fetchedAt, expiresAt }) {
   if (!row) return null;
   return (
-    <Card className="shadow-sm border-violet-200 overflow-hidden">
-      <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-3 text-white">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-violet-100">Your keyword</p>
+    <Card className="shadow-sm border-[color-mix(in_srgb,var(--cw-neon)_28%,var(--cw-hairline))] overflow-hidden">
+      <div className="bg-gradient-to-r from-[color-mix(in_srgb,var(--cw-neon)_18%,var(--cw-surface))] to-[var(--cw-raised)] px-4 py-3 text-[var(--cw-ink)]">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--cw-neon)]">Your keyword</p>
         <p className="text-lg sm:text-xl font-bold truncate">{row.keyword}</p>
         {fromCache ? (
-          <p className="text-[11px] text-violet-100/90 mt-1">
+          <p className="text-[11px] text-[var(--cw-ink-muted)] mt-1">
             Cached · renews weekly{fetchedAt ? ` · saved ${new Date(fetchedAt).toLocaleDateString()}` : ""}
           </p>
         ) : null}
@@ -145,7 +150,7 @@ function SeedKeywordCard({ row, fromCache, fetchedAt, expiresAt }) {
           </div>
           <div>
             <p className="text-[10px] font-bold uppercase text-muted-foreground">Traffic potential</p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-emerald-700">
+            <p className="mt-1 text-xl font-bold tabular-nums text-[var(--cw-neon)]">
               {row.trafficPotential != null ? formatSerankingCompact(row.trafficPotential) : "—"}
             </p>
             <p className="text-[10px] text-muted-foreground">Top #1 page / mo</p>
@@ -192,7 +197,7 @@ function SeedKeywordCard({ row, fromCache, fetchedAt, expiresAt }) {
           ) : null}
         </div>
         {!row.isDataFound ? (
-          <p className="mt-3 text-sm text-amber-700">No keyword data for this term in the selected market.</p>
+          <p className="mt-3 text-sm text-[var(--cw-caution)]">No keyword data for this term in the selected market.</p>
         ) : null}
       </CardContent>
     </Card>
@@ -202,10 +207,10 @@ function SeedKeywordCard({ row, fromCache, fetchedAt, expiresAt }) {
 function KeywordDetailPanel({ row }) {
   if (!row) return null;
   return (
-    <div className="border-t border-violet-100 bg-violet-50/30 px-4 py-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5 text-sm">
+    <div className="border-t border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5 text-sm">
       <div>
         <p className="text-[10px] font-bold uppercase text-muted-foreground">Traffic potential</p>
-        <p className="mt-1 text-lg font-bold tabular-nums text-emerald-700">
+        <p className="mt-1 text-lg font-bold tabular-nums text-[var(--cw-neon)]">
           {row.trafficPotential != null ? formatSerankingCompact(row.trafficPotential) : "—"}
         </p>
         <p className="text-[10px] text-muted-foreground">Top #1 page organic traffic / mo</p>
@@ -320,7 +325,9 @@ function KeywordTable({ rows, sortField, sortDir, onSort, expandedKey, onToggleE
             return (
               <Fragment key={key}>
                 <tr
-                  className={`hover:bg-violet-50/40 cursor-pointer ${open ? "bg-violet-50/30" : ""}`}
+                  className={`cursor-pointer hover:bg-[var(--cw-raised)] ${
+                    open ? "bg-[color-mix(in_srgb,var(--cw-neon)_8%,var(--cw-surface))]" : ""
+                  }`}
                   onClick={() => onToggleExpand(key)}
                 >
                   <td className="px-3 py-2.5 text-muted-foreground text-xs">{open ? "▼" : "▶"}</td>
@@ -329,7 +336,7 @@ function KeywordTable({ rows, sortField, sortDir, onSort, expandedKey, onToggleE
                       {row.keyword}
                     </span>
                     {!row.isDataFound ? (
-                      <span className="text-[10px] text-amber-700">No data in this market</span>
+                      <span className="text-[10px] text-[var(--cw-caution)]">No data in this market</span>
                     ) : null}
                   </td>
                   {showPosition ? (
@@ -347,7 +354,7 @@ function KeywordTable({ rows, sortField, sortDir, onSort, expandedKey, onToggleE
                   <td className="px-3 py-2.5 tabular-nums text-muted-foreground">
                     {row.competition != null ? Number(row.competition).toFixed(2) : "—"}
                   </td>
-                  <td className="px-3 py-2.5 tabular-nums font-medium text-emerald-700">
+                  <td className="px-3 py-2.5 tabular-nums font-medium text-[var(--cw-neon)]">
                     {row.trafficPotential != null ? formatSerankingCompact(row.trafficPotential) : "—"}
                   </td>
                   <td className="px-3 py-2.5 tabular-nums font-medium">
@@ -548,9 +555,9 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
 
         {viewTab === "research" ? (
           <>
-            <Card className="shadow-sm border-violet-100 overflow-hidden">
+            <Card className="shadow-sm border-[color-mix(in_srgb,var(--cw-neon)_20%,var(--cw-hairline))] overflow-hidden">
               <CardContent className="p-0">
-                <div className="bg-gradient-to-br from-violet-50/80 via-white to-sky-50/40 p-5 sm:p-6 space-y-4">
+                <div className="bg-gradient-to-br from-[color-mix(in_srgb,var(--cw-neon)_10%,var(--cw-surface))] via-[var(--cw-surface)] to-[var(--cw-raised)] p-5 sm:p-6 space-y-4">
                   <div className="flex flex-col lg:flex-row gap-3">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -619,7 +626,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
 
             {lastSearch ? (
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground px-1">
-                <Sparkles className="size-3.5 text-violet-600" />
+                <Sparkles className="size-3.5 text-[var(--cw-neon)]" />
                 <span>
                   <strong className="text-foreground">{lastSearch.keyword}</strong> · {lastSearch.type} ·{" "}
                   {lastSearch.source.toUpperCase()} · {formatSerankingNum(results.length)} related ·{" "}

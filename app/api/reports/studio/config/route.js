@@ -82,9 +82,11 @@ export async function PUT(req) {
       resolveSiteReportContext(prisma, resolved.siteKey),
       resolveSiteEquivalents(prisma, resolved.siteKey),
     ]);
+    // Same alias list GET resolves from, so a save can never miss a key the
+    // next load would read.
     const saved = await setReportDeckConfig(resolved.siteKey, normalizeReportDeckConfig(body.config), {
       websiteUrl: context.websiteUrl,
-      equivalents,
+      equivalents: [...equivalents, resolved.siteKey, context.websiteUrl].filter(Boolean),
     });
     return Response.json({
       siteKey: resolved.siteKey,
