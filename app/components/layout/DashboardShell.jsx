@@ -89,10 +89,8 @@ export default function DashboardLayout({
               : "px-4 py-5 sm:px-8 sm:py-7 lg:px-12 xl:px-16 2xl:px-20"
           )}
         >
-          {isDashboard ? (
-            <div className="cw-lit mx-auto w-full max-w-6xl rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 sm:p-7">
-              {children}
-            </div>
+          {isDashboard || isPortfolio ? (
+            <div className="mx-auto w-full max-w-[1360px]">{children}</div>
           ) : isBoard ? (
             <div className="flex min-h-0 w-full flex-1 flex-col">
               <WorkspaceTabs

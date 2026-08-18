@@ -16,6 +16,7 @@ import {
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { FadeIn, StaggerItem } from "./ui-shared/Motion";
 import Btn from "./ui-shared/Btn";
+import { getClientAccountFaviconUrl } from "@/lib/clientAccountList";
 
 function siteHost(url) {
   if (!url) return "";
@@ -328,6 +329,7 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
   }, [snapshot?.social?.baselines]);
 
   const host = snapshot?.host || siteHost(effectiveSite);
+  const favicon = getClientAccountFaviconUrl(effectiveSite);
 
   const linkPill =
     "transition-smooth inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--cw-neon)_32%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_8%,transparent)] px-4 py-2 text-sm font-semibold text-[var(--cw-neon)] hover:bg-[color-mix(in_srgb,var(--cw-neon)_16%,transparent)] active:translate-y-px";
@@ -336,26 +338,28 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
   const gscErr = gsc?.available === false ? gsc.error : "";
 
   return (
-    <div className="relative min-h-[calc(100vh-1rem)]">
-      <div className="relative mx-auto max-w-6xl space-y-8 py-2 sm:space-y-10">
+    <div className="relative min-h-[calc(100vh-3.5rem)]">
+      <div className="relative mx-auto max-w-[1360px] space-y-8 py-1 sm:space-y-10">
         <FadeIn>
-          <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-[var(--cw-hairline)] pb-4">
-            <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-              <h1 className="font-heading text-lg font-semibold tracking-tight text-[var(--cw-ink)]">
-                Overview
-              </h1>
-              {host ? (
-                <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-[var(--cw-ink-dim)]">
-                  <span
-                    className="size-1.5 shrink-0 rounded-full bg-[var(--cw-neon)] shadow-[0_0_8px_rgb(14_255_42_/_0.8)]"
-                    aria-hidden
+          <header className="flex items-center justify-between gap-4 border-b border-[var(--cw-hairline)] pb-5">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)]">
+                {favicon ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={favicon}
+                    alt=""
+                    width={26}
+                    height={26}
+                    className="rounded object-contain"
                   />
-                  {host}
-                </span>
-              ) : null}
-              <span className="hidden text-xs text-[var(--cw-ink-faint)] lg:inline">
-                Search: last 28 days vs prior · Social: SMM baseline
+                ) : (
+                  <Globe className="size-6 text-[var(--cw-ink-muted)]" aria-hidden />
+                )}
               </span>
+              <h1 className="font-heading min-w-0 truncate text-2xl font-bold tracking-tight text-[var(--cw-ink)] sm:text-3xl">
+                {host || "Dashboard"}
+              </h1>
             </div>
             <Btn
               variant="secondary"
@@ -376,43 +380,6 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
             </p>
           </FadeIn>
         ) : null}
-
-        <FadeIn delay={60}>
-          <section aria-label="Quick navigation" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <QuickNavCard
-              icon={Globe}
-              title="Website Statistics"
-              desc="Traffic, queries, sitemaps"
-              sectionId="website-statistics"
-              onNavigate={go}
-              accent="sky"
-            />
-            <QuickNavCard
-              icon={Zap}
-              title="Site Health"
-              desc="Speed, authority, links"
-              sectionId="site-health"
-              onNavigate={go}
-              accent="emerald"
-            />
-            <QuickNavCard
-              icon={Search}
-              title="Keyword Research"
-              desc="Discover & rank opportunities"
-              sectionId="keyword-research"
-              onNavigate={go}
-              accent="violet"
-            />
-            <QuickNavCard
-              icon={Shield}
-              title="Site Audit"
-              desc="Crawl issues & fixes"
-              sectionId="site-audit"
-              onNavigate={go}
-              accent="amber"
-            />
-          </section>
-        </FadeIn>
 
         {health ? (
           <FadeIn delay={80}>
@@ -646,6 +613,44 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
             </section>
           </FadeIn>
         ) : null}
+
+        <FadeIn delay={110}>
+          <section aria-label="Quick navigation">
+            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">
+              Jump to a tool
+            </h2>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <QuickNavCard
+                icon={Globe}
+                title="Website Statistics"
+                desc="Traffic, queries, sitemaps"
+                sectionId="website-statistics"
+                onNavigate={go}
+              />
+              <QuickNavCard
+                icon={Zap}
+                title="Site Health"
+                desc="Speed, authority, links"
+                sectionId="site-health"
+                onNavigate={go}
+              />
+              <QuickNavCard
+                icon={Search}
+                title="Keyword Research"
+                desc="Discover & rank opportunities"
+                sectionId="keyword-research"
+                onNavigate={go}
+              />
+              <QuickNavCard
+                icon={Shield}
+                title="Site Audit"
+                desc="Crawl issues & fixes"
+                sectionId="site-audit"
+                onNavigate={go}
+              />
+            </div>
+          </section>
+        </FadeIn>
 
         {snapshot?.actions?.length ? (
           <FadeIn delay={120}>

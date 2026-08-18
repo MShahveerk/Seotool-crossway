@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Globe, Megaphone, Search, Users } from "lucide-react";
+import { ArrowUpRight, Bell, FileText, Globe, Megaphone, Search, Send, Users } from "lucide-react";
 import {
   entryMatchesSelectValue,
   getClientAccountSelectValue,
   mergeClientAccountEntries,
 } from "@/lib/clientAccountList";
-import { isMetaPageId } from "@/lib/siteAccess";
+import { canonicalizeSiteKey, isMetaPageId } from "@/lib/siteAccess";
 import ClientAccountLogo from "./ui-shared/ClientAccountLogo";
 import CrosswayLogo from "./ui-shared/CrosswayLogo";
 import { FadeIn } from "./ui-shared/Motion";
@@ -27,6 +27,33 @@ function siteHost(siteLink) {
 function isWebsiteEntry(entry) {
   const link = String(entry?.siteLink || "").trim();
   return Boolean(link && (link.startsWith("http") || link.startsWith("sc-domain:")));
+}
+
+/** Same normalisation on both sides so a stored siteLink matches a client. */
+function normalizeMatchKey(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^\d+$/.test(raw)) return raw;
+  return canonicalizeSiteKey(raw) || raw.toLowerCase();
+}
+
+function clientMatchKeys(entry) {
+  return [
+    normalizeMatchKey(entry.siteLink),
+    entry.facebookPageId ? String(entry.facebookPageId).trim() : "",
+    entry.instagramUserId ? String(entry.instagramUserId).trim() : "",
+  ].filter(Boolean);
+}
+
+function sumForClient(entry, countMap) {
+  let total = 0;
+  const seen = new Set();
+  for (const key of clientMatchKeys(entry)) {
+    if (seen.has(key)) continue;
+    seen.add(key);
+    total += countMap.get(key) || 0;
+  }
+  return total;
 }
 
 function clientDisplayName(entry, metaAccounts) {
@@ -77,6 +104,7 @@ function layoutPositions(n) {
 export default function PortfolioDashboard({ selectedSite = "", onEnterClient }) {
   const [sites, setSites] = useState([]);
   const [metaAccounts, setMetaAccounts] = useState([]);
+  const [overview, setOverview] = useState({ posts: [], blogs: [] });
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [hovered, setHovered] = useState(-1);
@@ -86,16 +114,39 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
     Promise.all([
       fetch("/api/admin/site-integrations").then((r) => r.json()).catch(() => ({})),
       fetch("/api/admin/meta-accounts").then((r) => r.json()).catch(() => ({})),
-    ]).then(([integrations, meta]) => {
+      fetch("/api/portfolio/overview").then((r) => r.json()).catch(() => ({})),
+    ]).then(([integrations, meta, ov]) => {
       if (cancelled) return;
       setSites(mergeClientAccountEntries(integrations?.sites || []));
       setMetaAccounts(Array.isArray(meta?.accounts) ? meta.accounts : []);
+      setOverview({
+        posts: Array.isArray(ov?.posts) ? ov.posts : [],
+        blogs: Array.isArray(ov?.blogs) ? ov.blogs : [],
+      });
       setLoading(false);
     });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const postMap = useMemo(() => {
+    const m = new Map();
+    for (const row of overview.posts) {
+      const k = normalizeMatchKey(row.siteLink);
+      if (k) m.set(k, (m.get(k) || 0) + Number(row.count || 0));
+    }
+    return m;
+  }, [overview.posts]);
+
+  const blogMap = useMemo(() => {
+    const m = new Map();
+    for (const row of overview.blogs) {
+      const k = normalizeMatchKey(row.siteLink);
+      if (k) m.set(k, (m.get(k) || 0) + Number(row.count || 0));
+    }
+    return m;
+  }, [overview.blogs]);
 
   const clients = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -107,11 +158,18 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
         host: siteHost(entry.siteLink),
         website: isWebsiteEntry(entry),
         social: Boolean(entry.facebookPageId),
+        pendingPosts: sumForClient(entry, postMap),
+        pendingBlogs: sumForClient(entry, blogMap),
       }))
       .filter((c) => c.value)
       .filter((c) => !q || c.name.toLowerCase().includes(q) || c.host.toLowerCase().includes(q))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [sites, metaAccounts, query]);
+  }, [sites, metaAccounts, query, postMap, blogMap]);
+
+  const totalAlerts = useMemo(
+    () => clients.reduce((s, c) => s + c.pendingPosts + c.pendingBlogs, 0),
+    [clients]
+  );
 
   const positions = useMemo(() => layoutPositions(clients.length), [clients.length]);
   const total = useMemo(() => sites.filter((s) => getClientAccountSelectValue(s)).length, [sites]);
@@ -143,14 +201,25 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
               approval scopes to it. Jump back here any time.
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)]/60 px-3 py-2 focus-within:border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))]">
-            <Search className="size-4 shrink-0 text-[var(--cw-ink-faint)]" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search clients…"
-              className="w-40 bg-transparent text-sm text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] focus:outline-none sm:w-56"
-            />
+          <div className="flex items-center gap-2">
+            {totalAlerts > 0 ? (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--cw-caution)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_12%,var(--cw-surface))] px-3 py-2 text-xs font-semibold text-[var(--cw-caution)]"
+                title="Blog and post approvals awaiting review across all clients"
+              >
+                <Bell className="size-3.5" />
+                {totalAlerts} pending
+              </span>
+            ) : null}
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)]/60 px-3 py-2 focus-within:border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))]">
+              <Search className="size-4 shrink-0 text-[var(--cw-ink-faint)]" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search clients…"
+                className="w-40 bg-transparent text-sm text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] focus:outline-none sm:w-56"
+              />
+            </div>
           </div>
         </div>
       </FadeIn>
@@ -231,6 +300,7 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
                 const p = positions[i] || { x: 50, y: 50 };
                 const isActive = entryMatchesSelectValue(c.entry, selectedSite);
                 const isHover = hovered === i;
+                const alertCount = c.pendingBlogs + c.pendingPosts;
                 return (
                   <button
                     key={`${c.value}-${i}`}
@@ -258,6 +328,14 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
                         }`}
                       >
                         <ClientAccountLogo entry={c.entry} size="md" />
+                        {alertCount > 0 ? (
+                          <span
+                            className="absolute -left-2 -top-2 flex min-w-[18px] items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--cw-caution)_55%,transparent)] bg-[var(--cw-caution)] px-1 text-[9px] font-bold text-[var(--cw-canvas)] shadow-[0_0_10px_-1px_var(--cw-caution)]"
+                            title={`${c.pendingBlogs} blog${c.pendingBlogs === 1 ? "" : "s"} · ${c.pendingPosts} post${c.pendingPosts === 1 ? "" : "s"} awaiting review`}
+                          >
+                            {alertCount > 9 ? "9+" : alertCount}
+                          </span>
+                        ) : null}
                         {isActive ? (
                           <span className="absolute -right-1.5 -top-1.5 rounded-full bg-[var(--cw-neon)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-[var(--cw-canvas)]">
                             Live
@@ -276,12 +354,26 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
                       >
                         {c.name}
                       </span>
-                      <span className="mt-0.5 flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-                        {c.website ? (
-                          <Globe className="size-3 text-[var(--cw-ink-faint)]" />
+                      <span className="mt-1 flex items-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+                        {c.pendingBlogs > 0 ? (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[var(--cw-caution)]">
+                            <FileText className="size-3" /> {c.pendingBlogs}
+                          </span>
                         ) : null}
-                        {c.social ? (
-                          <Megaphone className="size-3 text-[var(--cw-ink-faint)]" />
+                        {c.pendingPosts > 0 ? (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-[var(--cw-caution)]">
+                            <Send className="size-3" /> {c.pendingPosts}
+                          </span>
+                        ) : null}
+                        {alertCount === 0 ? (
+                          <>
+                            {c.website ? (
+                              <Globe className="size-3 text-[var(--cw-ink-faint)]" />
+                            ) : null}
+                            {c.social ? (
+                              <Megaphone className="size-3 text-[var(--cw-ink-faint)]" />
+                            ) : null}
+                          </>
                         ) : null}
                       </span>
                     </span>
@@ -294,7 +386,8 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
       </FadeIn>
 
       <p className="mt-3 text-center text-[11px] text-[var(--cw-ink-faint)]">
-        Tip: hover a node to trace its link to the hub · click to enter the workspace
+        Amber badge = blog / post approvals awaiting review · hover a node to trace its link · click to
+        enter the workspace
       </p>
     </div>
   );
