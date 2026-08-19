@@ -409,6 +409,7 @@ export default function AgentPipeline({
   emptyHint = "Start a run to watch each agent work in sequence.",
   emptyIcon: EmptyIcon = Radio,
   className = "",
+  showDraftSlot = true,
 }) {
   // `pinnedId` is the only stored selection: null means "follow the live agent".
   // Everything else is derived during render, so the cockpit can never show a
@@ -563,9 +564,9 @@ export default function AgentPipeline({
       </Panel>
 
       {/* ── The draft, rendered as an article ── */}
-      {draft ? (
+      {showDraftSlot && draft ? (
         <DraftCard draft={draft} />
-      ) : live ? (
+      ) : showDraftSlot && live ? (
         <Panel className="flex items-center gap-3 px-5 py-4">
           <FileText className="size-4 shrink-0 text-[var(--cw-ink-faint)]" aria-hidden />
           <p className="text-[13px] text-[var(--cw-ink-muted)]">

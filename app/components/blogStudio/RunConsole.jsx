@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { PenLine } from "lucide-react";
+import { PenLine, Search } from "lucide-react";
 import AgentPipeline from "../studioShared/AgentPipeline";
 import { buildPipelineSteps } from "../studioShared/runFormat";
+import KeywordResearchBoard from "./KeywordResearchBoard";
 
 /**
  * Blog Studio run console — a thin adapter that maps this studio's stage shape
@@ -13,11 +14,29 @@ import { buildPipelineSteps } from "../studioShared/runFormat";
 /** Pipeline order. The Interpreter only runs for document/Excel sources. */
 export const BLOG_PIPELINE = [
   { id: "interpreter", title: "Interpreter", subtitle: "Document → SEO seeds", optional: true },
-  { id: "agent1", title: "Strategist", subtitle: "Keyword intelligence" },
+  { id: "decider", title: "Decider", subtitle: "Trends × harvest", optional: true },
+  { id: "binder", title: "Binder", subtitle: "Low-KD keyword bag" },
+  { id: "checker", title: "Checker", subtitle: "Unique title" },
+  { id: "headings", title: "Headings", subtitle: "KD-aware outline" },
   { id: "agent2", title: "Architect", subtitle: "Article blueprint" },
   { id: "agent3", title: "Writer", subtitle: "Publication draft" },
   { id: "image", title: "Image", subtitle: "Featured visual" },
 ];
+
+export const RESEARCH_PIPELINE = [
+  { id: "researcher", title: "Researcher", subtitle: "Site brief + seeds" },
+  { id: "scout", title: "Scout", subtitle: "SE Ranking harvest" },
+];
+
+export function isBlogResearchRun(run) {
+  return run?.trigger === "research" || run?.draftPreviewJson?.kind === "keyword_research";
+}
+
+export function researchResultFromRun(run) {
+  const stages = Array.isArray(run?.stagesJson) ? run.stagesJson : [];
+  const hit = stages.find((s) => s?.agent === "_result");
+  return hit?.result || null;
+}
 
 export function resolveImageSrc(path) {
   if (!path) return null;
@@ -26,7 +45,61 @@ export function resolveImageSrc(path) {
   return `/api/uploads/${value.replace(/^.*[\\/]/, "")}`;
 }
 
-/** The image agent reports style-reference details worth surfacing verbatim. */
+function draftStageExtra(stage) {
+  if (!stage) return null;
+  if (stage.agent === "image") return imageStageExtra(stage);
+  const d = stage.data;
+  if (!d || typeof d !== "object") return null;
+
+  if (stage.agent === "decider") {
+    const cands = Array.isArray(d.candidates) ? d.candidates : [];
+    return (
+      <div className="space-y-1.5 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5">
+        <p className="text-[12px] font-semibold text-[var(--cw-ink)]">{d.topic}</p>
+        {d.why ? <p className="text-[11px] text-[var(--cw-ink-muted)]">{d.why}</p> : null}
+        {cands.length ? (
+          <p className="text-[10px] text-[var(--cw-ink-faint)]">
+            Candidates: {cands.slice(0, 6).map((c) => c.query).join(" · ")}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+  if (stage.agent === "binder") {
+    return (
+      <div className="space-y-1.5 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-[11px] text-[var(--cw-ink-muted)]">
+        {d.cluster ? <p>Cluster · {d.cluster}</p> : null}
+        <p>
+          Primary · <span className="font-semibold text-[var(--cw-ink)]">{d.primary}</span>
+        </p>
+        {d.headingKeywords?.length ? <p>Headings · {d.headingKeywords.join(" · ")}</p> : null}
+        {d.bodyKeywords?.length ? <p>Body · {d.bodyKeywords.join(" · ")}</p> : null}
+      </div>
+    );
+  }
+  if (stage.agent === "checker") {
+    return (
+      <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-[11px] text-[var(--cw-ink-muted)]">
+        <p>
+          {d.verdict === "rephrased" ? "Rephrased after a collision" : "Unique"}
+          {d.topic ? ` · ${d.topic}` : ""}
+        </p>
+        {d.hit?.title ? <p className="mt-1 text-[var(--cw-ink-faint)]">Collided with {d.hit.title}</p> : null}
+      </div>
+    );
+  }
+  if (stage.agent === "headings" && Array.isArray(d.sections)) {
+    return (
+      <ul className="space-y-1 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-[11px] text-[var(--cw-ink-muted)]">
+        {d.h1 ? <li className="font-semibold text-[var(--cw-ink)]">{d.h1}</li> : null}
+        {d.sections.slice(0, 8).map((s) => (
+          <li key={s.section_id || s.heading_h2}>{s.heading_h2}</li>
+        ))}
+      </ul>
+    );
+  }
+  return null;
+}
 function imageStageExtra(stage) {
   if (!stage || stage.agent !== "image") return null;
   const bits = [];
@@ -52,15 +125,23 @@ function imageStageExtra(stage) {
 }
 
 export default function RunConsole({ run, onCancel, cancelling }) {
+  const research = isBlogResearchRun(run);
+  const pipeline = research ? RESEARCH_PIPELINE : BLOG_PIPELINE;
+
   const steps = useMemo(() => {
-    const stages = Array.isArray(run?.stagesJson) ? run.stagesJson : [];
-    return buildPipelineSteps(BLOG_PIPELINE, stages, (s) => s?.agent).map((step) => ({
+    const stages = (Array.isArray(run?.stagesJson) ? run.stagesJson : []).filter(
+      (s) => s?.agent && !String(s.agent).startsWith("_")
+    );
+    return buildPipelineSteps(pipeline, stages, (s) => s?.agent).map((step) => ({
       ...step,
-      extra: imageStageExtra(step.raw),
+      extra: research ? null : draftStageExtra(step.raw),
     }));
-  }, [run?.stagesJson]);
+  }, [run?.stagesJson, pipeline, research]);
+
+  const result = research ? researchResultFromRun(run) : null;
 
   const draft = useMemo(() => {
+    if (research) return null;
     const p = run?.draftPreviewJson || {};
     if (!p.title && !p.html && !p.featuredImagePath) return null;
     return {
@@ -73,20 +154,26 @@ export default function RunConsole({ run, onCancel, cancelling }) {
       href: p.blogPostId ? "/?section=my-blog-approvals" : null,
       hrefLabel: "Open in approvals",
     };
-  }, [run?.draftPreviewJson]);
+  }, [run?.draftPreviewJson, research]);
 
   return (
     <AgentPipeline
       run={run}
       steps={steps}
-      eyebrow="Blog run"
-      title={run?.topic || "Untitled topic"}
+      eyebrow={research ? "Keyword research" : "Blog run"}
+      title={run?.topic || (research ? "Keyword research" : "Untitled topic")}
       draft={draft}
       onCancel={onCancel}
       cancelling={cancelling}
-      emptyIcon={PenLine}
+      emptyIcon={research ? Search : PenLine}
       emptyTitle="No run yet"
-      emptyHint="Start a draft and every agent — Strategist, Architect, Writer, Image — appears here as it works, with its full output one click away."
+      emptyHint={
+        research
+          ? "Start research and the Site Researcher then Keyword Scout appear here as they work."
+          : "Start a draft and every agent — Decider, Binder, Checker, Headings, Architect, Writer, Image — appears here as it works."
+      }
+      showDraftSlot={!research}
+      footer={result ? <KeywordResearchBoard result={result} /> : null}
     />
   );
 }

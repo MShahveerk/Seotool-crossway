@@ -5,12 +5,15 @@
 import PipelinePreview from "../studioShared/PipelinePreview";
 
 const STEPS = [
-  { id: "agent1", title: "Strategist", subtitle: "Keyword intelligence", readyKey: "agent1", modelKey: "agent1Model" },
+  { id: "decider", title: "Decider", subtitle: "Trends × harvest", readyKey: "decider", modelKey: "deciderModel" },
+  { id: "binder", title: "Binder", subtitle: "Low-KD keyword bag", readyKey: "binder", modelKey: "binderModel" },
+  { id: "checker", title: "Checker", subtitle: "Unique title", readyKey: "checker", modelKey: "checkerModel" },
+  { id: "headings", title: "Headings", subtitle: "KD-aware outline", readyKey: "headings", modelKey: "headingsModel" },
   { id: "agent2", title: "Architect", subtitle: "Article blueprint", readyKey: "agent2", modelKey: "agent2Model" },
   { id: "agent3", title: "Writer", subtitle: "Publication draft", readyKey: "agent3", modelKey: "agent3Model" },
   { id: "image", title: "Image", subtitle: "Featured visual", readyKey: "image", modelKey: "imageModel" },
 ];
 
 export default function BlogPipelinePreview(props) {
-  return <PipelinePreview steps={STEPS} estimate="~1–2 min" {...props} />;
+  return <PipelinePreview steps={STEPS} estimate="~4–8 min" {...props} />;
 }

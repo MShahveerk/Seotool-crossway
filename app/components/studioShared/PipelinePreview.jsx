@@ -21,6 +21,7 @@ export default function PipelinePreview({
   config = {},
   onConfigure,
   estimate = "~1–2 min",
+  eyebrow = "Pipeline · what runs on Generate",
   className = "",
 }) {
   const ready = config?.agentReady || {};
@@ -35,7 +36,7 @@ export default function PipelinePreview({
     >
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">
-          Pipeline · what runs on Generate
+          {eyebrow}
         </p>
         <span className="font-mono text-[11px] text-[var(--cw-ink-muted)]">{estimate}</span>
       </div>

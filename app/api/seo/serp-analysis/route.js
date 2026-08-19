@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../api/auth/[...nextauth]/route";
 import { canAccessSection } from "@/lib/modulePermissions";
 import { getSerpAnalysis } from "@/lib/serpAnalysis";
-import { isSerpApiConfigured } from "@/lib/serpapi";
+import { isSerpApiReady } from "@/lib/dataSources";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -19,9 +19,9 @@ export async function POST(req) {
       return NextResponse.json({ error: "Forbidden: Access to SERP Analysis is not granted." }, { status: 403 });
     }
 
-    if (!isSerpApiConfigured()) {
+    if (!(await isSerpApiReady())) {
       return NextResponse.json(
-        { error: "SerpApi is not configured. Add SERPAPI_API_KEY to your environment." },
+        { error: "SerpApi is not configured. Add the key in Admin → Data sources." },
         { status: 503 }
       );
     }

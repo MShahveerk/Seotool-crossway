@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { canAccessSection } from "@/lib/modulePermissions";
 import { getLinkOpportunities } from "@/lib/linkOpportunities";
-import { isSerpApiConfigured } from "@/lib/serpapi";
+import { isSerpApiReady } from "@/lib/dataSources";
 import { isSerankingConfigured } from "@/lib/seranking/config";
 
 export const runtime = "nodejs";
@@ -26,9 +26,9 @@ export async function POST(req) {
       );
     }
 
-    if (!isSerpApiConfigured()) {
+    if (!(await isSerpApiReady())) {
       return NextResponse.json(
-        { error: "Live SERP data is not configured. Add SERPAPI_API_KEY to your environment." },
+        { error: "Live SERP data is not configured. Add the SerpAPI key in Admin → Data sources." },
         { status: 503 }
       );
     }

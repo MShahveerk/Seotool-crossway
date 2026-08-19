@@ -22,12 +22,14 @@ import {
   FiImage,
   FiClock,
   FiExternalLink,
+  FiSearch,
 } from "react-icons/fi";
-import RunConsole from "./blogStudio/RunConsole";
+import RunConsole, { isBlogResearchRun, researchResultFromRun } from "./blogStudio/RunConsole";
 import RunLibrary from "./blogStudio/RunLibrary";
 import ExcelQueuePanel from "./blogStudio/ExcelQueuePanel";
 import ContentInbox from "./blogStudio/ContentInbox";
 import PipelinePreview from "./blogStudio/PipelinePreview";
+import KeywordResearchPanel from "./blogStudio/KeywordResearchPanel";
 import ModelCombobox from "./studioShared/ModelCombobox";
 import StudioReferenceImages from "./studioShared/StudioReferenceImages";
 import StudioBrandKit from "./studioShared/StudioBrandKit";
@@ -58,6 +60,7 @@ const SOURCES = [
   { id: "topic", label: "Topic", icon: FiEdit3 },
   { id: "inbox", label: "From Inbox", icon: FiInbox },
   { id: "excel", label: "Excel queue", icon: FiGrid },
+  { id: "research", label: "Research", icon: FiSearch },
 ];
 
 const SETUP_TABS = [
@@ -119,12 +122,21 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   const [triggeringExternal, setTriggeringExternal] = useState(false);
   const [manualPrompt, setManualPrompt] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  const [researchDepth, setResearchDepth] = useState("deep");
+  const [researchMarket, setResearchMarket] = useState("us");
+  const [lastResearch, setLastResearch] = useState(null);
 
   const siteQ = useMemo(
     () => (selectedSite ? `?siteLink=${encodeURIComponent(selectedSite)}` : ""),
     [selectedSite]
   );
   const isInternal = engineMode === "internal";
+  const isWebsite = Boolean(
+    selectedSite &&
+      (String(selectedSite).startsWith("http") ||
+        String(selectedSite).startsWith("sc-domain:") ||
+        (String(selectedSite).includes(".") && !/^\d+$/.test(String(selectedSite).trim())))
+  );
 
   const loadGlobal = useCallback(async () => {
     const res = await fetch("/api/admin/blog-automation");
@@ -237,6 +249,43 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
       clearInterval(t);
     };
   }, [liveRunId]);
+
+  useEffect(() => {
+    if (!isBlogResearchRun(liveRun) || liveRun.status !== "succeeded") return;
+    const result = researchResultFromRun(liveRun);
+    if (result) setLastResearch(result);
+  }, [liveRun]);
+
+  useEffect(() => {
+    setLastResearch(null);
+    setRuns([]);
+  }, [selectedSite]);
+
+  useEffect(() => {
+    if (!selectedSite || lastResearch) return;
+    const latest = runs.find(
+      (r) =>
+        (r.trigger === "research" || r.draftPreviewJson?.kind === "keyword_research") &&
+        r.status === "succeeded"
+    );
+    if (!latest?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/admin/blog-automation/runs/${latest.id}`);
+        const data = await res.json();
+        if (cancelled || !res.ok) return;
+        if (data.run?.siteLink && data.run.siteLink !== selectedSite) return;
+        const result = researchResultFromRun(data.run);
+        if (result) setLastResearch(result);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSite, runs, lastResearch]);
 
   // Keep the library list itself moving while anything is live, so its cards
   // report progress instead of going stale until someone hits Refresh.
@@ -406,6 +455,38 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
         selectRun(data.run.id);
       }
       setSaveMessage({ ok: true, text: "Run queued — following it in the Library." });
+      loadRuns();
+    } catch (err) {
+      setSaveMessage({ ok: false, text: err.message });
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const startResearch = async () => {
+    if (!selectedSite) {
+      setSaveMessage({ ok: false, text: "Select a project in the sidebar first." });
+      return;
+    }
+    if (!isWebsite) {
+      setSaveMessage({ ok: false, text: "Keyword research needs a website project, not a Meta-only page." });
+      return;
+    }
+    setRunning(true);
+    setSaveMessage(null);
+    try {
+      const res = await fetch(`/api/admin/blog-automation/site/research${siteQ}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ depth: researchDepth, market: researchMarket }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to start research.");
+      if (data.run) {
+        setLiveRun(data.run);
+        selectRun(data.run.id);
+      }
+      setSaveMessage({ ok: true, text: "Research queued — follow it in the dock." });
       loadRuns();
     } catch (err) {
       setSaveMessage({ ok: false, text: err.message });
@@ -774,7 +855,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
               pointing at what you're looking at. */}
           <LiveRunDock
             run={dockedRun}
-            label="Draft"
+            label={isBlogResearchRun(liveRun) ? "Research" : "Draft"}
             onCancel={() => cancelRun(liveRun?.id)}
             onOpen={liveRun?.id ? () => selectRun(liveRun.id) : undefined}
             openLabel="Open in Library"
@@ -789,7 +870,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
               <div className="flex items-center justify-between gap-3">
                 <TabRail size="sm" tabs={SOURCES} value={source} onChange={setSource} ariaLabel="Content source" />
                 <span className="hidden text-xs text-[var(--cw-ink-faint)] sm:inline">
-                  Where the next draft comes from
+                  {source === "research" ? "Build the project keyword library" : "Where the next draft comes from"}
                 </span>
               </div>
 
@@ -802,9 +883,27 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                         className={`${inputClass} mt-1`}
                         value={topic}
                         onChange={(e) => setTopic(e.target.value)}
-                        placeholder="e.g. How to choose a healthcare app partner"
+                        placeholder="Leave blank — Decider picks from Trends × your keyword library"
                       />
                     </div>
+                    {lastResearch ? (
+                      <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 text-xs text-[var(--cw-ink-muted)]">
+                        Keyword library · {lastResearch.topicCount || lastResearch.topics?.length || "—"} topics ·{" "}
+                        {lastResearch.unique || lastResearch.universe?.length || "—"} keywords
+                        {lastResearch.creditsSpent != null ? ` · ${lastResearch.creditsSpent} credits last harvest` : ""}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_8%,transparent)] px-3 py-2 text-xs text-[var(--cw-ink-dim)]">
+                        Research this project first. The Decider and Binder read that keyword library.
+                        <button
+                          type="button"
+                          className="ml-2 font-semibold text-[var(--cw-neon)] hover:underline"
+                          onClick={() => setSource("research")}
+                        >
+                          Open Research →
+                        </button>
+                      </div>
+                    )}
                     <div>
                       <label className={labelClass}>Must-follow keywords (absolute)</label>
                       <textarea
@@ -826,7 +925,13 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                         Standing seeds (audience, links, brand) live in Setup → Voice & Seeds and apply automatically.
                       </p>
                     </div>
-                    <Btn variant="primary" size="lg" icon={running ? FiRefreshCw : FiSend} onClick={startRun} disabled={running || !selectedSite}>
+                    <Btn
+                      variant="primary"
+                      size="lg"
+                      icon={running ? FiRefreshCw : FiSend}
+                      onClick={startRun}
+                      disabled={running || !selectedSite || !lastResearch}
+                    >
                       {running ? "Queueing…" : "Generate draft"}
                     </Btn>
                   </div>
@@ -837,8 +942,9 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                         Tips
                       </p>
                       <p className="text-xs text-[var(--cw-ink-muted)]">
-                        Leave the topic blank to let the Strategist choose from your seeds. The Interpreter
-                        only runs for document / Excel sources.
+                        Leave the topic blank and the Decider picks from Google Trends intersected with your
+                        keyword library. Type a topic to skip the Decider; Binder, Checker and Headings still
+                        run. Research is required.
                       </p>
                     </div>
                   </div>
@@ -872,6 +978,26 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                     onToggleAuto={toggleAuto}
                   />
                 </div>
+              )}
+
+              {source === "research" && (
+                <KeywordResearchPanel
+                  selectedSite={selectedSite}
+                  isWebsite={isWebsite}
+                  siteConfig={siteConfig}
+                  depth={researchDepth}
+                  market={researchMarket}
+                  onDepth={setResearchDepth}
+                  onMarket={setResearchMarket}
+                  onStart={startResearch}
+                  onConfigure={() => {
+                    setZone("setup");
+                    setSetupTab("agents");
+                  }}
+                  starting={running}
+                  running={hasLiveAutomation && isBlogResearchRun(liveRun)}
+                  result={lastResearch}
+                />
               )}
             </div>
           )}
@@ -1137,10 +1263,16 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                     </p>
                     {[
                       ["interpreter", "Interpreter", "interpreterProvider", "interpreterModel", "interpreterPrompt", "chat"],
-                      ["agent1", "Strategist (Agent 1)", "agent1Provider", "agent1Model", "agent1Prompt", "chat"],
+                      ["decider", "Topic Decider", "deciderProvider", "deciderModel", "deciderPrompt", "chat"],
+                      ["binder", "Keyword Binder", "binderProvider", "binderModel", "binderPrompt", "chat"],
+                      ["checker", "Topic Checker", "checkerProvider", "checkerModel", "checkerPrompt", "chat"],
+                      ["headings", "Headings", "headingsProvider", "headingsModel", "headingsPrompt", "chat"],
                       ["agent2", "Architect (Agent 2)", "agent2Provider", "agent2Model", "agent2Prompt", "chat"],
                       ["agent3", "Writer (Agent 3)", "agent3Provider", "agent3Model", "agent3Prompt", "chat"],
                       ["image", "Image", "imageProvider", "imageModel", "imagePromptSystem", "image"],
+                      ["researcher", "Site Researcher", "researcherProvider", "researcherModel", "researcherPrompt", "chat"],
+                      ["scout", "Keyword Scout", "scoutProvider", "scoutModel", "scoutPrompt", "chat"],
+                      ["agent1", "Strategist (unused — Binder replaced this)", "agent1Provider", "agent1Model", "agent1Prompt", "chat"],
                     ].map(([id, title, pKey, mKey, promptKey, kind]) => {
                       const providerList = kind === "image" ? IMAGE_PROVIDERS : PROVIDERS;
                       const providerValue = siteConfig[pKey] || "openai";

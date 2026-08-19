@@ -14,7 +14,7 @@ export const AUTO_SOURCE_OPTIONS = [
   {
     value: "seed",
     label: "Seed prompt",
-    hint: "Uses SEO Seeds + rotating must-follow keywords each run.",
+    hint: "Decider picks from Trends × keyword library, then Binder → Checker → Headings → Architect.",
   },
   {
     value: "excel",
@@ -116,11 +116,43 @@ export const AGENT_ROLES = [
   },
   {
     id: "agent1",
-    title: "Strategist",
-    subtitle: "Keyword intelligence",
+    title: "Strategist (unused)",
+    subtitle: "Replaced by Binder — prompt kept",
     providerKey: "agent1Provider",
     modelKey: "agent1Model",
     readyKey: "agent1",
+  },
+  {
+    id: "decider",
+    title: "Topic Decider",
+    subtitle: "Trends × keyword library",
+    providerKey: "deciderProvider",
+    modelKey: "deciderModel",
+    readyKey: "decider",
+  },
+  {
+    id: "binder",
+    title: "Keyword Binder",
+    subtitle: "Low-KD headings, higher KD in body",
+    providerKey: "binderProvider",
+    modelKey: "binderModel",
+    readyKey: "binder",
+  },
+  {
+    id: "checker",
+    title: "Topic Checker",
+    subtitle: "In-app + optional Google duplicate",
+    providerKey: "checkerProvider",
+    modelKey: "checkerModel",
+    readyKey: "checker",
+  },
+  {
+    id: "headings",
+    title: "Headings",
+    subtitle: "KD-aware outline",
+    providerKey: "headingsProvider",
+    modelKey: "headingsModel",
+    readyKey: "headings",
   },
   {
     id: "agent2",
@@ -145,6 +177,22 @@ export const AGENT_ROLES = [
     providerKey: "imageProvider",
     modelKey: "imageModel",
     readyKey: "image",
+  },
+  {
+    id: "researcher",
+    title: "Site Researcher",
+    subtitle: "Project brief for keyword harvest",
+    providerKey: "researcherProvider",
+    modelKey: "researcherModel",
+    readyKey: "researcher",
+  },
+  {
+    id: "scout",
+    title: "Keyword Scout",
+    subtitle: "SE Ranking harvest → topics",
+    providerKey: "scoutProvider",
+    modelKey: "scoutModel",
+    readyKey: "scout",
   },
 ];
 

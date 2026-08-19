@@ -4,6 +4,7 @@ import { enqueueStudioRun } from "@/lib/blogStudio/runner.js";
 import { ENGINE_INTERNAL, getEngineMode } from "@/lib/blogStudio/engine.js";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 export async function POST(req) {
   try {

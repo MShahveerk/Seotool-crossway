@@ -62,8 +62,11 @@ function RunRow({ run, selected, onSelect, onCancel, cancelling, requiredSteps, 
   const status = normalizeStatus(run.status);
   const live = isLiveStatus(run.status);
   const summary = run.stageSummary || null;
+  const research = run.trigger === "research" || run.draftPreviewJson?.kind === "keyword_research";
 
-  const total = requiredSteps + (summary?.hasInterpreter ? 1 : 0);
+  const total = research
+    ? 2
+    : requiredSteps + (summary?.hasInterpreter ? 1 : 0) + (summary?.hasDecider ? 1 : 0);
   const done = Math.min(summary?.done ?? 0, total);
   const pct = total ? Math.round((done / total) * 100) : 0;
 
@@ -113,6 +116,11 @@ function RunRow({ run, selected, onSelect, onCancel, cancelling, requiredSteps, 
           <span className="flex items-center gap-1.5">
             <GlowDot status={status} size={6} />
             <span className="truncate text-[13px] font-semibold text-[var(--cw-ink)]">{title}</span>
+            {research ? (
+              <span className="shrink-0 rounded-md border border-[var(--cw-hairline)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-[var(--cw-ink-faint)]">
+                Research
+              </span>
+            ) : null}
           </span>
 
           <span className="mt-1 flex flex-wrap items-center gap-x-2 text-[11px] text-[var(--cw-ink-muted)]">

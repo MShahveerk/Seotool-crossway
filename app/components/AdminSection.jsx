@@ -117,6 +117,7 @@ const SMM_BASELINE_PLATFORM_LABEL = {
 };
 import SiteAssociationsModal from "./SiteAssociationsModal";
 import SeoDigestSettingsPanel from "./SeoDigestSettingsPanel";
+import DataSourcesPanel from "./DataSourcesPanel";
 import ReportsManagementPanel from "./ReportsManagementPanel";
 import CronJobsPanel from "./CronJobsPanel";
 import ModulePermissionPicker from "./ModulePermissionPicker";
@@ -1283,6 +1284,7 @@ export default function AdminSection({ onNavigate } = {}) {
 
       {adminTab === "sources" && (
         <div className="space-y-4">
+          <DataSourcesPanel />
           <SeoDigestSettingsPanel />
         </div>
       )}
