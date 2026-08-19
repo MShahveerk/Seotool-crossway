@@ -22,6 +22,12 @@ const STATUS = {
     pill: "border-[color-mix(in_srgb,var(--cw-caution)_40%,transparent)] bg-[color-mix(in_srgb,var(--cw-caution)_11%,transparent)] text-[var(--cw-caution)]",
     pulse: true,
   },
+  waiting: {
+    label: "Waiting",
+    dot: "bg-[var(--cw-caution)] text-[var(--cw-caution)]",
+    pill: "border-[color-mix(in_srgb,var(--cw-caution)_40%,transparent)] bg-[color-mix(in_srgb,var(--cw-caution)_11%,transparent)] text-[var(--cw-caution)]",
+    pulse: true,
+  },
   succeeded: {
     label: "Done",
     dot: "bg-[var(--cw-neon-deep)] text-[var(--cw-neon-deep)]",
@@ -52,7 +58,7 @@ const ALIASES = {
   error: "failed",
   canceled: "cancelled",
   idle: "pending",
-  waiting: "pending",
+  waiting: "waiting",
   "": "pending",
 };
 

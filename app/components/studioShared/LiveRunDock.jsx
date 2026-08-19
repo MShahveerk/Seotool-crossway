@@ -40,19 +40,26 @@ export default function LiveRunDock({
   if (!run || !isLiveStatus(run.status)) return null;
 
   const stages = Array.isArray(run.stagesJson) ? run.stagesJson : [];
-  const current = stages.find((s) => normalizeStatus(s?.status) === "running");
+  const current = stages.find((s) => ["running", "waiting"].includes(normalizeStatus(s?.status)));
   const done = stages.filter((s) => normalizeStatus(s?.status) === "succeeded").length;
   const total = Math.max(stages.length, done + (current ? 1 : 0));
   const pct = total ? Math.round(((done + (current ? 0.5 : 0)) / total) * 100) : 6;
 
   const queued = normalizeStatus(run.status) === "queued";
+  const waiting = normalizeStatus(run.status) === "waiting";
 
   const agentName =
     current?.title ||
     current?.role ||
     current?.agentId ||
     current?.agent ||
-    (done ? "wrapping up" : queued ? "waiting for a slot" : "starting up");
+    (waiting
+      ? "waiting on headings review"
+      : done
+        ? "wrapping up"
+        : queued
+          ? "waiting for a slot"
+          : "starting up");
 
   return (
     <div
@@ -72,9 +79,9 @@ export default function LiveRunDock({
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
           aria-expanded={expanded}
         >
-          <GlowDot status={queued ? "queued" : "running"} />
+          <GlowDot status={waiting ? "waiting" : queued ? "queued" : "running"} />
           <span className="text-[13px] font-semibold text-[var(--cw-ink)]">
-            {label} {queued ? "queued" : "running"}
+            {label} {waiting ? "waiting" : queued ? "queued" : "running"}
           </span>
           <span
             className={cn(

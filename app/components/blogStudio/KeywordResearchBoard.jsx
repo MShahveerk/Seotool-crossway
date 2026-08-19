@@ -44,7 +44,7 @@ function PostureBadge({ value }) {
   );
 }
 
-export default function KeywordResearchBoard({ result }) {
+export default function KeywordResearchBoard({ result, onUseTopic }) {
   const topics = Array.isArray(result?.topics) ? result.topics : [];
   const [activeId, setActiveId] = useState(topics[0]?.id || "");
   const [showAll, setShowAll] = useState(false);
@@ -168,13 +168,24 @@ export default function KeywordResearchBoard({ result }) {
                     Primary · <span className="font-semibold text-[var(--cw-ink)]">{active.primary}</span>
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAll((v) => !v)}
-                  className="rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--cw-neon)]"
-                >
-                  {showAll ? "Show featured" : `Show all ${active.keywordCount || keywords.length}`}
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {typeof onUseTopic === "function" ? (
+                    <button
+                      type="button"
+                      onClick={() => onUseTopic(active.primary || active.name)}
+                      className="rounded-lg bg-[var(--cw-neon)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--cw-neon-ink)]"
+                    >
+                      Use as draft topic
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setShowAll((v) => !v)}
+                    className="rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--cw-neon)]"
+                  >
+                    {showAll ? "Show featured" : `Show all ${active.keywordCount || keywords.length}`}
+                  </button>
+                </div>
               </div>
 
               <div className="mt-3 overflow-x-auto">

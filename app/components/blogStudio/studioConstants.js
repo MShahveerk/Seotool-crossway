@@ -14,7 +14,7 @@ export const AUTO_SOURCE_OPTIONS = [
   {
     value: "seed",
     label: "Seed prompt",
-    hint: "Decider picks from Trends × keyword library, then Binder → Checker → Headings → Architect.",
+    hint: "Decider picks from Trends or the keyword library, then Binder → Checker → Headings → Architect.",
   },
   {
     value: "excel",
@@ -125,7 +125,7 @@ export const AGENT_ROLES = [
   {
     id: "decider",
     title: "Topic Decider",
-    subtitle: "Trends × keyword library",
+    subtitle: "Trends, harvest, or GSC × library",
     providerKey: "deciderProvider",
     modelKey: "deciderModel",
     readyKey: "decider",
@@ -153,6 +153,14 @@ export const AGENT_ROLES = [
     providerKey: "headingsProvider",
     modelKey: "headingsModel",
     readyKey: "headings",
+  },
+  {
+    id: "humanizer",
+    title: "Humanizer",
+    subtitle: "Paste a skill · strips em dashes",
+    providerKey: "humanizerProvider",
+    modelKey: "humanizerModel",
+    readyKey: "humanizer",
   },
   {
     id: "agent2",

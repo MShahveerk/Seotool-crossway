@@ -37,6 +37,7 @@ export function normalizeStatus(value) {
   const s = String(value ?? "").toLowerCase();
   if (["running", "in_progress", "active", "working"].includes(s)) return "running";
   if (["queued", "pending_start", "starting"].includes(s)) return "queued";
+  if (["waiting", "awaiting_approval", "paused"].includes(s)) return "waiting";
   if (["succeeded", "success", "completed", "complete", "done", "ok"].includes(s)) return "succeeded";
   if (["failed", "error", "errored"].includes(s)) return "failed";
   if (["cancelled", "canceled", "aborted"].includes(s)) return "cancelled";
@@ -45,7 +46,7 @@ export function normalizeStatus(value) {
 
 export function isLiveStatus(value) {
   const s = normalizeStatus(value);
-  return s === "running" || s === "queued";
+  return s === "running" || s === "queued" || s === "waiting";
 }
 
 /** Best-effort readable dump of whatever an agent returned. */

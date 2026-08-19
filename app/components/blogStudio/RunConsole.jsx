@@ -14,12 +14,14 @@ import KeywordResearchBoard from "./KeywordResearchBoard";
 /** Pipeline order. The Interpreter only runs for document/Excel sources. */
 export const BLOG_PIPELINE = [
   { id: "interpreter", title: "Interpreter", subtitle: "Document → SEO seeds", optional: true },
-  { id: "decider", title: "Decider", subtitle: "Trends × harvest", optional: true },
+  { id: "decider", title: "Decider", subtitle: "Trends or keyword library", optional: true },
   { id: "binder", title: "Binder", subtitle: "Low-KD keyword bag" },
   { id: "checker", title: "Checker", subtitle: "Unique title" },
   { id: "headings", title: "Headings", subtitle: "KD-aware outline" },
+  { id: "headings_approval", title: "Review", subtitle: "Email User roles", optional: true },
   { id: "agent2", title: "Architect", subtitle: "Article blueprint" },
   { id: "agent3", title: "Writer", subtitle: "Publication draft" },
+  { id: "humanizer", title: "Humanizer", subtitle: "Skill-guided rewrite", optional: true },
   { id: "image", title: "Image", subtitle: "Featured visual" },
 ];
 
@@ -53,9 +55,21 @@ function draftStageExtra(stage) {
 
   if (stage.agent === "decider") {
     const cands = Array.isArray(d.candidates) ? d.candidates : [];
+    const sourceLabel =
+      d.source === "harvest"
+        ? "Keyword library"
+        : d.source === "gsc"
+          ? "Search Console × harvest"
+          : d.source === "trends"
+            ? "Google Trends × harvest"
+            : null;
     return (
       <div className="space-y-1.5 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5">
         <p className="text-[12px] font-semibold text-[var(--cw-ink)]">{d.topic}</p>
+        {d.seedQuery && d.seedQuery !== d.topic ? (
+          <p className="text-[10px] text-[var(--cw-ink-faint)]">Seed · {d.seedQuery}</p>
+        ) : null}
+        {sourceLabel ? <p className="text-[10px] text-[var(--cw-ink-faint)]">{sourceLabel}</p> : null}
         {d.why ? <p className="text-[11px] text-[var(--cw-ink-muted)]">{d.why}</p> : null}
         {cands.length ? (
           <p className="text-[10px] text-[var(--cw-ink-faint)]">
@@ -85,6 +99,18 @@ function draftStageExtra(stage) {
           {d.topic ? ` · ${d.topic}` : ""}
         </p>
         {d.hit?.title ? <p className="mt-1 text-[var(--cw-ink-faint)]">Collided with {d.hit.title}</p> : null}
+      </div>
+    );
+  }
+  if (stage.agent === "headings_approval") {
+    return (
+      <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-[11px] text-[var(--cw-ink-muted)]">
+        <p className="font-semibold text-[var(--cw-ink)]">{d.h1 || d.topic || "Outline"}</p>
+        <p className="mt-0.5">
+          Round {d.round || 1}
+          {d.recipientCount ? ` · emailed ${d.recipientCount} User-role reviewer${d.recipientCount === 1 ? "" : "s"}` : ""}
+        </p>
+        {d.reason ? <p className="mt-1 text-[var(--cw-ink-faint)]">Last decline · {d.reason}</p> : null}
       </div>
     );
   }

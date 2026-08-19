@@ -76,6 +76,7 @@ export function LiveClock({ startedAt, live, className = "" }) {
 function AgentChip({ step, index, selected, onSelect, isLast }) {
   const status = normalizeStatus(step.status);
   const running = status === "running" || status === "queued";
+  const waiting = status === "waiting";
   const done = status === "succeeded";
   const failed = status === "failed";
   const cancelled = status === "cancelled";
@@ -99,17 +100,21 @@ function AgentChip({ step, index, selected, onSelect, isLast }) {
             "relative flex size-10 shrink-0 items-center justify-center rounded-xl border transition-smooth",
             running &&
               "cw-live border-[var(--cw-neon)] text-[var(--cw-neon)]",
+            waiting &&
+              "border-[color-mix(in_srgb,var(--cw-caution)_50%,transparent)] bg-[color-mix(in_srgb,var(--cw-caution)_12%,var(--cw-surface))] text-[var(--cw-caution)]",
             done &&
               "border-[color-mix(in_srgb,var(--cw-neon)_50%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_10%,var(--cw-surface))] text-[var(--cw-neon)]",
             failed &&
               "border-[color-mix(in_srgb,var(--cw-danger)_50%,transparent)] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] text-[var(--cw-danger)]",
             cancelled && "border-[var(--cw-hairline-strong)] bg-[var(--cw-raised)] text-[var(--cw-ink-faint)]",
-            !running && !done && !failed && !cancelled &&
+            !running && !waiting && !done && !failed && !cancelled &&
               "border-dashed border-[var(--cw-hairline-strong)] bg-[var(--cw-surface)] text-[var(--cw-ink-faint)]"
           )}
         >
           {running ? (
             <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : waiting ? (
+            <Clock className="size-4" aria-hidden />
           ) : done ? (
             <Check className="size-5" strokeWidth={2.6} aria-hidden />
           ) : failed ? (
@@ -128,11 +133,13 @@ function AgentChip({ step, index, selected, onSelect, isLast }) {
               "block truncate text-[12px] font-bold transition-smooth",
               running
                 ? "text-[var(--cw-neon)]"
-                : selected
-                  ? "text-[var(--cw-ink)]"
-                  : done
-                    ? "text-[var(--cw-ink-dim)]"
-                    : "text-[var(--cw-ink-faint)]"
+                : waiting
+                  ? "text-[var(--cw-caution)]"
+                  : selected
+                    ? "text-[var(--cw-ink)]"
+                    : done
+                      ? "text-[var(--cw-ink-dim)]"
+                      : "text-[var(--cw-ink-faint)]"
             )}
           >
             {step.title}
@@ -140,7 +147,9 @@ function AgentChip({ step, index, selected, onSelect, isLast }) {
           <span className="mt-0.5 block truncate text-[10px] text-[var(--cw-ink-faint)]">
             {running
               ? "working…"
-              : done
+              : waiting
+                ? "awaiting review"
+                : done
                 ? formatDuration(step.durationMs) || "done"
                 : failed
                   ? "failed"

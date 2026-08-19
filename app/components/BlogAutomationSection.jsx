@@ -30,6 +30,7 @@ import ExcelQueuePanel from "./blogStudio/ExcelQueuePanel";
 import ContentInbox from "./blogStudio/ContentInbox";
 import PipelinePreview from "./blogStudio/PipelinePreview";
 import KeywordResearchPanel from "./blogStudio/KeywordResearchPanel";
+import KeywordResearchBoard from "./blogStudio/KeywordResearchBoard";
 import ModelCombobox from "./studioShared/ModelCombobox";
 import StudioReferenceImages from "./studioShared/StudioReferenceImages";
 import StudioBrandKit from "./studioShared/StudioBrandKit";
@@ -883,7 +884,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                         className={`${inputClass} mt-1`}
                         value={topic}
                         onChange={(e) => setTopic(e.target.value)}
-                        placeholder="Leave blank — Decider picks from Trends × your keyword library"
+                        placeholder="Leave blank — Decider picks from Trends or your keyword library"
                       />
                     </div>
                     {lastResearch ? (
@@ -942,9 +943,10 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                         Tips
                       </p>
                       <p className="text-xs text-[var(--cw-ink-muted)]">
-                        Leave the topic blank and the Decider picks from Google Trends intersected with your
-                        keyword library. Type a topic to skip the Decider; Binder, Checker and Headings still
-                        run. Research is required.
+                        Leave the topic blank and the Decider picks from Google Trends when SerpAPI is
+                        configured, otherwise from your last Research library (or Search Console ∩ harvest —
+                        set the fallback in Admin → Data sources). Type a topic to skip the Decider; Binder,
+                        Checker and Headings still run. Research is required.
                       </p>
                     </div>
                   </div>
@@ -999,6 +1001,46 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                   result={lastResearch}
                 />
               )}
+
+              {source !== "research" && lastResearch?.topics?.length ? (
+                <div className="space-y-3 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5">
+                  <div className="flex flex-wrap items-end justify-between gap-2">
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">
+                        Last research library
+                      </p>
+                      <h3 className="mt-0.5 text-base font-bold text-[var(--cw-ink)]">
+                        {lastResearch.brief?.brandName || lastResearch.title || "Keyword library"}
+                      </h3>
+                      <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
+                        {lastResearch.topicCount || lastResearch.topics.length} topics ·{" "}
+                        {lastResearch.unique || lastResearch.universe?.length || "—"} keywords
+                        {source === "topic"
+                          ? " · pick a topic to drop it into the draft field above"
+                          : ""}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-[var(--cw-neon)] hover:underline"
+                      onClick={() => setSource("research")}
+                    >
+                      Open Research →
+                    </button>
+                  </div>
+                  <KeywordResearchBoard
+                    result={lastResearch}
+                    onUseTopic={
+                      source === "topic"
+                        ? (phrase) => {
+                            setTopic(phrase);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }
+                        : undefined
+                    }
+                  />
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -1269,6 +1311,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                       ["headings", "Headings", "headingsProvider", "headingsModel", "headingsPrompt", "chat"],
                       ["agent2", "Architect (Agent 2)", "agent2Provider", "agent2Model", "agent2Prompt", "chat"],
                       ["agent3", "Writer (Agent 3)", "agent3Provider", "agent3Model", "agent3Prompt", "chat"],
+                      ["humanizer", "Humanizer", "humanizerProvider", "humanizerModel", "humanizerPrompt", "chat"],
                       ["image", "Image", "imageProvider", "imageModel", "imagePromptSystem", "image"],
                       ["researcher", "Site Researcher", "researcherProvider", "researcherModel", "researcherPrompt", "chat"],
                       ["scout", "Keyword Scout", "scoutProvider", "scoutModel", "scoutPrompt", "chat"],
@@ -1340,6 +1383,67 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                             value={siteConfig[promptKey] || ""}
                             onChange={(e) => patchSite({ [promptKey]: e.target.value })}
                           />
+                          {id === "headings" ? (
+                            <label className="mt-3 flex items-start gap-2 text-sm text-[var(--cw-ink-dim)]">
+                              <input
+                                type="checkbox"
+                                className="mt-1"
+                                checked={Boolean(siteConfig.headingsApprovalEnabled)}
+                                onChange={(e) => patchSite({ headingsApprovalEnabled: e.target.checked })}
+                              />
+                              <span>
+                                Email User-role accounts to approve headings before Architect
+                                <span className="mt-0.5 block text-xs text-[var(--cw-ink-faint)]">
+                                  They get a Crossway email with the outline. Approve continues the draft.
+                                  Decline with a reason regenerates headings and emails again.
+                                </span>
+                              </span>
+                            </label>
+                          ) : null}
+                          {id === "humanizer" ? (
+                            <div className="mt-3 space-y-2">
+                              <label className="flex items-start gap-2 text-sm text-[var(--cw-ink-dim)]">
+                                <input
+                                  type="checkbox"
+                                  className="mt-1"
+                                  checked={Boolean(siteConfig.humanizerEnabled)}
+                                  onChange={(e) => patchSite({ humanizerEnabled: e.target.checked })}
+                                />
+                                <span>
+                                  Run Humanizer after Writer
+                                  <span className="mt-0.5 block text-xs text-[var(--cw-ink-faint)]">
+                                    Always strips em dashes and stock AI phrasing, then applies the skill below.
+                                  </span>
+                                </span>
+                              </label>
+                              <div className="flex items-center justify-between gap-2">
+                                <label className={labelClass}>Skill (paste markdown)</label>
+                                {BLOG_STUDIO_DEFAULT_PROMPTS.humanizerSkill ? (
+                                  <Btn
+                                    variant="ghost"
+                                    size="xs"
+                                    icon={FiRotateCcw}
+                                    onClick={() =>
+                                      patchSite({ humanizerSkill: BLOG_STUDIO_DEFAULT_PROMPTS.humanizerSkill })
+                                    }
+                                  >
+                                    Revert skill
+                                  </Btn>
+                                ) : null}
+                              </div>
+                              <textarea
+                                className={`${inputClass} mt-1 min-h-[220px] font-mono text-xs`}
+                                value={siteConfig.humanizerSkill || ""}
+                                onChange={(e) => patchSite({ humanizerSkill: e.target.value })}
+                                placeholder="Paste any Cursor-style SKILL.md here. It is injected verbatim."
+                                spellCheck={false}
+                              />
+                              <p className="text-[11px] text-[var(--cw-ink-faint)]">
+                                Replace this entire box with your own skill. Crossway injects it as a mandatory
+                                block after the system prompt. Default skill already bans em dashes and AI tells.
+                              </p>
+                            </div>
+                          ) : null}
                         </div>
                       );
                     })}

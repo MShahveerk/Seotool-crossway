@@ -27,7 +27,8 @@ export default function DataSourcesPanel() {
   const [message, setMessage] = useState("");
   const [serpApiKey, setSerpApiKey] = useState("");
   const [checkGoogleDuplicates, setCheckGoogleDuplicates] = useState(true);
-  const [ready, setReady] = useState({ trends: false, serp: false, seranking: false });
+  const [deciderFallback, setDeciderFallback] = useState("harvest");
+  const [ready, setReady] = useState({ trends: false, serp: false, seranking: false, gsc: false });
   const [keySource, setKeySource] = useState("missing");
 
   const load = useCallback(async () => {
@@ -40,6 +41,7 @@ export default function DataSourcesPanel() {
       const cfg = data.config || {};
       setSerpApiKey(cfg.serpApiKey || "");
       setCheckGoogleDuplicates(cfg.checkGoogleDuplicates !== false);
+      setDeciderFallback(cfg.deciderFallback === "gsc" ? "gsc" : "harvest");
       setReady(cfg.ready || {});
       setKeySource(cfg.keySource?.serpapi || "missing");
     } catch (e) {
@@ -61,13 +63,14 @@ export default function DataSourcesPanel() {
       const res = await fetch("/api/admin/data-sources", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serpApiKey, checkGoogleDuplicates }),
+        body: JSON.stringify({ serpApiKey, checkGoogleDuplicates, deciderFallback }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save");
       const cfg = data.config || {};
       setSerpApiKey(cfg.serpApiKey || "");
       setCheckGoogleDuplicates(cfg.checkGoogleDuplicates !== false);
+      setDeciderFallback(cfg.deciderFallback === "gsc" ? "gsc" : "harvest");
       setReady(cfg.ready || {});
       setKeySource(cfg.keySource?.serpapi || "missing");
       setMessage("Data source credentials saved.");
@@ -122,6 +125,7 @@ export default function DataSourcesPanel() {
               <ReadyChip ok={ready.trends} label="Trends" />
               <ReadyChip ok={ready.serp} label="Live SERP" />
               <ReadyChip ok={ready.seranking} label="SE Ranking" />
+              <ReadyChip ok={ready.gsc} label="Search Console" />
             </div>
 
             <div className="space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-4">
@@ -133,7 +137,7 @@ export default function DataSourcesPanel() {
                 Powers Blog Studio topic trends, optional duplicate-title checks, and SERP Analysis.
                 {keySource === "env" ? " Currently using the environment key." : ""}
                 {keySource === "saved" ? " Using the key saved here." : ""}
-                {keySource === "missing" ? " No key yet — paste one from serpapi.com." : ""}
+                {keySource === "missing" ? " No key yet — the Decider uses the fallback below." : ""}
               </p>
               <input
                 type="password"
@@ -157,15 +161,51 @@ export default function DataSourcesPanel() {
                   </span>
                 </span>
               </label>
-              <button
-                type="button"
-                onClick={save}
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-[var(--cw-neon)] px-4 py-2 text-sm font-semibold text-[var(--cw-neon-ink)] hover:bg-[var(--cw-neon-soft)] disabled:opacity-50"
-              >
-                <FiSave className="h-4 w-4" />
-                {saving ? "Saving…" : "Save credentials"}
-              </button>
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-4">
+              <p className="text-sm font-semibold text-[var(--cw-ink)]">Topic Decider fallback</p>
+              <p className="text-xs text-[var(--cw-ink-muted)]">
+                Used only when there is no SerpAPI key. Drafts still need Research; the Decider just
+                will not pick “what’s spiking on Google this week.”
+              </p>
+              <label className="flex items-start gap-2 text-sm text-[var(--cw-ink-dim)]">
+                <input
+                  type="radio"
+                  className="mt-1"
+                  name="deciderFallback"
+                  value="harvest"
+                  checked={deciderFallback === "harvest"}
+                  onChange={() => setDeciderFallback("harvest")}
+                />
+                <span>
+                  Harvest-only
+                  <span className="ml-1.5 rounded-md border border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--cw-neon)]">
+                    Best
+                  </span>
+                  <span className="mt-0.5 block text-xs text-[var(--cw-ink-faint)]">
+                    Closed list from the last Research library. Prefers gap/strike topics, low KD,
+                    real volume, and SE Ranking trend direction. No invented phrases.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 text-sm text-[var(--cw-ink-dim)]">
+                <input
+                  type="radio"
+                  className="mt-1"
+                  name="deciderFallback"
+                  value="gsc"
+                  checked={deciderFallback === "gsc"}
+                  onChange={() => setDeciderFallback("gsc")}
+                />
+                <span>
+                  Search Console + harvest
+                  <span className="mt-0.5 block text-xs text-[var(--cw-ink-faint)]">
+                    Rank harvest topics that also appear in Search Console queries. Silent harvest-only
+                    if GSC is not connected.
+                  </span>
+                </span>
+              </label>
             </div>
 
             <div className="rounded-xl border border-[var(--cw-hairline)] px-4 py-4">
@@ -176,6 +216,16 @@ export default function DataSourcesPanel() {
                   : "Not configured. Set SERANKING_API_KEY in the server environment (.env / host secrets)."}
               </p>
             </div>
+
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-lg bg-[var(--cw-neon)] px-4 py-2 text-sm font-semibold text-[var(--cw-neon-ink)] hover:bg-[var(--cw-neon-soft)] disabled:opacity-50"
+            >
+              <FiSave className="h-4 w-4" />
+              {saving ? "Saving…" : "Save credentials"}
+            </button>
           </>
         )}
       </div>
