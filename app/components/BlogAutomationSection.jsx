@@ -862,7 +862,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
             openLabel="Open in Library"
             cancelling={cancelling}
           >
-            <RunConsole run={liveRun} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />
+            <RunConsole run={liveRun} config={siteConfig} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />
           </LiveRunDock>
 
           {/* ── COMPOSE ─────────────────────────────────────────────── */}
@@ -1050,6 +1050,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
               runs={runs}
               selectedRunId={selectedRunId}
               selectedRun={selectedRun}
+              config={siteConfig}
               detailLoading={runDetailLoading}
               detailError={runDetailError}
               liveRunId={liveRunId}

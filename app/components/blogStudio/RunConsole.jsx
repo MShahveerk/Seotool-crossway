@@ -25,6 +25,23 @@ export const BLOG_PIPELINE = [
   { id: "image", title: "Image", subtitle: "Featured visual" },
 ];
 
+/** Optional agents stay off the rail unless this run (or the live config) enabled them. */
+export function blogPipelineForRun(run, config = {}) {
+  const stages = Array.isArray(run?.stagesJson) ? run.stagesJson : [];
+  const ctx = stages.find((s) => s?.agent === "_context") || {};
+  const hasAgent = (id) => stages.some((s) => s?.agent === id);
+  const humanizerOn =
+    Boolean(ctx.humanizerEnabled ?? config.humanizerEnabled) || hasAgent("humanizer");
+  const reviewOn =
+    Boolean(ctx.headingsApprovalEnabled ?? config.headingsApprovalEnabled) ||
+    hasAgent("headings_approval");
+  return BLOG_PIPELINE.map((step) => {
+    if (step.id === "humanizer") return { ...step, optional: !humanizerOn };
+    if (step.id === "headings_approval") return { ...step, optional: !reviewOn };
+    return step;
+  });
+}
+
 export const RESEARCH_PIPELINE = [
   { id: "researcher", title: "Researcher", subtitle: "Site brief + seeds" },
   { id: "scout", title: "Scout", subtitle: "SE Ranking harvest" },
@@ -150,9 +167,9 @@ function imageStageExtra(stage) {
   );
 }
 
-export default function RunConsole({ run, onCancel, cancelling }) {
+export default function RunConsole({ run, onCancel, cancelling, config }) {
   const research = isBlogResearchRun(run);
-  const pipeline = research ? RESEARCH_PIPELINE : BLOG_PIPELINE;
+  const pipeline = research ? RESEARCH_PIPELINE : blogPipelineForRun(run, config);
 
   const steps = useMemo(() => {
     const stages = (Array.isArray(run?.stagesJson) ? run.stagesJson : []).filter(
@@ -196,7 +213,7 @@ export default function RunConsole({ run, onCancel, cancelling }) {
       emptyHint={
         research
           ? "Start research and the Site Researcher then Keyword Scout appear here as they work."
-          : "Start a draft and every agent — Decider, Binder, Checker, Headings, Architect, Writer, Image — appears here as it works."
+          : "Start a draft and every agent — Decider, Binder, Checker, Headings, Architect, Writer, Humanizer, Image — appears here as it works."
       }
       showDraftSlot={!research}
       footer={result ? <KeywordResearchBoard result={result} /> : null}

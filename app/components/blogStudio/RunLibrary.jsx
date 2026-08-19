@@ -5,7 +5,7 @@
 
 import { PenLine } from "lucide-react";
 import RunLibrary from "../studioShared/RunLibrary";
-import RunConsole, { BLOG_PIPELINE, resolveImageSrc } from "./RunConsole";
+import RunConsole, { blogPipelineForRun, resolveImageSrc } from "./RunConsole";
 
 const COPY = {
   emptyTitle: "No runs yet",
@@ -15,16 +15,17 @@ const COPY = {
     "Every agent in the chain, its full output, what it cost and the finished draft — all in this pane, without leaving the list.",
 };
 
-export default function BlogRunLibrary({ cancelling, onCancel, ...rest }) {
+export default function BlogRunLibrary({ cancelling, onCancel, config, ...rest }) {
   return (
     <RunLibrary
-      pipeline={BLOG_PIPELINE}
+      pipeline={blogPipelineForRun(rest.selectedRun, config)}
       emptyIcon={PenLine}
       copy={COPY}
       getThumbSrc={(run) => resolveImageSrc(run?.draftPreviewJson?.featuredImagePath)}
       renderConsole={(run) => (
         <RunConsole
           run={run}
+          config={config}
           onCancel={onCancel ? () => onCancel(run.id) : undefined}
           cancelling={cancelling}
         />
