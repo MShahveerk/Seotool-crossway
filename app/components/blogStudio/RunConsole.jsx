@@ -14,7 +14,7 @@ import KeywordResearchBoard from "./KeywordResearchBoard";
 /** Pipeline order. The Interpreter only runs for document/Excel sources. */
 export const BLOG_PIPELINE = [
   { id: "interpreter", title: "Interpreter", subtitle: "Document → SEO seeds", optional: true },
-  { id: "decider", title: "Decider", subtitle: "Library + relevant world trends", optional: true },
+  { id: "decider", title: "Decider", subtitle: "World trends, then overlap, then library", optional: true },
   { id: "binder", title: "Binder", subtitle: "Low-KD keyword bag" },
   { id: "checker", title: "Checker", subtitle: "Unique title" },
   { id: "headings", title: "Headings", subtitle: "KD-aware outline" },
@@ -76,10 +76,14 @@ function draftStageExtra(stage) {
       d.source === "harvest"
         ? "Keyword library"
         : d.source === "gsc"
-          ? "Search Console × harvest"
-          : d.source === "trends"
-            ? "Google Trends × harvest"
-            : null;
+          ? "Search Console ∩ library"
+          : d.source === "trends+overlap+library"
+            ? "World trends, then overlap, then library"
+            : d.source === "trends"
+              ? "World trends"
+              : d.source === "library+trends"
+                ? "World trends, then overlap, then library"
+                : null;
     return (
       <div className="space-y-1.5 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5">
         <p className="text-[12px] font-semibold text-[var(--cw-ink)]">{d.topic}</p>

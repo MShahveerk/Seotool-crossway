@@ -8,6 +8,11 @@ npm install
 npm run build
 ```
 
-`npm run build` writes `dist/` (HTML, CSS, JS, fonts, robot mark). Upload that folder.
+`npm run build` writes `dist/` (HTML, CSS, JS, fonts, robot mark). Upload that folder, or on Render:
 
-`npm run dev` starts Vite for live preview if you have it installed.
+- Type: Static Site
+- Root Directory: `story`
+- Build Command: `npm install && npm run build`
+- Publish Directory: `dist`
+
+`npm run dev` starts Vite for live preview.

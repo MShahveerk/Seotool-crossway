@@ -18,7 +18,7 @@ import { FadeIn, StaggerItem } from "./ui-shared/Motion";
 import Btn from "./ui-shared/Btn";
 import CHART from "./ui-shared/chartTheme";
 import { getClientAccountFaviconUrl } from "@/lib/clientAccountList";
-import { deltaBadgeClass } from "@/lib/ui/deltaTone";
+import { deltaBadgeClass, formatPositionDelta } from "@/lib/ui/deltaTone";
 
 function siteHost(url) {
   if (!url) return "";
@@ -85,7 +85,7 @@ function DeltaBadge({ value, invert = false, suffix = "%", label = "vs prior per
     suffix === "pp"
       ? `${n > 0 ? "+" : ""}${n.toFixed(1)} pp`
       : suffix === "pos"
-        ? `${n > 0 ? "+" : ""}${n.toFixed(1)}`
+        ? formatPositionDelta(n)
         : formatDeltaPct(n);
 
   return (

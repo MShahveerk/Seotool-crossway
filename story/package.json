@@ -4,11 +4,24 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node build.mjs",
-    "build:vite": "vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
+  "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@fontsource/space-grotesk": "^5.2.8",
+    "@phosphor-icons/react": "^2.1.10",
+    "@react-three/drei": "^10.7.6",
+    "@react-three/fiber": "^9.4.0",
+    "@react-three/postprocessing": "^3.0.4",
+    "gsap": "^3.13.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "three": "^0.180.0"
+  },
   "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
     "vite": "^7.1.0"
   }
 }

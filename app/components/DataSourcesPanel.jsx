@@ -166,9 +166,9 @@ export default function DataSourcesPanel() {
             <div className="space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-4">
               <p className="text-sm font-semibold text-[var(--cw-ink)]">Keyword library ranking</p>
               <p className="text-xs text-[var(--cw-ink-muted)]">
-                The Decider always starts from the keyword library (Research or an uploaded bank).
-                SerpAPI only adds on-niche world trends as a hook. This ranking is used when there
-                is no SerpAPI key — or as the library lane even when Trends are on.
+                When SerpAPI is on, the Decider prefers relevant world trends, then overlap
+                (library×trend or Search Console ∩ library), then the keyword library. This ranking
+                is the library lane when Trends are off, or when no on-niche world trend exists.
               </p>
               <label className="flex items-start gap-2 text-sm text-[var(--cw-ink-dim)]">
                 <input

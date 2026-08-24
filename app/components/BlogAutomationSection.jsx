@@ -887,7 +887,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                         className={`${inputClass} mt-1`}
                         value={topic}
                         onChange={(e) => setTopic(e.target.value)}
-                        placeholder="Leave blank — Decider picks from your keyword library, angled with relevant world trends"
+                        placeholder="Leave blank. Decider prefers a relevant world trend, then overlap, then your keyword library"
                       />
                     </div>
                     {lastResearch ? (
@@ -963,9 +963,8 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                         Tips
                       </p>
                       <p className="text-xs text-[var(--cw-ink-muted)]">
-                        Leave the topic blank and the Decider picks a seed from your keyword library
-                        (Research, or the list you uploaded). When SerpAPI is set, it also layers
-                        relevant world trends as the timely angle — never instead of the library.
+                        Leave the topic blank and the Decider prefers a relevant world trend, then
+                        overlap (library×trend or Search Console ∩ library), then the keyword library.
                         Type a topic to skip the Decider.
                       </p>
                     </div>

@@ -25,7 +25,7 @@ import WebsiteStatisticsDateRangeModal, {
 import ReportSectionActions from "./ReportSectionActions";
 import WorldAudienceHeatMap from "./website-stats/WorldAudienceHeatMap";
 import { countryDisplayName } from "@/lib/geo/isoCountries";
-import { deltaBadgeClass, deltaTone } from "@/lib/ui/deltaTone";
+import { deltaBadgeClass, deltaTone, formatPositionDelta } from "@/lib/ui/deltaTone";
 
 const RANGE_OPTIONS = [
   { id: "7d", label: "7 days" },
@@ -157,17 +157,18 @@ function pctChangeFromCtr(ctr) {
   return `${pct}%`;
 }
 
-function PeriodChangeBadge({ value, invert = false }) {
+function PeriodChangeBadge({ value, invert = false, kind = "percent" }) {
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   const tone = deltaTone(n, { invert });
   const Up = invert ? FiTrendingDown : FiTrendingUp;
   const Down = invert ? FiTrendingUp : FiTrendingDown;
   const Icon = tone === "down" ? Down : Up;
+  const label = kind === "position" ? formatPositionDelta(n) : `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
   return (
     <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${deltaBadgeClass(n, { invert })}`}>
       {tone !== "neutral" ? <Icon className="w-3 h-3" /> : null}
-      {`${n > 0 ? "+" : ""}${n.toFixed(1)}%`}
+      {label}
     </span>
   );
 }
@@ -327,7 +328,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
 
   const positionChange = useMemo(() => {
     if (!payload?.totals?.averagePosition || !payload?.compareTotals?.averagePosition) return 0;
-    return ((payload.totals.averagePosition - payload.compareTotals.averagePosition) / payload.compareTotals.averagePosition) * 100;
+    return Number(payload.totals.averagePosition) - Number(payload.compareTotals.averagePosition);
   }, [payload]);
 
   const maxCountryClicks = useMemo(() => {
@@ -947,7 +948,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     <span className="text-2xl font-bold text-slate-900 tabular-nums">
                       {formatPos(payload?.totals?.averagePosition)}
                     </span>
-                    {hasCompare && <PeriodChangeBadge value={positionChange} invert />}
+                    {hasCompare && <PeriodChangeBadge value={positionChange} invert kind="position" />}
                   </div>
                 </div>
                 <span className="w-2.5 h-2.5 rounded-full bg-[#949CA5] shadow-[0_0_8px_rgba(107,114,128,0.3)]" />

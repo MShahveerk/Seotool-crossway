@@ -5,7 +5,7 @@
 import PipelinePreview from "../studioShared/PipelinePreview";
 
 const STEPS = [
-  { id: "decider", title: "Decider", subtitle: "Library + relevant world trends", readyKey: "decider", modelKey: "deciderModel" },
+  { id: "decider", title: "Decider", subtitle: "World trends, then overlap, then library", readyKey: "decider", modelKey: "deciderModel" },
   { id: "binder", title: "Binder", subtitle: "Low-KD keyword bag", readyKey: "binder", modelKey: "binderModel" },
   { id: "checker", title: "Checker", subtitle: "Unique title", readyKey: "checker", modelKey: "checkerModel" },
   { id: "headings", title: "Headings", subtitle: "KD-aware outline", readyKey: "headings", modelKey: "headingsModel" },
