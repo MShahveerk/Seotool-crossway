@@ -489,7 +489,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       loading={false}
       error={error}
     >
-      <div className="cw-lit space-y-3 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5">
+      <div className="cw-lit space-y-3 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5" data-guide="link-target">
         <button
           type="button"
           onClick={() => setLlmOpen((v) => !v)}
@@ -689,7 +689,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
               each · {DEPTHS[depth].credits} credits when uncached
             </span>
           </div>
-          <Btn type="submit" variant="primary" size="lg" icon={FiZap} loading={loading} disabled={loading}>
+          <Btn type="submit" variant="primary" size="lg" icon={FiZap} loading={loading} disabled={loading} data-guide="link-run">
             Find opportunities
           </Btn>
         </div>
@@ -706,7 +706,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
 
       {data && !loading ? (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--cw-ink-muted)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--cw-ink-muted)]" data-guide="link-list">
             <span className="font-mono">
               &ldquo;{data.keyword}&rdquo; · {data.device}
               {data.location ? ` · ${data.location}` : ""} · {data.targets?.length || 0} rivals

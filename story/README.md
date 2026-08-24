@@ -17,4 +17,4 @@ npm run build
 
 `npm run dev` starts Vite for live preview.
 
-The robot on the right is 2D sprites in `public/mascot/`, drawn from the product mark. No Three.js.
+The robot is a 2D narrator in `public/mascot/`, drawn from the product mark. He talks, hops between chapters, and points at the line you click. No Three.js.

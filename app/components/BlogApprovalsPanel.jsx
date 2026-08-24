@@ -405,7 +405,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-guide="approve-queue">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
           <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--cw-ink-faint)]" />
@@ -471,7 +471,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
       ) : (
         <div className="overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)]">
           <ul className="divide-y divide-[var(--cw-hairline)]">
-            {filtered.map((blog) => {
+            {filtered.map((blog, index) => {
               const meta = statusMeta(blog.status);
               const title = blog.userEditedTitle || blog.title || "Untitled";
               const excerpt = stripHtml(blog.userEditedExcerpt ?? blog.excerpt ?? "").slice(0, 140);
@@ -480,9 +480,13 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                   <button
                     type="button"
                     onClick={() => openBlog(blog)}
+                    data-guide={index === 0 ? "approve-actions" : undefined}
                     className="group flex w-full items-stretch gap-4 px-4 py-3.5 text-left transition hover:bg-[var(--cw-raised)] focus:bg-[var(--cw-raised)] focus:outline-none"
                   >
-                    <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-[var(--cw-canvas)] ring-1 ring-[var(--cw-hairline)]">
+                    <div
+                      className="relative h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-[var(--cw-canvas)] ring-1 ring-[var(--cw-hairline)]"
+                      data-guide={index === 0 ? "approve-preview" : undefined}
+                    >
                       {blog.featuredImagePath ? (
                         <img
                           src={publicMediaUrl(blog.featuredImagePath, {

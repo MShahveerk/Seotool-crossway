@@ -451,7 +451,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="rounded-xl border border-gray-200 p-4 space-y-4 bg-gray-50/50">
+        <form onSubmit={handleSubmit} className="rounded-xl border border-gray-200 p-4 space-y-4 bg-gray-50/50" data-guide="create-editor">
           <p className="text-sm font-semibold text-gray-900">New approval</p>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Heading</label>
@@ -594,7 +594,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
               </span>
             </span>
           </label>
-          <div>
+          <div data-guide="create-meta">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Schedule Post (Optional, {timezoneShortLabel()})
             </label>
@@ -619,6 +619,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
             <button
               type="submit"
               disabled={submitting || !selectedSite.trim()}
+              data-guide="create-submit"
               className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-xl font-semibold disabled:opacity-60"
             >
               <FiImage className="w-4 h-4" />

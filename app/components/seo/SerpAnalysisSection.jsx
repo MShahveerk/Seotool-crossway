@@ -1221,7 +1221,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
           <KeywordMetricsBar metrics={data.keywordMetrics} />
 
           {/* 2. Your position + your site card */}
-          <div className="space-y-3">
+          <div className="space-y-3" data-guide="serp-you">
             <div className="flex items-center gap-2">
               <FiTarget className={`size-5 ${data.found ? "text-emerald-600" : "text-amber-600"}`} />
               <h3 className="font-bold text-base text-gray-900">
@@ -1239,7 +1239,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
 
           {/* 3. Action plan */}
           {data.actions?.length > 0 && (
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-3 shadow-sm">
+            <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-3 shadow-sm" data-guide="serp-move">
               <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2"><FiTarget className="size-4 text-emerald-600" /> How To Move Up</h3>
               <div className="space-y-2">
                 {data.actions.map((a, i) => (

@@ -11,6 +11,7 @@ import { useState } from "react";
 import TabRail from "../ui-shared/TabRail";
 import UnifiedKeywordResearchSection from "./UnifiedKeywordResearchSection";
 import KeywordOpportunitiesSection from "./KeywordOpportunitiesSection";
+import { useGuidePrepare } from "@/lib/guideNav";
 
 const TABS = [
   { id: "research", label: "Research" },
@@ -19,6 +20,9 @@ const TABS = [
 
 export default function KeywordWorkbenchSection({ selectedSite = "", initialTab = "research" }) {
   const [tab, setTab] = useState(TABS.some((t) => t.id === initialTab) ? initialTab : "research");
+  useGuidePrepare((nav) => {
+    if (nav.kwTab) setTab(nav.kwTab);
+  });
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)] space-y-5">

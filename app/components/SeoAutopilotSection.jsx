@@ -29,6 +29,7 @@ import SeoAutopilotMark from "./seoAutopilot/SeoAutopilotMark";
 import TabRail from "./ui-shared/TabRail";
 import LiveRunDock from "./studioShared/LiveRunDock";
 import Btn from "./ui-shared/Btn";
+import { useGuidePrepare } from "@/lib/guideNav";
 
 const TABS = [
   { id: "overview", label: "Scorecard" },
@@ -58,6 +59,9 @@ async function copyText(text) {
 export default function SeoAutopilotSection({ selectedSite = "" }) {
   const siteLink = String(selectedSite || "").trim();
   const [tab, setTab] = useState("overview");
+  useGuidePrepare((nav) => {
+    if (nav.autoTab) setTab(nav.autoTab);
+  });
   const [config, setConfig] = useState(null);
   const [runs, setRuns] = useState([]);
   const [artifacts, setArtifacts] = useState([]);
@@ -353,7 +357,7 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
       <div className="relative border-b border-[var(--cw-hairline)] px-5 py-4">
         <div className="relative flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h2 className="font-heading inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-[var(--cw-ink)]">
+            <h2 className="font-heading inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-[var(--cw-ink)]" data-guide="auto-brief">
               <SeoAutopilotMark className="h-4 w-4 text-[var(--cw-neon)]" />
               SEO Autopilot
             </h2>
@@ -385,6 +389,7 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
               loading={running || hasLiveAutopilot}
               onClick={() => runNow()}
               disabled={running || hasLiveAutopilot}
+              data-guide="auto-run"
             >
               {running || hasLiveAutopilot ? "Running…" : "Run Autopilot"}
             </Btn>
@@ -435,7 +440,7 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
         </LiveRunDock>
 
         {tab === "overview" && (
-          <div className="space-y-4">
+          <div className="space-y-4" data-guide="auto-output">
             <ScorecardDashboard scorecard={scorecard} siteLink={siteLink} />
             <div className="rounded-2xl border border-gray-100 bg-white p-5 space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -582,7 +587,7 @@ export default function SeoAutopilotSection({ selectedSite = "" }) {
         )}
 
         {tab === "agents" && (
-          <div className="space-y-6">
+          <div className="space-y-6" data-guide="auto-agents">
             <p className="text-sm text-gray-600">
               Same key → provider → model pattern as Blog / Post Automation Studios. Each Autopilot
               agent has its own prompt; revert restores the built-in default.

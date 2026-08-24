@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { AuthGuideButton } from "../components/ui-shared/PageGuide";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -123,12 +124,15 @@ function ResetPasswordForm() {
     <main className="min-h-screen bg-white dark:bg-gray-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md bg-white dark:bg-gray-100 shadow-xl rounded-xl border border-gray-200 dark:border-gray-300 p-8">
         <h1 className="text-3xl font-bold mb-2 text-center text-gray-900 dark:text-black">Reset Password</h1>
+        <div className="mb-6 flex justify-center">
+          <AuthGuideButton pathname="/reset-password" />
+        </div>
         <p className="text-gray-600 dark:text-gray-800 mb-8 text-center text-sm">
           Enter your new password below
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
+          <div data-guide="auth-password">
             <label
               htmlFor="password"
               className="block text-sm font-semibold text-gray-900 dark:text-black mb-2"
@@ -173,6 +177,7 @@ function ResetPasswordForm() {
           <button
             type="submit"
             disabled={loading}
+            data-guide="auth-submit"
             className="w-full inline-flex items-center justify-center rounded-lg bg-[#00A3FF] px-4 py-2.5 text-sm md:text-base font-semibold text-black shadow-md hover:shadow-lg hover:bg-primary-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200"
           >
             {loading ? (

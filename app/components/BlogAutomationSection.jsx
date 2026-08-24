@@ -37,6 +37,7 @@ import StudioReferenceImages from "./studioShared/StudioReferenceImages";
 import StudioBrandKit from "./studioShared/StudioBrandKit";
 import TabRail from "./ui-shared/TabRail";
 import Btn from "./ui-shared/Btn";
+import { useGuidePrepare } from "@/lib/guideNav";
 import LiveRunDock from "./studioShared/LiveRunDock";
 import { isLiveStatus } from "./studioShared/runFormat";
 import { BLOG_STUDIO_DEFAULT_PROMPTS } from "../../lib/blogStudio/defaults";
@@ -97,6 +98,14 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   const [zone, setZone] = useState("compose");
   const [source, setSource] = useState("topic");
   const [setupTab, setSetupTab] = useState("voice");
+  useGuidePrepare((nav) => {
+    if (nav.zone) setZone(nav.zone);
+    if (nav.source) setSource(nav.source);
+    if (nav.setupTab) {
+      setZone("setup");
+      setSetupTab(nav.setupTab);
+    }
+  });
   const [seedHandoffRunId, setSeedHandoffRunId] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");

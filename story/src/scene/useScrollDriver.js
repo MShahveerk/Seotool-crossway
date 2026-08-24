@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { chapters } from "../content.js";
+import { defaultTarget } from "../mascot/lines.js";
 import { story } from "./store.js";
 
 export function useScrollDriver() {
@@ -30,10 +31,13 @@ export function useScrollDriver() {
         if (!visible) return;
         const id = visible.target.getAttribute("data-id");
         const idx = chapters.findIndex((c) => c.id === id);
-        if (idx >= 0) {
-          story.chapter = idx;
-          story.progress = idx / Math.max(chapters.length - 1, 1);
-        }
+        if (idx < 0 || idx === story.chapter) return;
+        story.chapter = idx;
+        story.progress = idx / Math.max(chapters.length - 1, 1);
+        story.targetKey = defaultTarget(id);
+        story.mode = "pose";
+        story.held = false;
+        story.quip = "";
       },
       { root: null, threshold: [0.2, 0.35, 0.5, 0.7], rootMargin: "-12% 0px -35% 0px" }
     );

@@ -64,6 +64,15 @@ export default function CalendarView({
     onDayClick(date, getPostsForDay(day));
   };
 
+  let firstScheduledId = null;
+  for (let d = 1; d <= daysInMonth; d += 1) {
+    const hit = getPostsForDay(d)[0];
+    if (hit?.id) {
+      firstScheduledId = hit.id;
+      break;
+    }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between border-b border-gray-200 pb-4">
@@ -129,6 +138,7 @@ export default function CalendarView({
               key={day}
               type="button"
               onClick={() => openDay(day)}
+              data-guide={day === 1 ? "cal-day" : undefined}
               className="bg-white min-h-[120px] p-2 text-left transition-colors hover:bg-[#f4fbf4] relative group focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#1d9c35]"
             >
               <div className="flex items-center justify-between">
@@ -157,6 +167,7 @@ export default function CalendarView({
                       key={post.id}
                       role="button"
                       tabIndex={0}
+                      data-guide={post.id === firstScheduledId ? "cal-item" : undefined}
                       onClick={(e) => {
                         e.stopPropagation();
                         onPostClick?.(post);

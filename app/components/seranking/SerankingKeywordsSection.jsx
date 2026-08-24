@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useGuidePrepare } from "@/lib/guideNav";
 import {
   ArrowDown,
   ArrowUp,
@@ -418,6 +419,9 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
   const [error, setError] = useState("");
   const [domainKeywords, setDomainKeywords] = useState([]);
   const [viewTab, setViewTab] = useState("research");
+  useGuidePrepare((nav) => {
+    if (nav.kwView) setViewTab(nav.kwView);
+  });
 
   const [market, setMarket] = useState("us");
   // Fixed expansion type — the Similar/Related/Questions/Long-tail selector was
@@ -606,7 +610,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
               <CardContent className="p-0">
                 <div className="bg-gradient-to-br from-[color-mix(in_srgb,var(--cw-neon)_10%,var(--cw-surface))] via-[var(--cw-surface)] to-[var(--cw-raised)] p-5 sm:p-6 space-y-4">
                   <div className="flex flex-col lg:flex-row gap-3">
-                    <div className="relative flex-1">
+                    <div className="relative flex-1" data-guide="kw-seed">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                       <Input
                         value={query}
@@ -645,6 +649,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
                       className="h-11 px-6"
                       onClick={() => runSearch(false)}
                       disabled={searchLoading || !query.trim()}
+                      data-guide="kw-run"
                     >
                       {searchLoading ? "Searching…" : `Search (~${creditCost} cr)`}
                     </Button>
@@ -693,7 +698,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
             ) : null}
 
             {results.length ? (
-              <Card className="shadow-sm overflow-hidden">
+              <Card className="shadow-sm overflow-hidden" data-guide="kw-table">
                 <div className="border-b border-border/60 px-4 py-2 bg-muted/20">
                   <p className="text-sm font-medium">Related keywords</p>
                 </div>
@@ -707,7 +712,7 @@ export default function SerankingKeywordsSection({ selectedSite = "" }) {
                 />
               </Card>
             ) : !searchLoading ? (
-              <Card className="shadow-sm border-dashed">
+              <Card className="shadow-sm border-dashed" data-guide="kw-table">
                 <CardContent className="py-12 text-center text-sm text-muted-foreground">
                   Search any seed keyword to see volume, KD, CPC, competition, traffic potential, intent, and trends.
                 </CardContent>

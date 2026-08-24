@@ -322,7 +322,7 @@ export default function CalendarSection({ selectedSite = "" }) {
         </div>
       )}
 
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm" data-guide="cal-month">
         <CalendarView
           approvals={filteredApprovals}
           canManage={canManage}

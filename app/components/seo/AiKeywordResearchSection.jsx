@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useGuidePrepare } from "@/lib/guideNav";
 import {
   FiSearch,
   FiZap,
@@ -348,6 +349,9 @@ function AiSiteBriefPanel({ brief, loading, error, onGenerate, hasData }) {
 
 export default function AiKeywordResearchSection({ selectedSite = "", initialTab = "yours", embedded = false }) {
   const [tab, setTab] = useState(initialTab === "explore" ? "explore" : "yours");
+  useGuidePrepare((nav) => {
+    if (nav.kwExplore) setTab("explore");
+  });
   const [geo, setGeo] = useState("us");
   const [range, setRange] = useState("28d");
   const [status, setStatus] = useState(null);
@@ -674,7 +678,7 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
               )}
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
+              <div className="relative flex-1" data-guide="kw-seed">
                 <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type="text"
@@ -689,6 +693,7 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                 type="button"
                 onClick={runExplore}
                 disabled={exploreLoading || !seedInput.trim()}
+                data-guide="kw-run"
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
               >
                 {exploreLoading ? <FiRefreshCw className="animate-spin" size={16} /> : <FiZap size={16} />}
@@ -751,7 +756,7 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
                   ))}
                 </div>
               ) : null}
-              <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+              <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm" data-guide="kw-table">
                 <div className="flex flex-wrap gap-1 border-b border-gray-100 px-4 py-3 bg-gray-50/80">
                   {FILTER_TABS.map((t) => (
                     <button
@@ -812,7 +817,7 @@ export default function AiKeywordResearchSection({ selectedSite = "", initialTab
               </div>
             </>
           ) : !exploreLoading ? (
-            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-12 text-center">
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-12 text-center" data-guide="kw-table">
               <FiDollarSign size={32} className="mx-auto text-indigo-400 mb-3" />
               <h3 className="text-lg font-semibold text-gray-900">Research any keyword</h3>
               <p className="mt-2 max-w-md mx-auto text-sm text-gray-500">Enter a seed above. Autocomplete finds related terms, AI estimates volume/KD/CPC/traffic potential/trend, and Google Ads fills in live Planner data when configured.</p>

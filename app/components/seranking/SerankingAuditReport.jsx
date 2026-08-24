@@ -295,7 +295,7 @@ export default function SerankingAuditReport({ report, auditId = null, pages = [
   return (
     <div className="space-y-6">
       {report.score != null ? (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3" data-guide="intel-scores">
           <Card className="shadow-sm border-[color-mix(in_srgb,var(--cw-neon)_32%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_10%,var(--cw-surface))]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
@@ -345,11 +345,10 @@ export default function SerankingAuditReport({ report, auditId = null, pages = [
         </div>
       ) : null}
 
+      <div className="space-y-4" data-guide="intel-issues">
       <p className="text-xs text-muted-foreground">
         Expand any issue for a full explanation, SEO impact, step-by-step fix guide, and affected URLs.
       </p>
-
-      <div className="space-y-4">
         {sections.map((sec) => (
           <Card key={sec.uid || sec.name} className="shadow-sm">
             <CardHeader className="pb-2">

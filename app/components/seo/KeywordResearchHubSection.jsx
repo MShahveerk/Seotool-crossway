@@ -44,7 +44,7 @@ export default function KeywordResearchHubSection({ selectedSite = "" }) {
         : "";
 
   return (
-    <div className="min-h-[calc(100vh-2rem)] space-y-8 rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
+    <div className="relative min-h-[calc(100vh-2rem)] space-y-8 rounded-xl border border-gray-200 bg-white p-5 sm:p-6">
       <header className="relative overflow-hidden rounded-2xl border border-gray-100 bg-gradient-to-br from-indigo-950 via-slate-900 to-emerald-950 p-6 text-white shadow-[0_8px_32px_rgba(0,0,0,0.12)] sm:p-8">
         <div className="absolute -right-16 -top-16 size-64 rounded-full bg-indigo-500/10 blur-3xl" aria-hidden />
         <div className="relative min-w-0">

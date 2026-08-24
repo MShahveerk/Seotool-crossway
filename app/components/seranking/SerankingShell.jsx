@@ -99,6 +99,7 @@ export default function SerankingShell({
         description={description}
         actions={
           onRefresh ? (
+            <div data-guide="intel-export">
             <Btn
               variant="secondary"
               icon={RefreshCw}
@@ -108,6 +109,7 @@ export default function SerankingShell({
             >
               {refreshing ? "Refreshing…" : refreshLabel}
             </Btn>
+            </div>
           ) : null
         }
       />

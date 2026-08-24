@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
+import { AuthGuideButton } from "../components/ui-shared/PageGuide";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -54,6 +55,9 @@ function VerifyEmailContent() {
   return (
     <main className="min-h-screen bg-white dark:bg-gray-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
+        <div className="mb-4 flex justify-center">
+          <AuthGuideButton pathname="/verify-email" />
+        </div>
         {/* Verifying State */}
         {status === "verifying" && (
           <div className="bg-white dark:bg-gray-100 shadow-xl rounded-xl border border-gray-200 dark:border-gray-300 p-8 text-center">
@@ -92,6 +96,7 @@ function VerifyEmailContent() {
             </p>
             <Link
               href="/login"
+              data-guide="auth-submit"
               className="inline-flex items-center justify-center w-full rounded-lg bg-[#00A3FF] px-4 py-2.5 text-sm font-semibold text-black shadow-md hover:shadow-lg hover:bg-[#0077CC] transition-all duration-200"
             >
               Go to Login
@@ -117,6 +122,7 @@ function VerifyEmailContent() {
             </p>
             <Link
               href="/login"
+              data-guide="auth-submit"
               className="inline-flex items-center justify-center w-full rounded-lg bg-[#00A3FF] px-4 py-2.5 text-sm font-semibold text-black shadow-md hover:shadow-lg hover:bg-[#0077CC] transition-all duration-200"
             >
               Go to Login
@@ -143,6 +149,7 @@ function VerifyEmailContent() {
             <div className="space-y-3">
               <Link
                 href="/login"
+                data-guide="auth-submit"
                 className="inline-flex items-center justify-center w-full rounded-lg bg-[#00A3FF] px-4 py-2.5 text-sm font-semibold text-black shadow-md hover:shadow-lg hover:bg-[#0077CC] transition-all duration-200"
               >
                 Go to Login

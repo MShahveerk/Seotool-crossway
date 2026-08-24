@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { AuthGuideButton } from "../components/ui-shared/PageGuide";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -82,6 +83,9 @@ export default function ForgotPasswordPage() {
         <h1 className="text-3xl font-bold mb-2 text-center text-gray-900 dark:text-black">
           Forgot Password
         </h1>
+        <div className="mb-6 flex justify-center">
+          <AuthGuideButton pathname="/forgot-password" />
+        </div>
         <p className="text-gray-600 dark:text-gray-800 mb-8 text-center text-sm">
           Enter your email address and we&apos;ll send you a link to reset your
           password

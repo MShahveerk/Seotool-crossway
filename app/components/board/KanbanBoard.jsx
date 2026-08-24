@@ -145,7 +145,7 @@ export default function KanbanBoard({
             <h1 className="cw-board__brand">{brand}</h1>
             <p className="cw-board__sub">{subtitle}</p>
           </div>
-          <div className="cw-board__meta">
+          <div className="cw-board__meta" data-guide="board-filter">
             <span
               className={`cw-board__chip ${
                 liveConnected === false ? "cw-board__chip--muted" : "cw-board__chip--live"
@@ -168,7 +168,7 @@ export default function KanbanBoard({
         {error ? <div className="cw-board__error">{error}</div> : null}
 
         <div className="cw-board__scroller" data-board-scroller={boardId} id={boundsId}>
-          <div className="cw-board__lanes">
+          <div className="cw-board__lanes" data-guide="board-lanes">
             <AutoMoveArrows boardId={boardId} autoMoves={resolvedAutoMoves} columns={columns} />
             {columns.map((col) => {
               const list = grouped[col.id] || [];
@@ -198,17 +198,21 @@ export default function KanbanBoard({
                       <p className="cw-board__empty">Drop here</p>
                     ) : null}
                     {list.map((item, index) => (
-                      <Card
+                      <div
                         key={item.id}
-                        item={item}
-                        columnId={col.id}
-                        boardId={boardId}
-                        boundsSelector={`#${boundsId}`}
-                        locked={Boolean(col.locked) || getColumn(item) === "published"}
-                        onMoveToColumn={requestMove}
-                        onOpenDetails={setDetailItem}
-                        index={index}
-                      />
+                        data-guide={columns[0]?.id === col.id && index === 0 ? "board-card" : undefined}
+                      >
+                        <Card
+                          item={item}
+                          columnId={col.id}
+                          boardId={boardId}
+                          boundsSelector={`#${boundsId}`}
+                          locked={Boolean(col.locked) || getColumn(item) === "published"}
+                          onMoveToColumn={requestMove}
+                          onOpenDetails={setDetailItem}
+                          index={index}
+                        />
+                      </div>
                     ))}
                   </div>
                 </section>

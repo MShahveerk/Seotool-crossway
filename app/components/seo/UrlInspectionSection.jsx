@@ -182,6 +182,7 @@ export default function UrlInspectionSection({ selectedSite = "" }) {
       <form onSubmit={runInspect} className="flex flex-col sm:flex-row gap-3 mb-8">
         <input
           type="url"
+          data-guide="inspect-input"
           value={inspectionUrl}
           onChange={(e) => setInspectionUrl(e.target.value)}
           placeholder={
@@ -194,6 +195,7 @@ export default function UrlInspectionSection({ selectedSite = "" }) {
         <button
           type="submit"
           disabled={loading}
+          data-guide="inspect-run"
           className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-black text-white text-sm font-semibold disabled:opacity-60"
         >
           {loading ? <FiRefreshCw className="w-4 h-4 animate-spin" /> : <FiSearch className="w-4 h-4" />}
@@ -202,7 +204,7 @@ export default function UrlInspectionSection({ selectedSite = "" }) {
       </form>
 
       {result ? (
-        <div className="rounded-xl border border-gray-200 overflow-hidden mb-8">
+        <div className="rounded-xl border border-gray-200 overflow-hidden mb-8" data-guide="inspect-result">
           <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Live inspection</p>
             <p className="mt-1 text-sm font-medium text-gray-900 break-all">{result.url}</p>
@@ -242,7 +244,7 @@ export default function UrlInspectionSection({ selectedSite = "" }) {
         </div>
       ) : null}
 
-      <section className="space-y-4">
+      <section className="space-y-4" data-guide={result ? undefined : "inspect-result"}>
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-gray-900">Daily inspection results</h2>

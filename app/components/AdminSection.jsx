@@ -26,6 +26,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
 } from "react-icons/fi";
+import { useGuidePrepare } from "@/lib/guideNav";
 
 const ROLES = {
   SUPER_ADMIN: "super_admin",
@@ -148,6 +149,9 @@ export default function AdminSection({ onNavigate } = {}) {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [adminTab, setAdminTab] = useState("people");
+  useGuidePrepare((nav) => {
+    if (nav.adminTab) setAdminTab(nav.adminTab);
+  });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({ ...EMPTY_USER_FORM });
@@ -1284,13 +1288,17 @@ export default function AdminSection({ onNavigate } = {}) {
       )}
 
       {adminTab === "sources" && (
-        <div className="space-y-4">
+        <div className="space-y-4" data-guide="admin-sources">
           <DataSourcesPanel />
           <SeoDigestSettingsPanel />
         </div>
       )}
 
-      {adminTab === "automation" && <CronJobsPanel onNavigate={onNavigate} />}
+      {adminTab === "automation" && (
+        <div data-guide="admin-jobs">
+          <CronJobsPanel onNavigate={onNavigate} />
+        </div>
+      )}
 
       {/* Create/Edit Modal — portaled so section transforms cannot clip it */}
       {portalReady && (showCreateModal || editingUser)

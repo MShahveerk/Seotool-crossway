@@ -45,6 +45,7 @@ import {
   labelClass,
   formatWhen,
 } from "./postsStudio/studioConstants";
+import { useGuidePrepare } from "@/lib/guideNav";
 
 const ZONES = [
   { id: "compose", label: "Compose", icon: FiEdit3 },
@@ -74,6 +75,14 @@ export default function PostAutomationSection({ selectedSite = "" }) {
   const [zone, setZone] = useState("compose");
   const [source, setSource] = useState("topic");
   const [setupTab, setSetupTab] = useState("voice");
+  useGuidePrepare((nav) => {
+    if (nav.zone) setZone(nav.zone);
+    if (nav.source) setSource(nav.source);
+    if (nav.setupTab) {
+      setZone("setup");
+      setSetupTab(nav.setupTab);
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [engineMode, setEngineMode] = useState("external");
@@ -550,6 +559,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
           {/* Live run docks on every zone, minimised, self-hiding — except in the
               Library with that same run already open, where it would only be
               pointing at what you're looking at. */}
+          <div data-guide="studio-rail">
           <LiveRunDock
             run={dockedRun}
             label="Post"
@@ -560,10 +570,11 @@ export default function PostAutomationSection({ selectedSite = "" }) {
           >
             <RunConsole run={liveRun} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />
           </LiveRunDock>
+          </div>
 
           {/* ── COMPOSE ─────────────────────────────────────────────── */}
           {zone === "compose" && (
-            <div className="space-y-4">
+            <div className="space-y-4" data-guide="studio-brief">
               <div className="flex items-center justify-between gap-3">
                 <TabRail size="sm" tabs={SOURCES} value={source} onChange={setSource} ariaLabel="Content source" />
                 <span className="hidden text-xs text-[var(--cw-ink-faint)] sm:inline">
@@ -605,7 +616,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
                         automatically.
                       </p>
                     </div>
-                    <Btn variant="primary" size="lg" icon={running ? FiRefreshCw : FiSend} onClick={startRun} disabled={running || !selectedSite}>
+                    <Btn variant="primary" size="lg" icon={running ? FiRefreshCw : FiSend} onClick={startRun} disabled={running || !selectedSite} data-guide="studio-generate">
                       {running ? "Queueing…" : "Generate post"}
                     </Btn>
                   </div>
@@ -641,6 +652,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
 
           {/* ── LIBRARY ─────────────────────────────────────────────── */}
           {zone === "library" && (
+            <div data-guide="studio-library">
             <RunLibrary
               runs={runs}
               selectedRunId={selectedRunId}
@@ -657,6 +669,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
               onCancel={cancelRun}
               onGoCompose={() => setZone("compose")}
             />
+            </div>
           )}
 
           {/* ── SETUP ───────────────────────────────────────────────── */}

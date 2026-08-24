@@ -226,7 +226,7 @@ export default function ReportsStudioSection({ selectedSite = "" }) {
 
   return (
     <div className="min-h-[calc(100vh-2rem)] space-y-6">
-      <header className="relative overflow-hidden rounded-3xl border border-gray-900/10 bg-gradient-to-br from-gray-950 via-gray-900 to-emerald-950 px-6 py-8 text-white shadow-[0_16px_48px_rgba(0,0,0,0.18)] sm:px-8">
+      <header className="relative overflow-hidden rounded-3xl border border-gray-900/10 bg-gradient-to-br from-gray-950 via-gray-900 to-emerald-950 px-6 py-8 text-white shadow-[0_16px_48px_rgba(0,0,0,0.18)] sm:px-8" data-guide="report-month">
         <div className="absolute -right-20 -top-16 size-72 rounded-full bg-emerald-400/15 blur-3xl" aria-hidden />
         <div className="absolute -bottom-24 left-10 size-56 rounded-full bg-lime-300/10 blur-3xl" aria-hidden />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -273,7 +273,7 @@ export default function ReportsStudioSection({ selectedSite = "" }) {
 
       <section className="grid gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm ring-1 ring-gray-50 lg:col-span-2">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3" data-guide="report-build">
             <div>
               <h2 className="text-lg font-bold text-gray-900">Download filtered decks</h2>
               <p className="text-sm text-gray-500">Uses the saved template for this client.</p>
@@ -288,7 +288,7 @@ export default function ReportsStudioSection({ selectedSite = "" }) {
               </span>
             )}
           </div>
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <div className="mt-4 grid gap-2 sm:grid-cols-3" data-guide="report-kind">
             {[
               { kind: "website", label: "Website" },
               { kind: "smm", label: "Social" },
@@ -486,7 +486,9 @@ export default function ReportsStudioSection({ selectedSite = "" }) {
               </p>
             </div>
           </div>
-          <ReportsManagementPanel />
+          <div data-guide="report-history">
+            <ReportsManagementPanel />
+          </div>
         </section>
       ) : (
         <div className="rounded-2xl border border-gray-100 bg-white px-5 py-4 text-sm text-gray-600 ring-1 ring-gray-50">

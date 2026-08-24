@@ -226,6 +226,7 @@ export default function KeywordOpportunitiesSection({ selectedSite = "" }) {
       <form
         onSubmit={run}
         className="cw-lit space-y-4 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5"
+        data-guide={!data ? "kw-export" : undefined}
       >
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-2">
@@ -285,6 +286,7 @@ export default function KeywordOpportunitiesSection({ selectedSite = "" }) {
                 loading={pdfBusy}
                 onClick={exportPdf}
                 disabled={pdfBusy}
+                data-guide="kw-export"
               >
                 {pdfBusy ? "Building PDF…" : "Download PDF"}
               </Btn>

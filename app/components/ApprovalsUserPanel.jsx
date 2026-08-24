@@ -256,7 +256,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-guide="approve-queue">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <p className="text-sm text-gray-600 max-w-3xl">
           Pending posts from Create Post, inbound, and Post Automation Studio appear here
@@ -310,7 +310,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
         </div>
       ) : (
         <ul className="space-y-3">
-          {visibleItems.map((a) => {
+          {visibleItems.map((a, index) => {
             const open = openId === a.id;
             const closed = a.status === "approved" || a.status === "declined";
             const canAct = a.status === "pending" || a.status === "edited";
@@ -331,9 +331,13 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                 <button
                   type="button"
                   onClick={() => toggleOpen(a)}
+                  data-guide={index === 0 ? "approve-actions" : undefined}
                   className="w-full flex items-stretch gap-3 px-4 py-3 text-left hover:bg-gray-50/80"
                 >
-                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200">
+                  <div
+                    className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200"
+                    data-guide={index === 0 ? "approve-preview" : undefined}
+                  >
                     {a.imagePath ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img

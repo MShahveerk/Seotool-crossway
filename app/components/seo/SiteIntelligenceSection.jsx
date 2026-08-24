@@ -12,6 +12,7 @@
 
 import { useState } from "react";
 import TabRail from "../ui-shared/TabRail";
+import { useGuidePrepare } from "@/lib/guideNav";
 import SiteHealthSection from "./SiteHealthSection";
 import UnifiedSiteAuditSection from "./UnifiedSiteAuditSection";
 import UnifiedSiteExplorerSection from "./UnifiedSiteExplorerSection";
@@ -39,9 +40,17 @@ export default function SiteIntelligenceSection({
     BACKLINK_MODES.some((m) => m.id === initialBacklinkMode) ? initialBacklinkMode : "profile"
   );
 
+  useGuidePrepare((nav) => {
+    if (nav.intelTab) setTab(nav.intelTab);
+    if (nav.intelBlMode) {
+      setTab("backlinks");
+      setBlMode(nav.intelBlMode);
+    }
+  });
+
   return (
     <div className="min-h-[calc(100vh-3.5rem)] space-y-5">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3" data-guide="intel-tabs">
         <TabRail
           tabs={TABS}
           value={tab}
@@ -54,12 +63,20 @@ export default function SiteIntelligenceSection({
         </span>
       </div>
 
-      {tab === "authority" ? <SiteHealthSection selectedSite={selectedSite} /> : null}
+      {tab === "authority" ? (
+        <div data-guide="intel-authority">
+          <SiteHealthSection selectedSite={selectedSite} />
+        </div>
+      ) : null}
 
-      {tab === "audit" ? <UnifiedSiteAuditSection selectedSite={selectedSite} /> : null}
+      {tab === "audit" ? (
+        <div>
+          <UnifiedSiteAuditSection selectedSite={selectedSite} />
+        </div>
+      ) : null}
 
       {tab === "backlinks" ? (
-        <div className="space-y-4">
+        <div className="space-y-4" data-guide="intel-backlinks">
           <div className="inline-flex rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-0.5">
             {BACKLINK_MODES.map((m) => (
               <button

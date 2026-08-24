@@ -6,6 +6,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { Separator } from "@/components/ui/separator";
 import { getSectionLabel } from "@/lib/sectionMeta";
 import { cn } from "@/lib/utils";
+import { useGuidePrepare } from "@/lib/guideNav";
 import { FadeIn } from "../ui-shared/Motion";
 import { PageGuideButton } from "../ui-shared/PageGuide";
 
@@ -24,6 +25,12 @@ export default function DashboardLayout({
   const isPortfolio = activeSection === "portfolio";
   const isBoard = activeSection === "post-board" || activeSection === "blog-board";
   const showPortfolioCrumb = canSwitchClients && !isPortfolio && Boolean(selectedSite);
+
+  useGuidePrepare((nav) => {
+    if (nav.section && nav.section !== activeSection) {
+      onSectionChange?.(nav.section);
+    }
+  });
 
   const siteLabel = selectedSite
     ? String(selectedSite).startsWith("http")

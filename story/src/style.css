@@ -4,6 +4,7 @@
   --dim: #9ba3ad;
   --faint: #79818b;
   --neon: #00a3ff;
+  --surface: #0e1624;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --display: "Space Grotesk", "Segoe UI", sans-serif;
   --body: Inter, "Segoe UI", sans-serif;
@@ -44,40 +45,162 @@ body {
   padding: 0.5rem 0.75rem;
 }
 
+.aim-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  overflow: visible;
+  transition: opacity 180ms var(--ease);
+}
+.aim-layer.is-on {
+  opacity: 1;
+}
+.aim-path {
+  fill: none;
+  stroke: var(--neon);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.78;
+}
+.aim-from {
+  fill: var(--neon);
+}
+.aim-to {
+  fill: rgb(0 163 255 / 0.18);
+  stroke: var(--neon);
+  stroke-width: 2;
+}
+
 .mascot-stage {
   position: fixed;
-  right: 2vw;
-  top: 12vh;
-  width: min(38vw, 420px);
-  z-index: 2;
+  right: 1.1vw;
+  top: 10vh;
+  width: min(22vw, 250px);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  perspective: 640px;
+  transform: translateY(var(--sit, 0px));
+  pointer-events: none;
+}
+
+.mascot-ground {
+  position: absolute;
+  left: 16%;
+  right: 16%;
+  bottom: 6%;
+  height: 22px;
+  background: radial-gradient(ellipse at center, rgb(0 163 255 / 0.38), transparent 72%);
   pointer-events: none;
 }
 
 .mascot-hop {
-  transform-origin: 50% 100%;
+  transform-origin: 50% 80%;
+  transform-style: preserve-3d;
+  overflow: visible;
+}
+
+.mascot-body {
+  position: relative;
+  overflow: visible;
+}
+
+.mascot-hit {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  transform-style: preserve-3d;
+  touch-action: manipulation;
 }
 
 .mascot-pose {
   display: block;
   width: 100%;
   height: auto;
-  filter: drop-shadow(0 18px 40px rgb(0 163 255 / 0.18));
+  pointer-events: none;
+  user-select: none;
+}
+
+.mascot-stage.is-flip .mascot-pose {
+  transform: scaleX(-1);
+}
+
+.mascot-hot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  pointer-events: none;
+}
+
+.mascot-say {
+  position: relative;
+  width: 100%;
+  margin: 0;
+  padding: 0.8rem 0.9rem 0.65rem;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--neon) 42%, transparent);
+  border-radius: 16px 16px 16px 6px;
+  color: var(--ink);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  pointer-events: none;
+  box-shadow:
+    0 16px 40px rgb(0 0 0 / 0.35),
+    inset 0 1px 0 rgb(255 255 255 / 0.06);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .mascot-pose {
-    animation: mascot-float 3.6s var(--ease) infinite;
+  .mascot-say {
+    animation: say-in 280ms var(--ease) both;
   }
 }
 
-@keyframes mascot-float {
-  0%,
-  100% {
-    transform: translateY(0);
+@keyframes say-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(4px);
   }
-  50% {
-    transform: translateY(-8px);
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
   }
+}
+.mascot-say::after {
+  content: "";
+  position: absolute;
+  left: 28%;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: var(--surface);
+  border-right: 1px solid color-mix(in srgb, var(--neon) 42%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--neon) 42%, transparent);
+  transform: rotate(45deg);
+}
+.mascot-say-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--neon);
+}
+.mascot-say-hint {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.72rem;
+  color: var(--faint);
 }
 
 .rail {
@@ -130,7 +253,6 @@ body {
 .rail a[aria-current="true"] .rail-dot {
   background: var(--neon);
   transform: scale(1.35);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--neon) 50%, transparent);
 }
 
 .rail a[aria-current="true"] {
@@ -148,7 +270,7 @@ main {
   position: relative;
   z-index: 4;
   padding-left: var(--rail);
-  padding-right: min(40vw, 440px);
+  padding-right: min(26vw, 300px);
 }
 
 .chapter {
@@ -158,11 +280,11 @@ main {
 
 .chapter-first {
   min-height: 100dvh;
-  padding-top: 18vh;
+  padding-top: 16vh;
 }
 
 .chapter-inner {
-  max-width: 68ch;
+  max-width: 62ch;
 }
 
 .kicker {
@@ -183,6 +305,8 @@ h2 {
   line-height: 1.12;
   margin: 0 0 1rem;
   font-size: clamp(1.8rem, 3.4vw, 3.1rem);
+  border-radius: 10px;
+  outline: none;
 }
 
 .chapter-first h1 {
@@ -201,9 +325,44 @@ h2 {
 .lead,
 .body,
 .meta,
-.note {
+.note,
+.pair,
+.steps li {
   margin: 0 0 1rem;
   color: var(--dim);
+  border-radius: 10px;
+  outline: none;
+  cursor: pointer;
+}
+
+.lead,
+.body,
+.meta,
+.note,
+.pair,
+h1,
+h2,
+.steps li {
+  padding: 0.2rem 0.45rem;
+  margin-left: -0.45rem;
+  transition: background 180ms var(--ease), box-shadow 180ms var(--ease);
+}
+
+.lead:hover,
+.body:hover,
+.meta:hover,
+.note:hover,
+.pair:hover,
+h1:hover,
+h2:hover,
+.steps li:hover {
+  background: color-mix(in srgb, var(--neon) 7%, transparent);
+}
+
+.is-aim {
+  background: color-mix(in srgb, var(--neon) 14%, transparent);
+  box-shadow: inset 3px 0 0 var(--neon);
+  color: var(--ink);
 }
 
 .lead {
@@ -233,13 +392,14 @@ h2 {
 
 .pair {
   border-top: 1px solid rgb(255 255 255 / 0.08);
-  padding: 0.75rem 0 0.3rem;
+  padding: 0.75rem 0.45rem 0.3rem;
 }
 
 .pair dt {
   font-family: var(--display);
   font-size: 0.98rem;
   margin-bottom: 0.15rem;
+  color: var(--ink);
 }
 
 .pair dd {
@@ -260,7 +420,7 @@ h2 {
 
 .note {
   margin-top: 1.4rem;
-  padding: 0.85rem 0 0;
+  padding: 0.85rem 0.45rem 0;
   border-top: 1px solid rgb(255 255 255 / 0.12);
   color: var(--faint);
   font-size: 0.92rem;
@@ -280,20 +440,34 @@ h2 {
     --rail: 2.7rem;
   }
   .mascot-stage {
-    top: 0.6rem;
-    right: 0.4rem;
-    width: min(42vw, 160px);
-    opacity: 0.92;
+    top: auto;
+    bottom: 5.6rem;
+    right: 0.35rem;
+    width: 108px;
+  }
+  .mascot-say {
+    position: fixed;
+    left: 2.9rem;
+    right: 7.2rem;
+    bottom: 0.7rem;
+    top: auto;
+    width: auto;
+    border-radius: 14px;
+    z-index: 7;
+  }
+  .mascot-say::after {
+    display: none;
   }
   main {
     padding-right: 0.9rem;
+    padding-bottom: 7.5rem;
   }
   .chapter {
     padding: 3.2rem 0.9rem 3.6rem;
   }
   .chapter-first {
     min-height: 100dvh;
-    padding-top: 22vh;
+    padding-top: 12vh;
   }
   .chapter-inner {
     max-width: 100%;
@@ -311,8 +485,23 @@ h2 {
   html {
     scroll-behavior: auto;
   }
-  .mascot-pose,
-  .mascot-hop {
-    animation: none;
+  .lead,
+  .body,
+  .meta,
+  .note,
+  .pair,
+  h1,
+  h2,
+  .steps li {
+    transition: none;
+  }
+  .aim-layer {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .mascot-say {
+    background: #101820;
   }
 }

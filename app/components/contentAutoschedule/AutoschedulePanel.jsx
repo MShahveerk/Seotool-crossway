@@ -179,11 +179,11 @@ export default function AutoschedulePanel({
   const proposals = preview?.proposals || [];
 
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="space-y-4 max-w-3xl" data-guide="sched-calendar">
       <div className="relative overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 shadow-sm">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(14,255,42,0.10),_transparent_55%),linear-gradient(135deg,var(--cw-surface)_0%,var(--cw-raised)_100%)]" />
         <div className="relative">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3" data-guide="sched-rules">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--cw-neon)]">
                 {kind === "blog" ? "Blog" : "Post"} Autoscheduler
@@ -222,7 +222,7 @@ export default function AutoschedulePanel({
         </div>
       </div>
 
-      <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 shadow-sm space-y-4">
+      <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 shadow-sm space-y-4" data-guide="sched-queue">
         <p className="text-sm text-[var(--cw-ink-muted)]">
           Fills blank schedule dates only — Mon–Fri days that don’t already have a{" "}
           {kind === "blog" ? "blog" : "post"} for this site. Edit or clear dates anytime in Content

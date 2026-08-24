@@ -1038,8 +1038,8 @@ export default function AdminBlogSection({ selectedSite = "" }) {
         </div>
       ) : null}
 
-      <form onSubmit={submitBlog} className="rounded-xl border border-gray-200 bg-white p-5 space-y-4">
-        <label className="block">
+      <form onSubmit={submitBlog} className="rounded-xl border border-gray-200 bg-white p-5 space-y-4" data-guide="create-editor">
+        <label className="block" data-guide="create-meta">
           <span className="text-xs font-semibold uppercase text-gray-500">Title</span>
           <input required className="mt-1 w-full border rounded-lg px-3 py-2 text-lg font-medium" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
         </label>
@@ -1137,6 +1137,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
           <button
             type="submit"
             disabled={loading}
+            data-guide="create-submit"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gray-900 text-white text-sm font-semibold disabled:opacity-50"
           >
             <FiFileText /> {loading ? "Saving…" : "Create"}

@@ -1,10 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CircleHelp, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getAuthGuide, getPageGuide, guideStorageKey } from "@/lib/pageGuides";
+import { prepareGuide, waitForGuideEl } from "@/lib/guideNav";
+import {
+  getAuthGuide,
+  getPageGuide,
+  guideStartIndex,
+  guideStorageKey,
+  mascotSrc,
+} from "@/lib/pageGuides";
 
 const PAD = 8;
 const VIEW_PAD = 12;
@@ -56,15 +63,30 @@ function clampTip(hole, tw, th, vw, vh) {
 
 export function PageGuideButton({ sectionId, className }) {
   const guide = getPageGuide(sectionId);
-  return <GuideLauncher scope={sectionId} guide={guide} className={className} />;
+  return (
+    <GuideLauncher
+      scope={sectionId}
+      sectionId={sectionId}
+      guide={guide}
+      className={className}
+    />
+  );
 }
 
 export function AuthGuideButton({ pathname, className }) {
   const guide = getAuthGuide(pathname);
-  return <GuideLauncher scope={`auth:${pathname}`} guide={guide} compact className={className} />;
+  return (
+    <GuideLauncher
+      scope={`auth:${pathname}`}
+      sectionId={pathname}
+      guide={guide}
+      compact
+      className={className}
+    />
+  );
 }
 
-function GuideLauncher({ scope, guide, compact = false, className }) {
+function GuideLauncher({ scope, sectionId, guide, compact = false, className }) {
   const [open, setOpen] = useState(false);
 
   if (!guide?.steps?.length) return null;
@@ -76,31 +98,41 @@ function GuideLauncher({ scope, guide, compact = false, className }) {
         onClick={() => setOpen(true)}
         className={cn(
           "inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-2.5 py-1.5 text-xs font-semibold text-[var(--cw-ink-dim)] transition-smooth hover:border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] hover:text-[var(--cw-neon)]",
+          compact && "px-2 py-1",
           className
         )}
         aria-haspopup="dialog"
         aria-expanded={open}
       >
         <CircleHelp className="size-3.5" aria-hidden />
-        {compact ? "Guide" : "Guide"}
+        Guide
       </button>
-      {open ? <GuideOverlay scope={scope} guide={guide} onClose={() => setOpen(false)} /> : null}
+      {open ? (
+        <GuideOverlay
+          scope={scope}
+          sectionId={sectionId}
+          guide={guide}
+          onClose={() => setOpen(false)}
+        />
+      ) : null}
     </>
   );
 }
 
-function GuideOverlay({ scope, guide, onClose }) {
+function GuideOverlay({ scope, sectionId, guide, onClose }) {
   const steps = guide.steps;
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => guideStartIndex(guide, sectionId));
   const [hole, setHole] = useState(null);
   const [tip, setTip] = useState({ top: VIEW_PAD, left: VIEW_PAD });
   const [ready, setReady] = useState(false);
+  const [missing, setMissing] = useState(false);
   const tipRef = useRef(null);
   const step = steps[index];
 
   const place = useCallback(() => {
     const next = step ? measureHole(step.id) : null;
     setHole(next);
+    setMissing(!next);
     const card = tipRef.current;
     if (!card) return;
     const nextTip = clampTip(
@@ -114,23 +146,37 @@ function GuideOverlay({ scope, guide, onClose }) {
     setReady(true);
   }, [step]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
+    let cancelled = false;
     setReady(false);
-    const el = step ? document.querySelector(`[data-guide="${step.id}"]`) : null;
-    const reduced = prefersReducedMotion();
-    if (el) {
-      el.scrollIntoView({
-        block: "center",
-        inline: "nearest",
-        behavior: reduced ? "auto" : "smooth",
-      });
-    }
-    place();
-    const raf = requestAnimationFrame(place);
-    const t = window.setTimeout(place, reduced ? 40 : 280);
+    setHole(null);
+    setMissing(false);
+
+    const run = async () => {
+      prepareGuide(step?.nav || {});
+      await new Promise((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise((resolve) => requestAnimationFrame(() => resolve()));
+      const reduced = prefersReducedMotion();
+      const el = step?.id
+        ? await waitForGuideEl(step.id, { timeout: reduced ? 700 : 4800 })
+        : null;
+      if (cancelled) return;
+      if (el) {
+        el.scrollIntoView({
+          block: "center",
+          inline: "nearest",
+          behavior: reduced ? "auto" : "smooth",
+        });
+      }
+      const wait = reduced ? 30 : el ? 340 : 80;
+      window.setTimeout(() => {
+        if (!cancelled) place();
+      }, wait);
+    };
+
+    run();
     return () => {
-      cancelAnimationFrame(raf);
-      window.clearTimeout(t);
+      cancelled = true;
     };
   }, [step, place]);
 
@@ -169,12 +215,13 @@ function GuideOverlay({ scope, guide, onClose }) {
   };
 
   const last = index === steps.length - 1;
+  const poseSrc = mascotSrc(step?.pose);
 
   if (typeof document === "undefined") return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] overflow-hidden animate-[page-guide-in_180ms_cubic-bezier(0.22,1,0.36,1)_both] motion-reduce:animate-none"
+      className="fixed inset-0 z-[240] overflow-hidden animate-[page-guide-in_180ms_cubic-bezier(0.22,1,0.36,1)_both] motion-reduce:animate-none"
       role="dialog"
       aria-modal="true"
       aria-labelledby="page-guide-title"
@@ -200,48 +247,72 @@ function GuideOverlay({ scope, guide, onClose }) {
 
       <div
         ref={tipRef}
-        className="absolute z-[1] w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-4 shadow-[var(--cw-shadow-lg)] pointer-events-auto"
+        className="absolute z-[1] flex w-[min(26.5rem,calc(100vw-2rem))] items-end gap-2 pointer-events-auto"
         style={{
           top: tip.top,
           left: tip.left,
           opacity: ready ? 1 : 0,
         }}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--cw-neon)]">
-              {guide.title} · {index + 1} of {steps.length}
-            </p>
-            <h2 id="page-guide-title" className="font-heading mt-1 text-sm font-semibold text-[var(--cw-ink)]">
-              {step.title}
-            </h2>
+        <img
+          src={poseSrc}
+          alt=""
+          width={88}
+          height={88}
+          className="mb-1 size-[5.5rem] shrink-0 object-contain drop-shadow-[0_8px_16px_rgba(5,11,24,0.35)] motion-safe:animate-[guide-mascot-hop_1.6s_ease-in-out_infinite]"
+        />
+        <div className="relative min-w-0 flex-1 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-4 shadow-[var(--cw-shadow-lg)]">
+          <span
+            className="pointer-events-none absolute -left-1.5 bottom-8 size-3 rotate-45 border-b border-l border-[var(--cw-hairline)] bg-[var(--cw-surface)]"
+            aria-hidden
+          />
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--cw-neon)]">
+                {guide.title}
+              </p>
+              <p className="mt-0.5 text-[10px] font-semibold text-[var(--cw-ink-faint)]">
+                {index + 1} of {steps.length}
+              </p>
+              <h2
+                id="page-guide-title"
+                className="font-heading mt-1 text-sm font-semibold text-[var(--cw-ink)]"
+              >
+                {step.title}
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md p-1 text-[var(--cw-ink-faint)] hover:bg-[var(--cw-raised)] hover:text-[var(--cw-ink)]"
+              aria-label="Close guide"
+            >
+              <X className="size-4" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1 text-[var(--cw-ink-faint)] hover:bg-[var(--cw-raised)] hover:text-[var(--cw-ink)]"
-            aria-label="Close guide"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--cw-ink-dim)]">{step.body}</p>
-        <div className="mt-4 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => setIndex((i) => Math.max(0, i - 1))}
-            disabled={index === 0}
-            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--cw-ink-muted)] hover:text-[var(--cw-ink)] disabled:opacity-30"
-          >
-            Back
-          </button>
-          <button
-            type="button"
-            onClick={() => (last ? finish() : setIndex((i) => i + 1))}
-            className="rounded-lg bg-[var(--cw-neon)] px-3 py-1.5 text-xs font-semibold text-[var(--cw-neon-ink)]"
-          >
-            {last ? "Done" : "Next"}
-          </button>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--cw-ink-dim)]">{step.body}</p>
+          {missing ? (
+            <p className="mt-2 text-xs text-[var(--cw-ink-faint)]">
+              That control is not on this screen yet. It shows up once there is data to display.
+            </p>
+          ) : null}
+          <div className="mt-4 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setIndex((i) => Math.max(0, i - 1))}
+              disabled={index === 0}
+              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--cw-ink-muted)] hover:text-[var(--cw-ink)] disabled:opacity-30"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={() => (last ? finish() : setIndex((i) => i + 1))}
+              className="rounded-lg bg-[var(--cw-neon)] px-3 py-1.5 text-xs font-semibold text-[var(--cw-neon-ink)]"
+            >
+              {last ? "Done" : "Next"}
+            </button>
+          </div>
         </div>
       </div>
     </div>,

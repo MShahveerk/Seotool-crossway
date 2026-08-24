@@ -258,6 +258,7 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
               type="button"
               onClick={() => setReportModalOpen(true)}
               disabled={!activeSite}
+              data-guide="smm-report"
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold shadow-sm hover:bg-gray-800 disabled:opacity-45 disabled:cursor-not-allowed"
             >
               <FiDownload className="w-4 h-4 shrink-0" aria-hidden />
@@ -276,6 +277,7 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
           <select
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
+            data-guide="smm-channels"
             className="px-3 py-1.5 rounded-md border border-gray-200 text-sm bg-white"
           >
             {PLATFORM_OPTIONS.map((opt) => (
@@ -308,7 +310,7 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Platforms</span>
                   <span className="text-[11px] font-semibold text-green-600">Platforms +</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border border-gray-200 bg-[#f9f9f9] rounded-sm overflow-hidden">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border border-gray-200 bg-[#f9f9f9] rounded-sm overflow-hidden" data-guide="smm-kpis">
                   {topCards.map((card) => {
                     const cardIcon = PlatformIcon({ platform: card.platform });
                     return (
