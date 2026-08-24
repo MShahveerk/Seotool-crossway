@@ -75,37 +75,40 @@ body {
 
 .mascot-stage {
   position: fixed;
-  right: 1.1vw;
-  top: 10vh;
-  width: min(22vw, 250px);
+  left: calc(var(--rail) + 5vw + 62ch + 0.75rem);
+  right: auto;
+  top: 28vh;
   z-index: 6;
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+  width: 16.25rem;
+  min-width: 0;
+  background: transparent;
   perspective: 640px;
   transform: translateY(var(--sit, 0px));
   pointer-events: none;
 }
 
 .mascot-ground {
-  position: absolute;
-  left: 16%;
-  right: 16%;
-  bottom: 6%;
-  height: 22px;
-  background: radial-gradient(ellipse at center, rgb(0 163 255 / 0.38), transparent 72%);
-  pointer-events: none;
+  display: none;
 }
 
 .mascot-hop {
-  transform-origin: 50% 80%;
-  transform-style: preserve-3d;
-  overflow: visible;
+  position: relative;
+  z-index: 1;
+  flex: 0 0 3.9rem;
+  width: 3.9rem;
+  background: transparent;
+  transform-origin: 50% 90%;
+  overflow: hidden;
 }
 
 .mascot-body {
   position: relative;
   overflow: visible;
+  background: transparent;
 }
 
 .mascot-hit {
@@ -124,6 +127,7 @@ body {
   display: block;
   width: 100%;
   height: auto;
+  background: transparent;
   pointer-events: none;
   user-select: none;
 }
@@ -142,18 +146,20 @@ body {
 
 .mascot-say {
   position: relative;
-  width: 100%;
+  z-index: 3;
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
-  padding: 0.8rem 0.9rem 0.65rem;
+  padding: 0.7rem 0.8rem 0.55rem;
   background: var(--surface);
   border: 1px solid color-mix(in srgb, var(--neon) 42%, transparent);
-  border-radius: 16px 16px 16px 6px;
+  border-radius: 6px 16px 16px 16px;
   color: var(--ink);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   line-height: 1.45;
   pointer-events: none;
   box-shadow:
-    0 16px 40px rgb(0 0 0 / 0.35),
+    10px 14px 28px rgb(0 0 0 / 0.28),
     inset 0 1px 0 rgb(255 255 255 / 0.06);
 }
 
@@ -166,24 +172,22 @@ body {
 @keyframes say-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
-    filter: blur(4px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: none;
   }
 }
 .mascot-say::after {
   content: "";
   position: absolute;
-  left: 28%;
-  bottom: -6px;
-  width: 12px;
-  height: 12px;
+  left: -6px;
+  bottom: 1.15rem;
+  width: 11px;
+  height: 11px;
   background: var(--surface);
-  border-right: 1px solid color-mix(in srgb, var(--neon) 42%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--neon) 42%, transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--neon) 42%, transparent);
   transform: rotate(45deg);
 }
@@ -270,7 +274,7 @@ main {
   position: relative;
   z-index: 4;
   padding-left: var(--rail);
-  padding-right: min(26vw, 300px);
+  padding-right: min(17.5rem, 26vw);
 }
 
 .chapter {
@@ -441,22 +445,29 @@ h2:hover,
   }
   .mascot-stage {
     top: auto;
-    bottom: 5.6rem;
-    right: 0.35rem;
-    width: 108px;
+    bottom: 0.55rem;
+    right: 0.45rem;
+    left: 2.9rem;
+    width: auto;
+    min-width: 0;
+    align-items: center;
+  }
+  .mascot-hop {
+    flex: 0 0 4.1rem;
+    width: 4.1rem;
   }
   .mascot-say {
-    position: fixed;
-    left: 2.9rem;
-    right: 7.2rem;
-    bottom: 0.7rem;
-    top: auto;
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    margin: 0;
     width: auto;
     border-radius: 14px;
     z-index: 7;
   }
   .mascot-say::after {
-    display: none;
+    display: block;
   }
   main {
     padding-right: 0.9rem;

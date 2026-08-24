@@ -247,7 +247,7 @@ function GuideOverlay({ scope, sectionId, guide, onClose }) {
 
       <div
         ref={tipRef}
-        className="absolute z-[1] flex w-[min(26.5rem,calc(100vw-2rem))] items-end gap-2 pointer-events-auto"
+        className="absolute z-[1] flex w-[min(26.5rem,calc(100vw-2rem))] items-end gap-3 pointer-events-auto"
         style={{
           top: tip.top,
           left: tip.left,
@@ -257,11 +257,11 @@ function GuideOverlay({ scope, sectionId, guide, onClose }) {
         <img
           src={poseSrc}
           alt=""
-          width={88}
-          height={88}
-          className="mb-1 size-[5.5rem] shrink-0 object-contain drop-shadow-[0_8px_16px_rgba(5,11,24,0.35)] motion-safe:animate-[guide-mascot-hop_1.6s_ease-in-out_infinite]"
+          width={56}
+          height={56}
+          className="relative z-0 mb-0.5 size-14 shrink-0 bg-transparent object-contain object-bottom motion-safe:animate-[guide-mascot-hop_1.6s_ease-in-out_infinite]"
         />
-        <div className="relative min-w-0 flex-1 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-4 shadow-[var(--cw-shadow-lg)]">
+        <div className="relative z-[1] min-w-0 flex-1 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-4 shadow-[var(--cw-shadow-lg)]">
           <span
             className="pointer-events-none absolute -left-1.5 bottom-8 size-3 rotate-45 border-b border-l border-[var(--cw-hairline)] bg-[var(--cw-surface)]"
             aria-hidden

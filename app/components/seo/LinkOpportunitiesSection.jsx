@@ -28,6 +28,7 @@ import {
   modelsForProvider,
   defaultModelForProvider,
 } from "../blogStudio/studioConstants";
+import { originLocationFromHost } from "@/lib/linkOriginLocation";
 
 const GEO_OPTIONS = [
   { value: "us", label: "US" },
@@ -88,6 +89,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   const [depth, setDepth] = useState("standard");
   const [lastRequest, setLastRequest] = useState(null);
   const [query, setQuery] = useState("");
+  const [originFilter, setOriginFilter] = useState("all");
 
   /**
    * The selected client IS used here — for one thing only: marking which
@@ -223,6 +225,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       if (!res.ok || !json.success) throw new Error(json.error || "Failed to build link opportunities");
       setData(json.data);
       setLastRequest(request);
+      setOriginFilter("all");
     } catch (err) {
       setError(err.message || "Failed to build link opportunities");
       setData(null);
@@ -240,12 +243,23 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
    * the anchors it hands out, who it links to, and its opportunity type. With
    * hundreds of rows, scrolling is not a search strategy.
    */
+  const rowOrigin = (row) =>
+    row?.sourceLocation || originLocationFromHost(row?.domain || row?.sourceDomain || "");
+
+  const originOptions = [
+    ...new Set(
+      (view === "strongest" ? data?.strongest || [] : data?.intersect || [])
+        .map(rowOrigin)
+        .filter(Boolean)
+    ),
+  ].sort((a, b) => a.localeCompare(b));
   const q = query.trim().toLowerCase();
   const matchesQuery = (haystacks) =>
     !q || haystacks.filter(Boolean).some((h) => String(h).toLowerCase().includes(q));
 
   const intersectRows = (data?.intersect || []).filter((r) => {
     if (onlyGaps && r.youHaveIt) return false;
+    if (originFilter !== "all" && rowOrigin(r) !== originFilter) return false;
     if (typeFilter === "actionable" && !ACTIONABLE.includes(r.type)) return false;
     if (typeFilter === "unpaid" && (!ACTIONABLE.includes(r.type) || r.cost === "paid")) return false;
     if (typeFilter === "paid" && (!ACTIONABLE.includes(r.type) || r.cost !== "paid")) return false;
@@ -256,6 +270,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       r.domain,
       r.typeLabel,
       r.cost,
+      rowOrigin(r),
       (r.anchors || []).join(" "),
       (r.linksTo || []).join(" "),
       (r.examples || []).map((e) => e.sourceUrl).join(" "),
@@ -264,7 +279,8 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
 
   const strongestRows = (data?.strongest || []).filter((r) => {
     if (onlyGaps && r.youHaveIt) return false;
-    return matchesQuery([r.sourceDomain, r.sourceUrl, r.anchor, r.targetDomain]);
+    if (originFilter !== "all" && rowOrigin(r) !== originFilter) return false;
+    return matchesQuery([r.sourceDomain, r.sourceUrl, r.anchor, r.targetDomain, rowOrigin(r)]);
   });
 
   /* Rejected buckets stay visible — you should be able to see what was ruled
@@ -394,6 +410,17 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       render: (row) => <AuthorityCell value={row.authority} />,
     },
     {
+      key: "sourceLocation",
+      label: "Origin",
+      width: "132px",
+      sortable: true,
+      headerHint: "Where the linking site is from (country TLD, or vendor country when the backlink data includes it)",
+      render: (row) => (
+        <span className="text-[11px] text-[var(--cw-ink-muted)]">{rowOrigin(row)}</span>
+      ),
+      sortValue: (row) => rowOrigin(row),
+    },
+    {
       key: "linksTo",
       label: "Links to",
       width: "230px",
@@ -466,6 +493,17 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       numeric: true,
       width: "120px",
       render: (row) => <AuthorityCell value={row.authority} />,
+    },
+    {
+      key: "sourceLocation",
+      label: "Origin",
+      width: "132px",
+      sortable: true,
+      headerHint: "Where the linking page's site is from",
+      render: (row) => (
+        <span className="text-[11px] text-[var(--cw-ink-muted)]">{rowOrigin(row)}</span>
+      ),
+      sortValue: (row) => rowOrigin(row),
     },
     {
       key: "targetDomain",
@@ -628,6 +666,10 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
               placeholder="Blank = detected from your keyword"
               className={INPUT}
             />
+            <p className="text-[11px] text-[var(--cw-ink-faint)]">
+              Picks the local Google SERP (who ranks). It does not limit backlinks to that place.
+              After the run, Origin filters linking sites by where they are from.
+            </p>
           </div>
           <div className="space-y-1.5 md:col-span-3">
             <div className="flex items-center justify-between gap-2">
@@ -813,6 +855,26 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
                 />
                 Hide sites already linking to me
               </label>
+              {originOptions.length ? (
+                <label className="flex items-center gap-2 text-xs font-semibold text-[var(--cw-ink-muted)]">
+                  <FiMapPin className="size-3.5 text-[var(--cw-neon)]" />
+                  <span className="sr-only">Origin</span>
+                  <select
+                    value={originFilter}
+                    onChange={(e) => setOriginFilter(e.target.value)}
+                    data-guide="link-origin"
+                    className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-2.5 py-2 text-xs font-semibold text-[var(--cw-ink-dim)] transition-smooth focus:border-[var(--cw-neon)] focus:outline-none"
+                    aria-label="Filter by linking-site origin"
+                  >
+                    <option value="all">All origins</option>
+                    {originOptions.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
             </div>
           </div>
 

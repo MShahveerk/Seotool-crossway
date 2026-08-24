@@ -1,6 +1,7 @@
 import prisma from "../../../../../lib/prisma";
 import { requireSuperAdmin } from "../../../../../lib/middleware/auth";
 import { normalizeSiteOrigin } from "../../../../../lib/validation";
+import { isMetaPageId } from "../../../../../lib/siteAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -90,59 +91,61 @@ export async function DELETE(req, { params }) {
     const targetUrl = site.siteUrl;
     const fbId = site.facebookPageId ? String(site.facebookPageId).trim() : "";
     const igId = site.instagramUserId ? String(site.instagramUserId).trim() : "";
-    const accessibleKeys = [targetUrl, fbId, igId].filter(Boolean);
+    // Website delete must not wipe Meta pages. Keep numeric page IDs on users,
+    // assignments, stats, and approvals so those projects remain and reappear.
+    const websiteKeys = [targetUrl].filter(Boolean);
 
     const operations = [];
 
-    // 1. Clean user siteLink fields (exact + common variants)
-    operations.push(
-      prisma.user.updateMany({
-        where: { siteLink: { in: accessibleKeys } },
-        data: { siteLink: null },
-      })
-    );
-
-    // 2. Detach Meta Page IDs on User table
-    const userMetaOr = [];
-    if (fbId) userMetaOr.push({ facebookPageId: fbId });
-    if (igId) userMetaOr.push({ instagramUserId: igId });
-    if (userMetaOr.length > 0) {
+    if (fbId && isMetaPageId(fbId)) {
       operations.push(
-        prisma.user.updateMany({
-          where: { OR: userMetaOr },
-          data: {
-            facebookPageId: null,
-            instagramUserId: null,
+        prisma.sitePostConfig.upsert({
+          where: { siteKey: fbId },
+          create: {
+            siteKey: fbId,
+            facebookPageId: fbId,
+            instagramUserId: igId && isMetaPageId(igId) ? igId : null,
           },
+          update: {
+            facebookPageId: fbId,
+            ...(igId && isMetaPageId(igId) ? { instagramUserId: igId } : {}),
+          },
+        })
+      );
+    } else if (igId && isMetaPageId(igId)) {
+      operations.push(
+        prisma.sitePostConfig.upsert({
+          where: { siteKey: igId },
+          create: { siteKey: igId, instagramUserId: igId },
+          update: { instagramUserId: igId },
         })
       );
     }
 
-    // 3. Delete user accessible site links (URL and Meta IDs used as association keys)
-    operations.push(
-      prisma.userAccessibleSite.deleteMany({
-        where: { siteLink: { in: accessibleKeys } },
-      })
-    );
+    if (websiteKeys.length) {
+      operations.push(
+        prisma.user.updateMany({
+          where: { siteLink: { in: websiteKeys } },
+          data: { siteLink: null },
+        })
+      );
+      operations.push(
+        prisma.userAccessibleSite.deleteMany({
+          where: { siteLink: { in: websiteKeys } },
+        })
+      );
+      operations.push(
+        prisma.socialMediaDailyStat.deleteMany({
+          where: { siteLink: { in: websiteKeys } },
+        })
+      );
+      operations.push(
+        prisma.approval.deleteMany({
+          where: { siteLink: { in: websiteKeys } },
+        })
+      );
+    }
 
-    // 4. Delete social media daily stats
-    operations.push(
-      prisma.socialMediaDailyStat.deleteMany({
-        where: { siteLink: { in: accessibleKeys } },
-      })
-    );
-
-    // 5. Delete approvals targeting this site or its pages
-    const approvalsOr = [{ siteLink: { in: accessibleKeys } }];
-    if (fbId) approvalsOr.push({ facebookPageId: fbId });
-    if (igId) approvalsOr.push({ instagramUserId: igId });
-    operations.push(
-      prisma.approval.deleteMany({
-        where: { OR: approvalsOr },
-      })
-    );
-
-    // 6. Finally delete the site record
     operations.push(
       prisma.site.delete({
         where: { id },
@@ -152,7 +155,9 @@ export async function DELETE(req, { params }) {
     await prisma.$transaction(operations);
 
     return new Response(
-      JSON.stringify({ message: "Site and all associated records deleted successfully." }),
+      JSON.stringify({
+        message: "Website removed. Linked Meta pages stay on the dashboard.",
+      }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {

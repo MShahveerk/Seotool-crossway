@@ -5,8 +5,6 @@ import { story } from "../scene/store.js";
 import { lineFor, nudgeFor } from "./lines.js";
 import { IDLE, allSpriteSrc, poseMeta, poseSrc } from "./sprites.js";
 
-const CLAMP_Y = 110;
-
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
 }
@@ -22,6 +20,7 @@ function targetEl(chapterId, key) {
 }
 
 export function Mascot() {
+  const shell = useRef(null);
   const stage = useRef(null);
   const hop = useRef(null);
   const hit = useRef(null);
@@ -123,8 +122,30 @@ export function Mascot() {
         toDot.current.setAttribute("cy", y2);
 
         if (!story.reduced && yTo.current && rotTo.current) {
-          yTo.current(clamp(y2 - y1, -CLAMP_Y, CLAMP_Y));
-          rotTo.current(clamp((y2 - y1) / -14, -8, 8));
+          yTo.current(clamp((y2 - y1) * 0.18, -28, 28));
+          rotTo.current(0);
+        }
+      }
+
+      const sit = shell.current;
+      if (sit) {
+        if (story.mobile) {
+          sit.style.left = "";
+          sit.style.top = "";
+          sit.style.width = "";
+        } else {
+          const inner = document.querySelector(`#chapter-${ch.id} .chapter-inner`);
+          const lead = inner?.querySelector(".lead") || inner;
+          const column = inner?.getBoundingClientRect();
+          const copy = lead?.getBoundingClientRect();
+          if (column && copy && column.width > 40) {
+            const left = Math.round(column.right + 6);
+            const room = window.innerWidth - left - 16;
+            const top = Math.round(Math.min(Math.max(copy.top - 4, 72), window.innerHeight - 220));
+            sit.style.left = `${left}px`;
+            sit.style.top = `${top}px`;
+            sit.style.width = `${Math.max(0, Math.min(260, room))}px`;
+          }
         }
       }
 
@@ -139,11 +160,10 @@ export function Mascot() {
     const tl = gsap.timeline();
     tl.fromTo(
       hop.current,
-      { scaleY: 0.92, scaleX: 1.05, filter: "blur(4px)", opacity: 0.7 },
+      { scaleY: 0.94, scaleX: 1.04, opacity: 0.85 },
       {
-        scaleY: 1.04,
-        scaleX: 0.98,
-        filter: "blur(0px)",
+        scaleY: 1.03,
+        scaleX: 0.99,
         opacity: 1,
         duration: 0.28,
         ease: "power2.out",
@@ -222,17 +242,12 @@ export function Mascot() {
       </svg>
 
       <aside
+        ref={shell}
         className={`mascot-stage${meta.flip ? " is-flip" : ""}${mode === "point" ? " is-pointing" : ""}`}
         style={{ "--sit": `${meta.sit}px` }}
       >
-        <p className="mascot-say" aria-live="polite" key={spoken}>
-          <span className="mascot-say-label">Robo</span>
-          {spoken}
-          {quip ? null : <span className="mascot-say-hint">Click a line. I will point.</span>}
-        </p>
-        <div className="mascot-hop" ref={hop}>
+      <div className="mascot-hop" ref={hop}>
           <div className="mascot-body" ref={stage}>
-            <div className="mascot-ground" aria-hidden="true" />
             <button
               type="button"
               ref={hit}
@@ -255,6 +270,11 @@ export function Mascot() {
             <span className="mascot-hot" ref={hot} aria-hidden="true" />
           </div>
         </div>
+        <p className="mascot-say" aria-live="polite" key={spoken}>
+          <span className="mascot-say-label">Robo</span>
+          {spoken}
+          {quip ? null : <span className="mascot-say-hint">Click a line. I will point.</span>}
+        </p>
       </aside>
     </>
   );

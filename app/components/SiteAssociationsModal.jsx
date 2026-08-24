@@ -104,7 +104,12 @@ export default function SiteAssociationsModal({ isOpen, onClose }) {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this site configuration? Users will lose access to its metrics.")) return;
+    if (
+      !window.confirm(
+        "Remove this website from the dashboard? Search Console and site metrics for this URL go away. Linked Meta pages stay, and they show up again as their own projects."
+      )
+    )
+      return;
 
     try {
       const res = await fetch(`/api/admin/sites/${id}`, { method: "DELETE" });
