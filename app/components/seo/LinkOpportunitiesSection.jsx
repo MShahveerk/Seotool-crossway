@@ -322,7 +322,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
           {row.onNiche ? (
             <span
               className="shrink-0 rounded-full border border-[color-mix(in_srgb,var(--cw-info)_35%,transparent)] bg-[color-mix(in_srgb,var(--cw-info)_10%,transparent)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--cw-info)]"
-              title="This domain reads as being in your niche"
+              title="This domain's name matches the keyword or industry words. Not a guarantee you should pitch it."
             >
               NICHE
             </span>
