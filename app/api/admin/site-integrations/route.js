@@ -250,7 +250,8 @@ export async function GET() {
           userName: entry.userName,
           siteLink: entry.siteLink,
           facebookPageId: entry.facebookPageId,
-          metaName: metaMatch?.userName,
+          metaName: metaMatch?.name || metaMatch?.userName,
+          preferMetaName: entry.type === "meta_page",
         });
         smmEntries.push({ ...entry, userName: displayName, displayName });
       }
@@ -287,7 +288,8 @@ export async function GET() {
         userName: entry.userName,
         siteLink: entry.siteLink,
         facebookPageId: entry.facebookPageId,
-        metaName: metaMatch?.userName || metaMatch?.name,
+        metaName: metaMatch?.name || metaMatch?.userName,
+        preferMetaName: entry.type === "meta_page",
       });
       return {
         ...entry,
