@@ -8,7 +8,7 @@
   --display: "Space Grotesk", "Segoe UI", sans-serif;
   --body: Inter, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
-  --rail: 4.5rem;
+  --rail: 7.5rem;
 }
 
 * {
@@ -44,11 +44,40 @@ body {
   padding: 0.5rem 0.75rem;
 }
 
-.canvas-root {
+.mascot-stage {
   position: fixed;
-  inset: 0;
-  z-index: 1;
+  right: 2vw;
+  top: 12vh;
+  width: min(38vw, 420px);
+  z-index: 2;
   pointer-events: none;
+}
+
+.mascot-hop {
+  transform-origin: 50% 100%;
+}
+
+.mascot-pose {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 18px 40px rgb(0 163 255 / 0.18));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mascot-pose {
+    animation: mascot-float 3.6s var(--ease) infinite;
+  }
+}
+
+@keyframes mascot-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 .rail {
@@ -61,19 +90,19 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.55rem;
-  padding: 1.5rem 0.85rem;
+  gap: 0.35rem;
+  padding: 5.5rem 0.55rem 1.5rem;
 }
 
 .rail-brand {
   position: absolute;
-  top: 1.4rem;
+  top: 1.2rem;
   left: 50%;
   transform: rotate(-90deg) translateX(-100%);
   transform-origin: top left;
   font-family: var(--mono);
   font-size: 0.62rem;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--faint);
   margin: 0;
@@ -81,66 +110,67 @@ body {
 }
 
 .rail a {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+  color: var(--faint);
+  min-height: 28px;
+  padding: 0.15rem 0.2rem;
+}
+
+.rail-dot {
   width: 7px;
   height: 7px;
-  margin-inline: auto;
   border-radius: 999px;
   background: color-mix(in srgb, var(--ink) 22%, transparent);
-  border: 0;
+  flex: 0 0 auto;
+}
+
+.rail a[aria-current="true"] .rail-dot {
+  background: var(--neon);
+  transform: scale(1.35);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--neon) 50%, transparent);
 }
 
 .rail a[aria-current="true"] {
-  background: var(--neon);
-  transform: scale(1.45);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--neon) 55%, transparent);
+  color: var(--ink);
+}
+
+.rail-label {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
 }
 
 main {
   position: relative;
   z-index: 4;
   padding-left: var(--rail);
+  padding-right: min(40vw, 440px);
 }
 
 .chapter {
-  min-height: 140dvh;
   position: relative;
-  padding: 14vh 7vw 22vh;
+  padding: 4.5rem 5vw 5rem;
 }
 
-.chapter-arrival {
-  min-height: max(100dvh, 170vh);
-  padding-top: 22vh;
-}
-
-.chapter-limits {
-  padding-bottom: 28vh;
+.chapter-first {
+  min-height: 100dvh;
+  padding-top: 18vh;
 }
 
 .chapter-inner {
-  position: sticky;
-  top: 12vh;
-  max-width: min(38rem, 100%);
-}
-
-.chapter-even .chapter-inner {
-  margin-left: auto;
-  text-align: right;
-}
-
-.chapter-even .cluster,
-.chapter-even .lead,
-.chapter-even .body,
-.chapter-even .rule {
-  margin-left: auto;
+  max-width: 68ch;
 }
 
 .kicker {
-  margin: 0 0 1rem;
+  margin: 0 0 0.7rem;
   font-family: var(--mono);
   font-size: 0.72rem;
   font-weight: 500;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--neon);
 }
@@ -150,28 +180,29 @@ h2 {
   font-family: var(--display);
   font-weight: 700;
   letter-spacing: -0.04em;
-  line-height: 1.08;
-  margin: 0 0 1.2rem;
-  font-size: clamp(2rem, 4.6vw, 4.4rem);
+  line-height: 1.12;
+  margin: 0 0 1rem;
+  font-size: clamp(1.8rem, 3.4vw, 3.1rem);
 }
 
-.chapter-arrival h1 {
-  font-size: clamp(2.4rem, 5.6vw, 5.2rem);
-  max-width: 16ch;
+.chapter-first h1 {
+  font-size: clamp(2.2rem, 4.4vw, 3.8rem);
+  max-width: 14ch;
 }
 
 .rule {
   display: block;
   height: 1px;
   width: min(11rem, 40%);
-  margin: 0 0 1.6rem;
+  margin: 0 0 1.2rem;
   background: var(--neon);
 }
 
 .lead,
-.body {
-  margin: 0 0 1.15rem;
-  max-width: 42ch;
+.body,
+.meta,
+.note {
+  margin: 0 0 1rem;
   color: var(--dim);
 }
 
@@ -180,32 +211,35 @@ h2 {
   color: var(--ink);
 }
 
-.cluster {
-  margin: 1.8rem 0 0;
-  max-width: 36rem;
-  text-align: left;
+.meta {
+  font-size: 0.95rem;
 }
 
-.chapter-even .cluster {
-  margin-left: auto;
+.meta strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.cluster {
+  margin: 1.6rem 0 0;
 }
 
 .cluster h3 {
   font-family: var(--display);
   font-size: 1.05rem;
-  margin: 0 0 0.8rem;
+  margin: 0 0 0.6rem;
   letter-spacing: -0.03em;
 }
 
 .pair {
   border-top: 1px solid rgb(255 255 255 / 0.08);
-  padding: 0.85rem 0 0.35rem;
+  padding: 0.75rem 0 0.3rem;
 }
 
 .pair dt {
   font-family: var(--display);
   font-size: 0.98rem;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
 }
 
 .pair dd {
@@ -214,8 +248,26 @@ h2 {
   font-size: 0.95rem;
 }
 
+.steps {
+  margin: 0 0 1.2rem;
+  padding-left: 1.2rem;
+  color: var(--dim);
+}
+
+.steps li {
+  margin: 0.35rem 0;
+}
+
+.note {
+  margin-top: 1.4rem;
+  padding: 0.85rem 0 0;
+  border-top: 1px solid rgb(255 255 255 / 0.12);
+  color: var(--faint);
+  font-size: 0.92rem;
+}
+
 .footer-mark {
-  margin-top: 2.5rem;
+  margin-top: 2.2rem;
   color: var(--faint);
   font-family: var(--mono);
   font-size: 0.72rem;
@@ -225,39 +277,42 @@ h2 {
 
 @media (max-width: 900px) {
   :root {
-    --rail: 2.6rem;
+    --rail: 2.7rem;
   }
-  .canvas-root {
-    opacity: 0.55;
-    mask-image: linear-gradient(to bottom, black 0%, black 38%, transparent 72%);
+  .mascot-stage {
+    top: 0.6rem;
+    right: 0.4rem;
+    width: min(42vw, 160px);
+    opacity: 0.92;
   }
-  .chapter,
-  .chapter-even .chapter-inner,
-  .chapter-even .cluster,
-  .chapter-even .lead,
-  .chapter-even .body,
-  .chapter-even .rule {
-    margin-left: 0;
-    text-align: left;
+  main {
+    padding-right: 0.9rem;
   }
   .chapter {
-    min-height: 120dvh;
-    padding: 10vh 1.1rem 16vh;
+    padding: 3.2rem 0.9rem 3.6rem;
   }
-  .chapter-arrival {
+  .chapter-first {
     min-height: 100dvh;
+    padding-top: 22vh;
   }
   .chapter-inner {
     max-width: 100%;
-    top: 38vh;
   }
-  .rail-brand {
+  .rail-brand,
+  .rail-label {
     display: none;
+  }
+  .rail {
+    padding-top: 1.2rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+  .mascot-pose,
+  .mascot-hop {
+    animation: none;
   }
 }

@@ -1,12 +1,12 @@
 import { useScrollDriver } from "./scene/useScrollDriver.js";
-import { CanvasRoot } from "./scene/CanvasRoot.jsx";
+import { Mascot } from "./mascot/Mascot.jsx";
 import { Overlay } from "./overlay/Overlay.jsx";
 
 export default function App() {
   useScrollDriver();
   return (
     <>
-      <CanvasRoot />
+      <Mascot />
       <Overlay />
     </>
   );
