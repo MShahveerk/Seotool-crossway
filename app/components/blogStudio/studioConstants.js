@@ -14,7 +14,7 @@ export const AUTO_SOURCE_OPTIONS = [
   {
     value: "seed",
     label: "Seed prompt",
-    hint: "Decider picks from Trends or the keyword library, then Binder → Checker → Headings → Architect.",
+    hint: "Decider picks from the keyword library, angled with relevant world trends, then Binder → Checker → Headings → Architect.",
   },
   {
     value: "excel",
@@ -125,7 +125,7 @@ export const AGENT_ROLES = [
   {
     id: "decider",
     title: "Topic Decider",
-    subtitle: "Trends, harvest, or GSC × library",
+    subtitle: "Library + relevant world trends",
     providerKey: "deciderProvider",
     modelKey: "deciderModel",
     readyKey: "decider",

@@ -14,7 +14,7 @@ import KeywordResearchBoard from "./KeywordResearchBoard";
 /** Pipeline order. The Interpreter only runs for document/Excel sources. */
 export const BLOG_PIPELINE = [
   { id: "interpreter", title: "Interpreter", subtitle: "Document → SEO seeds", optional: true },
-  { id: "decider", title: "Decider", subtitle: "Trends or keyword library", optional: true },
+  { id: "decider", title: "Decider", subtitle: "Library + relevant world trends", optional: true },
   { id: "binder", title: "Binder", subtitle: "Low-KD keyword bag" },
   { id: "checker", title: "Checker", subtitle: "Unique title" },
   { id: "headings", title: "Headings", subtitle: "KD-aware outline" },

@@ -137,7 +137,7 @@ export default function DataSourcesPanel() {
                 Powers Blog Studio topic trends, optional duplicate-title checks, and SERP Analysis.
                 {keySource === "env" ? " Currently using the environment key." : ""}
                 {keySource === "saved" ? " Using the key saved here." : ""}
-                {keySource === "missing" ? " No key yet — the Decider uses the fallback below." : ""}
+                {keySource === "missing" ? " No key yet — drafts still use the keyword library; world-trend hooks stay off." : ""}
               </p>
               <input
                 type="password"
@@ -164,10 +164,11 @@ export default function DataSourcesPanel() {
             </div>
 
             <div className="space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-4">
-              <p className="text-sm font-semibold text-[var(--cw-ink)]">Topic Decider fallback</p>
+              <p className="text-sm font-semibold text-[var(--cw-ink)]">Keyword library ranking</p>
               <p className="text-xs text-[var(--cw-ink-muted)]">
-                Used only when there is no SerpAPI key. Drafts still need Research; the Decider just
-                will not pick “what’s spiking on Google this week.”
+                The Decider always starts from the keyword library (Research or an uploaded bank).
+                SerpAPI only adds on-niche world trends as a hook. This ranking is used when there
+                is no SerpAPI key — or as the library lane even when Trends are on.
               </p>
               <label className="flex items-start gap-2 text-sm text-[var(--cw-ink-dim)]">
                 <input
@@ -179,13 +180,13 @@ export default function DataSourcesPanel() {
                   onChange={() => setDeciderFallback("harvest")}
                 />
                 <span>
-                  Harvest-only
+                  Research library
                   <span className="ml-1.5 rounded-md border border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--cw-neon)]">
                     Best
                   </span>
                   <span className="mt-0.5 block text-xs text-[var(--cw-ink-faint)]">
-                    Closed list from the last Research library. Prefers gap/strike topics, low KD,
-                    real volume, and SE Ranking trend direction. No invented phrases.
+                    Featured and universe keywords from the last Research run. Prefers gap/strike,
+                    low KD, real volume — not dump cluster titles.
                   </span>
                 </span>
               </label>
@@ -199,10 +200,10 @@ export default function DataSourcesPanel() {
                   onChange={() => setDeciderFallback("gsc")}
                 />
                 <span>
-                  Search Console + harvest
+                  Search Console ∩ library
                   <span className="mt-0.5 block text-xs text-[var(--cw-ink-faint)]">
-                    Rank harvest topics that also appear in Search Console queries. Silent harvest-only
-                    if GSC is not connected.
+                    Rank library keywords that also appear in Search Console. Silent library-only if
+                    GSC is not connected.
                   </span>
                 </span>
               </label>

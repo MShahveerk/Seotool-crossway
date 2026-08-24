@@ -31,6 +31,7 @@ import ContentInbox from "./blogStudio/ContentInbox";
 import PipelinePreview from "./blogStudio/PipelinePreview";
 import KeywordResearchPanel from "./blogStudio/KeywordResearchPanel";
 import KeywordResearchBoard from "./blogStudio/KeywordResearchBoard";
+import OperatorKeywordBank from "./blogStudio/OperatorKeywordBank";
 import ModelCombobox from "./studioShared/ModelCombobox";
 import StudioReferenceImages from "./studioShared/StudioReferenceImages";
 import StudioBrandKit from "./studioShared/StudioBrandKit";
@@ -884,7 +885,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                         className={`${inputClass} mt-1`}
                         value={topic}
                         onChange={(e) => setTopic(e.target.value)}
-                        placeholder="Leave blank — Decider picks from Trends or your keyword library"
+                        placeholder="Leave blank — Decider picks from your keyword library, angled with relevant world trends"
                       />
                     </div>
                     {lastResearch ? (
@@ -895,16 +896,23 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                       </div>
                     ) : (
                       <div className="rounded-xl border border-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_8%,transparent)] px-3 py-2 text-xs text-[var(--cw-ink-dim)]">
-                        Research this project first. The Decider and Binder read that keyword library.
+                        No Research harvest yet. Import your own keywords below, or{" "}
                         <button
                           type="button"
-                          className="ml-2 font-semibold text-[var(--cw-neon)] hover:underline"
+                          className="font-semibold text-[var(--cw-neon)] hover:underline"
                           onClick={() => setSource("research")}
                         >
-                          Open Research →
+                          run Research
                         </button>
+                        .
                       </div>
                     )}
+                    <OperatorKeywordBank
+                      siteQ={siteQ}
+                      config={siteConfig}
+                      onPatch={patchSite}
+                      onMessage={setSaveMessage}
+                    />
                     <div>
                       <label className={labelClass}>Must-follow keywords (absolute)</label>
                       <textarea
@@ -931,7 +939,16 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                       size="lg"
                       icon={running ? FiRefreshCw : FiSend}
                       onClick={startRun}
-                      disabled={running || !selectedSite || !lastResearch}
+                      disabled={
+                        running ||
+                        !selectedSite ||
+                        (!lastResearch &&
+                          !(
+                            siteConfig.useOperatorKeywords &&
+                            Array.isArray(siteConfig.operatorKeywords) &&
+                            siteConfig.operatorKeywords.length
+                          ))
+                      }
                     >
                       {running ? "Queueing…" : "Generate draft"}
                     </Btn>
@@ -943,10 +960,10 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                         Tips
                       </p>
                       <p className="text-xs text-[var(--cw-ink-muted)]">
-                        Leave the topic blank and the Decider picks from Google Trends when SerpAPI is
-                        configured, otherwise from your last Research library (or Search Console ∩ harvest —
-                        set the fallback in Admin → Data sources). Type a topic to skip the Decider; Binder,
-                        Checker and Headings still run. Research is required.
+                        Leave the topic blank and the Decider picks a seed from your keyword library
+                        (Research, or the list you uploaded). When SerpAPI is set, it also layers
+                        relevant world trends as the timely angle — never instead of the library.
+                        Type a topic to skip the Decider.
                       </p>
                     </div>
                   </div>
