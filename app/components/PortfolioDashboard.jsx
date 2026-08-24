@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import {
   Activity,
   ArrowUpRight,
   Bell,
+  CheckCircle2,
   FileText,
   Gauge,
   Globe,
   Megaphone,
   MousePointerClick,
+  Plus,
+  RefreshCw,
   Search,
   Send,
   ShieldCheck,
@@ -23,8 +27,10 @@ import {
   mergeClientAccountEntries,
 } from "@/lib/clientAccountList";
 import { canonicalizeSiteKey, isMetaPageId } from "@/lib/siteAccess";
+import { ROLES } from "@/lib/rbac";
 import ClientAccountLogo from "./ui-shared/ClientAccountLogo";
 import { FadeIn } from "./ui-shared/Motion";
+import Btn from "./ui-shared/Btn";
 
 function siteHost(siteLink) {
   const raw = String(siteLink || "").trim();
@@ -39,6 +45,7 @@ function siteHost(siteLink) {
 }
 
 function isWebsiteEntry(entry) {
+  if (entry?.type === "meta_page") return false;
   const link = String(entry?.siteLink || "").trim();
   return Boolean(link && (link.startsWith("http") || link.startsWith("sc-domain:")));
 }
@@ -300,6 +307,270 @@ function MiniStat({ icon: Icon, label, value, title }) {
   );
 }
 
+const ONBOARD_STEPS = [
+  {
+    n: "1",
+    title: "Paste the website",
+    body: "The live URL is enough. Search Console can be connected after the project exists.",
+  },
+  {
+    n: "2",
+    title: "It lands in this grid",
+    body: "The site becomes a project you can open. Every tool then follows that project.",
+  },
+  {
+    n: "3",
+    title: "Open it and work",
+    body: "Blog Studio, Search Console, and audits all need a website project. Social can run from a Meta page on its own.",
+  },
+];
+
+function OnboardPanel({ isAdmin, hasProjects, onProjectsChanged }) {
+  const [open, setOpen] = useState(!hasProjects);
+  const [url, setUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [fetchingMeta, setFetchingMeta] = useState(false);
+  const [error, setError] = useState("");
+  const [ok, setOk] = useState("");
+
+  useEffect(() => {
+    if (!hasProjects) setOpen(true);
+  }, [hasProjects]);
+
+  const addWebsite = async (event) => {
+    event?.preventDefault?.();
+    if (!isAdmin) return;
+    const trimmed = url.trim();
+    if (!trimmed) {
+      setError("Paste a website URL first.");
+      setOk("");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    setOk("");
+    try {
+      const res = await fetch("/api/admin/sites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteUrl: trimmed }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not add this website.");
+      setUrl("");
+      setOk("Website added. It is now a project in the grid.");
+      await onProjectsChanged?.();
+    } catch (err) {
+      setError(err.message || "Could not add this website.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fetchMeta = async () => {
+    if (!isAdmin) return;
+    setFetchingMeta(true);
+    setError("");
+    setOk("");
+    try {
+      const res = await fetch("/api/admin/meta-accounts", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not fetch Meta pages.");
+      const count = Array.isArray(data.accounts) ? data.accounts.length : 0;
+      const saved = Number(data.persisted || 0);
+      if (count === 0) {
+        setError(
+          data.error ||
+            "Meta returned no pages. Check META_PAGE_ACCESS_TOKEN on the server, then try again."
+        );
+      } else {
+        setOk(
+          saved > 0
+            ? `Fetched ${count} Meta ${count === 1 ? "page" : "pages"} and saved them as projects.`
+            : `Loaded ${count} Meta ${count === 1 ? "page" : "pages"}.`
+        );
+      }
+      await onProjectsChanged?.();
+    } catch (err) {
+      setError(err.message || "Could not fetch Meta pages.");
+    } finally {
+      setFetchingMeta(false);
+    }
+  };
+
+  const showForm = isAdmin && (open || !hasProjects);
+
+  return (
+    <div data-guide="portfolio-onboard">
+      {hasProjects ? (
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {isAdmin ? (
+            <>
+              <Btn
+                variant={open ? "primary" : "secondary"}
+                size="sm"
+                icon={Plus}
+                onClick={() => setOpen((v) => !v)}
+              >
+                {open ? "Hide website setup" : "Add a website"}
+              </Btn>
+              <Btn
+                variant="outline"
+                size="sm"
+                icon={RefreshCw}
+                loading={fetchingMeta}
+                onClick={fetchMeta}
+                disabled={fetchingMeta}
+              >
+                Fetch Meta pages
+              </Btn>
+            </>
+          ) : (
+            <p className="text-xs text-[var(--cw-ink-muted)]">
+              Need another site here? Ask an admin to onboard it from this page.
+            </p>
+          )}
+        </div>
+      ) : null}
+      {hasProjects && !open && (error || ok) ? (
+        <div className="mt-2 max-w-xl">
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-lg border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_12%,var(--cw-surface))] px-3 py-2 text-xs text-[var(--cw-danger)]"
+            >
+              {error}
+            </p>
+          ) : null}
+          {ok ? (
+            <p
+              role="status"
+              className="inline-flex items-start gap-2 rounded-lg border border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] px-3 py-2 text-xs text-[var(--cw-neon)]"
+            >
+              <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              {ok}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showForm || !hasProjects ? (
+        <div
+          className={`mt-5 overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--cw-neon)_32%,var(--cw-hairline))] bg-[var(--cw-surface)] ${
+            hasProjects ? "" : "shadow-[0_0_40px_-18px_color-mix(in_srgb,var(--cw-neon)_55%,transparent)]"
+          }`}
+        >
+          <div className="grid gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
+            <div className="p-5 sm:p-6">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--cw-neon)]">
+                Onboard a website
+              </p>
+              <h2 className="mt-1.5 font-heading text-xl font-bold tracking-tight text-[var(--cw-ink)] sm:text-2xl">
+                Put the site on the board
+              </h2>
+              <p className="mt-2 max-w-lg text-sm leading-relaxed text-[var(--cw-ink-muted)]">
+                A website project is what Search Console, Blog Studio, and site health hang off.
+                Add the URL here and it shows up with the rest of your projects.
+              </p>
+              <ol className="mt-5 space-y-3">
+                {ONBOARD_STEPS.map((step) => (
+                  <li key={step.n} className="flex gap-3">
+                    <span
+                      className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_10%,transparent)] text-[11px] font-bold tabular-nums text-[var(--cw-neon)]"
+                      aria-hidden
+                    >
+                      {step.n}
+                    </span>
+                    <span>
+                      <span className="block text-sm font-semibold text-[var(--cw-ink)]">{step.title}</span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-[var(--cw-ink-muted)]">
+                        {step.body}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="border-t border-[var(--cw-hairline)] bg-[var(--cw-canvas)]/55 p-5 sm:p-6 lg:border-l lg:border-t-0">
+              {isAdmin ? (
+                <form onSubmit={addWebsite} className="flex h-full flex-col">
+                  <label htmlFor="portfolio-onboard-url" className="text-sm font-semibold text-[var(--cw-ink)]">
+                    Website URL
+                  </label>
+                  <p className="mt-1 text-xs leading-relaxed text-[var(--cw-ink-muted)]">
+                    example.com works. So does https://www.example.com.
+                  </p>
+                  <input
+                    id="portfolio-onboard-url"
+                    type="text"
+                    inputMode="url"
+                    autoComplete="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://www.example.com"
+                    className="mt-3 w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3.5 py-2.5 text-sm text-[var(--cw-ink)] placeholder:text-[var(--cw-ink-faint)] focus:border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))] focus:outline-none"
+                  />
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <Btn type="submit" variant="primary" size="md" icon={Plus} loading={saving} disabled={saving}>
+                      Add website
+                    </Btn>
+                    {!hasProjects ? (
+                      <Btn
+                        type="button"
+                        variant="secondary"
+                        size="md"
+                        icon={RefreshCw}
+                        loading={fetchingMeta}
+                        disabled={fetchingMeta}
+                        onClick={fetchMeta}
+                      >
+                        Fetch Meta pages
+                      </Btn>
+                    ) : null}
+                  </div>
+                  {!hasProjects ? (
+                    <p className="mt-3 text-[11px] leading-relaxed text-[var(--cw-ink-faint)]">
+                      Fetch Meta pages pulls Facebook pages from Graph and saves them as social
+                      projects, even when they are not attached to a website.
+                    </p>
+                  ) : null}
+                </form>
+              ) : (
+                <div className="flex h-full flex-col justify-center">
+                  <p className="text-sm font-semibold text-[var(--cw-ink)]">An admin adds websites here</p>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--cw-ink-muted)]">
+                    Once your site is onboarded it appears in this grid. You can then open it and use
+                    every project tool against it.
+                  </p>
+                </div>
+              )}
+
+              {error ? (
+                <p
+                  role="alert"
+                  className="mt-3 rounded-lg border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_12%,var(--cw-surface))] px-3 py-2 text-xs text-[var(--cw-danger)]"
+                >
+                  {error}
+                </p>
+              ) : null}
+              {ok ? (
+                <p
+                  role="status"
+                  className="mt-3 inline-flex items-start gap-2 rounded-lg border border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_12%,var(--cw-surface))] px-3 py-2 text-xs text-[var(--cw-neon)]"
+                >
+                  <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                  {ok}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function SummaryTile({ icon: Icon, label, value, sub, accent = "var(--cw-neon)" }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-4">
@@ -504,6 +775,8 @@ const FILTERS = [
  * grid answers "where do I need to look today" before anyone clicks anything.
  */
 export default function PortfolioDashboard({ selectedSite = "", onEnterClient }) {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === ROLES.SUPER_ADMIN;
   const [sites, setSites] = useState([]);
   const [metaAccounts, setMetaAccounts] = useState([]);
   const [overview, setOverview] = useState({
@@ -524,14 +797,14 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
   const [sort, setSort] = useState("attention");
   const [filter, setFilter] = useState("all");
 
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all([
-      fetch("/api/admin/site-integrations").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/admin/meta-accounts").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/portfolio/overview").then((r) => r.json()).catch(() => ({})),
-    ]).then(([integrations, meta, ov]) => {
-      if (cancelled) return;
+  const loadPortfolio = useCallback(async ({ initial = false } = {}) => {
+    if (initial) setLoading(true);
+    try {
+      const [integrations, meta, ov] = await Promise.all([
+        fetch("/api/admin/site-integrations").then((r) => r.json()).catch(() => ({})),
+        fetch("/api/admin/meta-accounts").then((r) => r.json()).catch(() => ({})),
+        fetch("/api/portfolio/overview").then((r) => r.json()).catch(() => ({})),
+      ]);
       const arr = (v) => (Array.isArray(v) ? v : []);
       setSites(mergeClientAccountEntries(integrations?.sites || []));
       setMetaAccounts(arr(meta?.accounts));
@@ -548,12 +821,14 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
         followerSeries: arr(ov?.followerSeries),
         clicks: arr(ov?.clicks),
       });
+    } finally {
       setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
+    }
   }, []);
+
+  useEffect(() => {
+    loadPortfolio({ initial: true });
+  }, [loadPortfolio]);
 
   const postMap = useMemo(() => toCountMap(overview.posts), [overview.posts]);
   const blogMap = useMemo(() => toCountMap(overview.blogs), [overview.blogs]);
@@ -590,7 +865,7 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
   const allProjects = useMemo(() => {
     return sites
       .map((entry, i) => {
-        const host = siteHost(entry.siteLink);
+        const host = entry.type === "meta_page" ? "" : siteHost(entry.siteLink);
         const trend = followerTrendForProject(entry, followerSeriesByKey);
         const first = trend.length > 1 ? trend[0].total : 0;
         const last = trend.length > 1 ? trend[trend.length - 1].total : 0;
@@ -748,6 +1023,16 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
         </div>
       </FadeIn>
 
+      {!loading ? (
+        <FadeIn delay={40}>
+          <OnboardPanel
+            isAdmin={isAdmin}
+            hasProjects={allProjects.length > 0}
+            onProjectsChanged={() => loadPortfolio()}
+          />
+        </FadeIn>
+      ) : null}
+
       <FadeIn delay={50}>
         <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4" data-guide="portfolio-list">
           <SummaryTile
@@ -826,17 +1111,13 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
           ))}
         </div>
       ) : projects.length === 0 ? (
-        <div className="mt-4 flex flex-col items-center justify-center rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-6 py-20 text-center">
-          <Globe className="size-8 text-[var(--cw-ink-faint)]" />
-          <p className="mt-3 text-sm font-medium text-[var(--cw-ink)]">
-            {query || filter !== "all" ? "No projects match" : "No projects linked yet"}
-          </p>
-          <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
-            {query || filter !== "all"
-              ? "Try a different name, domain or filter."
-              : "Link a site or Meta page to get started."}
-          </p>
-          {query || filter !== "all" ? (
+        query || filter !== "all" ? (
+          <div className="mt-4 flex flex-col items-center justify-center rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-6 py-16 text-center">
+            <Globe className="size-8 text-[var(--cw-ink-faint)]" />
+            <p className="mt-3 text-sm font-medium text-[var(--cw-ink)]">No projects match</p>
+            <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
+              Try a different name, domain or filter.
+            </p>
             <button
               type="button"
               onClick={() => {
@@ -847,8 +1128,8 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
             >
               Clear filters
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null
       ) : (
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {projects.map((p, i) => (
@@ -873,8 +1154,13 @@ function projectDisplayName(entry, metaAccounts) {
       entry.facebookPageId &&
       String(a.facebookPageId).trim() === String(entry.facebookPageId).trim()
   );
-  if (metaMatch?.name) return metaMatch.name;
-  const name = entry.displayName || entry.userName || "";
-  if (name && !name.startsWith("http") && !/^\d+$/.test(String(name).trim())) return name;
+  const metaName = String(metaMatch?.name || "").trim();
+  if (metaName && !metaName.startsWith("http") && !/^\d+$/.test(metaName)) return metaName;
+  const name = String(entry.displayName || entry.userName || "").trim();
+  const isMeta = entry.type === "meta_page" || Boolean(entry.facebookPageId && !isWebsiteEntry(entry));
+  if (name && !name.startsWith("http") && !/^\d+$/.test(name) && !/^your account$/i.test(name)) {
+    return name;
+  }
+  if (isMeta) return metaName || "Meta page";
   return siteHost(entry.siteLink) || "Untitled project";
 }

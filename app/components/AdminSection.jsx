@@ -179,6 +179,7 @@ export default function AdminSection({ onNavigate } = {}) {
   const [metaAccounts, setMetaAccounts] = useState([]);
   const [loadingMetaAccounts, setLoadingMetaAccounts] = useState(false);
   const [metaAccountsError, setMetaAccountsError] = useState("");
+  const [syncingMetaPages, setSyncingMetaPages] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -237,6 +238,46 @@ export default function AdminSection({ onNavigate } = {}) {
       setMetaAccountsError(err.message || "Failed to load Meta accounts");
     } finally {
       setLoadingMetaAccounts(false);
+    }
+  };
+
+  const syncMetaPages = async () => {
+    setSyncingMetaPages(true);
+    setMetaAccountsError("");
+    try {
+      const res = await fetch("/api/admin/meta-accounts", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      const accounts = Array.isArray(data.accounts) ? data.accounts : [];
+      setMetaAccounts(accounts);
+      if (!res.ok) {
+        setMetaAccountsError(data.error || `Failed to fetch Meta pages (${res.status})`);
+        setError(data.error || "Failed to fetch Meta pages.");
+        return;
+      }
+      await fetchAvailableIntegrations();
+      if (accounts.length === 0) {
+        const msg =
+          data.error ||
+          "Meta returned no pages. Check META_PAGE_ACCESS_TOKEN on the server, then try again.";
+        setMetaAccountsError(msg);
+        setError(msg);
+      } else {
+        setMetaAccountsError(data.warning || "");
+        setSuccessMessage(
+          data.message ||
+            `Fetched ${accounts.length} Meta ${accounts.length === 1 ? "page" : "pages"} as projects.`
+        );
+        setError("");
+        setTimeout(() => setSuccessMessage(""), 6000);
+      }
+    } catch (err) {
+      console.error("Failed to fetch Meta pages", err);
+      setMetaAccounts([]);
+      const msg = err.message || "Failed to fetch Meta pages";
+      setMetaAccountsError(msg);
+      setError(msg);
+    } finally {
+      setSyncingMetaPages(false);
     }
   };
 
@@ -926,13 +967,24 @@ export default function AdminSection({ onNavigate } = {}) {
             People and access, report delivery, data sources and the scheduled jobs behind them.
           </p>
         </div>
-        <button
-          onClick={() => setShowSiteAssociations(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--cw-ink-dim)] transition-smooth hover:border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink)]"
-        >
-          <FiLink className="h-4 w-4" />
-          Manage sites &amp; tracking
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={syncMetaPages}
+            disabled={syncingMetaPages}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_10%,var(--cw-raised))] px-4 py-2.5 text-sm font-semibold text-[var(--cw-neon)] transition-smooth hover:bg-[color-mix(in_srgb,var(--cw-neon)_16%,var(--cw-raised))] disabled:opacity-45"
+          >
+            <FiRefreshCw className={`h-4 w-4 ${syncingMetaPages ? "animate-spin" : ""}`} />
+            {syncingMetaPages ? "Fetching Meta pages…" : "Fetch Meta pages"}
+          </button>
+          <button
+            onClick={() => setShowSiteAssociations(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--cw-ink-dim)] transition-smooth hover:border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink)]"
+          >
+            <FiLink className="h-4 w-4" />
+            Manage sites &amp; tracking
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -1496,7 +1548,8 @@ export default function AdminSection({ onNavigate } = {}) {
                     Link Meta account (Facebook &amp; Instagram)
                   </label>
                   <p className="mb-3 text-xs text-[var(--cw-ink-muted)]">
-                    Select a Facebook Page linked to your Meta Token. This will automatically set the Facebook Page ID and Instagram User ID for publishing.
+                    Select a Facebook Page linked to your Meta token. Use Fetch Meta pages on this
+                    screen if the list is empty, then the pages also appear as projects.
                   </p>
 
                   {loadingMetaAccounts ? (
@@ -1527,7 +1580,7 @@ export default function AdminSection({ onNavigate } = {}) {
                         <option value="">-- Select a Meta Account --</option>
                         {metaAccounts.map((acc) => (
                           <option key={acc.facebookPageId} value={acc.facebookPageId}>
-                            {acc.name}{" "}
+                            {acc.name || acc.facebookPageId}{" "}
                             {acc.instagramUserId ? "(Includes Instagram)" : "(Facebook Only)"}
                             {acc.source === "database" ? " · saved" : ""}
                           </option>
@@ -1544,6 +1597,15 @@ export default function AdminSection({ onNavigate } = {}) {
                         (Page or System User token from Meta for Developers), save, and restart the service. You can
                         also type a Facebook Page ID manually below if needed.
                       </p>
+                      <button
+                        type="button"
+                        onClick={syncMetaPages}
+                        disabled={syncingMetaPages}
+                        className="mt-2 inline-flex items-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--cw-neon)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_10%,var(--cw-surface))] px-3 py-1.5 text-xs font-semibold text-[var(--cw-neon)] disabled:opacity-45"
+                      >
+                        <FiRefreshCw className={`h-3.5 w-3.5 ${syncingMetaPages ? "animate-spin" : ""}`} />
+                        {syncingMetaPages ? "Fetching…" : "Fetch Meta pages"}
+                      </button>
                       <div className="pt-1">
                         <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--cw-ink-faint)]">
                           Facebook Page ID (manual)

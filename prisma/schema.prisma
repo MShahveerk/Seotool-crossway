@@ -412,6 +412,8 @@ model SitePostConfig {
   metaPageAccessToken String?  @map("meta_page_access_token") @db.Text
   metaPullEnabled     Boolean  @default(false) @map("meta_pull_enabled")
   facebookPageId      String?  @map("facebook_page_id") @db.VarChar(191)
+  /// Graph page name, kept so Meta projects survive when live lookup is empty.
+  pageName            String?  @map("page_name") @db.VarChar(255)
   instagramUserId     String?  @map("instagram_user_id") @db.VarChar(191)
   lastMetaPullAt      DateTime? @map("last_meta_pull_at")
   emailInboundEnabled Boolean  @default(false) @map("email_inbound_enabled")

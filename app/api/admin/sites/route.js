@@ -1,6 +1,6 @@
 import prisma from "../../../../lib/prisma";
 import { requireSuperAdmin } from "../../../../lib/middleware/auth";
-import { normalizeSiteOrigin } from "../../../../lib/validation";
+import { normalizeOnboardWebsiteUrl } from "../../../../lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +37,7 @@ export async function POST(req) {
     const body = await req.json();
     const { siteUrl, gtmContainerId, facebookPageId, instagramUserId } = body || {};
 
-    const normalizedSiteUrl = normalizeSiteOrigin(siteUrl);
+    const normalizedSiteUrl = normalizeOnboardWebsiteUrl(siteUrl);
 
     if (!normalizedSiteUrl) {
       return new Response(JSON.stringify({ error: "A valid Site URL is required." }), {
