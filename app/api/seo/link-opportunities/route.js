@@ -45,6 +45,7 @@ export async function POST(req) {
       keyword = "",
       siteUrl = "",
       location = "",
+      originCountry = "",
       device = "desktop",
       geo = "us",
       rankers = 10,
@@ -61,6 +62,7 @@ export async function POST(req) {
       keyword,
       {
         location,
+        originCountry,
         device: device === "mobile" ? "mobile" : "desktop",
         geo: ALLOWED_GEO.has(String(geo).toLowerCase()) ? String(geo).toLowerCase() : "us",
         // Clamped: depth is the credit dial, so it can't be driven off a cliff

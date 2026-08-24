@@ -33,6 +33,7 @@ export async function POST(req) {
       keyword = "",
       siteUrl = "",
       location = "",
+      originCountry = "",
       device = "desktop",
       geo = "us",
       rankers = 10,
@@ -47,6 +48,7 @@ export async function POST(req) {
     // silently re-bills a full analysis just to print it.
     const data = await getLinkOpportunities(siteUrl, keyword, {
       location,
+      originCountry,
       device,
       geo,
       rankers: Math.min(30, Math.max(3, Number(rankers) || 10)),

@@ -79,6 +79,7 @@ function AuthorityCell({ value }) {
 export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
+  const [originCountry, setOriginCountry] = useState("");
   const [device, setDevice] = useState("desktop");
   const [geo, setGeo] = useState("us");
   const [view, setView] = useState("intersect");
@@ -180,6 +181,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
           keyword: data.keyword,
           siteUrl: analysisSite,
           location: location.trim(),
+          originCountry: originCountry.trim(),
           device: data.device || device,
           geo: data.geo || geo,
           rankers: data.depth?.rankers ?? DEPTHS[depth].rankers,
@@ -209,6 +211,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       keyword: keyword.trim(),
       siteUrl: analysisSite,
       location: location.trim(),
+      originCountry: originCountry.trim(),
       device,
       geo,
       rankers: DEPTHS[depth].rankers,
@@ -527,7 +530,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       loading={false}
       error={error}
     >
-      <div className="cw-lit space-y-3 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5" data-guide="link-target">
+      <div className="cw-lit space-y-3 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5">
         <button
           type="button"
           onClick={() => setLlmOpen((v) => !v)}
@@ -641,8 +644,9 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       <form
         onSubmit={run}
         className="cw-lit space-y-4 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5"
+        data-guide="link-target"
       >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1.5 md:col-span-2">
             <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
               <FiSearch className="size-3.5 text-[var(--cw-neon)]" /> Keyword
@@ -657,7 +661,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
           </div>
           <div className="space-y-1.5">
             <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
-              <FiMapPin className="size-3.5 text-[var(--cw-neon)]" /> Location
+              <FiMapPin className="size-3.5 text-[var(--cw-neon)]" /> SERP location
             </label>
             <input
               type="text"
@@ -667,11 +671,26 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
               className={INPUT}
             />
             <p className="text-[11px] text-[var(--cw-ink-faint)]">
-              Picks the local Google SERP (who ranks). It does not limit backlinks to that place.
-              After the run, Origin filters linking sites by where they are from.
+              Which Google SERP to read (who ranks). Not where the linking sites are from.
             </p>
           </div>
-          <div className="space-y-1.5 md:col-span-3">
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
+              <FiMapPin className="size-3.5 text-[var(--cw-neon)]" /> Link origin
+            </label>
+            <input
+              type="text"
+              value={originCountry}
+              onChange={(e) => setOriginCountry(e.target.value)}
+              placeholder="Blank = worldwide"
+              className={INPUT}
+            />
+            <p className="text-[11px] text-[var(--cw-ink-faint)]">
+              Keep only linking sites from this country. Works best with country TLDs such as
+              PK, UK, AU, CA. United States mostly lives on .com, so that hunt stays thin.
+            </p>
+          </div>
+          <div className="space-y-1.5 md:col-span-2">
             <div className="flex items-center justify-between gap-2">
               <label className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-[var(--cw-ink-faint)] uppercase">
                 <FiLink className="size-3.5 text-[var(--cw-neon)]" /> Prepare for domain
@@ -751,7 +770,8 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--cw-ink-muted)]" data-guide="link-list">
             <span className="font-mono">
               &ldquo;{data.keyword}&rdquo; · {data.device}
-              {data.location ? ` · ${data.location}` : ""} · {data.targets?.length || 0} rivals
+              {data.location ? ` · SERP ${data.location}` : ""}
+              {data.originCountry ? ` · links from ${data.originCountry}` : ""} · {data.targets?.length || 0} rivals
               analysed
               {data.yourHost ? ` · for ${data.yourHost}` : " · no site context"}
             </span>
@@ -855,7 +875,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
                 />
                 Hide sites already linking to me
               </label>
-              {originOptions.length ? (
+              {originOptions.length && !data.originCountry ? (
                 <label className="flex items-center gap-2 text-xs font-semibold text-[var(--cw-ink-muted)]">
                   <FiMapPin className="size-3.5 text-[var(--cw-neon)]" />
                   <span className="sr-only">Origin</span>
@@ -900,7 +920,9 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
               emptyDescription={
                 query
                   ? "Clear the filter, or widen the type tabs above."
-                  : "Try the All tab, or untick 'hide sites already linking to me'. If everything is empty, the rivals' backlink data may not have returned."
+                  : data.originCountry
+                    ? `No linking sites from ${data.originCountry} in this run. Pair it with a local SERP location, or try a country with its own TLD.`
+                    : "Try the All tab, or untick 'hide sites already linking to me'. If everything is empty, the rivals' backlink data may not have returned."
               }
               footer={`${formatNum(intersectRows.length)} sites · click any row for full detail and an outreach check · ranked by how gettable the link is, then by how many rivals already have it`}
               ariaLabel="Link prospects"
@@ -914,7 +936,11 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
               maxHeight="60vh"
               emptyIcon={Link2Off}
               emptyTitle="No individual links returned"
-              emptyDescription="The rivals' link lists came back empty for this keyword."
+              emptyDescription={
+                data.originCountry
+                  ? `No individual links from ${data.originCountry} in this run.`
+                  : "The rivals' link lists came back empty for this keyword."
+              }
               footer={`${formatNum(strongestRows.length)} links · sorted by the authority of the linking domain`}
               ariaLabel="Strongest individual backlinks"
             />
