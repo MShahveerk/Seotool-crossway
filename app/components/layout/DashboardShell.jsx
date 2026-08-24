@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { getSectionLabel } from "@/lib/sectionMeta";
 import { cn } from "@/lib/utils";
 import { FadeIn } from "../ui-shared/Motion";
+import { PageGuideButton } from "../ui-shared/PageGuide";
 
 export default function DashboardLayout({
   children,
@@ -76,6 +77,7 @@ export default function DashboardLayout({
               </FadeIn>
             ) : null}
           </div>
+          <PageGuideButton sectionId={activeSection} />
         </header>
 
         {/* Boards need the full width; every other page gets real margins so

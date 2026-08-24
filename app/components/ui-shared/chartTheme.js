@@ -1,8 +1,8 @@
 /**
- * Chart palette for Carbon Neon.
+ * Chart palette for RoboSEO.Ai electric navy.
  *
  * Rules that keep a dashboard readable rather than festive:
- *  - Neon green is the *primary* series only. If a chart has one line, it's neon.
+ *  - Electric blue is the *primary* series only. If a chart has one line, it's blue.
  *  - Cyan is the second series, amber the third, grey the fourth. Four is the
  *    limit before a legend is doing the work the chart should do.
  *  - Comparison/previous-period lines reuse the same hue, dashed and dimmed —
@@ -15,15 +15,15 @@
 
 export const CHART = {
   /** Series colours, in the order they should be used. */
-  series: ["#0EFF2A", "#38E1FF", "#FFB020", "#949CA5", "#B184FF"],
+  series: ["#00A3FF", "#00F0FF", "#FFB020", "#949CA5", "#B184FF"],
 
-  primary: "#0EFF2A",
-  secondary: "#38E1FF",
+  primary: "#00A3FF",
+  secondary: "#00F0FF",
   tertiary: "#FFB020",
   neutral: "#949CA5",
   accentAlt: "#B184FF",
 
-  positive: "#0EFF2A",
+  positive: "#00A3FF",
   negative: "#FF5C5C",
   caution: "#FFB020",
 
@@ -31,17 +31,17 @@ export const CHART = {
   axis: "#6D757E",
   axisTick: { fontSize: 10, fill: "#6D757E" },
 
-  surface: "#1A1E23",
-  canvas: "#101317",
-  hairline: "#333941",
+  surface: "#0E1624",
+  canvas: "#070D18",
+  hairline: "#2A3650",
   ink: "#F4F6F7",
   inkMuted: "#949CA5",
 
   /** Shared tooltip chrome so every chart's hover looks the same. */
   tooltip: {
     contentStyle: {
-      background: "#2B3038",
-      border: "1px solid #333941",
+      background: "#1C2740",
+      border: "1px solid #2A3650",
       borderRadius: "12px",
       color: "#F4F6F7",
       fontSize: "12px",

@@ -92,7 +92,7 @@ function RunRow({ run, selected, onSelect, onCancel, cancelling, requiredSteps, 
           aria-hidden
           className={cn(
             "absolute inset-y-0 left-0 w-0.5 transition-smooth",
-            selected ? "bg-[var(--cw-neon)] shadow-[0_0_10px_rgb(14_255_42_/_0.6)]" : "bg-transparent"
+            selected ? "bg-[var(--cw-neon)] shadow-[0_0_10px_rgb(0_163_255_/_0.6)]" : "bg-transparent"
           )}
         />
 

@@ -107,7 +107,7 @@ export default function TabRail({
           "pointer-events-none absolute top-1 bottom-1 left-0 rounded-xl opacity-0",
           "border border-[color-mix(in_srgb,var(--cw-neon)_45%,transparent)]",
           "bg-[color-mix(in_srgb,var(--cw-neon)_13%,var(--cw-surface))]",
-          "shadow-[0_0_18px_-4px_rgb(14_255_42_/_0.45)]"
+          "shadow-[0_0_18px_-4px_rgb(0_163_255_/_0.45)]"
         )}
       />
 

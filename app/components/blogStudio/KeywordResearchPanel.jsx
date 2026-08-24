@@ -47,7 +47,7 @@ export default function KeywordResearchPanel({
           </p>
           <h2 className="mt-1 text-lg font-bold text-[var(--cw-ink)]">Research this project</h2>
           <p className="mt-1.5 text-sm text-[var(--cw-ink-muted)]">
-            The Site Researcher reads the live site and Crossway SEO data. The Keyword Scout then
+            The Site Researcher reads the live site and RoboSEO.Ai data. The Keyword Scout then
             pulls SE Ranking — similar, related, questions, long-tail, plus rival lists — and indexes
             every term under a topic. Manual only.
           </p>

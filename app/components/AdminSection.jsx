@@ -912,7 +912,7 @@ export default function AdminSection({ onNavigate } = {}) {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between" data-guide="admin-users">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--cw-neon)]">
             Admin
@@ -945,7 +945,7 @@ export default function AdminSection({ onNavigate } = {}) {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-1.5">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-1.5" data-guide="admin-access">
         {ADMIN_TABS.map((tab) => {
           const Icon = tab.icon;
           const active = adminTab === tab.id;
@@ -1065,6 +1065,7 @@ export default function AdminSection({ onNavigate } = {}) {
                     setSmmFetchStatusByPlatform({});
                   }}
                   className="inline-flex items-center gap-2 rounded-xl bg-[var(--cw-neon)] px-4 py-2.5 text-sm font-semibold text-[var(--cw-neon-ink)] transition-smooth hover:bg-[var(--cw-neon-deep)]"
+                  data-guide="admin-invite"
                 >
                   <FiUserPlus className="h-4 w-4" />
                   Add user

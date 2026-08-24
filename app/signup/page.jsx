@@ -82,7 +82,7 @@ export default function SignUpPage() {
   return (
     <AuthLayout
       title="Create your account"
-      description="Get started with Crossway Suite"
+      description="Get started with RoboSEO.Ai"
       footer={
         <>
           Already have an account?{" "}
@@ -93,12 +93,12 @@ export default function SignUpPage() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
+        <div className="space-y-2" data-guide="auth-name">
           <Label htmlFor="name">Name (optional)</Label>
           <Input id="name" type="text" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2" data-guide="auth-email">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
@@ -111,7 +111,7 @@ export default function SignUpPage() {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2" data-guide="auth-password">
           <Label htmlFor="password">Password</Label>
           <Input
             id="password"
@@ -143,7 +143,7 @@ export default function SignUpPage() {
           </Alert>
         ) : null}
 
-        <Button type="submit" className="w-full bg-emerald-600 text-white hover:bg-emerald-700" disabled={loading}>
+        <Button type="submit" data-guide="auth-submit" className="w-full bg-emerald-600 text-white hover:bg-emerald-700" disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="size-4 animate-spin" />

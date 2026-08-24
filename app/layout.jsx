@@ -27,16 +27,16 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata = {
-  title: "Crossway Suite — SEO, SMM & Content Operations",
+  title: "RoboSEO.Ai — SEO, SMM & Content Operations",
   description:
     "Agency dashboard for Search Console analytics, PageSpeed, site audits, keyword research, SMM statistics, content approvals, and blog publishing.",
   keywords: "SEO tools, Search Console, PageSpeed, keyword research, SMM, content approvals, marketing dashboard",
-  authors: [{ name: "Crossway" }],
+  authors: [{ name: "RoboSEO.Ai" }],
   verification: {
     google: "sUHFadG3VzndzY2egA0pPwpKMysL5qSCXuTy3st_pjY",
   },
   openGraph: {
-    title: "Crossway Suite — SEO & Marketing Dashboard",
+    title: "RoboSEO.Ai — SEO & Marketing Dashboard",
     description: "Professional SEO analytics, social media stats, and content workflow tools.",
     type: "website",
   },
@@ -47,7 +47,7 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#08090a",
+  themeColor: "#050B18",
   colorScheme: "dark",
 };
 

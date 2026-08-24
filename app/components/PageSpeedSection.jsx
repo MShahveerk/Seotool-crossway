@@ -33,7 +33,7 @@ function siteHost(url) {
 
 function scoreTone(score) {
   if (score == null) return { ring: "#d1d5db", text: "text-gray-400", bg: "bg-gray-50", label: "No data" };
-  if (score >= 90) return { ring: "#1d9c35", text: "text-emerald-700", bg: "bg-emerald-50", label: "Good" };
+  if (score >= 90) return { ring: "#00A3FF", text: "text-emerald-700", bg: "bg-emerald-50", label: "Good" };
   if (score >= 50) return { ring: "#FFB020", text: "text-amber-700", bg: "bg-amber-50", label: "Needs work" };
   return { ring: "#ef4444", text: "text-red-700", bg: "bg-red-50", label: "Poor" };
 }

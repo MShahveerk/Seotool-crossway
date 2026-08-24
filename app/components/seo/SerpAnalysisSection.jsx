@@ -11,6 +11,7 @@ import {
   FiAward,
   FiArrowUp,
   FiArrowDown,
+  FiMinus,
   FiTarget,
   FiCode,
   FiMonitor,
@@ -568,9 +569,11 @@ function BacklinkSummary({ b }) {
 
 function DetailCard({ item, onDetails }) {
   const isYou = item.isYou;
-  const relTag = item.relation === "above" ? { label: "Above you", cls: "bg-red-100 text-red-700", icon: FiArrowUp }
-    : item.relation === "below" ? { label: "Below you", cls: "bg-emerald-100 text-emerald-700", icon: FiArrowDown }
-    : null;
+  const relTag = item.relation === "above"
+    ? { label: "Above you", cls: "bg-amber-100 text-amber-800", icon: FiMinus }
+    : item.relation === "below"
+      ? { label: "Below you", cls: "bg-emerald-100 text-emerald-700", icon: FiArrowDown }
+      : null;
   const broad = !isYou && item.keywordProfile?.keywords?.length > 3 && item.keywordProfile.relevantCount === 0;
   const frame = isYou ? "border-emerald-300 bg-emerald-50/40 ring-1 ring-emerald-500/20" : "border-gray-200 bg-white";
   const topKw = (item.keywordProfile?.keywords || []).slice(0, 4);
@@ -1078,6 +1081,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
       <form
         onSubmit={handleAnalyze}
         className="cw-lit space-y-4 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5"
+        data-guide="serp-query"
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-1.5 md:col-span-2">
@@ -1171,7 +1175,7 @@ export default function SerpAnalysisSection({ selectedSite }) {
               </span>
             )}
           </div>
-          <Btn type="submit" variant="primary" size="lg" icon={FiZap} loading={loading} disabled={loading}>
+          <Btn type="submit" variant="primary" size="lg" icon={FiZap} loading={loading} disabled={loading} data-guide="serp-run">
             Analyze SERP
           </Btn>
         </div>

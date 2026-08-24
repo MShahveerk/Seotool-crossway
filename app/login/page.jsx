@@ -58,7 +58,7 @@ export default function LoginPage() {
   return (
     <AuthLayout
       title="Welcome back"
-      description="Sign in to your Crossway dashboard"
+      description="Sign in to your RoboSEO.Ai dashboard"
       footer={
         <>
           Don&apos;t have an account?{" "}
@@ -69,7 +69,7 @@ export default function LoginPage() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="space-y-2">
+        <div className="space-y-2" data-guide="auth-email">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
@@ -82,7 +82,7 @@ export default function LoginPage() {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2" data-guide="auth-password">
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
             <Link href="/forgot-password" className="text-xs font-medium text-muted-foreground hover:text-foreground">
@@ -106,7 +106,7 @@ export default function LoginPage() {
           </Alert>
         ) : null}
 
-        <Button type="submit" className="w-full bg-emerald-600 text-white transition-smooth hover:bg-emerald-700 hover:shadow-lg active:scale-[0.98]" disabled={loading}>
+        <Button type="submit" data-guide="auth-submit" className="w-full bg-emerald-600 text-white transition-smooth hover:bg-emerald-700 hover:shadow-lg active:scale-[0.98]" disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="size-4 animate-spin" />

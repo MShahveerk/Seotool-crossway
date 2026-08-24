@@ -237,7 +237,7 @@ export default function PostPublishConfigPanel({ selectedSite = "" }) {
                 <div className="md:col-span-2 border-t border-gray-200 pt-4 mt-2">
                   <p className="font-semibold text-gray-900 mb-2">Outbound delivery chain</p>
                   <p className="text-xs text-gray-500 mb-3">
-                    When a post is approved and scheduled, Crossway tries each method in order until one succeeds.
+                    When a post is approved and scheduled, RoboSEO.Ai tries each method in order until one succeeds.
                   </p>
                   <label className="block md:col-span-2 mb-3">
                     <span className="text-xs font-semibold uppercase text-gray-500">Delivery order</span>

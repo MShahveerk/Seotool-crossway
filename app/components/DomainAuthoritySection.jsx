@@ -40,7 +40,7 @@ function siteHost(url) {
 function scoreTone(score10) {
   const score = toScore100(score10);
   if (score == null) return { text: "text-gray-400", bg: "bg-gray-50", bar: "#d1d5db", label: "No data" };
-  if (score >= 60) return { text: "text-emerald-700", bg: "bg-emerald-50", bar: "#1d9c35", label: "Strong" };
+  if (score >= 60) return { text: "text-emerald-700", bg: "bg-emerald-50", bar: "#00A3FF", label: "Strong" };
   if (score >= 40) return { text: "text-lime-700", bg: "bg-lime-50", bar: "#84cc16", label: "Established" };
   if (score >= 25) return { text: "text-amber-700", bg: "bg-amber-50", bar: "#f59e0b", label: "Growing" };
   return { text: "text-red-700", bg: "bg-red-50", bar: "#ef4444", label: "Early stage" };
@@ -243,7 +243,7 @@ export default function DomainAuthoritySection({ selectedSite = "", embedded = f
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <div className="inline-block h-10 w-10 animate-spin rounded-full border-2 border-gray-300 border-t-[#1d9c35]" />
+          <div className="inline-block h-10 w-10 animate-spin rounded-full border-2 border-gray-300 border-t-[#00A3FF]" />
           <p className="text-sm text-gray-500">Loading authority data…</p>
         </div>
       ) : data && !data.configured ? (
@@ -270,7 +270,7 @@ export default function DomainAuthoritySection({ selectedSite = "", embedded = f
                         detail: { section: "help", article: "openpagerank" }
                       }));
                     }}
-                    className="font-semibold text-[#1d9c35] hover:underline inline-flex items-center gap-1"
+                    className="font-semibold text-[#00A3FF] hover:underline inline-flex items-center gap-1"
                   >
                     our help center guide
                   </a>{" "}
@@ -359,8 +359,8 @@ export default function DomainAuthoritySection({ selectedSite = "", embedded = f
                   <AreaChart data={trendData} margin={{ top: 5, right: 5, bottom: 0, left: -22 }}>
                     <defs>
                       <linearGradient id="authorityGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#1d9c35" stopOpacity={0.25} />
-                        <stop offset="100%" stopColor="#1d9c35" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#00A3FF" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#00A3FF" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
@@ -370,7 +370,7 @@ export default function DomainAuthoritySection({ selectedSite = "", embedded = f
                       contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }}
                       formatter={(v) => [`${Math.round(Number(v))} / 100`, "Authority"]}
                     />
-                    <Area type="monotone" dataKey="score" stroke="#1d9c35" strokeWidth={2.5} fill="url(#authorityGrad)" dot={{ r: 3 }} />
+                    <Area type="monotone" dataKey="score" stroke="#00A3FF" strokeWidth={2.5} fill="url(#authorityGrad)" dot={{ r: 3 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -406,13 +406,13 @@ export default function DomainAuthoritySection({ selectedSite = "", embedded = f
                     }
                   }}
                   placeholder="competitor.com"
-                  className="w-52 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#1d9c35] focus:bg-white focus:outline-none"
+                  className="w-52 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#00A3FF] focus:bg-white focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={addCompetitor}
                   disabled={comparing || competitors.length >= 5}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#1d9c35] px-3 py-2 text-sm font-semibold text-white hover:bg-[#178a2c] disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#00A3FF] px-3 py-2 text-sm font-semibold text-white hover:bg-[#178a2c] disabled:opacity-50"
                 >
                   <FiPlus className="h-4 w-4" aria-hidden />
                   Compare
@@ -456,7 +456,7 @@ export default function DomainAuthoritySection({ selectedSite = "", embedded = f
                     />
                     <Bar dataKey="score" radius={[0, 8, 8, 0]} barSize={22} label={{ position: "right", fontSize: 12, fill: "#6b7280", formatter: (v) => Math.round(Number(v)) }}>
                       {comparisonData.map((row) => (
-                        <Cell key={row.domain} fill={row.self ? "#1d9c35" : "#cbd5e1"} />
+                        <Cell key={row.domain} fill={row.self ? "#00A3FF" : "#cbd5e1"} />
                       ))}
                     </Bar>
                   </BarChart>

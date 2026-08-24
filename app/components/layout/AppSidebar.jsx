@@ -35,7 +35,7 @@ import {
   mergeClientAccountEntries,
 } from "@/lib/clientAccountList";
 import ClientAccountLogo from "@/app/components/ui-shared/ClientAccountLogo";
-import CrosswayLogo from "@/app/components/ui-shared/CrosswayLogo";
+import BrandLogo, { RoboSeoWordmark } from "@/app/components/ui-shared/CrosswayLogo";
 import {
   Sidebar,
   SidebarContent,
@@ -317,13 +317,8 @@ export default function AppSidebar({
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader className="border-b border-sidebar-border/80">
         <div className="flex items-center gap-3 px-1 py-1">
-          <CrosswayLogo variant="dark" size={36} />
-          <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <p className="font-heading truncate text-sm font-bold text-[var(--cw-ink)]">Crossway</p>
-            <p className="truncate text-[11px] tracking-wide text-[var(--cw-ink-faint)]">
-              SEO &amp; Marketing Suite
-            </p>
-          </div>
+          <BrandLogo variant="mark" size={36} />
+          <RoboSeoWordmark className="group-data-[collapsible=icon]:hidden" />
         </div>
 
         {hasGlobalSiteAccess ? (

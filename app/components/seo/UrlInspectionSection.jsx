@@ -189,7 +189,7 @@ export default function UrlInspectionSection({ selectedSite = "" }) {
               ? `${selectedSite.replace(/\/$/, "")}/your-page`
               : "https://example.com/page-to-inspect"
           }
-          className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EFF2A]/30"
+          className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A3FF]/30"
         />
         <button
           type="submit"

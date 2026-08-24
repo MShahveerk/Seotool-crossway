@@ -117,7 +117,7 @@ async function processBlogDecline(blog, reason, revisionTarget = "both") {
     page: resultPage({
       title: "Blog declined",
       message:
-        "Your feedback has been recorded. The Crossway team has been notified. If this came from WordPress, the post was moved back to draft so it will not auto-publish.",
+        "Your feedback has been recorded. The RoboSEO team has been notified. If this came from WordPress, the post was moved back to draft so it will not auto-publish.",
       tone: "decline",
       kindLabel: "Rejected",
       detail: trimmedReason,
@@ -180,7 +180,7 @@ export async function GET(req) {
       return resultPage({
         title: "Blog approved",
         message:
-          "Thanks — you have approved this blog. The Crossway team has been notified and can proceed with scheduling or publishing.",
+          "Thanks — you have approved this blog. The RoboSEO team has been notified and can proceed with scheduling or publishing.",
         tone: "success",
         kindLabel: "Approved",
         detail: `Blog: ${title}`,

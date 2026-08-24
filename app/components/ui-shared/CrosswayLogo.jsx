@@ -1,49 +1,70 @@
 "use client";
 
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 
+const LOCKUP = "/brand/roboseo-lockup.png";
+
 /**
- * Brand mark that stays readable on light and dark chrome.
- * Light UI: black transparent mark → full logo tile if needed.
- * Dark UI: white mark → full logo tile if needed.
+ * RoboSEO.Ai mark + lockup, cropped from the official promotional graphic.
+ * `mark` — square crop of the robot (sidebar chrome).
+ * `lockup` — robot + wordmark crop (auth, emails).
  */
-export default function CrosswayLogo({
-  variant = "light",
+export default function BrandLogo({
+  variant = "mark",
   size = 36,
   className,
   imgClassName,
-  alt = "Crossway",
+  alt = "RoboSEO.Ai",
 }) {
-  const chain =
-    variant === "dark"
-      ? ["/crossway-logo-white.png", "/crossway-logo.png"]
-      : ["/crossway-logo-black.png", "/crossway-logo.png"];
-  const [idx, setIdx] = useState(0);
-  const src = chain[Math.min(idx, chain.length - 1)];
-  const onBlackTile = src === "/crossway-logo.png";
+  const lockup = variant === "lockup";
+  const width = lockup ? Math.round(size * 4.4) : size;
+  const height = lockup ? Math.round(size * 2.55) : size;
 
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg",
-        onBlackTile && "bg-black p-0.5",
+        "inline-flex shrink-0 items-center justify-center overflow-hidden",
+        lockup ? "rounded-xl ring-1 ring-[var(--cw-hairline)] bg-[#050b18]" : "rounded-lg bg-[#050b18]",
         className
       )}
-      style={{ width: size, height: size }}
+      style={{ width, height }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        key={src}
-        src={src}
+        src={LOCKUP}
         alt={alt}
-        width={size}
-        height={size}
-        className={cn("h-full w-full object-contain", imgClassName)}
-        onError={() => {
-          if (idx < chain.length - 1) setIdx((i) => i + 1);
-        }}
+        width={width}
+        height={height}
+        className={cn(
+          "h-full w-full",
+          lockup
+            ? "object-cover object-[center_18%]"
+            : "scale-[1.65] object-cover object-[center_8%]",
+          imgClassName
+        )}
       />
     </span>
   );
 }
+
+export function RoboSeoWordmark({ className, tagline = true }) {
+  return (
+    <div className={cn("min-w-0", className)}>
+      <p className="font-heading truncate text-sm font-bold leading-tight tracking-tight text-[var(--cw-ink)]">
+        Robo
+        <span className="bg-gradient-to-b from-[#4DC4FF] to-[#00A3FF] bg-clip-text text-transparent">
+          SEO
+        </span>
+        <span className="text-[0.85em] font-semibold text-[var(--cw-ink)]">.Ai</span>
+      </p>
+      {tagline ? (
+        <p className="truncate text-[11px] tracking-wide text-[var(--cw-ink-faint)]">
+          AI powered SEO &amp; SMM Automation
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** @deprecated Use BrandLogo. Kept so existing imports keep working. */
+export { BrandLogo as CrosswayLogo };

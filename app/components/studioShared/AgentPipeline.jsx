@@ -165,7 +165,7 @@ function AgentChip({ step, index, selected, onSelect, isLast }) {
           className={cn(
             "absolute inset-x-4 bottom-0 h-0.5 rounded-full transition-smooth",
             selected
-              ? "bg-[var(--cw-neon)] opacity-100 shadow-[0_0_10px_rgb(14_255_42_/_0.7)]"
+              ? "bg-[var(--cw-neon)] opacity-100 shadow-[0_0_10px_rgb(0_163_255_/_0.7)]"
               : "opacity-0"
           )}
         />

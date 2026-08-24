@@ -5,10 +5,11 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ══════════════════════════════════════════════════════════════════════════
-   CROSSWAY — "CARBON NEON"
-   Dark-only design system. Near-black canvas, layered graphite surfaces,
-   one neon green accent spent sparingly (live state, active control,
-   primary action, focus, hero numbers). Everything else is greyscale.
+   ROBOSEO.AI — ELECTRIC NAVY
+   Dark-only design system. Deep navy canvas, layered midnight surfaces,
+   one electric-blue accent spent sparingly (live state, active control,
+   primary action, focus, positive deltas). Everything else is greyscale.
+   Red is reserved for losses, errors, and destroy actions.
 
    Structure of this file:
      1. @theme      — design tokens + Tailwind palette remap
@@ -25,32 +26,32 @@
   --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
-  /* ── Brand accent (neon green) ──────────────────────────────────────── */
-  --color-primary-50: #061a09;
-  --color-primary-100: #0a2a10;
-  --color-primary-200: #0f4419;
-  --color-primary-300: #5fff6e;
-  --color-primary-400: #3fff52;
-  --color-primary-500: #0eff2a;
-  --color-primary-600: #0bcc22;
-  --color-primary-700: #099e1b;
-  --color-primary-800: #077015;
-  --color-primary-900: #04440d;
+  /* ── Brand accent (electric blue) ───────────────────────────────────── */
+  --color-primary-50: #051018;
+  --color-primary-100: #071828;
+  --color-primary-200: #0a2844;
+  --color-primary-300: #4dc4ff;
+  --color-primary-400: #2bb4ff;
+  --color-primary-500: #00a3ff;
+  --color-primary-600: #0088d6;
+  --color-primary-700: #0077cc;
+  --color-primary-800: #055a96;
+  --color-primary-900: #033a62;
 
-  --color-neon: #0eff2a;
-  --color-neon-soft: #5fff6e;
-  --color-neon-deep: #0bcc22;
-  --color-neon-ink: #04140a;
+  --color-neon: #00a3ff;
+  --color-neon-soft: #4dc4ff;
+  --color-neon-deep: #0077cc;
+  --color-neon-ink: #031018;
 
-  /* ── Carbon surfaces ────────────────────────────────────────────────────
-     Graphite, not void. Each step up is visible on its own — you should be
+  /* ── Navy surfaces ──────────────────────────────────────────────────────
+     Midnight, not void. Each step up is visible on its own — you should be
      able to see a card sitting on the canvas without looking for the border. */
-  --color-canvas: #151a1f;
-  --color-surface: #1f252c;
-  --color-raised: #2a313a;
-  --color-overlay: #343c46;
-  --color-hairline: #3d454f;
-  --color-hairline-strong: #505a66;
+  --color-canvas: #070d18;
+  --color-surface: #0e1624;
+  --color-raised: #151e30;
+  --color-overlay: #1c2740;
+  --color-hairline: #2a3650;
+  --color-hairline-strong: #3d4d6a;
 
   --color-ink: #f4f6f7;
   --color-ink-dim: #ccd2d9;
@@ -63,10 +64,10 @@
      Legacy components use light shades (50–300) for fills/borders and dark
      shades (600–900) for text. Inverting the ramp makes ~4,000 existing
      utility usages read correctly on a dark canvas without touching them. */
-  --color-gray-50: #1b2127;
-  --color-gray-100: #232a32;
-  --color-gray-200: #3d454f;
-  --color-gray-300: #505a66;
+  --color-gray-50: #0c1422;
+  --color-gray-100: #121b2c;
+  --color-gray-200: #2a3650;
+  --color-gray-300: #3d4d6a;
   --color-gray-400: #79818b;
   --color-gray-500: #9ba3ad;
   --color-gray-600: #aab1b9;
@@ -75,10 +76,10 @@
   --color-gray-900: #f4f6f7;
   --color-gray-950: #fbfcfc;
 
-  --color-slate-50: #1b2228;
-  --color-slate-100: #232b34;
-  --color-slate-200: #3d4650;
-  --color-slate-300: #505b68;
+  --color-slate-50: #0c1524;
+  --color-slate-100: #121c2e;
+  --color-slate-200: #2a3652;
+  --color-slate-300: #3d4e6c;
   --color-slate-400: #6d7783;
   --color-slate-500: #949eaa;
   --color-slate-600: #aab3bd;
@@ -111,30 +112,30 @@
   --color-stone-900: #f5f4f2;
   --color-stone-950: #fcfcfb;
 
-  /* ── Emerald / green → the neon accent ramp ─────────────────────────── */
-  --color-emerald-50: #18301f;
-  --color-emerald-100: #204028;
-  --color-emerald-200: #245231;
-  --color-emerald-300: #2f7a42;
-  --color-emerald-400: #35d94a;
-  --color-emerald-500: #0eff2a;
-  --color-emerald-600: #0eff2a;
-  --color-emerald-700: #3fff52;
-  --color-emerald-800: #5fff6e;
-  --color-emerald-900: #8dff97;
-  --color-emerald-950: #d8ffdc;
+  /* ── Emerald / green → the electric-blue accent ramp ────────────────── */
+  --color-emerald-50: #0a1a2a;
+  --color-emerald-100: #0d2438;
+  --color-emerald-200: #123550;
+  --color-emerald-300: #1a5a88;
+  --color-emerald-400: #3db4ff;
+  --color-emerald-500: #00a3ff;
+  --color-emerald-600: #00a3ff;
+  --color-emerald-700: #4dc4ff;
+  --color-emerald-800: #7ad4ff;
+  --color-emerald-900: #b3e7ff;
+  --color-emerald-950: #e6f6ff;
 
-  --color-green-50: #18301f;
-  --color-green-100: #204028;
-  --color-green-200: #245231;
-  --color-green-300: #2f7a42;
-  --color-green-400: #35d94a;
-  --color-green-500: #0eff2a;
-  --color-green-600: #0eff2a;
-  --color-green-700: #3fff52;
-  --color-green-800: #5fff6e;
-  --color-green-900: #8dff97;
-  --color-green-950: #d8ffdc;
+  --color-green-50: #0a1a2a;
+  --color-green-100: #0d2438;
+  --color-green-200: #123550;
+  --color-green-300: #1a5a88;
+  --color-green-400: #3db4ff;
+  --color-green-500: #00a3ff;
+  --color-green-600: #00a3ff;
+  --color-green-700: #4dc4ff;
+  --color-green-800: #7ad4ff;
+  --color-green-900: #b3e7ff;
+  --color-green-950: #e6f6ff;
 
   --color-teal-50: #04201c;
   --color-teal-100: #062e28;
@@ -342,72 +343,75 @@
 .dark {
   color-scheme: dark;
 
-  --cw-canvas: #151a1f;
-  --cw-surface: #1f252c;
-  --cw-raised: #2a313a;
-  --cw-overlay: #343c46;
-  --cw-hairline: #3d454f;
-  --cw-hairline-strong: #505a66;
+  --cw-canvas: #070d18;
+  --cw-surface: #0e1624;
+  --cw-raised: #151e30;
+  --cw-overlay: #1c2740;
+  --cw-hairline: #2a3650;
+  --cw-hairline-strong: #3d4d6a;
 
   --cw-ink: #f4f6f7;
   --cw-ink-dim: #ccd2d9;
   --cw-ink-muted: #9ba3ad;
   --cw-ink-faint: #79818b;
 
-  --cw-neon: #0eff2a;
-  --cw-neon-soft: #5fff6e;
-  --cw-neon-deep: #0bcc22;
-  --cw-neon-ink: #04140a;
+  --cw-neon: #00a3ff;
+  --cw-neon-soft: #4dc4ff;
+  --cw-neon-deep: #0077cc;
+  --cw-neon-ink: #031018;
+
+  --cw-up: var(--cw-neon);
+  --cw-down: var(--cw-danger);
 
   --cw-danger: #ff5c5c;
   --cw-caution: #ffb020;
-  --cw-info: #38e1ff;
+  --cw-info: #00f0ff;
 
   /* Glow strengths — the accent's only decorative role */
-  --cw-glow-sm: 0 0 0 1px rgb(14 255 42 / 0.22), 0 0 12px -2px rgb(14 255 42 / 0.28);
-  --cw-glow: 0 0 0 1px rgb(14 255 42 / 0.3), 0 0 24px -4px rgb(14 255 42 / 0.35);
-  --cw-glow-lg: 0 0 0 1px rgb(14 255 42 / 0.4), 0 0 44px -6px rgb(14 255 42 / 0.45);
+  --cw-glow-sm: 0 0 0 1px rgb(0 163 255 / 0.22), 0 0 12px -2px rgb(0 163 255 / 0.28);
+  --cw-glow: 0 0 0 1px rgb(0 163 255 / 0.3), 0 0 24px -4px rgb(0 163 255 / 0.35);
+  --cw-glow-lg: 0 0 0 1px rgb(0 163 255 / 0.4), 0 0 44px -6px rgb(0 163 255 / 0.45);
 
   /* Neutral elevation shadows — deep and soft, never grey-washed */
   --cw-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
   --cw-shadow: 0 4px 16px -4px rgb(0 0 0 / 0.6), 0 1px 3px rgb(0 0 0 / 0.4);
   --cw-shadow-lg: 0 18px 48px -12px rgb(0 0 0 / 0.8), 0 4px 12px rgb(0 0 0 / 0.5);
 
-  --background: #151a1f;
+  --background: #070d18;
   --foreground: #f4f6f7;
-  --card: #1f252c;
+  --card: #0e1624;
   --card-foreground: #f4f6f7;
-  --popover: #343c46;
+  --popover: #1c2740;
   --popover-foreground: #f4f6f7;
-  --primary: #0eff2a;
-  --primary-foreground: #04140a;
-  --secondary: #2a313a;
+  --primary: #00a3ff;
+  --primary-foreground: #031018;
+  --secondary: #151e30;
   --secondary-foreground: #f4f6f7;
-  --muted: #2a313a;
+  --muted: #151e30;
   --muted-foreground: #9ba3ad;
-  --accent: #343c46;
-  --accent-foreground: #0eff2a;
+  --accent: #1c2740;
+  --accent-foreground: #00a3ff;
   --destructive: #ff5c5c;
-  --border: #3d454f;
-  --input: #3d454f;
-  --ring: #0eff2a;
+  --border: #2a3650;
+  --input: #2a3650;
+  --ring: #00a3ff;
 
-  --chart-1: #0eff2a;
-  --chart-2: #38e1ff;
+  --chart-1: #00a3ff;
+  --chart-2: #00f0ff;
   --chart-3: #9ba3ad;
   --chart-4: #ffb020;
   --chart-5: #b184ff;
 
   --radius: 0.75rem;
 
-  --sidebar: #1a2026;
+  --sidebar: #0a1220;
   --sidebar-foreground: #ccd2d9;
-  --sidebar-primary: #0eff2a;
-  --sidebar-primary-foreground: #04140a;
-  --sidebar-accent: #2a313a;
+  --sidebar-primary: #00a3ff;
+  --sidebar-primary-foreground: #031018;
+  --sidebar-accent: #151e30;
   --sidebar-accent-foreground: #f4f6f7;
-  --sidebar-border: #363e47;
-  --sidebar-ring: #0eff2a;
+  --sidebar-border: #24324a;
+  --sidebar-ring: #00a3ff;
 }
 
 /* ══ 3. Base ══════════════════════════════════════════════════════════════ */
@@ -446,7 +450,7 @@
   }
 
   ::selection {
-    background: rgb(14 255 42 / 0.28);
+    background: rgb(0 163 255) / 0.28);
     color: #ffffff;
   }
 
@@ -469,7 +473,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid rgb(14 255 42 / 0.55);
+    outline: 2px solid rgb(0 163 255) / 0.55);
     outline-offset: 2px;
   }
 
@@ -498,7 +502,7 @@
 
   :where(input, textarea, select):focus {
     border-color: var(--cw-neon);
-    box-shadow: 0 0 0 3px rgb(14 255 42 / 0.16);
+    box-shadow: 0 0 0 3px rgb(0 163 255) / 0.16);
     outline: none;
   }
 
@@ -848,7 +852,7 @@
   .bg-sky-500.text-white,
   .bg-sky-600.text-white,
   .bg-cyan-500.text-white {
-    color: #10130f;
+    color: #031018;
   }
 
   /* Dark hero gradients. The inverted ramps would turn `from-gray-900
@@ -863,7 +867,7 @@
   .from-indigo-950,
   .from-emerald-950,
   .from-sky-950 {
-    --tw-gradient-from: #171b21;
+    --tw-gradient-from: #070d18;
   }
 
   .via-gray-800,
@@ -872,7 +876,7 @@
   .via-slate-900,
   .via-neutral-800,
   .via-neutral-900 {
-    --tw-gradient-via: #1e232a;
+    --tw-gradient-via: #0e1624;
   }
 
   .to-emerald-950,
@@ -883,7 +887,7 @@
   .to-gray-950,
   .to-slate-900,
   .to-slate-950 {
-    --tw-gradient-to: #182420;
+    --tw-gradient-to: #0a1a2a;
   }
 
   /* Code / terminal blocks: the ramp inversion would flip these to light */
@@ -894,13 +898,13 @@
   .bg-neutral-900,
   .bg-neutral-950,
   .bg-black {
-    background-color: #0f1216;
+    background-color: #070d18;
   }
 
   .bg-gray-800,
   .bg-slate-800,
   .bg-neutral-800 {
-    background-color: #171b20;
+    background-color: #0e1624;
   }
 
   .bg-gray-900 .text-gray-100,
@@ -946,7 +950,7 @@
   width: 2px;
   border-radius: 999px;
   background: var(--cw-neon);
-  box-shadow: 0 0 10px rgb(14 255 42 / 0.75);
+  box-shadow: 0 0 10px rgb(0 163 255) / 0.75);
 }
 
 /* Automation studios carry a second accent — cyan, the palette's existing
@@ -998,7 +1002,7 @@
   font-weight: 700;
 }
 
-/* ══ 5. Crossway utilities ════════════════════════════════════════════════ */
+/* ══ 5. RoboSEO utilities ════════════════════════════════════════════════ */
 @layer utilities {
   /* ── Surfaces ─────────────────────────────────────────────────────── */
   .cw-surface {
@@ -1036,7 +1040,7 @@
   /* Canvas texture: one cold pool of light, top-left, and a faint grid */
   .mesh-bg {
     background-image:
-      radial-gradient(ellipse 70% 45% at 12% -10%, rgb(14 255 42 / 0.055), transparent 70%),
+      radial-gradient(ellipse 70% 45% at 12% -10%, rgb(0 163 255) / 0.055), transparent 70%),
       radial-gradient(ellipse 50% 40% at 100% 0%, rgb(56 225 255 / 0.03), transparent 70%);
   }
 
@@ -1062,7 +1066,7 @@
 
   .cw-neon-text {
     color: var(--cw-neon);
-    text-shadow: 0 0 18px rgb(14 255 42 / 0.35);
+    text-shadow: 0 0 18px rgb(0 163 255) / 0.35);
   }
 
   /* The live-agent surface: breathing glow + a slow sheen sweeping across */
@@ -1078,7 +1082,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(105deg, transparent 35%, rgb(14 255 42 / 0.13) 50%, transparent 65%);
+    background: linear-gradient(105deg, transparent 35%, rgb(0 163 255) / 0.13) 50%, transparent 65%);
     animation: cw-sweep 2.8s ease-in-out infinite;
     pointer-events: none;
   }
@@ -1104,8 +1108,8 @@
       90deg,
       var(--cw-neon) 0%,
       var(--cw-neon) 40%,
-      rgb(14 255 42 / 0.15) 60%,
-      rgb(14 255 42 / 0.15) 100%
+      rgb(0 163 255) / 0.15) 60%,
+      rgb(0 163 255) / 0.15) 100%
     );
     background-size: 250% 100%;
     animation: cw-flow-slide 1.8s linear infinite;
@@ -1217,10 +1221,10 @@
 @keyframes cw-breathe {
   0%,
   100% {
-    box-shadow: 0 0 0 1px rgb(14 255 42 / 0.25), 0 0 20px -6px rgb(14 255 42 / 0.3);
+    box-shadow: 0 0 0 1px rgb(0 163 255) / 0.25), 0 0 20px -6px rgb(0 163 255) / 0.3);
   }
   50% {
-    box-shadow: 0 0 0 1px rgb(14 255 42 / 0.45), 0 0 34px -4px rgb(14 255 42 / 0.5);
+    box-shadow: 0 0 0 1px rgb(0 163 255) / 0.45), 0 0 34px -4px rgb(0 163 255) / 0.5);
   }
 }
 

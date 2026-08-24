@@ -25,6 +25,7 @@ import WebsiteStatisticsDateRangeModal, {
 import ReportSectionActions from "./ReportSectionActions";
 import WorldAudienceHeatMap from "./website-stats/WorldAudienceHeatMap";
 import { countryDisplayName } from "@/lib/geo/isoCountries";
+import { deltaBadgeClass, deltaTone } from "@/lib/ui/deltaTone";
 
 const RANGE_OPTIONS = [
   { id: "7d", label: "7 days" },
@@ -154,6 +155,21 @@ function shortLabel(urlOrText) {
 function pctChangeFromCtr(ctr) {
   const pct = ((ctr || 0) * 100).toFixed(1);
   return `${pct}%`;
+}
+
+function PeriodChangeBadge({ value, invert = false }) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  const tone = deltaTone(n, { invert });
+  const Up = invert ? FiTrendingDown : FiTrendingUp;
+  const Down = invert ? FiTrendingUp : FiTrendingDown;
+  const Icon = tone === "down" ? Down : Up;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${deltaBadgeClass(n, { invert })}`}>
+      {tone !== "neutral" ? <Icon className="w-3 h-3" /> : null}
+      {`${n > 0 ? "+" : ""}${n.toFixed(1)}%`}
+    </span>
+  );
 }
 
 function getTimeAgo(value) {
@@ -541,7 +557,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
         <ApprovalsUserPanel />
       ) : (
         <>
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4" data-guide="gsc-range">
         <ReportSectionActions
           section="website"
           activeSite={selectedSite}
@@ -719,7 +735,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     name={hasCompare ? "Clicks" : undefined}
                     type="monotone"
                     dataKey="clicks"
-                    stroke="#0EFF2A"
+                    stroke="#00A3FF"
                     strokeWidth={2}
                     dot={false}
                   />
@@ -730,7 +746,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     name="Clicks (compare)"
                     type="monotone"
                     dataKey="compareClicks"
-                    stroke="#0EFF2A"
+                    stroke="#00A3FF"
                     strokeWidth={2}
                     strokeOpacity={0.4}
                     strokeDasharray="5 4"
@@ -823,34 +839,27 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     <span className="text-2xl font-bold text-slate-900 tabular-nums">
                       {formatNum(payload?.totals?.clicks)}
                     </span>
-                    {hasCompare && (
-                      <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        clicksChange >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                      }`}>
-                        {clicksChange >= 0 ? <FiTrendingUp className="w-3 h-3" /> : <FiTrendingDown className="w-3 h-3" />}
-                        {Math.abs(clicksChange).toFixed(1)}%
-                      </span>
-                    )}
+                    {hasCompare && <PeriodChangeBadge value={clicksChange} />}
                   </div>
                 </div>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#0EFF2A] shadow-[0_0_8px_rgba(52,168,83,0.3)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#00A3FF] shadow-[0_0_8px_rgba(52,168,83,0.3)]" />
               </div>
               <div className="h-[180px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#0EFF2A" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#0EFF2A" stopOpacity={0.0}/>
+                        <stop offset="5%" stopColor="#00A3FF" stopOpacity={0.2}/>
+                        <stop offset="95%" stopColor="#00A3FF" stopOpacity={0.0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
                     <YAxis tick={{ fontSize: 9, fill: "#6D757E" }} tickLine={false} axisLine={false} />
                     <Tooltip content={<SeparateTooltip type="clicks" />} />
-                    <Area type="monotone" dataKey="clicks" stroke="#0EFF2A" strokeWidth={2} fillOpacity={1} fill="url(#colorClicks)" />
+                    <Area type="monotone" dataKey="clicks" stroke="#00A3FF" strokeWidth={2} fillOpacity={1} fill="url(#colorClicks)" />
                     {hasCompare && (
-                      <Area type="monotone" dataKey="compareClicks" stroke="#0EFF2A" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
+                      <Area type="monotone" dataKey="compareClicks" stroke="#00A3FF" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.5} fill="none" />
                     )}
                   </AreaChart>
                 </ResponsiveContainer>
@@ -866,14 +875,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     <span className="text-2xl font-bold text-slate-900 tabular-nums">
                       {formatNum(payload?.totals?.impressions)}
                     </span>
-                    {hasCompare && (
-                      <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        impressionsChange >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                      }`}>
-                        {impressionsChange >= 0 ? <FiTrendingUp className="w-3 h-3" /> : <FiTrendingDown className="w-3 h-3" />}
-                        {Math.abs(impressionsChange).toFixed(1)}%
-                      </span>
-                    )}
+                    {hasCompare && <PeriodChangeBadge value={impressionsChange} />}
                   </div>
                 </div>
                 <span className="w-2.5 h-2.5 rounded-full bg-[#38E1FF] shadow-[0_0_8px_rgba(124,122,188,0.3)]" />
@@ -909,14 +911,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     <span className="text-2xl font-bold text-slate-900 tabular-nums">
                       {formatPct(payload?.totals?.averageCtr)}
                     </span>
-                    {hasCompare && (
-                      <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        ctrChange >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                      }`}>
-                        {ctrChange >= 0 ? <FiTrendingUp className="w-3 h-3" /> : <FiTrendingDown className="w-3 h-3" />}
-                        {Math.abs(ctrChange).toFixed(1)}%
-                      </span>
-                    )}
+                    {hasCompare && <PeriodChangeBadge value={ctrChange} />}
                   </div>
                 </div>
                 <span className="w-2.5 h-2.5 rounded-full bg-[#FFB020] shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
@@ -952,14 +947,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                     <span className="text-2xl font-bold text-slate-900 tabular-nums">
                       {formatPos(payload?.totals?.averagePosition)}
                     </span>
-                    {hasCompare && (
-                      <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        positionChange <= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                      }`}>
-                        {positionChange <= 0 ? <FiTrendingUp className="w-3 h-3" /> : <FiTrendingDown className="w-3 h-3" />}
-                        {Math.abs(positionChange).toFixed(1)}%
-                      </span>
-                    )}
+                    {hasCompare && <PeriodChangeBadge value={positionChange} invert />}
                   </div>
                 </div>
                 <span className="w-2.5 h-2.5 rounded-full bg-[#949CA5] shadow-[0_0_8px_rgba(107,114,128,0.3)]" />
@@ -989,7 +977,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3" data-guide="gsc-tables">
         <div className="bg-white border border-gray-200 rounded-md p-3">
           <div className="flex items-center justify-between text-[13px] font-medium text-gray-700 mb-3">
             <span>Views by page title and screens</span>
@@ -998,15 +986,14 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
           <div className="grid grid-cols-[1fr_56px_58px] gap-2 text-[10px] font-semibold text-gray-500 uppercase border-b border-gray-200 pb-1.5 mb-1.5">
             <span>Page Title And Screens</span>
             <span className="text-right">Views</span>
-            <span className="text-right">Trend</span>
+            <span className="text-right">CTR</span>
           </div>
           <div className="space-y-1">
             {(payload?.topPages?.pages || []).slice(0, 7).map((row) => (
               <div key={row.page} className="grid grid-cols-[1fr_56px_58px] gap-2 items-center text-xs border-b border-gray-100 pb-1.5">
                 <span className="text-gray-800">{shortLabel(row.page)}</span>
                 <span className="text-right text-gray-800">{formatNum(row.clicks)}</span>
-                <span className={`inline-flex justify-end items-center gap-0.5 ${row.ctr >= 0.05 ? "text-[#2fb54a]" : "text-red-500"}`}>
-                  {row.ctr >= 0.05 ? <FiTrendingUp className="w-3 h-3" /> : <FiTrendingDown className="w-3 h-3" />}
+                <span className="inline-flex justify-end items-center gap-0.5 text-[var(--cw-ink-dim)] tabular-nums">
                   {pctChangeFromCtr(row.ctr)}
                 </span>
               </div>
@@ -1017,7 +1004,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
             <button
               type="button"
               onClick={() => setActiveDetailView("pages")}
-              className="text-[#2fb54a] font-medium inline-flex items-center gap-1"
+              className="text-[var(--cw-neon)] font-medium inline-flex items-center gap-1"
             >
               View pages and screens
               <FiArrowRight className="w-3 h-3" />
@@ -1036,7 +1023,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
             <button
               type="button"
               onClick={() => setActiveDetailView("countries")}
-              className="text-[#2fb54a] font-medium inline-flex items-center gap-1"
+              className="text-[var(--cw-neon)] font-medium inline-flex items-center gap-1"
             >
               Explore full map
               <FiArrowRight className="w-3 h-3" />
@@ -1055,7 +1042,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
           <div className="grid grid-cols-[1fr_64px_58px] gap-2 text-[10px] font-semibold text-gray-500 uppercase border-b border-gray-200 pb-1.5 mb-1.5">
             <span>Keywords</span>
             <span className="text-right">Sessions</span>
-            <span className="text-right">Trend</span>
+            <span className="text-right">CTR</span>
           </div>
           <div className="space-y-1">
             {(payload?.topQueries?.queries || []).slice(0, 7).map((row) => (
@@ -1065,8 +1052,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
                   {shortLabel(row.query)}
                 </span>
                 <span className="text-right text-gray-800">{formatNum(row.clicks)}</span>
-                <span className={`inline-flex justify-end items-center gap-0.5 ${row.ctr >= 0.05 ? "text-[#2fb54a]" : "text-red-500"}`}>
-                  {row.ctr >= 0.05 ? <FiTrendingUp className="w-3 h-3" /> : <FiTrendingDown className="w-3 h-3" />}
+                <span className="inline-flex justify-end items-center gap-0.5 text-[var(--cw-ink-dim)] tabular-nums">
                   {pctChangeFromCtr(row.ctr)}
                 </span>
               </div>
@@ -1077,7 +1063,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
             <button
               type="button"
               onClick={() => setActiveDetailView("keywords")}
-              className="text-[#2fb54a] font-medium inline-flex items-center gap-1"
+              className="text-[var(--cw-neon)] font-medium inline-flex items-center gap-1"
             >
               View more keywords
               <FiArrowRight className="w-3 h-3" />
@@ -1092,7 +1078,7 @@ export default function WebsiteStatisticsPanel({ selectedSite = "", title = "Web
 }
 
 const METRIC_LINE = {
-  clicks: "#0EFF2A",
+  clicks: "#00A3FF",
   impressions: "#38E1FF",
   ctr: "#FFB020",
   position: "#949CA5",
@@ -1155,6 +1141,7 @@ function MetricCard({
         type="button"
         onClick={onToggle}
         className={`relative text-left pl-3 pr-3 pt-2.5 pb-9 min-h-[168px] border-r border-gray-200 last:border-r-0 ${surface} w-full transition-colors hover:brightness-[0.99]`}
+        data-guide={`gsc-${metric}`}
       >
         <div className="flex items-center gap-2 text-xs pr-5">
           {checked ? <FiCheckSquare className={color} /> : <FiSquare className="text-gray-400" />}
@@ -1190,6 +1177,7 @@ function MetricCard({
       className={`relative text-left pl-3 pr-3 py-3 min-h-[108px] border-r border-gray-200 last:border-r-0 ${
         checked ? activeBg : "bg-white"
       } w-full transition-colors hover:brightness-[0.99]`}
+      data-guide={`gsc-${metric}`}
     >
       <div className="flex items-center gap-2 text-xs pr-5">
         {checked ? <FiCheckSquare className={color} /> : <FiSquare className="text-gray-400" />}
@@ -1224,7 +1212,7 @@ function CustomTooltip({ active, payload, label, activeMetrics, hasCompare }) {
   };
 
   const getColor = (type) => {
-    if (type === "clicks") return "text-[#0EFF2A]";
+    if (type === "clicks") return "text-[#00A3FF]";
     if (type === "impressions") return "text-[#38E1FF]";
     if (type === "ctr") return "text-[#FFB020]";
     if (type === "position") return "text-[#949CA5]";
@@ -1273,7 +1261,7 @@ function SeparateTooltip({ active, payload, label, type }) {
   };
 
   const getColor = (type) => {
-    if (type === "clicks") return "text-[#0EFF2A]";
+    if (type === "clicks") return "text-[#00A3FF]";
     if (type === "impressions") return "text-[#38E1FF]";
     if (type === "ctr") return "text-[#FFB020]";
     if (type === "position") return "text-[#949CA5]";

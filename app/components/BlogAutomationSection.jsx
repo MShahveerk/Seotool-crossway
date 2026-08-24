@@ -855,6 +855,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
           {/* Live run docks on every zone, minimised, self-hiding — except in the
               Library with that same run already open, where it would only be
               pointing at what you're looking at. */}
+          <div data-guide="studio-rail">
           <LiveRunDock
             run={dockedRun}
             label={isBlogResearchRun(liveRun) ? "Research" : "Draft"}
@@ -865,10 +866,11 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
           >
             <RunConsole run={liveRun} config={siteConfig} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />
           </LiveRunDock>
+          </div>
 
           {/* ── COMPOSE ─────────────────────────────────────────────── */}
           {zone === "compose" && (
-            <div className="space-y-4">
+            <div className="space-y-4" data-guide="studio-source">
               <div className="flex items-center justify-between gap-3">
                 <TabRail size="sm" tabs={SOURCES} value={source} onChange={setSource} ariaLabel="Content source" />
                 <span className="hidden text-xs text-[var(--cw-ink-faint)] sm:inline">
@@ -937,6 +939,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                     <Btn
                       variant="primary"
                       size="lg"
+                      data-guide="studio-generate"
                       icon={running ? FiRefreshCw : FiSend}
                       onClick={startRun}
                       disabled={
@@ -1063,6 +1066,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
 
           {/* ── LIBRARY ─────────────────────────────────────────────── */}
           {zone === "library" && (
+            <div data-guide="studio-library">
             <RunLibrary
               runs={runs}
               selectedRunId={selectedRunId}
@@ -1080,11 +1084,12 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
               onCancel={cancelRun}
               onGoCompose={() => setZone("compose")}
             />
+            </div>
           )}
 
           {/* ── SETUP ───────────────────────────────────────────────── */}
           {zone === "setup" && (
-            <div className="space-y-4">
+            <div className="space-y-4" data-guide="studio-skills">
               <TabRail size="sm" tabs={SETUP_TABS} value={setupTab} onChange={setSetupTab} ariaLabel="Studio setup" />
 
               <div className={surfaceCard}>
@@ -1412,7 +1417,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                               <span>
                                 Email User-role accounts to approve headings before Architect
                                 <span className="mt-0.5 block text-xs text-[var(--cw-ink-faint)]">
-                                  They get a Crossway email with the outline. Approve continues the draft.
+                                  They get a RoboSEO.Ai email with the outline. Approve continues the draft.
                                   Decline with a reason regenerates headings and emails again.
                                 </span>
                               </span>
@@ -1457,7 +1462,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                                 spellCheck={false}
                               />
                               <p className="text-[11px] text-[var(--cw-ink-faint)]">
-                                Replace this entire box with your own skill. Crossway injects it as a mandatory
+                                Replace this entire box with your own skill. RoboSEO injects it as a mandatory
                                 block after the system prompt. Default skill already bans em dashes and AI tells.
                               </p>
                             </div>

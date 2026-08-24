@@ -531,7 +531,7 @@ export default function CalendarSection({ selectedSite = "" }) {
                     type="text"
                     value={form.title}
                     onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EFF2A]/30"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A3FF]/30"
                     required
                     maxLength={255}
                   />
@@ -542,7 +542,7 @@ export default function CalendarSection({ selectedSite = "" }) {
                     value={form.caption}
                     onChange={(e) => setForm((f) => ({ ...f, caption: e.target.value }))}
                     rows={3}
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EFF2A]/30 resize-y max-h-48"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A3FF]/30 resize-y max-h-48"
                     maxLength={2000}
                   />
                 </div>
@@ -554,7 +554,7 @@ export default function CalendarSection({ selectedSite = "" }) {
                     type="datetime-local"
                     value={form.scheduledFor}
                     onChange={(e) => setForm((f) => ({ ...f, scheduledFor: e.target.value }))}
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0EFF2A]/30"
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#00A3FF]/30"
                     required
                   />
                 </div>

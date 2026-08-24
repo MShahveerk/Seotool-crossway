@@ -64,7 +64,7 @@ export default function SideTabs({
                 "inset-x-3 top-0 h-0.5 md:inset-x-auto md:inset-y-2 md:left-0 md:h-auto md:w-0.5",
                 "rounded-full",
                 active
-                  ? "bg-[var(--cw-neon)] opacity-100 shadow-[0_0_10px_rgb(14_255_42_/_0.7)]"
+                  ? "bg-[var(--cw-neon)] opacity-100 shadow-[0_0_10px_rgb(0_163_255_/_0.7)]"
                   : "bg-[var(--cw-hairline-strong)] opacity-0 group-hover:opacity-100"
               )}
             />

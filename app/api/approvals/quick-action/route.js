@@ -113,7 +113,7 @@ async function processDecline(approval, reason, revisionTarget = "both") {
   return {
     page: resultPage({
       title: "Post declined",
-      message: "Your feedback has been recorded. The Crossway team has been notified and can revise or resubmit the content.",
+      message: "Your feedback has been recorded. The RoboSEO team has been notified and can revise or resubmit the content.",
       tone: "decline",
       kindLabel: "Rejected",
       detail: trimmedReason,
@@ -171,7 +171,7 @@ export async function GET(req) {
       return resultPage({
         title: "Post approved",
         message:
-          "Thanks — you have approved this content. It has been scheduled for publishing and the Crossway team has been notified.",
+          "Thanks — you have approved this content. It has been scheduled for publishing and the RoboSEO team has been notified.",
         tone: "success",
         kindLabel: "Approved",
         detail: approval.title ? `Post: ${approval.title}` : "",

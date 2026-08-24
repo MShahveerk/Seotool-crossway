@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FadeIn } from "../ui-shared/Motion";
-import CrosswayLogo from "../ui-shared/CrosswayLogo";
+import BrandLogo from "../ui-shared/CrosswayLogo";
+import { AuthGuideButton } from "../ui-shared/PageGuide";
 
 export default function AuthLayout({ title, description, children, footer }) {
+  const pathname = usePathname();
   return (
     <main className="cw-grid relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--cw-canvas)] px-4 py-10">
       {/* One cold pool of neon behind the card — the only colour on the page. */}
@@ -24,15 +27,18 @@ export default function AuthLayout({ title, description, children, footer }) {
             href="/login"
             className="transition-smooth mb-4 inline-flex items-center gap-3 hover:scale-[1.03] active:scale-[0.98]"
           >
-            <CrosswayLogo
-              variant="dark"
-              size={56}
-              className="transition-smooth rounded-xl ring-1 ring-[var(--cw-hairline)]"
+            <BrandLogo
+              variant="lockup"
+              size={72}
+              className="transition-smooth"
             />
           </Link>
           <p className="text-[10px] font-bold tracking-[0.2em] text-[var(--cw-neon)] uppercase">
-            Crossway Suite
+            RoboSEO.Ai
           </p>
+          <div className="mt-3">
+            <AuthGuideButton pathname={pathname} />
+          </div>
         </FadeIn>
         <FadeIn delay={80}>
           <Card className="animate-soft-scale-in cw-lit border-[var(--cw-hairline)] bg-[var(--cw-surface)] shadow-[var(--cw-shadow-lg)]">

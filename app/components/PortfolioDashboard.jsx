@@ -376,6 +376,7 @@ function ProjectCard({ project, isActive, onOpen, index }) {
       type="button"
       onClick={onOpen}
       aria-label={`Open ${project.name}`}
+      data-guide={index === 0 ? "portfolio-open" : undefined}
       className={`group relative flex w-full flex-col overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cw-neon)] ${
         isActive
           ? "border-[color-mix(in_srgb,var(--cw-neon)_55%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_7%,var(--cw-surface))] shadow-[0_0_30px_-10px_color-mix(in_srgb,var(--cw-neon)_65%,transparent)]"
@@ -421,7 +422,7 @@ function ProjectCard({ project, isActive, onOpen, index }) {
       </div>
 
       {/* Health + traffic: the two things worth knowing at a glance. */}
-      <div className="mt-4 flex items-center gap-4 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)]/50 p-3">
+      <div className="mt-4 flex items-center gap-4 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)]/50 p-3" data-guide={index === 0 ? "portfolio-health" : undefined}>
         <div className="flex items-center gap-2.5">
           <HealthRing score={project.healthScore} />
           <div className="min-w-0">
@@ -720,7 +721,7 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)]/60 px-3 py-2 focus-within:border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))]">
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-canvas)]/60 px-3 py-2 focus-within:border-[color-mix(in_srgb,var(--cw-neon)_45%,var(--cw-hairline))]" data-guide="portfolio-search">
               <Search className="size-4 shrink-0 text-[var(--cw-ink-faint)]" />
               <input
                 value={query}
@@ -748,7 +749,7 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
       </FadeIn>
 
       <FadeIn delay={50}>
-        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4" data-guide="portfolio-list">
           <SummaryTile
             icon={Users}
             label="Projects"

@@ -134,7 +134,7 @@ export default function CalendarView({
               <div className="flex items-center justify-between">
                 <div
                   className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
-                    isToday ? "bg-[#0EFF2A] text-gray-900 shadow-md" : "text-gray-900"
+                    isToday ? "bg-[#00A3FF] text-gray-900 shadow-md" : "text-gray-900"
                   }`}
                 >
                   {day}
@@ -170,7 +170,7 @@ export default function CalendarView({
                       }}
                       className={`group/item relative flex flex-col gap-1 rounded-md border p-1.5 text-xs transition-shadow hover:shadow-sm cursor-pointer ${
                         isPublished
-                          ? "border-[#0EFF2A] bg-green-50"
+                          ? "border-[#00A3FF] bg-green-50"
                           : "border-gray-200 bg-white"
                       }`}
                     >
@@ -178,7 +178,7 @@ export default function CalendarView({
                         <FiClock className="text-gray-400 shrink-0" />
                         <span className="truncate">{postTime}</span>
                         {isPublished && (
-                          <span className="ml-auto flex h-2 w-2 rounded-full bg-[#0EFF2A]" />
+                          <span className="ml-auto flex h-2 w-2 rounded-full bg-[#00A3FF]" />
                         )}
                       </div>
                       <div className="truncate text-gray-500 font-medium">
@@ -215,13 +215,13 @@ export default function CalendarView({
                             Status:{" "}
                             <span
                               className={
-                                post.status === "approved" ? "text-[#0EFF2A]" : "text-amber-400"
+                                post.status === "approved" ? "text-[#00A3FF]" : "text-amber-400"
                               }
                             >
                               {String(post.status || "").toUpperCase()}
                             </span>
                           </span>
-                          {isPublished && <span className="text-[#0EFF2A]">Published</span>}
+                          {isPublished && <span className="text-[#00A3FF]">Published</span>}
                         </div>
                         <div className="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 bg-gray-900" />
                       </div>

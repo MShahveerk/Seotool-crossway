@@ -595,7 +595,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                                 editedInstructions: instructionsDraft,
                               })
                             }
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0EFF2A] hover:bg-[#0BCC22] text-white text-sm font-semibold disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00A3FF] hover:bg-[#0077CC] text-white text-sm font-semibold disabled:opacity-50"
                           >
                             <FiCheck className="w-4 h-4" />
                             {approvePrimaryLabel}

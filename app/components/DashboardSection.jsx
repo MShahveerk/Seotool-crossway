@@ -16,7 +16,9 @@ import {
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { FadeIn, StaggerItem } from "./ui-shared/Motion";
 import Btn from "./ui-shared/Btn";
+import CHART from "./ui-shared/chartTheme";
 import { getClientAccountFaviconUrl } from "@/lib/clientAccountList";
+import { deltaBadgeClass } from "@/lib/ui/deltaTone";
 
 function siteHost(url) {
   if (!url) return "";
@@ -78,16 +80,7 @@ function platformLabel(platform) {
 function DeltaBadge({ value, invert = false, suffix = "%", label = "vs prior period" }) {
   if (value == null || !Number.isFinite(Number(value))) return null;
   const n = Number(value);
-  const positive = invert ? n < 0 : n > 0;
-  const negative = invert ? n > 0 : n < 0;
-  const neutral = Math.abs(n) < 0.05;
-  const cls = neutral
-    ? "bg-gray-100 text-gray-600 border-gray-200"
-    : positive
-      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-      : negative
-        ? "bg-red-50 text-red-700 border-red-200"
-        : "bg-gray-100 text-gray-600 border-gray-200";
+  const cls = deltaBadgeClass(n, { invert });
   const display =
     suffix === "pp"
       ? `${n > 0 ? "+" : ""}${n.toFixed(1)} pp`
@@ -121,14 +114,14 @@ function ClickSparkline({ data }) {
         <AreaChart data={series} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id="dashClickGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0EFF2A" stopOpacity={0.28} />
-              <stop offset="100%" stopColor="#0EFF2A" stopOpacity={0} />
+              <stop offset="0%" stopColor={CHART.primary} stopOpacity={0.28} />
+              <stop offset="100%" stopColor={CHART.primary} stopOpacity={0} />
             </linearGradient>
           </defs>
           <Area
             type="monotone"
             dataKey="clicks"
-            stroke="#0EFF2A"
+            stroke={CHART.primary}
             strokeWidth={2}
             fill="url(#dashClickGrad)"
             dot={false}
@@ -149,10 +142,12 @@ function BigStatCard({
   accentClass = "",
   barClass = "bg-[var(--cw-neon)]",
   index = 0,
+  guideId,
 }) {
   return (
     <StaggerItem index={index}>
       <div
+        data-guide={guideId}
         className={`group cw-lit hover-lift relative flex min-h-[140px] flex-col justify-between overflow-hidden rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5 sm:p-6 ${accentClass}`}
       >
         {/* A lit edge on the leading side — the card's only decoration. */}
@@ -508,6 +503,7 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <BigStatCard
                       index={0}
+                      guideId="dashboard-clicks"
                       label="Clicks"
                       value={formatNum(totals.clicks)}
                       delta={deltas?.clicksPct}
@@ -516,6 +512,7 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
                     />
                     <BigStatCard
                       index={1}
+                      guideId="dashboard-impressions"
                       label="Impressions"
                       value={formatCompact(totals.impressions)}
                       delta={deltas?.impressionsPct}
@@ -524,6 +521,7 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
                     />
                     <BigStatCard
                       index={2}
+                      guideId="dashboard-ctr"
                       label="Avg. CTR"
                       value={formatPct(totals.averageCtr)}
                       delta={deltas?.ctrPts}
@@ -533,6 +531,7 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
                     />
                     <BigStatCard
                       index={3}
+                      guideId="dashboard-position"
                       label="Avg. position"
                       value={formatPos(totals.averagePosition)}
                       delta={deltas?.positionDelta}
@@ -545,7 +544,7 @@ export default function DashboardSection({ selectedSite = "", onNavigate }) {
                   </div>
 
                   {(gsc.topQueries?.length || gsc.topPages?.length) ? (
-                    <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4" data-guide="dashboard-queries">
                       {gsc.topQueries?.length ? (
                         <div className="rounded-2xl border border-gray-100 overflow-hidden">
                           <div className="px-4 py-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between">

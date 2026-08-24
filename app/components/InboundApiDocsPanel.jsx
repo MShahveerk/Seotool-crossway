@@ -90,7 +90,7 @@ export default function InboundApiDocsPanel({
   return (
     <div className={`rounded-lg border border-indigo-200 bg-indigo-50/60 p-4 space-y-3 text-sm ${className}`}>
       <div>
-        <p className="font-semibold text-gray-900">Inbound API — send {contentType === "blog" ? "blogs" : "posts"} into Crossway</p>
+        <p className="font-semibold text-gray-900">Inbound API — send {contentType === "blog" ? "blogs" : "posts"} into RoboSEO.Ai</p>
         <p className="mt-0.5 text-xs text-gray-600">
           External tools can POST content into the approval queue for{" "}
           <span className="font-mono font-medium">{siteKey}</span>

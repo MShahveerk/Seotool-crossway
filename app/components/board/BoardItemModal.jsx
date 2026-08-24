@@ -501,7 +501,7 @@ export default function BoardItemModal({
 
         <footer className="cw-board-modal__foot">
           <p className="cw-board-modal__hint">
-            Double-click any card · Esc closes · changes save to Crossway immediately
+            Double-click any card · Esc closes · changes save to RoboSEO.Ai immediately
           </p>
           <div className="cw-board-modal__actions">
             <button

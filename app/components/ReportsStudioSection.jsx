@@ -253,7 +253,7 @@ export default function ReportsStudioSection({ selectedSite = "" }) {
               type="button"
               onClick={save}
               disabled={!dirty || saving || !config}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#0EFF2A] px-4 py-2 text-sm font-bold text-gray-950 hover:bg-[#2aff4a] disabled:opacity-40"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#00A3FF] px-4 py-2 text-sm font-bold text-gray-950 hover:bg-[#4DC4FF] disabled:opacity-40"
             >
               {saving ? <FiLoader className="size-4 animate-spin" /> : <FiSave className="size-4" />}
               {saving ? "Saving…" : dirty ? "Save template" : "Saved"}

@@ -247,10 +247,11 @@ export default function SmmStatisticsSection({ selectedSite = "" }) {
               <input
                 id="smm-view-month"
                 type="month"
+                data-guide="smm-range"
                 value={viewMonth}
                 max={maxCalendarMonth}
                 onChange={(e) => setViewMonth(e.target.value || maxCalendarMonth)}
-                className="block w-full sm:w-auto min-w-[11rem] px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0EFF2A]/25 focus:border-[#0EFF2A]"
+                className="block w-full sm:w-auto min-w-[11rem] px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-900 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#00A3FF]/25 focus:border-[#00A3FF]"
               />
             </div>
             <button

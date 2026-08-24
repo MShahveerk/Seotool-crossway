@@ -120,7 +120,7 @@ export default function SmmDownloadReportModal({
               Download report
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              Landscape Crossway slide decks — social, website, or combined for {humanMonthYear(reportMonth)}.
+              Landscape RoboSEO.Ai slide decks — social, website, or combined for {humanMonthYear(reportMonth)}.
             </p>
           </div>
           <button

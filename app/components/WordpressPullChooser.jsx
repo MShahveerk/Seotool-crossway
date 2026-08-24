@@ -25,7 +25,7 @@ function stripHtml(html) {
 }
 
 /**
- * Modal to preview WordPress posts and choose which ones to pull into Crossway.
+ * Modal to preview WordPress posts and choose which ones to pull into RoboSEO.Ai.
  * Always portaled to document.body so it is never clipped by parent layouts.
  */
 export default function WordpressPullChooser({
@@ -313,7 +313,7 @@ export default function WordpressPullChooser({
               onChange={(e) => setHideInQueue(e.target.checked)}
               disabled={loading}
             />
-            Hide already in Crossway
+            Hide already in RoboSEO.Ai
           </label>
           <p className="text-xs text-[var(--cw-ink-muted)]">
             {loading
@@ -516,7 +516,7 @@ export default function WordpressPullChooser({
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-[color-mix(in_srgb,var(--cw-canvas)_80%,transparent)] backdrop-blur-[1px]">
               <FiLoader className="h-8 w-8 animate-spin text-[var(--cw-neon)]" />
               <p className="text-sm font-semibold text-[var(--cw-ink-dim)]">
-                Pulling {selected.size} blog{selected.size === 1 ? "" : "s"} into Crossway…
+                Pulling {selected.size} blog{selected.size === 1 ? "" : "s"} into RoboSEO.Ai…
               </p>
             </div>
           ) : null}
@@ -524,7 +524,7 @@ export default function WordpressPullChooser({
 
         <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-3 sm:px-5">
           <p className="text-xs text-[var(--cw-ink-muted)]">
-            Selected posts import (or refresh) into the Crossway approval queue.
+            Selected posts import (or refresh) into the RoboSEO.Ai approval queue.
           </p>
           <div className="flex flex-wrap gap-2">
             <button

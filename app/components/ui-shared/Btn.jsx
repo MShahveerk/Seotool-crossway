@@ -16,9 +16,9 @@ import { cn } from "@/lib/utils";
 const VARIANTS = {
   primary: cn(
     "bg-[var(--cw-neon)] text-[var(--cw-neon-ink)] border border-[var(--cw-neon)]",
-    "shadow-[0_0_20px_-6px_rgb(14_255_42_/_0.6)]",
+    "shadow-[0_0_20px_-6px_rgb(0_163_255_/_0.6)]",
     "hover:bg-[var(--cw-neon-soft)] hover:border-[var(--cw-neon-soft)]",
-    "hover:shadow-[0_0_28px_-6px_rgb(14_255_42_/_0.75)]"
+    "hover:shadow-[0_0_28px_-6px_rgb(0_163_255_/_0.75)]"
   ),
   secondary: cn(
     "bg-[var(--cw-raised)] text-[var(--cw-ink)] border border-[var(--cw-hairline-strong)]",

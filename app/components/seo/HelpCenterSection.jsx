@@ -105,7 +105,7 @@ export default function HelpCenterSection({
         <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--cw-neon)]">Support Center</p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Crossway Knowledge Hub</h1>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">RoboSEO.Ai Knowledge Hub</h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--cw-ink-dim)]">
               Your local repository for performance recommendations, SEO guidelines, and Core Web Vitals tutorials.
             </p>
@@ -126,7 +126,7 @@ export default function HelpCenterSection({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Side: Article List & Search */}
         <div className="lg:col-span-1 space-y-4">
-          <div className="relative">
+          <div className="relative" data-guide="help-search">
             <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--cw-ink-faint)] w-4 h-4" />
             <input
               type="text"
@@ -137,7 +137,7 @@ export default function HelpCenterSection({
             />
           </div>
 
-          <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-1.5 max-h-[60vh] overflow-y-auto" data-guide="help-list">
             {filteredArticles.length > 0 ? (
               filteredArticles.map((article) => {
                 const active = selectedArticle === article.id;
@@ -173,7 +173,7 @@ export default function HelpCenterSection({
 
         {/* Right Side: Active Article Content */}
         <div className="lg:col-span-2 bg-[var(--cw-surface)] border border-[var(--cw-hairline)] rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col h-full max-h-[75vh] overflow-hidden">
-          <div id="help-content-scroll" className="overflow-y-auto flex-1 space-y-4 pr-1">
+          <div id="help-content-scroll" className="overflow-y-auto flex-1 space-y-4 pr-1" data-guide="help-article">
             {/* Meta header */}
             <div className="border-b border-[var(--cw-hairline)] pb-4 space-y-2">
               <div className="flex flex-wrap items-center gap-3">
@@ -203,7 +203,7 @@ export default function HelpCenterSection({
             <div className="rounded-xl border border-[color-mix(in_srgb,var(--cw-neon)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-neon)_9%,var(--cw-surface))] p-4 mt-6">
               <h4 className="text-xs font-bold text-[var(--cw-ink)] uppercase tracking-wide flex items-center gap-1.5">
                 <FiCheck className="w-4 h-4 text-[var(--cw-neon)]" />
-                Crossway Recommendation
+                RoboSEO.Ai Recommendation
               </h4>
               <p className="text-[11px] text-[var(--cw-ink-dim)] font-semibold leading-relaxed mt-1">
                 Applying these internal optimization techniques directly raises your site's Lighthouse scores. For support implementing these fixes, contact your system administrator or file a development request inside the Client Settings panel.
