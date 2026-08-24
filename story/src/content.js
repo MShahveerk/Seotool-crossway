@@ -1,0 +1,126 @@
+export const site = {
+  name: "RoboSEO.Ai",
+  tagline: "AI powered SEO & SMM Automation",
+  kicker: "A field guide",
+};
+
+export const chapters = [
+  {
+    id: "arrival",
+    rail: "01",
+    kicker: "Arrival",
+    title: "A machine that\nwatches the search.",
+    lead: "RoboSEO.Ai is the place your websites and social accounts live as projects. Rankings, drafts, approvals, and reports share one navy room and one electric-blue accent.",
+    aside: "Scroll. The story is the product.",
+  },
+  {
+    id: "what",
+    rail: "02",
+    kicker: "What it is",
+    title: "SEO and social,\nin the same breath.",
+    lead: "You pick a project. Everything that follows belongs to that project: Search Console, the site audit, the blog board, the social calendar. Meta-only accounts can still run social. Blog Studio needs a real website.",
+    points: [
+      { label: "Projects", body: "Websites and social accounts you can open. Not a pile of disconnected logins." },
+      { label: "One accent", body: "Electric blue for live state, wins, and primary action. Red only for losses and errors." },
+      { label: "Guide", body: "Every screen has a Guide. It holes out over the control it is talking about." },
+    ],
+  },
+  {
+    id: "search",
+    rail: "03",
+    kicker: "Search Console",
+    title: "The numbers Google\nalready has on you.",
+    lead: "Statistics pull clicks, impressions, CTR, and average position for a date range you choose. Comparison badges are honest: blue is better, red is worse. Average position inverts, because a lower number is the win.",
+    points: [
+      { label: "Statistics", body: "Totals, charts, then the same numbers broken down by page, country, and query." },
+      { label: "URL Inspection", body: "Paste a page on this property. Coverage, last crawl, declared canonical." },
+      { label: "Reading the weather", body: "Up in clicks is blue. A rise in average position is red. The math is not decoration." },
+    ],
+  },
+  {
+    id: "site",
+    rail: "04",
+    kicker: "The site",
+    title: "Health, speed,\nauthority, crawl.",
+    lead: "Site Intelligence is one report for the selected website: audit issues, PageSpeed, domain authority, backlinks. Autopilot sits beside it when you want the machine to keep working the same site.",
+    points: [
+      { label: "Site Intelligence", body: "Scores first. Issues ordered so the expensive ones sit on top. Export a PDF when you need to share." },
+      { label: "Autopilot", body: "A run against this project’s own site, not a generic crawl of the internet." },
+    ],
+  },
+  {
+    id: "map",
+    rail: "05",
+    kicker: "The map",
+    title: "Keywords first.\nA project is optional.",
+    lead: "The toolkit starts from a term or a domain you type. You can open it with nothing selected, or with a Meta page that has no website behind it.",
+    points: [
+      { label: "Keyword Research", body: "Volume, difficulty, and related terms. The list you take into Studio later." },
+      { label: "SERP Analysis", body: "Who ranks, with what, and where you sit relative to them. “Above you” is not painted as a loss." },
+      { label: "Link Opportunities", body: "Prospects that already rank on related terms or link to similar pages. Export when you are ready to outreach." },
+    ],
+  },
+  {
+    id: "blogs",
+    rail: "06",
+    kicker: "Blogs",
+    title: "From a closed list\nto a draft you can refuse.",
+    lead: "The blog workspace is a queue for one project: Board, Approvals, Create, Autoscheduler. Blog Studio is the bench that writes. It does not invent keywords. The Decider picks from the library, Trends hooks, or a bank you upload. Leftover bags stay fat.",
+    points: [
+      { label: "Board", body: "Every draft in motion. Open one to read it, send it, or send it back." },
+      { label: "Approvals", body: "A person signs off. Email quick-actions exist for the same decision." },
+      { label: "Create", body: "A human still starts a post when the machine should not." },
+      { label: "Autoscheduler", body: "Set-and-forget publish windows. Research itself is not on a cron. You run that by hand." },
+      { label: "Blog Studio", body: "Prefix agents, then the Writer, then an optional Humanizer. Watch the live rail. Skills replace an agent’s instructions if you need a house style." },
+    ],
+  },
+  {
+    id: "social",
+    rail: "07",
+    kicker: "Social",
+    title: "The same discipline,\nfor the channels.",
+    lead: "Statistics, calendar, board, approvals, Create, autoscheduler. Post Studio is the bench: a brief, a channel, a strategist, a copywriter. Output lands in approval, not live.",
+    points: [
+      { label: "Statistics", body: "How the connected accounts actually performed." },
+      { label: "Calendar", body: "What is scheduled, and when it goes out." },
+      { label: "Board and approvals", body: "The same refuse-or-ship motion as blogs, for social posts." },
+      { label: "Post Studio", body: "Stop or re-run a step if the angle is wrong. The library keeps earlier runs for this project." },
+    ],
+  },
+  {
+    id: "reports",
+    rail: "08",
+    kicker: "Reports and people",
+    title: "A pack you can send.\nA door you can close.",
+    lead: "Report Studio builds a designed pack for the selected project. Admin is the installation itself: who can sign in, which projects they may open, which tools they may use.",
+    points: [
+      { label: "Report Studio", body: "The current view, as a PDF or a slide deck, with the robot mark in the header." },
+      { label: "Admin", body: "Invite, deactivate, change a role. Access is a list of projects and tools, not a rumour." },
+    ],
+  },
+  {
+    id: "guide",
+    rail: "09",
+    kicker: "How you learn it",
+    title: "A hole in the dark,\nover the control.",
+    lead: "Guide is not a knowledge-base article. It is a spotlight on this screen: the metric, the date range, the Generate button. Next moves the hole. The label stays on the page. Esc closes it.",
+    points: [
+      { label: "On the workspace", body: "Header, right side. One Guide per section." },
+      { label: "On sign-in", body: "A shorter tour for login, signup, and reset." },
+      { label: "Knowledge Hub", body: "Longer explainers live separately. They do not change project data." },
+    ],
+  },
+  {
+    id: "limits",
+    rail: "10",
+    kicker: "Limits",
+    title: "What it will not\npretend to do.",
+    lead: "A product that invents keywords is a product you cannot trust. RoboSEO.Ai would rather leave a bag fat than mint a term nobody searched.",
+    points: [
+      { label: "Closed list", body: "The Decider only picks from the library, Trends, or a bank you uploaded." },
+      { label: "No research cron", body: "Keyword research runs when you ask. Autoscheduler publishes; it does not go hunting overnight." },
+      { label: "Website for blogs", body: "Blog Studio needs a website project. A Meta-only account is not enough." },
+      { label: "Approvals stay human", body: "Studio output waits. It does not post itself because a model felt confident." },
+    ],
+  },
+];
