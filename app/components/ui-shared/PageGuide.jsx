@@ -1,14 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CircleHelp, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAuthGuide, getPageGuide, guideStorageKey } from "@/lib/pageGuides";
 
-const PAD = 10;
-const TOOLTIP_W = 320;
+const PAD = 8;
+const VIEW_PAD = 12;
+const GAP = 12;
+const DIM = "rgba(5, 11, 24, 0.72)";
 
-function measure(id) {
+function prefersReducedMotion() {
+  if (typeof window === "undefined") return true;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function measureHole(id) {
   if (typeof document === "undefined") return null;
   const el = document.querySelector(`[data-guide="${id}"]`);
   if (!el) return null;
@@ -22,16 +30,28 @@ function measure(id) {
   };
 }
 
-function tooltipPos(hole, vw, vh) {
+function clampTip(hole, tw, th, vw, vh) {
+  const maxLeft = Math.max(VIEW_PAD, vw - tw - VIEW_PAD);
+  const maxTop = Math.max(VIEW_PAD, vh - th - VIEW_PAD);
+
   if (!hole) {
-    return { top: Math.max(24, vh / 2 - 90), left: Math.max(16, (vw - TOOLTIP_W) / 2) };
+    return {
+      top: Math.max(VIEW_PAD, Math.min((vh - th) / 2, maxTop)),
+      left: Math.max(VIEW_PAD, Math.min((vw - tw) / 2, maxLeft)),
+    };
   }
-  const below = hole.top + hole.height + 12;
-  const above = hole.top - 12;
-  const left = Math.min(Math.max(16, hole.left), vw - TOOLTIP_W - 16);
-  if (below + 180 < vh) return { top: below, left };
-  if (above > 200) return { top: above - 160, left };
-  return { top: Math.min(below, vh - 200), left };
+
+  const below = hole.top + hole.height + GAP;
+  const above = hole.top - th - GAP;
+  let top;
+  if (below + th <= vh - VIEW_PAD) top = below;
+  else if (above >= VIEW_PAD) top = above;
+  else top = Math.max(VIEW_PAD, Math.min(hole.top, maxTop));
+
+  let left = hole.left + hole.width / 2 - tw / 2;
+  left = Math.max(VIEW_PAD, Math.min(left, maxLeft));
+  top = Math.max(VIEW_PAD, Math.min(top, maxTop));
+  return { top, left };
 }
 
 export function PageGuideButton({ sectionId, className }) {
@@ -64,13 +84,7 @@ function GuideLauncher({ scope, guide, compact = false, className }) {
         <CircleHelp className="size-3.5" aria-hidden />
         {compact ? "Guide" : "Guide"}
       </button>
-      {open ? (
-        <GuideOverlay
-          scope={scope}
-          guide={guide}
-          onClose={() => setOpen(false)}
-        />
-      ) : null}
+      {open ? <GuideOverlay scope={scope} guide={guide} onClose={() => setOpen(false)} /> : null}
     </>
   );
 }
@@ -79,29 +93,55 @@ function GuideOverlay({ scope, guide, onClose }) {
   const steps = guide.steps;
   const [index, setIndex] = useState(0);
   const [hole, setHole] = useState(null);
+  const [tip, setTip] = useState({ top: VIEW_PAD, left: VIEW_PAD });
+  const [ready, setReady] = useState(false);
+  const tipRef = useRef(null);
   const step = steps[index];
 
-  const refresh = useCallback(() => {
-    const next = step ? measure(step.id) : null;
+  const place = useCallback(() => {
+    const next = step ? measureHole(step.id) : null;
     setHole(next);
-    if (next) {
-      const el = document.querySelector(`[data-guide="${step.id}"]`);
-      el?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
-    }
+    const card = tipRef.current;
+    if (!card) return;
+    const nextTip = clampTip(
+      next,
+      card.offsetWidth,
+      card.offsetHeight,
+      window.innerWidth,
+      window.innerHeight
+    );
+    setTip(nextTip);
+    setReady(true);
   }, [step]);
 
   useLayoutEffect(() => {
-    refresh();
-  }, [refresh]);
+    setReady(false);
+    const el = step ? document.querySelector(`[data-guide="${step.id}"]`) : null;
+    const reduced = prefersReducedMotion();
+    if (el) {
+      el.scrollIntoView({
+        block: "center",
+        inline: "nearest",
+        behavior: reduced ? "auto" : "smooth",
+      });
+    }
+    place();
+    const raf = requestAnimationFrame(place);
+    const t = window.setTimeout(place, reduced ? 40 : 280);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(t);
+    };
+  }, [step, place]);
 
   useEffect(() => {
-    window.addEventListener("resize", refresh);
-    window.addEventListener("scroll", refresh, true);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
     return () => {
-      window.removeEventListener("resize", refresh);
-      window.removeEventListener("scroll", refresh, true);
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
     };
-  }, [refresh]);
+  }, [place]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -129,45 +169,43 @@ function GuideOverlay({ scope, guide, onClose }) {
   };
 
   const last = index === steps.length - 1;
-  const vw = typeof window === "undefined" ? 1200 : window.innerWidth;
-  const vh = typeof window === "undefined" ? 800 : window.innerHeight;
-  const tip = tooltipPos(hole, vw, vh);
 
-  return (
-    <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-labelledby="page-guide-title">
-      <svg className="absolute inset-0 h-full w-full" aria-hidden>
-        <defs>
-          <mask id="page-guide-mask">
-            <rect width="100%" height="100%" fill="white" />
-            {hole ? (
-              <rect
-                x={Math.max(0, hole.left)}
-                y={Math.max(0, hole.top)}
-                width={hole.width}
-                height={hole.height}
-                rx="14"
-                fill="black"
-              />
-            ) : null}
-          </mask>
-        </defs>
-        <rect width="100%" height="100%" fill="rgba(5, 11, 24, 0.72)" mask="url(#page-guide-mask)" />
-      </svg>
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[200] overflow-hidden animate-[page-guide-in_180ms_cubic-bezier(0.22,1,0.36,1)_both] motion-reduce:animate-none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="page-guide-title"
+    >
+      {hole ? (
+        <div className="absolute inset-0" onClick={onClose} />
+      ) : (
+        <div className="absolute inset-0" style={{ backgroundColor: DIM }} onClick={onClose} />
+      )}
+
       {hole ? (
         <div
-          className="pointer-events-none absolute rounded-[14px] ring-2 ring-[var(--cw-neon)] shadow-[var(--cw-glow)]"
+          className="pointer-events-none absolute rounded-[14px] ring-2 ring-[var(--cw-neon)]"
           style={{
             top: hole.top,
             left: hole.left,
             width: hole.width,
             height: hole.height,
+            boxShadow: `0 0 0 9999px ${DIM}`,
           }}
         />
       ) : null}
 
       <div
-        className="absolute w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-4 shadow-[var(--cw-shadow-lg)]"
-        style={{ top: tip.top, left: tip.left }}
+        ref={tipRef}
+        className="absolute z-[1] w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-4 shadow-[var(--cw-shadow-lg)] pointer-events-auto"
+        style={{
+          top: tip.top,
+          left: tip.left,
+          opacity: ready ? 1 : 0,
+        }}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -206,7 +244,8 @@ function GuideOverlay({ scope, guide, onClose }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

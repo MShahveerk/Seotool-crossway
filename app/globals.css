@@ -347,6 +347,7 @@
   --cw-surface: #0e1624;
   --cw-raised: #151e30;
   --cw-overlay: #1c2740;
+  --cw-hover: color-mix(in srgb, var(--cw-ink) 5%, transparent);
   --cw-hairline: #2a3650;
   --cw-hairline-strong: #3d4d6a;
 
@@ -389,8 +390,8 @@
   --secondary-foreground: #f4f6f7;
   --muted: #151e30;
   --muted-foreground: #9ba3ad;
-  --accent: #1c2740;
-  --accent-foreground: #00a3ff;
+  --accent: color-mix(in srgb, var(--cw-ink) 6%, var(--cw-surface));
+  --accent-foreground: #f4f6f7;
   --destructive: #ff5c5c;
   --border: #2a3650;
   --input: #2a3650;
@@ -626,6 +627,19 @@
 @layer utilities {
   .bg-white {
     background-color: var(--cw-surface);
+  }
+
+  /* Hover utilities are separate classes from the rest fills above. Without
+     these, hover:bg-white still flashes real white and overlay hover paints
+     an opaque slab over the row. Keep --cw-overlay solid for dialogs. */
+  .hover\:bg-white:hover,
+  .hover\:bg-gray-50:hover,
+  .hover\:bg-gray-100:hover,
+  .hover\:bg-slate-50:hover,
+  .hover\:bg-\[var\(--cw-overlay\)\]:hover,
+  .group:hover .group-hover\:bg-white,
+  .group:hover .group-hover\:bg-gray-50 {
+    background-color: var(--cw-hover);
   }
 
   /* Opaque-ish white panels are surfaces. Low-alpha whites (/20 and under) are
@@ -966,15 +980,13 @@
 }
 
 [data-sidebar="menu-button"][data-accent="studio"]:hover {
-  background-color: color-mix(in srgb, var(--cw-info) 14%, var(--cw-raised));
-  color: color-mix(in srgb, var(--cw-info) 80%, white);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cw-info) 30%, transparent);
+  background-color: color-mix(in srgb, var(--cw-info) 6%, transparent);
+  color: var(--cw-info);
 }
 
 [data-sidebar="menu-button"][data-accent="studio"][data-active="true"] {
-  background-color: color-mix(in srgb, var(--cw-info) 18%, var(--cw-raised));
-  color: color-mix(in srgb, var(--cw-info) 85%, white);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cw-info) 42%, transparent);
+  background-color: color-mix(in srgb, var(--cw-info) 10%, var(--cw-raised));
+  color: var(--cw-info);
 }
 
 [data-sidebar="menu-button"][data-accent="studio"][data-active="true"]::before {
@@ -1265,6 +1277,15 @@
   }
 }
 
+@keyframes page-guide-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -1277,7 +1298,8 @@
   .cw-live,
   .cw-live::after,
   .cw-pulse::after,
-  .cw-flow {
+  .cw-flow,
+  [role="dialog"][aria-labelledby="page-guide-title"] {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

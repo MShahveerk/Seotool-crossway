@@ -2,12 +2,12 @@
 
 import { cn } from "@/lib/utils";
 
-const LOCKUP = "/brand/roboseo-lockup.png";
+const MARK = "/brand/roboseo-mark.png";
 
 /**
- * RoboSEO.Ai mark + lockup, cropped from the official promotional graphic.
- * `mark` — square crop of the robot (sidebar chrome).
- * `lockup` — robot + wordmark crop (auth, emails).
+ * RoboSEO.Ai mark — the isolated robot (not the promotional banner).
+ * Pair with `RoboSeoWordmark` for a lockup. `variant` is kept for callers;
+ * both `mark` and `lockup` render the robot square.
  */
 export default function BrandLogo({
   variant = "mark",
@@ -17,31 +17,23 @@ export default function BrandLogo({
   alt = "RoboSEO.Ai",
 }) {
   const lockup = variant === "lockup";
-  const width = lockup ? Math.round(size * 4.4) : size;
-  const height = lockup ? Math.round(size * 2.55) : size;
+  const edge = lockup ? Math.max(size, 56) : size;
 
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center overflow-hidden",
-        lockup ? "rounded-xl ring-1 ring-[var(--cw-hairline)] bg-[#050b18]" : "rounded-lg bg-[#050b18]",
+        "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#050b18]",
         className
       )}
-      style={{ width, height }}
+      style={{ width: edge, height: edge }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={LOCKUP}
+        src={MARK}
         alt={alt}
-        width={width}
-        height={height}
-        className={cn(
-          "h-full w-full",
-          lockup
-            ? "object-cover object-[center_18%]"
-            : "scale-[1.65] object-cover object-[center_8%]",
-          imgClassName
-        )}
+        width={edge}
+        height={edge}
+        className={cn("h-full w-full object-contain", imgClassName)}
       />
     </span>
   );

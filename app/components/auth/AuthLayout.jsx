@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FadeIn } from "../ui-shared/Motion";
-import BrandLogo from "../ui-shared/CrosswayLogo";
+import BrandLogo, { RoboSeoWordmark } from "../ui-shared/CrosswayLogo";
 import { AuthGuideButton } from "../ui-shared/PageGuide";
 
 export default function AuthLayout({ title, description, children, footer }) {
@@ -25,17 +25,11 @@ export default function AuthLayout({ title, description, children, footer }) {
         <FadeIn className="flex flex-col items-center text-center">
           <Link
             href="/login"
-            className="transition-smooth mb-4 inline-flex items-center gap-3 hover:scale-[1.03] active:scale-[0.98]"
+            className="transition-smooth mb-4 inline-flex items-center gap-3 text-left hover:scale-[1.03] active:scale-[0.98]"
           >
-            <BrandLogo
-              variant="lockup"
-              size={72}
-              className="transition-smooth"
-            />
+            <BrandLogo variant="mark" size={56} className="transition-smooth" />
+            <RoboSeoWordmark />
           </Link>
-          <p className="text-[10px] font-bold tracking-[0.2em] text-[var(--cw-neon)] uppercase">
-            RoboSEO.Ai
-          </p>
           <div className="mt-3">
             <AuthGuideButton pathname={pathname} />
           </div>
