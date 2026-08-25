@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../api/auth/[...nextauth]/route";
 import { canAccessSection } from "@/lib/modulePermissions";
 import { getSerpAnalysis } from "@/lib/serpAnalysis";
-import { isSerpApiReady } from "@/lib/dataSources";
+import { isOrganicSearchReady } from "@/lib/dataSources";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -19,9 +19,9 @@ export async function POST(req) {
       return NextResponse.json({ error: "Forbidden: Access to SERP Analysis is not granted." }, { status: 403 });
     }
 
-    if (!(await isSerpApiReady())) {
+    if (!(await isOrganicSearchReady())) {
       return NextResponse.json(
-        { error: "SerpApi is not configured. Add the key in Admin → Data sources." },
+        { error: "Live search is not available. Add SerpAPI or Google Programmable Search in Admin → Data sources." },
         { status: 503 }
       );
     }

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 import { canAccessSection } from "@/lib/modulePermissions";
 import { getLinkOpportunities, peekLinkOpportunities } from "@/lib/linkOpportunities";
-import { isSerpApiReady } from "@/lib/dataSources";
+import { isOrganicSearchReady } from "@/lib/dataSources";
 import { isSerankingConfigured } from "@/lib/seranking/config";
 
 export const runtime = "nodejs";
@@ -50,9 +50,9 @@ async function requireAccess() {
       { status: 403 }
     );
   }
-  if (!(await isSerpApiReady())) {
+  if (!(await isOrganicSearchReady())) {
     return NextResponse.json(
-      { error: "Live SERP data is not configured. Add the SerpAPI key in Admin → Data sources." },
+      { error: "Live search is not available. Add SerpAPI or Google Programmable Search in Admin → Data sources." },
       { status: 503 }
     );
   }

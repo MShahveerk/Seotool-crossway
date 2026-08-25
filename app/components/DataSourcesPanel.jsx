@@ -26,10 +26,31 @@ export default function DataSourcesPanel() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [serpApiKey, setSerpApiKey] = useState("");
+  const [googleCseKey, setGoogleCseKey] = useState("");
+  const [googleCseCx, setGoogleCseCx] = useState("");
+  const [braveSearchKey, setBraveSearchKey] = useState("");
   const [checkGoogleDuplicates, setCheckGoogleDuplicates] = useState(true);
   const [deciderFallback, setDeciderFallback] = useState("harvest");
-  const [ready, setReady] = useState({ trends: false, serp: false, seranking: false, gsc: false });
-  const [keySource, setKeySource] = useState("missing");
+  const [ready, setReady] = useState({
+    trends: false,
+    serp: false,
+    googleCse: false,
+    brave: false,
+    seranking: false,
+    gsc: false,
+  });
+  const [keySource, setKeySource] = useState({ serpapi: "missing", googleCse: "missing", brave: "missing" });
+
+  const applyConfig = (cfg) => {
+    setSerpApiKey(cfg.serpApiKey || "");
+    setGoogleCseKey(cfg.googleCseKey || "");
+    setGoogleCseCx(cfg.googleCseCx || "");
+    setBraveSearchKey(cfg.braveSearchKey || "");
+    setCheckGoogleDuplicates(cfg.checkGoogleDuplicates !== false);
+    setDeciderFallback(cfg.deciderFallback === "gsc" ? "gsc" : "harvest");
+    setReady(cfg.ready || {});
+    setKeySource(cfg.keySource || { serpapi: "missing", googleCse: "missing", brave: "missing" });
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,12 +59,7 @@ export default function DataSourcesPanel() {
       const res = await fetch("/api/admin/data-sources");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load data sources");
-      const cfg = data.config || {};
-      setSerpApiKey(cfg.serpApiKey || "");
-      setCheckGoogleDuplicates(cfg.checkGoogleDuplicates !== false);
-      setDeciderFallback(cfg.deciderFallback === "gsc" ? "gsc" : "harvest");
-      setReady(cfg.ready || {});
-      setKeySource(cfg.keySource?.serpapi || "missing");
+      applyConfig(data.config || {});
     } catch (e) {
       setError(e.message || "Failed to load data sources");
     } finally {
@@ -63,16 +79,18 @@ export default function DataSourcesPanel() {
       const res = await fetch("/api/admin/data-sources", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serpApiKey, checkGoogleDuplicates, deciderFallback }),
+        body: JSON.stringify({
+          serpApiKey,
+          googleCseKey,
+          googleCseCx,
+          braveSearchKey,
+          checkGoogleDuplicates,
+          deciderFallback,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save");
-      const cfg = data.config || {};
-      setSerpApiKey(cfg.serpApiKey || "");
-      setCheckGoogleDuplicates(cfg.checkGoogleDuplicates !== false);
-      setDeciderFallback(cfg.deciderFallback === "gsc" ? "gsc" : "harvest");
-      setReady(cfg.ready || {});
-      setKeySource(cfg.keySource?.serpapi || "missing");
+      applyConfig(data.config || {});
       setMessage("Data source credentials saved.");
     } catch (e) {
       setError(e.message || "Failed to save");
@@ -90,8 +108,9 @@ export default function DataSourcesPanel() {
             <h2 className="text-xl font-bold text-[var(--cw-ink)]">Credentials</h2>
           </div>
           <p className="mt-1 max-w-2xl text-sm text-[var(--cw-ink-muted)]">
-            Keys for live search data. Google has no public Trends API — we use SerpAPI&apos;s Trends
-            engines plus live Google SERP. SE Ranking stays in the server environment.
+            Keys for live search data. SerpAPI is live Google SERP and Trends. When it is out of
+            searches, the app falls through to Google Programmable Search, Brave, then DuckDuckGo.
+            SE Ranking stays in the server environment.
           </p>
         </div>
         <button
@@ -122,8 +141,10 @@ export default function DataSourcesPanel() {
         ) : (
           <>
             <div className="flex flex-wrap gap-1.5">
-              <ReadyChip ok={ready.trends} label="Trends" />
-              <ReadyChip ok={ready.serp} label="Live SERP" />
+              <ReadyChip ok={ready.trends} label="Trends (SerpAPI)" />
+              <ReadyChip ok={ready.serp} label="Live search" />
+              <ReadyChip ok={ready.googleCse} label="Google CSE" />
+              <ReadyChip ok={ready.brave} label="Brave" />
               <ReadyChip ok={ready.seranking} label="SE Ranking" />
               <ReadyChip ok={ready.gsc} label="Search Console" />
             </div>
@@ -131,13 +152,15 @@ export default function DataSourcesPanel() {
             <div className="space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-4">
               <p className="flex items-center gap-2 text-sm font-semibold text-[var(--cw-ink)]">
                 <FiKey className="h-4 w-4 text-[var(--cw-neon)]" />
-                Google Trends and live SERP (SerpAPI)
+                Google Trends and live Google SERP (SerpAPI)
               </p>
               <p className="text-xs text-[var(--cw-ink-muted)]">
-                Powers Blog Studio topic trends, optional duplicate-title checks, and SERP Analysis.
-                {keySource === "env" ? " Currently using the environment key." : ""}
-                {keySource === "saved" ? " Using the key saved here." : ""}
-                {keySource === "missing" ? " No key yet — drafts still use the keyword library; world-trend hooks stay off." : ""}
+                The only source here that is live Google rankings plus Trends. Use this when you can.
+                {keySource.serpapi === "env" ? " Currently using the environment key." : ""}
+                {keySource.serpapi === "saved" ? " Using the key saved here." : ""}
+                {keySource.serpapi === "missing"
+                  ? " No key yet — world-trend hooks stay off. Organic search still runs on the free fallbacks below."
+                  : ""}
               </p>
               <input
                 type="password"
@@ -161,6 +184,70 @@ export default function DataSourcesPanel() {
                   </span>
                 </span>
               </label>
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-4">
+              <p className="text-sm font-semibold text-[var(--cw-ink)]">
+                Free Google fallback — Programmable Search (100 queries/day)
+              </p>
+              <p className="text-xs text-[var(--cw-ink-muted)]">
+                Official Google API. Not the live SERP (no local pack, different ranking), but it is
+                Google&apos;s index and costs nothing up to 100 searches/day. Create an engine that
+                searches the entire web at{" "}
+                <a
+                  className="text-[var(--cw-neon)] underline"
+                  href="https://programmablesearchengine.google.com/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  programmablesearchengine.google.com
+                </a>
+                , enable Custom Search API in Google Cloud, then paste the API key and Search engine
+                ID (cx). Used automatically when SerpAPI is missing or out of searches.
+                {keySource.googleCse === "env" ? " Currently using environment credentials." : ""}
+              </p>
+              <input
+                type="password"
+                autoComplete="off"
+                className={inputClass}
+                value={googleCseKey}
+                onChange={(e) => setGoogleCseKey(e.target.value)}
+                placeholder="Google Custom Search API key"
+              />
+              <input
+                type="text"
+                autoComplete="off"
+                className={inputClass}
+                value={googleCseCx}
+                onChange={(e) => setGoogleCseCx(e.target.value)}
+                placeholder="Search engine ID (cx)"
+              />
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-4">
+              <p className="text-sm font-semibold text-[var(--cw-ink)]">Brave Search (optional)</p>
+              <p className="text-xs text-[var(--cw-ink-muted)]">
+                Independent index, not Google. Brave includes about $5 of API credits each month
+                (card required). Get a key at{" "}
+                <a
+                  className="text-[var(--cw-neon)] underline"
+                  href="https://api-dashboard.search.brave.com/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  api-dashboard.search.brave.com
+                </a>
+                . Tried after Google CSE. DuckDuckGo is built in as a last resort and needs no key.
+                {keySource.brave === "env" ? " Currently using the environment key." : ""}
+              </p>
+              <input
+                type="password"
+                autoComplete="off"
+                className={inputClass}
+                value={braveSearchKey}
+                onChange={(e) => setBraveSearchKey(e.target.value)}
+                placeholder="Brave Search API key"
+              />
             </div>
 
             <div className="space-y-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-4">

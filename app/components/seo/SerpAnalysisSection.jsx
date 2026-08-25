@@ -1203,6 +1203,11 @@ export default function SerpAnalysisSection({ selectedSite }) {
               ) : (
                 <span className="text-amber-600">no location — generic {String(data.geo).toUpperCase()} SERP (may differ from local Google)</span>
               )}
+              {data.serpProvider && data.serpProvider !== "serpapi" ? (
+                <span className="text-amber-700">
+                  · {data.serpProviderLabel || data.serpProvider} (not live Google rankings)
+                </span>
+              ) : null}
             </div>
             <div className="flex items-center gap-2">
               <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${data.cached ? "bg-gray-100 text-gray-600" : "bg-emerald-100 text-emerald-700"}`}>
