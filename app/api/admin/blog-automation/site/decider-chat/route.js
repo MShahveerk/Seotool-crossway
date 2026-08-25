@@ -2,7 +2,7 @@ import { requireAdminRoute } from "../../../../../../lib/adminAuth";
 
 import { ENGINE_INTERNAL, getEngineMode } from "@/lib/blogStudio/engine.js";
 import { fallbackGreeting, runDeciderChatTurn } from "@/lib/blogStudio/deciderChat.js";
-import { isBrokenReply } from "@/lib/blogStudio/deciderChatVoice.js";
+import { isBrokenReply, titleFromUserIdea } from "@/lib/blogStudio/deciderChatVoice.js";
 import {
   createDeciderThread,
   getDeciderThread,
@@ -40,21 +40,32 @@ function siteFrom(req) {
 
 async function ensureOpening(siteLink, thread) {
   if (!thread) return thread;
-  const hasUser = (thread.messages || []).some((m) => m.role === "user");
-  if (hasUser) return thread;
-  const first = (thread.messages || []).find((m) => m.role === "assistant");
-  if (first && String(first.content || "").trim() && !isBrokenReply(first.content)) return thread;
+  const messages = Array.isArray(thread.messages) ? [...thread.messages] : [];
   const greet = await runDeciderChatTurn({ siteLink, messages: [], greeting: true });
-  const store = await patchDeciderThread(siteLink, thread.id, {
-    messages: [
-      {
-        id: first?.id,
-        role: "assistant",
-        content: greet.reply,
-        at: first?.at || new Date().toISOString(),
-      },
-    ],
+  let changed = false;
+  const next = messages.map((m, i, arr) => {
+    if (m.role !== "assistant" || !isBrokenReply(m.content)) return m;
+    changed = true;
+    const prevUser = [...arr.slice(0, i)].reverse().find((x) => x.role === "user");
+    const title = prevUser ? titleFromUserIdea(prevUser.content, greet.grounding || {}) : "";
+    return {
+      ...m,
+      content: title
+        ? `${title} — that's the piece. Say go and I'll write it, or tweak the cut.`
+        : greet.reply,
+      card: null,
+    };
   });
+  if (!next.some((m) => m.role === "assistant")) {
+    next.unshift({
+      role: "assistant",
+      content: greet.reply,
+      at: new Date().toISOString(),
+    });
+    changed = true;
+  }
+  if (!changed) return thread;
+  const store = await patchDeciderThread(siteLink, thread.id, { messages: next });
   return store.thread;
 }
 
@@ -192,8 +203,9 @@ export async function POST(req) {
       }
       const existing = await getDeciderThread(siteLink, threadId);
       if (!existing) return Response.json({ error: "That chat was not found." }, { status: 404 });
+      const cleaned = await ensureOpening(siteLink, existing);
 
-      const withUser = await patchDeciderThread(siteLink, threadId, {
+      const withUser = await patchDeciderThread(siteLink, cleaned.id, {
         appendMessage: { role: "user", content: text },
         proposal: null,
       });
@@ -211,11 +223,8 @@ export async function POST(req) {
         appendMessages: extras,
         proposal: turn.ready ? turn : null,
         title:
-          turn.ready && turn.topic
-            ? turn.topic
-            : withUser.thread.title === "New brief" && text.length > 3
-              ? text.slice(0, 42)
-              : withUser.thread.title,
+          turn.topic ||
+          (withUser.thread.title === "New brief" && text.length > 3 ? text.slice(0, 42) : withUser.thread.title),
       };
 
       if (turn.intent === "revise" && withUser.thread.blogPostId) {
