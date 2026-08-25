@@ -203,7 +203,8 @@ export default function DataSourcesPanel() {
                   programmablesearchengine.google.com
                 </a>
                 , enable Custom Search API in Google Cloud, then paste the API key and Search engine
-                ID (cx). Used automatically when SerpAPI is missing or out of searches.
+                ID (cx). The key must allow server calls: Application restrictions = None, API
+                restrictions = Custom Search API only. HTTP-referrer keys will be blocked.
                 {keySource.googleCse === "env" ? " Currently using environment credentials." : ""}
               </p>
               <input
