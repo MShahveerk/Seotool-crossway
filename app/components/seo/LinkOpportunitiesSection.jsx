@@ -105,6 +105,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
+  const [phaseLabel, setPhaseLabel] = useState("");
   const [llmConfig, setLlmConfig] = useState(null);
   const [llmSaving, setLlmSaving] = useState(false);
   const [llmOpen, setLlmOpen] = useState(false);
@@ -204,9 +205,9 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
     }
     setLoading(true);
     setError("");
+    setPhaseLabel("Starting search…");
+    if (!force) setData(null);
 
-    // Exactly what this run is keyed on. Kept so the PDF can replay it rather
-    // than reconstructing it from form state that may since have changed.
     const request = {
       keyword: keyword.trim(),
       siteUrl: analysisSite,
@@ -218,23 +219,64 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       refdomains: DEPTHS[depth].refdomains,
     };
 
+    const applyPayload = (payload) => {
+      if (!payload || payload.status === "error") {
+        if (payload?.error) setError(payload.error);
+        return;
+      }
+      setData(payload);
+      setLastRequest(request);
+      setPhaseLabel(payload.phaseLabel || "");
+      if (payload.status === "done") setOriginFilter("all");
+    };
+
     try {
       const res = await fetch("/api/seo/link-opportunities", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
+        },
         body: JSON.stringify({ ...request, refresh: force }),
       });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Failed to build link opportunities");
-      setData(json.data);
-      setLastRequest(request);
-      setOriginFilter("all");
+      const ctype = res.headers.get("content-type") || "";
+      if (!res.ok && !ctype.includes("event-stream")) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Failed to build link opportunities");
+      }
+      if (ctype.includes("event-stream") && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const parts = buf.split("\n\n");
+          buf = parts.pop() || "";
+          for (const part of parts) {
+            const line = part.split("\n").find((l) => l.startsWith("data:"));
+            if (!line) continue;
+            const json = line.replace(/^data:\s?/, "").trim();
+            if (!json) continue;
+            try {
+              applyPayload(JSON.parse(json));
+            } catch {
+              /* skip a torn frame */
+            }
+          }
+        }
+      } else {
+        const json = await res.json();
+        if (!res.ok || !json.success) throw new Error(json.error || "Failed to build link opportunities");
+        applyPayload({ ...json.data, status: json.data?.status || "done" });
+      }
     } catch (err) {
       setError(err.message || "Failed to build link opportunities");
-      setData(null);
-      setLastRequest(null);
+      if (!data) setLastRequest(null);
     } finally {
       setLoading(false);
+      setPhaseLabel("");
     }
   };
 
@@ -264,7 +306,7 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
     if (onlyGaps && r.youHaveIt) return false;
     if (originFilter !== "all" && rowOrigin(r) !== originFilter) return false;
     if (typeFilter === "actionable" && !ACTIONABLE.includes(r.type)) return false;
-    if (typeFilter === "unpaid" && (!ACTIONABLE.includes(r.type) || r.cost === "paid")) return false;
+    if (typeFilter === "unpaid" && (!ACTIONABLE.includes(r.type) || r.cost !== "unpaid")) return false;
     if (typeFilter === "paid" && (!ACTIONABLE.includes(r.type) || r.cost !== "paid")) return false;
     if (!["all", "actionable", "unpaid", "paid"].includes(typeFilter) && r.type !== typeFilter) {
       return false;
@@ -341,12 +383,27 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
             >
               FREE
             </span>
+          ) : ACTIONABLE.includes(row.type) && row.probeStatus && row.probeStatus !== "done" ? (
+            <span
+              className="shrink-0 rounded-full border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--cw-ink-faint)]"
+              title="Live check in progress"
+            >
+              CHECKING
+            </span>
           ) : ACTIONABLE.includes(row.type) ? (
             <span
               className="shrink-0 rounded-full border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--cw-ink-faint)]"
               title={row.costNote || "Couldn't confirm whether a listing is free"}
             >
               UNCONFIRMED
+            </span>
+          ) : null}
+          {row.foundVia === "discover" ? (
+            <span
+              className="shrink-0 rounded-full border border-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)] bg-[color-mix(in_srgb,var(--cw-neon)_8%,transparent)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--cw-neon)]"
+              title="Found via a topic search (directory, resources, write-for-us), not only rival backlinks"
+            >
+              DISCOVER
             </span>
           ) : null}
           {row.serpPosition != null ? (
@@ -556,11 +613,11 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
         {llmOpen ? (
           <div className="space-y-4 border-t border-[var(--cw-hairline)] pt-4">
             <p className="text-[12px] leading-relaxed text-[var(--cw-ink-muted)]">
-              Live pages are fetched to mark paid vs free and to drop parked spam. A missing
-              form does not remove a site. The model may only cite fetched evidence — it
-              cannot invent a URL or veto a live route. Leave a field masked to keep the
-              saved key. Server env keys (OPENROUTER_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY)
-              still work as fallback.
+              Live pages are fetched to mark paid vs free and to drop parked spam, mills, and
+              off-niche citations. Unpaid is confirmed free only. The model may veto a paid
+              checkout from fetched text — it still cannot invent a URL. Leave a field masked
+              to keep the saved key. Server env keys (OPENROUTER_API_KEY, OPENAI_API_KEY,
+              ANTHROPIC_API_KEY) still work as fallback.
             </p>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               {[
@@ -757,15 +814,30 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
       </form>
 
       {loading ? (
-        <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-8 text-center text-sm text-[var(--cw-ink-muted)]">
-          <FiRefreshCw className="mx-auto mb-3 size-6 animate-spin text-[var(--cw-neon)]" />
-          Pulling rival backlinks, then checking live submit routes
-          {llmConfig?.ready ? " with the saved LLM" : ""}. A keyword you&rsquo;ve
-          analysed before is mostly cached — a brand new one can take a minute.
+        <div className="rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-5 py-4 text-sm text-[var(--cw-ink-muted)]">
+          <div className="flex items-start gap-3">
+            <FiRefreshCw className="mt-0.5 size-5 shrink-0 animate-spin text-[var(--cw-neon)]" />
+            <div className="min-w-0">
+              <p className="font-semibold text-[var(--cw-ink)]">
+                {phaseLabel || "Searching — rows appear as they are found"}
+              </p>
+              <p className="mt-1 text-[12px] leading-relaxed text-[var(--cw-ink-faint)]">
+                Rival backlinks first, then extra Google searches for directories, resource
+                pages and write-for-us, then a live check of the best prospects. Unpaid only
+                means a free route was confirmed.
+                {data?.progress?.total ? (
+                  <>
+                    {" "}
+                    {data.progress.current}/{data.progress.total}
+                  </>
+                ) : null}
+              </p>
+            </div>
+          </div>
         </div>
       ) : null}
 
-      {data && !loading ? (
+      {data ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--cw-ink-muted)]" data-guide="link-list">
             <span className="font-mono">
@@ -805,14 +877,14 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
             <StatTile
               label="You can pitch"
               value={formatNum(data.summary?.prospects)}
-              hint={`${formatNum(data.summary?.unpaid)} unpaid · ${formatNum(data.summary?.paid)} paid`}
+              hint={`${formatNum(data.summary?.unpaid)} confirmed free · ${formatNum(data.summary?.paid)} paid`}
               accent
               icon={Trophy}
             />
             <StatTile
               label="Shared linkers"
               value={formatNum(data.summary?.sharedLinkers)}
-              hint="Link to 2+ rivals — proven willing"
+              hint="Link to 2+ rivals — useful evidence, not the only source"
               icon={FiLink}
             />
             <StatTile
