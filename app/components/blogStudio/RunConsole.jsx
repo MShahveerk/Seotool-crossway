@@ -17,6 +17,7 @@ export const BLOG_PIPELINE = [
   { id: "decider", title: "Decider", subtitle: "World trends, then overlap, then library", optional: true },
   { id: "binder", title: "Binder", subtitle: "Low-KD keyword bag" },
   { id: "checker", title: "Checker", subtitle: "Unique title" },
+  { id: "serp_compete", title: "SERP", subtitle: "Rival titles, PAA, length" },
   { id: "headings", title: "Headings", subtitle: "KD-aware outline" },
   { id: "headings_approval", title: "Review", subtitle: "Email User roles", optional: true },
   { id: "agent2", title: "Architect", subtitle: "Article blueprint" },
@@ -120,6 +121,34 @@ function draftStageExtra(stage) {
           {d.topic ? ` · ${d.topic}` : ""}
         </p>
         {d.hit?.title ? <p className="mt-1 text-[var(--cw-ink-faint)]">Collided with {d.hit.title}</p> : null}
+      </div>
+    );
+  }
+  if (stage.agent === "serp_compete") {
+    if (d.skipped) {
+      return (
+        <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-[11px] text-[var(--cw-ink-muted)]">
+          <p>No live SERP this run{d.reason ? ` · ${d.reason}` : ""}. Writer still uses the harvest brief.</p>
+        </div>
+      );
+    }
+    const titles = Array.isArray(d.titles) ? d.titles : [];
+    const paa = Array.isArray(d.peopleAlsoAsk) ? d.peopleAlsoAsk : [];
+    return (
+      <div className="space-y-1.5 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-[11px] text-[var(--cw-ink-muted)]">
+        {d.suggestedWordCountRange ? (
+          <p>
+            Target · <span className="font-semibold text-[var(--cw-ink)]">{d.suggestedWordCountRange} words</span>
+            {d.avgWordCount ? ` · rivals ~${d.avgWordCount}` : ""}
+          </p>
+        ) : null}
+        {titles.length ? (
+          <p>
+            Page 1 · {titles.slice(0, 4).map((t) => t.domain || t.title).join(" · ")}
+          </p>
+        ) : null}
+        {paa.length ? <p>People also ask · {paa.slice(0, 3).join(" · ")}</p> : null}
+        {Array.isArray(d.gaps) && d.gaps.length ? <p>Gaps · {d.gaps.slice(0, 2).join(" · ")}</p> : null}
       </div>
     );
   }
