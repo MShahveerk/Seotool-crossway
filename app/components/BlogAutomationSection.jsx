@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FiZap,
   FiSave,
@@ -172,6 +172,12 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
   const [topic, setTopic] = useState("");
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
+  const [chatError, setChatError] = useState("");
+  const [chatProposal, setChatProposal] = useState(null);
+  const [chatCountdown, setChatCountdown] = useState(null);
   const [running, setRunning] = useState(false);
   const [runs, setRuns] = useState([]);
   // The run in flight and the run you're reading are separate things: opening an
@@ -198,6 +204,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     [selectedSite]
   );
   const isInternal = engineMode === "internal";
+  const chatEnabled = Boolean(isInternal && siteConfig?.agentReady?.decider);
   const isWebsite = Boolean(
     selectedSite &&
       (String(selectedSite).startsWith("http") ||
@@ -325,6 +332,11 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   useEffect(() => {
     setLastResearch(null);
     setRuns([]);
+    setChatMessages([]);
+    setChatInput("");
+    setChatError("");
+    setChatProposal(null);
+    setChatCountdown(null);
   }, [selectedSite]);
 
   useEffect(() => {
@@ -352,6 +364,33 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
       cancelled = true;
     };
   }, [selectedSite, runs, lastResearch]);
+
+  useEffect(() => {
+    if (!selectedSite || !chatEnabled || !siteQ) return undefined;
+    let cancelled = false;
+    (async () => {
+      setChatBusy(true);
+      setChatError("");
+      try {
+        const res = await fetch(`/api/admin/blog-automation/site/decider-chat${siteQ}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: [] }),
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) throw new Error(data.error || "Topic Decider could not greet.");
+        setChatMessages([{ role: "assistant", content: data.reply }]);
+      } catch (err) {
+        if (!cancelled) setChatError(err.message || "Topic Decider is unavailable.");
+      } finally {
+        if (!cancelled) setChatBusy(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSite, chatEnabled, siteQ]);
 
   // Keep the library list itself moving while anything is live, so its cards
   // report progress instead of going stale until someone hits Refresh.
@@ -499,35 +538,136 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     }
   };
 
-  const startRun = async () => {
+  const startRun = async ({ topic: topicArg, overrides } = {}) => {
     if (!selectedSite) {
       setSaveMessage({ ok: false, text: "Select a site in the header first." });
       return;
     }
+    const nextTopic = topicArg != null ? String(topicArg).trim() : String(topic || "").trim();
     setRunning(true);
     setSaveMessage(null);
     try {
-      // Persist current draft fields before run
       await saveSiteConfig();
       const res = await fetch(`/api/admin/blog-automation/site/run${siteQ}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, generateImage: true }),
+        body: JSON.stringify({
+          topic: nextTopic,
+          generateImage: true,
+          ...(overrides && typeof overrides === "object" ? { overrides } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start run.");
       if (data.run) {
         setLiveRun(data.run);
-        selectRun(data.run.id);
       }
-      setSaveMessage({ ok: true, text: "Run queued — following it in the Library." });
+      setSaveMessage({ ok: true, text: "Run queued — watch the chip in the composer." });
       loadRuns();
+      return true;
     } catch (err) {
       setSaveMessage({ ok: false, text: err.message });
+      return false;
     } finally {
       setRunning(false);
     }
   };
+
+  const launchingRef = useRef(false);
+
+  const startDraftFromChat = async (proposal) => {
+    const p = proposal || chatProposal;
+    if (!p?.topic || launchingRef.current) return;
+    launchingRef.current = true;
+    try {
+      const transcript = chatMessages
+        .map((m) => `${m.role === "user" ? "Operator" : "Decider"}: ${m.content}`)
+        .join("\n");
+      const standing = String(siteConfig?.seedPrompt || "").trim();
+      const ok = await startRun({
+        topic: p.topic,
+        overrides: {
+          deciderSeedQuery: p.seedQuery || "",
+          recommendedAngle: p.angle || "",
+          seedPrompt: [standing, transcript ? `Topic briefing:\n${transcript}` : "", p.why ? `Why this title: ${p.why}` : ""]
+            .filter(Boolean)
+            .join("\n\n")
+            .slice(0, 8000),
+        },
+      });
+      setChatProposal(null);
+      setChatCountdown(null);
+      if (!ok) return;
+      setChatMessages((rows) => [
+        ...rows,
+        {
+          role: "assistant",
+          content: `Starting the studio on “${p.topic}”. The pipeline stays in the chip above — this chat stays put.`,
+        },
+      ]);
+    } finally {
+      launchingRef.current = false;
+    }
+  };
+
+  const sendChat = async (text) => {
+    const content = String(text || "").trim();
+    if (!content || chatBusy || running) return;
+    setChatCountdown(null);
+    setChatProposal(null);
+    setChatError("");
+    const next = [...chatMessages, { role: "user", content }];
+    setChatMessages(next);
+    setChatInput("");
+    setChatBusy(true);
+    try {
+      const res = await fetch(`/api/admin/blog-automation/site/decider-chat${siteQ}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Topic Decider did not reply.");
+      setChatMessages([...next, { role: "assistant", content: data.reply }]);
+      if (data.ready && data.topic) {
+        setChatProposal(data);
+        setChatCountdown(8);
+      }
+    } catch (err) {
+      setChatError(err.message || "Topic Decider did not reply.");
+    } finally {
+      setChatBusy(false);
+    }
+  };
+
+  const holdChatCountdown = () => {
+    setChatCountdown(null);
+    setChatProposal(null);
+    setChatMessages((rows) => [
+      ...rows,
+      {
+        role: "assistant",
+        content: "Holding. Tell me what to change and I’ll reshape the idea.",
+      },
+    ]);
+  };
+
+  const chatProposalRef = useRef(chatProposal);
+  chatProposalRef.current = chatProposal;
+  const startDraftFromChatRef = useRef(startDraftFromChat);
+  startDraftFromChatRef.current = startDraftFromChat;
+
+  useEffect(() => {
+    if (chatCountdown == null) return undefined;
+    if (chatCountdown <= 0) {
+      const p = chatProposalRef.current;
+      setChatCountdown(null);
+      void startDraftFromChatRef.current(p);
+      return undefined;
+    }
+    const t = setTimeout(() => setChatCountdown((n) => (n == null ? null : n - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [chatCountdown]);
 
   const startResearch = async () => {
     if (!selectedSite) {
@@ -550,9 +690,8 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
       if (!res.ok) throw new Error(data.error || "Failed to start research.");
       if (data.run) {
         setLiveRun(data.run);
-        selectRun(data.run.id);
       }
-      setSaveMessage({ ok: true, text: "Research queued — follow it in the dock." });
+      setSaveMessage({ ok: true, text: "Research queued — follow the chip in the composer." });
       loadRuns();
     } catch (err) {
       setSaveMessage({ ok: false, text: err.message });
@@ -712,11 +851,6 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     setSetupTab("agents");
     openBottomTab("setup");
   };
-
-  // The dock is a pointer to the live run; in the Library with that run open
-  // there is nothing left for it to point at.
-  const dockedRun =
-    bottomTab === "library" && selectedRunId && selectedRunId === liveRun?.id ? null : liveRun;
 
   const engineSwitch = (
     <TabRail
@@ -922,9 +1056,8 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
         onRan={async (run) => {
           if (run?.id) {
             setLiveRun(run);
-            selectRun(run.id);
           }
-          setSaveMessage({ ok: true, text: "Run queued — following it live." });
+          setSaveMessage({ ok: true, text: "Run queued — watch the chip in the composer." });
           await loadRuns();
           openBottomTab(null);
         }}
@@ -1493,7 +1626,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-0 w-full flex-1 flex-col">
       {!isInternal ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1514,7 +1647,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
           onSubmit={startRun}
           submitting={running}
           submitDisabled={!selectedSite}
-          liveRun={dockedRun}
+          liveRun={liveRun}
           liveLabel={isBlogResearchRun(liveRun) ? "Research" : "Draft"}
           livePanel={
             <RunConsole run={liveRun} config={siteConfig} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />
@@ -1534,6 +1667,17 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
           onCancelAllLive={cancelAllLive}
           hasLiveAutomation={hasLiveAutomation}
           banners={banners}
+          chatEnabled={chatEnabled}
+          chatMessages={chatMessages}
+          chatInput={chatInput}
+          onChatInputChange={setChatInput}
+          onChatSend={sendChat}
+          chatBusy={chatBusy}
+          chatError={chatError}
+          chatProposal={chatProposal}
+          chatCountdown={chatCountdown}
+          onChatStartNow={() => void startDraftFromChat()}
+          onChatHold={holdChatCountdown}
         />
       ) : null}
 

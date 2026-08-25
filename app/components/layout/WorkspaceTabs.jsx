@@ -14,7 +14,7 @@ import { isMetaPageId } from "@/lib/siteAccess";
 import { visibleSections, workspaceForSection } from "@/lib/workspaces";
 import TabRail from "../ui-shared/TabRail";
 
-export default function WorkspaceTabs({ activeSection, onSectionChange, selectedSite }) {
+export default function WorkspaceTabs({ activeSection, onSectionChange, selectedSite, compact = false }) {
   const { data: session } = useSession();
 
   const hasGlobalSiteAccess = sessionHasGlobalSiteAccess(session);
@@ -44,7 +44,7 @@ export default function WorkspaceTabs({ activeSection, onSectionChange, selected
     : sections[0]?.id;
 
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-3">
+    <div className={compact ? "mb-2 flex flex-wrap items-center gap-3" : "mb-5 flex flex-wrap items-center gap-3"}>
       <TabRail
         tabs={sections.map((s) => ({ id: s.id, label: s.label }))}
         value={value}

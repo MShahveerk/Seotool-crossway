@@ -24,6 +24,8 @@ export default function DashboardLayout({
   const isDashboard = activeSection === "dashboard";
   const isPortfolio = activeSection === "portfolio";
   const isBoard = activeSection === "post-board" || activeSection === "blog-board";
+  const isStudio = activeSection === "blog-automation" || activeSection === "post-automation";
+  const fillViewport = isBoard || isStudio;
   const showPortfolioCrumb = canSwitchClients && !isPortfolio && Boolean(selectedSite);
 
   useGuidePrepare((nav) => {
@@ -93,19 +95,20 @@ export default function DashboardLayout({
           id="main-content"
           className={cn(
             "flex min-h-0 flex-1 flex-col",
-            isBoard
+            fillViewport
               ? "p-2 sm:p-2.5 lg:p-3"
               : "px-4 py-5 sm:px-8 sm:py-7 lg:px-12 xl:px-16 2xl:px-20"
           )}
         >
           {isDashboard || isPortfolio ? (
             <div className="mx-auto w-full max-w-[1360px]">{children}</div>
-          ) : isBoard ? (
+          ) : fillViewport ? (
             <div className="flex min-h-0 w-full flex-1 flex-col">
               <WorkspaceTabs
                 activeSection={activeSection}
                 onSectionChange={onSectionChange}
                 selectedSite={selectedSite}
+                compact={isStudio}
               />
               {children}
             </div>

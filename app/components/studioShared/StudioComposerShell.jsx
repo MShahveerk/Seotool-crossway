@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import Btn from "../ui-shared/Btn";
 import LiveRunDock from "./LiveRunDock";
+import DeciderChatStage from "./DeciderChatStage";
 import { isLiveStatus } from "./runFormat";
 
 export function projectDisplayName(site) {
@@ -70,12 +71,23 @@ export default function StudioComposerShell({
   externalMode = null,
   emptySiteHint = null,
   className = "",
+  chatEnabled = false,
+  chatMessages = [],
+  chatInput = "",
+  onChatInputChange,
+  onChatSend,
+  chatBusy = false,
+  chatError = "",
+  chatProposal = null,
+  chatCountdown = null,
+  onChatStartNow,
+  onChatHold,
 }) {
   const textareaRef = useRef(null);
   const displayName = useMemo(() => projectDisplayName(projectName), [projectName]);
-  const live =
-    liveRun && isLiveStatus(liveRun.status) ? liveRun : null;
-  const showComposer = !live && !activeBottomTab;
+  const live = liveRun && isLiveStatus(liveRun.status) ? liveRun : null;
+  const keepComposer = kind === "blog";
+  const showComposer = (!live || keepComposer) && !activeBottomTab;
   const verb = kind === "post" ? "post" : "write";
   const promptLabel =
     placeholder ||
@@ -100,7 +112,7 @@ export default function StudioComposerShell({
   return (
     <div
       className={cn(
-        "studio-composer relative flex min-h-[min(78vh,820px)] flex-col overflow-hidden rounded-[1.75rem]",
+        "studio-composer relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[1.75rem]",
         "border border-[color-mix(in_srgb,var(--cw-hairline)_80%,transparent)]",
         "bg-[var(--cw-canvas)] shadow-[var(--cw-shadow-lg)]",
         className
@@ -174,7 +186,25 @@ export default function StudioComposerShell({
       <div className="relative z-10 flex min-h-0 flex-1 flex-col px-3 pb-[5.5rem] pt-2 sm:px-5">
         {emptySiteHint}
 
-        {live ? (
+        {live && keepComposer && showComposer ? (
+          <div className="mx-auto mb-2 w-full max-w-3xl shrink-0" data-guide="studio-rail">
+            <LiveRunDock
+              key={live.id}
+              run={live}
+              label={liveLabel}
+              onCancel={onCancelLive}
+              onOpen={onOpenLive}
+              openLabel={openLiveLabel}
+              cancelling={cancelling}
+              defaultExpanded={false}
+              className="!sticky !top-0 !mx-0 !mb-0"
+            >
+              {livePanel}
+            </LiveRunDock>
+          </div>
+        ) : null}
+
+        {live && !keepComposer ? (
           <div
             className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center animate-soft-rise"
             data-guide="studio-rail"
@@ -197,8 +227,26 @@ export default function StudioComposerShell({
           </div>
         ) : null}
 
-        {showComposer ? (
-          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center px-1 py-8 sm:py-12">
+        {showComposer && chatEnabled ? (
+          <DeciderChatStage
+            projectName={projectName}
+            messages={chatMessages}
+            input={chatInput}
+            onInputChange={onChatInputChange}
+            onSend={onChatSend}
+            busy={chatBusy || submitting}
+            error={chatError}
+            proposal={chatProposal}
+            countdown={chatCountdown}
+            onStartNow={onChatStartNow}
+            onHold={onChatHold}
+            liveRunning={Boolean(live)}
+            disabled={submitDisabled}
+          />
+        ) : null}
+
+        {showComposer && !chatEnabled ? (
+          <div className="mx-auto flex h-full min-h-0 w-full max-w-2xl flex-1 flex-col items-center justify-center px-1 py-8 sm:py-12">
             <h2 className="font-heading mb-8 max-w-xl text-center text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[var(--cw-ink)] sm:text-[2rem]">
               What should we {verb} for{" "}
               <span className="bg-gradient-to-r from-[var(--cw-neon-soft)] via-[var(--cw-info)] to-[var(--cw-neon)] bg-clip-text text-transparent">
