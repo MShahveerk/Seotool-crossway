@@ -145,15 +145,11 @@ export default function DeciderChatStage({
       {showHero ? (
         <div className="shrink-0 px-2 pb-3 pt-3 text-center sm:pt-6">
           <h2 className="font-heading mx-auto max-w-xl text-[1.55rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[var(--cw-ink)] sm:text-[1.9rem]">
-            What should{" "}
+            What should we write for{" "}
             <span className="bg-gradient-to-r from-[var(--cw-neon-soft)] via-[var(--cw-info)] to-[var(--cw-neon)] bg-clip-text text-transparent">
               {displayName}
-            </span>{" "}
-            publish?
+            </span>
           </h2>
-          <p className="mx-auto mt-3 max-w-md text-[12px] leading-relaxed text-[var(--cw-ink-faint)]">
-            {CHAT_PERSONA} already knows the site. Talk like you would to an editor — “suggest topics”, “yes”, or name the cut you want.
-          </p>
         </div>
       ) : null}
 
@@ -196,7 +192,7 @@ export default function DeciderChatStage({
           </div>
         ))}
 
-        {busy ? (
+        {busy && !showHero ? (
           <div className="flex justify-start">
             <div className="studio-chat-assistant flex items-center gap-3 px-4 py-3">
               <TypingDots />

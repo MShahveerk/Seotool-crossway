@@ -2,6 +2,7 @@ import { requireAdminRoute } from "../../../../../../lib/adminAuth";
 
 import { ENGINE_INTERNAL, getEngineMode } from "@/lib/blogStudio/engine.js";
 import { fallbackGreeting, runDeciderChatTurn } from "@/lib/blogStudio/deciderChat.js";
+import { isBrokenReply } from "@/lib/blogStudio/deciderChatVoice.js";
 import {
   createDeciderThread,
   getDeciderThread,
@@ -37,6 +38,26 @@ function siteFrom(req) {
   return siteLink;
 }
 
+async function ensureOpening(siteLink, thread) {
+  if (!thread) return thread;
+  const hasUser = (thread.messages || []).some((m) => m.role === "user");
+  if (hasUser) return thread;
+  const first = (thread.messages || []).find((m) => m.role === "assistant");
+  if (first && String(first.content || "").trim() && !isBrokenReply(first.content)) return thread;
+  const greet = await runDeciderChatTurn({ siteLink, messages: [], greeting: true });
+  const store = await patchDeciderThread(siteLink, thread.id, {
+    messages: [
+      {
+        id: first?.id,
+        role: "assistant",
+        content: greet.reply,
+        at: first?.at || new Date().toISOString(),
+      },
+    ],
+  });
+  return store.thread;
+}
+
 function payload(store, extra = {}) {
   return {
     persona: CHAT_PERSONA,
@@ -60,6 +81,12 @@ export async function GET(req) {
     await assertInternal();
     const siteLink = siteFrom(req);
     const store = await listDeciderThreads(siteLink);
+    const active = store.threads.find((t) => t.id === store.activeId) || null;
+    if (active) {
+      const thread = await ensureOpening(siteLink, active);
+      const fresh = await listDeciderThreads(siteLink);
+      return Response.json(payload(fresh, { thread }));
+    }
     return Response.json(payload(store));
   } catch (error) {
     return Response.json(
@@ -88,7 +115,9 @@ export async function POST(req) {
 
     if (action === "select") {
       const store = await selectDeciderThread(siteLink, body.threadId);
-      return Response.json(payload(store, { thread: store.thread }));
+      const thread = await ensureOpening(siteLink, store.thread);
+      const fresh = await listDeciderThreads(siteLink);
+      return Response.json(payload(fresh, { thread }));
     }
 
     if (action === "attach-run") {

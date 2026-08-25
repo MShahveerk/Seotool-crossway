@@ -412,7 +412,6 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     if (!selectedSite || !chatEnabled || !siteQ) return undefined;
     let cancelled = false;
     (async () => {
-      setChatBusy(true);
       setChatError("");
       try {
         const res = await fetch(`/api/admin/blog-automation/site/decider-chat${siteQ}`);
@@ -434,8 +433,6 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
         applyChatPayload(made);
       } catch (err) {
         if (!cancelled) setChatError(err.message || "Chat is unavailable.");
-      } finally {
-        if (!cancelled) setChatBusy(false);
       }
     })();
     return () => {
@@ -711,7 +708,6 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
 
   const startNewChat = async () => {
     if (chatBusy) return;
-    setChatBusy(true);
     setChatCountdown(null);
     setChatError("");
     try {
@@ -726,14 +722,11 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
       setChatInput("");
     } catch (err) {
       setChatError(err.message);
-    } finally {
-      setChatBusy(false);
     }
   };
 
   const selectChat = async (id) => {
     if (!id || id === chatThreadId || chatBusy) return;
-    setChatBusy(true);
     setChatCountdown(null);
     setChatError("");
     try {
@@ -748,8 +741,6 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
       setChatInput("");
     } catch (err) {
       setChatError(err.message);
-    } finally {
-      setChatBusy(false);
     }
   };
 
