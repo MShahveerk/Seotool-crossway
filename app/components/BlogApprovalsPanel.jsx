@@ -27,6 +27,7 @@ import EmptyState from "./ui-shared/EmptyState";
 import { LoadingSpinner } from "./ui-shared/LoadingBlock";
 import { publicMediaUrl } from "../../lib/publicMediaUrl";
 import BackupImageSwitcher from "./BackupImageSwitcher";
+import { normalizeArticleHtml } from "../../lib/blogStudio/articleHtml";
 
 /** Chrome sometimes caches a bad first paint — retry once with a bust, then hide. */
 function onMediaImgError(e) {
@@ -282,7 +283,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     setDraft({
       editedTitle: blog.userEditedTitle || blog.title || "",
       editedExcerpt: blog.userEditedExcerpt ?? blog.excerpt ?? "",
-      editedContent: blog.userEditedContent || blog.content || "",
+      editedContent: normalizeArticleHtml(blog.userEditedContent || blog.content || ""),
       editedSlug: blog.userEditedSlug || blog.slug || "",
       scheduledFor: toDatetimeLocalInTimezone(blog.scheduledFor),
       seoTitle: meta.seo_title || meta.yoast_title || "",
