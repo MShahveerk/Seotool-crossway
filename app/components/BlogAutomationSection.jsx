@@ -1513,15 +1513,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
           onTopicChange={setTopic}
           onSubmit={startRun}
           submitting={running}
-          submitDisabled={
-            !selectedSite ||
-            (!lastResearch &&
-              !(
-                siteConfig.useOperatorKeywords &&
-                Array.isArray(siteConfig.operatorKeywords) &&
-                siteConfig.operatorKeywords.length
-              ))
-          }
+          submitDisabled={!selectedSite}
           liveRun={dockedRun}
           liveLabel={isBlogResearchRun(liveRun) ? "Research" : "Draft"}
           livePanel={

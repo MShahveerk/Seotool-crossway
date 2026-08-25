@@ -249,6 +249,13 @@ export default function StudioComposerShell({
                   <button
                     type="submit"
                     disabled={submitting || submitDisabled}
+                    title={
+                      submitDisabled
+                        ? "Select a project in the sidebar first."
+                        : kind === "post"
+                          ? "Generate post"
+                          : "Generate draft"
+                    }
                     className={cn(
                       "flex h-10 w-10 items-center justify-center rounded-full",
                       "bg-[var(--cw-ink)] text-[var(--cw-canvas)]",
