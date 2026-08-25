@@ -39,6 +39,7 @@ import TabRail from "./ui-shared/TabRail";
 import Btn from "./ui-shared/Btn";
 import { useGuidePrepare } from "@/lib/guideNav";
 import LiveRunDock from "./studioShared/LiveRunDock";
+import StudioComposerShell from "./studioShared/StudioComposerShell";
 import { isLiveStatus } from "./studioShared/runFormat";
 import { BLOG_STUDIO_DEFAULT_PROMPTS } from "../../lib/blogStudio/defaults";
 import {
@@ -76,6 +77,15 @@ const SETUP_TABS = [
   { id: "external", label: "External n8n", icon: FiExternalLink },
 ];
 
+const BOTTOM_DOCK = [
+  { id: "brief", label: "Brief", icon: FiEdit3 },
+  { id: "inbox", label: "Inbox", icon: FiInbox },
+  { id: "excel", label: "Queue", icon: FiGrid },
+  { id: "research", label: "Research", icon: FiSearch },
+  { id: "library", label: "Library", icon: FiList },
+  { id: "setup", label: "Setup", icon: FiSettings },
+];
+
 const surfaceCard = "rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5";
 const raisedCard = "rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-4";
 const helpText = "text-sm text-[var(--cw-ink-muted)]";
@@ -98,13 +108,59 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   const [zone, setZone] = useState("compose");
   const [source, setSource] = useState("topic");
   const [setupTab, setSetupTab] = useState("voice");
+  const [bottomTab, setBottomTab] = useState(null);
+
+  const openBottomTab = useCallback((id) => {
+    if (!id) {
+      setBottomTab(null);
+      setZone("compose");
+      setSource("topic");
+      return;
+    }
+    setBottomTab(id);
+    if (id === "library") {
+      setZone("library"); setBottomTab("library");
+      return;
+    }
+    if (id === "setup") {
+      setZone("setup");
+      return;
+    }
+    if (id === "brief") {
+      setZone("compose");
+      setSource("topic");
+      return;
+    }
+    setZone("compose");
+    setSource(id);
+  }, []);
+
   useGuidePrepare((nav) => {
-    if (nav.zone) setZone(nav.zone);
-    if (nav.source) setSource(nav.source);
     if (nav.setupTab) {
       setZone("setup");
       setSetupTab(nav.setupTab);
+      setBottomTab("setup");
+      return;
     }
+    if (nav.zone === "library") {
+      setZone("library");
+      setBottomTab("library");
+      return;
+    }
+    if (nav.zone === "setup") {
+      setZone("setup");
+      setBottomTab("setup");
+      return;
+    }
+    if (nav.source && nav.source !== "topic") {
+      setZone("compose");
+      setSource(nav.source);
+      setBottomTab(nav.source);
+      return;
+    }
+    if (nav.zone) setZone(nav.zone);
+    if (nav.source) setSource(nav.source);
+    setBottomTab(null);
   });
   const [seedHandoffRunId, setSeedHandoffRunId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -227,8 +283,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     try {
       const h = JSON.parse(raw);
       if (h?.at && Date.now() - h.at > 120000) return;
-      setZone("compose");
-      setSource("inbox");
+      openBottomTab("inbox");
       if (h?.runId) setSeedHandoffRunId(h.runId);
     } catch {}
   }, []);
@@ -358,7 +413,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     setSelectedRunId(runId);
     setSelectedRunDetail(null);
     setRunDetailError("");
-    setZone("library");
+    setZone("library"); setBottomTab("library");
   }, []);
 
   const closeRun = useCallback(() => {
@@ -616,8 +671,8 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
         ok: true,
         text: `Interpreter filled fields (est. $${Number(data.usage?.costUsd || 0).toFixed(4)}). Review & save.`,
       });
-      setZone("setup");
       setSetupTab("voice");
+      openBottomTab("setup");
     } catch (err) {
       setSaveMessage({ ok: false, text: err.message });
     } finally {
@@ -654,40 +709,30 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   }
 
   const goAgents = () => {
-    setZone("setup");
     setSetupTab("agents");
+    openBottomTab("setup");
   };
 
   // The dock is a pointer to the live run; in the Library with that run open
   // there is nothing left for it to point at.
   const dockedRun =
-    zone === "library" && selectedRunId && selectedRunId === liveRun?.id ? null : liveRun;
+    bottomTab === "library" && selectedRunId && selectedRunId === liveRun?.id ? null : liveRun;
 
-  return (
-    <div className="space-y-4">
-      {/* Header + engine switch */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-[var(--cw-hairline)] pb-4">
-        <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1 className="font-heading inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-[var(--cw-ink)]">
-            <FiZap className="h-4 w-4 text-[var(--cw-neon)]" />
-            Blog Studio
-          </h1>
-          <span className="truncate font-mono text-[11px] text-[var(--cw-ink-faint)]">
-            {selectedSite || "No site selected"}
-          </span>
-        </div>
-        <TabRail
-          size="sm"
-          tabs={[
-            { id: "internal", label: "Internal Studio" },
-            { id: "external", label: "External n8n" },
-          ]}
-          value={isInternal ? "internal" : "external"}
-          onChange={(id) => saveEngine(id)}
-          ariaLabel="Automation engine"
-        />
-      </div>
+  const engineSwitch = (
+    <TabRail
+      size="sm"
+      tabs={[
+        { id: "internal", label: "Internal" },
+        { id: "external", label: "n8n" },
+      ]}
+      value={isInternal ? "internal" : "external"}
+      onChange={(id) => saveEngine(id)}
+      ariaLabel="Automation engine"
+    />
+  );
 
+  const banners = (
+    <>
       {loadError && (
         <p className="rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] px-3 py-2 text-sm text-[var(--cw-danger)]">
           {loadError}
@@ -704,17 +749,16 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
           {String(saveMessage.text).trim()}
         </p>
       ) : null}
+    </>
+  );
 
-      {/* External-mode brand kit still available */}
-      {siteConfig && selectedSite && !isInternal ? (
+  const externalModeUi = !isInternal ? (
+    <div className="relative z-10 space-y-4 px-4 pb-6 sm:px-6">
+      {siteConfig && selectedSite ? (
         <div className="space-y-2">
           <p className={helpText}>
             AI Brand kit is available here even in External mode. Switch to{" "}
-            <button
-              type="button"
-              className="font-semibold text-[var(--cw-neon)] hover:underline"
-              onClick={() => saveEngine("internal")}
-            >
+            <button type="button" className="font-semibold text-[var(--cw-neon)] hover:underline" onClick={() => saveEngine("internal")}>
               Internal Studio
             </button>{" "}
             when you want image runs to apply this frame.
@@ -732,372 +776,215 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
           />
         </div>
       ) : null}
-
-      {/* External engine: outbound webhook config (no internal pipeline). */}
-      {!isInternal && (
-        <div className={`${surfaceCard} max-w-2xl space-y-4`}>
-          <div className="flex items-center gap-2 text-[var(--cw-neon)]">
-            <FiLink />
-            <h2 className="text-sm font-bold uppercase tracking-wide">External n8n webhook</h2>
-          </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <label className={labelClass}>Webhook URL</label>
-              <input
-                className={`${inputClass} mt-1`}
-                value={globalConfig.webhookUrl || ""}
-                onChange={(e) => setGlobalConfig((c) => ({ ...c, webhookUrl: e.target.value }))}
-                placeholder="https://n8n.example.com/webhook/…"
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Webhook secret</label>
-              <input
-                type="password"
-                className={`${inputClass} mt-1`}
-                value={globalConfig.webhookSecret || ""}
-                onChange={(e) => setGlobalConfig((c) => ({ ...c, webhookSecret: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Schedule interval</label>
-              <select
-                className={`${inputClass} mt-1`}
-                value={globalConfig.intervalMinutes || 1440}
-                onChange={(e) => setGlobalConfig((c) => ({ ...c, intervalMinutes: Number(e.target.value) }))}
-              >
-                {INTERVAL_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="md:col-span-2">
-              <label className={labelClass}>Default prompt</label>
-              <textarea
-                className={`${inputClass} mt-1 min-h-[100px]`}
-                value={globalConfig.defaultPrompt || ""}
-                onChange={(e) => setGlobalConfig((c) => ({ ...c, defaultPrompt: e.target.value }))}
-              />
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="inline-flex items-center gap-2 text-sm text-[var(--cw-ink-muted)]">
-              <input
-                type="checkbox"
-                checked={Boolean(globalConfig.scheduleEnabled)}
-                onChange={(e) => setGlobalConfig((c) => ({ ...c, scheduleEnabled: e.target.checked }))}
-              />
-              Enable external schedule
-            </label>
-            <Btn variant="primary" size="sm" icon={FiSave} onClick={saveExternal} loading={saving}>
-              Save external
-            </Btn>
-          </div>
-          <div className="border-t border-[var(--cw-hairline)] pt-4">
-            <label className={labelClass}>Manual trigger prompt</label>
-            <textarea
-              className={`${inputClass} mt-1 min-h-[80px]`}
-              value={manualPrompt}
-              onChange={(e) => setManualPrompt(e.target.value)}
-            />
-            <Btn variant="secondary" size="sm" icon={triggeringExternal ? FiRefreshCw : FiSend} onClick={triggerExternal} disabled={triggeringExternal} className="mt-2">
-              Trigger webhook
-            </Btn>
-          </div>
-          {history.length > 0 && (
-            <div>
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">
-                Webhook history
-              </p>
-              <ul className="space-y-1 text-xs text-[var(--cw-ink-muted)]">
-                {history.slice(0, 10).map((h, i) => (
-                  <li key={i} className="flex justify-between gap-2 border-b border-[var(--cw-hairline)] py-1">
-                    <span>
-                      {formatWhen(h.at)} · {h.source} · {h.ok ? "OK" : "Fail"}
-                    </span>
-                    <span className="font-mono">{h.status || h.error || ""}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      <div className={`${surfaceCard} max-w-2xl space-y-4`}>
+        <div className="flex items-center gap-2 text-[var(--cw-neon)]">
+          <FiLink />
+          <h2 className="text-sm font-bold uppercase tracking-wide">External n8n webhook</h2>
         </div>
-      )}
-
-      {isInternal && siteConfig && (
-        <>
-          {/* Primary zone nav + always-available run controls */}
-          <div className="flex flex-wrap items-center gap-3">
-            <TabRail
-              tabs={ZONES.map((z) =>
-                z.id === "library"
-                  ? { ...z, live: hasLiveAutomation, badge: runs.length || undefined }
-                  : z
-              )}
-              value={zone}
-              onChange={setZone}
-              ariaLabel="Blog studio"
-              className="min-w-0 flex-1"
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className={labelClass}>Webhook URL</label>
+            <input
+              className={`${inputClass} mt-1`}
+              value={globalConfig.webhookUrl || ""}
+              onChange={(e) => setGlobalConfig((c) => ({ ...c, webhookUrl: e.target.value }))}
+              placeholder="https://n8n.example.com/webhook/…"
             />
-            <div className="ml-auto flex items-center gap-2">
-              {hasLiveAutomation && (
-                <Btn variant="danger" size="sm" icon={cancelling ? FiRefreshCw : FiXCircle} onClick={cancelAllLive} disabled={cancelling}>
-                  {cancelling ? "Cancelling…" : "Cancel run"}
-                </Btn>
-              )}
-              <Btn
-                variant={siteConfig.autoEnabled ? "outline" : "secondary"}
-                size="sm"
-                icon={siteConfig.autoEnabled ? FiPlay : FiPause}
-                onClick={toggleAuto}
-              >
-                Auto {siteConfig.autoEnabled ? "on" : "paused"}
-              </Btn>
-              <Btn variant="primary" size="sm" icon={FiSave} onClick={saveSiteConfig} loading={saving}>
-                Save
-              </Btn>
-            </div>
           </div>
-
-          {/* Live run docks on every zone, minimised, self-hiding — except in the
-              Library with that same run already open, where it would only be
-              pointing at what you're looking at. */}
-          <div data-guide="studio-rail">
-          <LiveRunDock
-            run={dockedRun}
-            label={isBlogResearchRun(liveRun) ? "Research" : "Draft"}
-            onCancel={() => cancelRun(liveRun?.id)}
-            onOpen={liveRun?.id ? () => selectRun(liveRun.id) : undefined}
-            openLabel="Open in Library"
-            cancelling={cancelling}
-          >
-            <RunConsole run={liveRun} config={siteConfig} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />
-          </LiveRunDock>
-          </div>
-
-          {/* ── COMPOSE ─────────────────────────────────────────────── */}
-          {zone === "compose" && (
-            <div className="space-y-4" data-guide="studio-source">
-              <div className="flex items-center justify-between gap-3">
-                <TabRail size="sm" tabs={SOURCES} value={source} onChange={setSource} ariaLabel="Content source" />
-                <span className="hidden text-xs text-[var(--cw-ink-faint)] sm:inline">
-                  {source === "research" ? "Build the project keyword library" : "Where the next draft comes from"}
-                </span>
-              </div>
-
-              {source === "topic" && (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
-                  <div className={`${surfaceCard} space-y-4`}>
-                    <div>
-                      <label className={labelClass}>Topic for this draft</label>
-                      <input
-                        className={`${inputClass} mt-1`}
-                        value={topic}
-                        onChange={(e) => setTopic(e.target.value)}
-                        placeholder="Leave blank. Decider prefers a relevant world trend, then overlap, then your keyword library"
-                      />
-                    </div>
-                    {lastResearch ? (
-                      <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 text-xs text-[var(--cw-ink-muted)]">
-                        Keyword library · {lastResearch.topicCount || lastResearch.topics?.length || "—"} topics ·{" "}
-                        {lastResearch.unique || lastResearch.universe?.length || "—"} keywords
-                        {lastResearch.creditsSpent != null ? ` · ${lastResearch.creditsSpent} credits last harvest` : ""}
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_8%,transparent)] px-3 py-2 text-xs text-[var(--cw-ink-dim)]">
-                        No Research harvest yet. Import your own keywords below, or{" "}
-                        <button
-                          type="button"
-                          className="font-semibold text-[var(--cw-neon)] hover:underline"
-                          onClick={() => setSource("research")}
-                        >
-                          run Research
-                        </button>
-                        .
-                      </div>
-                    )}
-                    <OperatorKeywordBank
-                      siteQ={siteQ}
-                      config={siteConfig}
-                      onPatch={patchSite}
-                      onMessage={setSaveMessage}
-                    />
-                    <div>
-                      <label className={labelClass}>Must-follow keywords (absolute)</label>
-                      <textarea
-                        className={`${inputClass} mt-1 min-h-[72px] font-mono text-xs`}
-                        value={siteConfig.mustFollowKeywords || ""}
-                        onChange={(e) => patchSite({ mustFollowKeywords: e.target.value })}
-                        placeholder={"primary keyword\nsecondary keyword"}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>General / seed prompt</label>
-                      <textarea
-                        className={`${inputClass} mt-1 min-h-[96px]`}
-                        value={siteConfig.seedPrompt || ""}
-                        onChange={(e) => patchSite({ seedPrompt: e.target.value })}
-                        placeholder="Standing brief for agents (brand voice, niche, what every post should cover)…"
-                      />
-                      <p className="mt-1 text-xs text-[var(--cw-ink-faint)]">
-                        Standing seeds (audience, links, brand) live in Setup → Voice & Seeds and apply automatically.
-                      </p>
-                    </div>
-                    <Btn
-                      variant="primary"
-                      size="lg"
-                      data-guide="studio-generate"
-                      icon={running ? FiRefreshCw : FiSend}
-                      onClick={startRun}
-                      disabled={
-                        running ||
-                        !selectedSite ||
-                        (!lastResearch &&
-                          !(
-                            siteConfig.useOperatorKeywords &&
-                            Array.isArray(siteConfig.operatorKeywords) &&
-                            siteConfig.operatorKeywords.length
-                          ))
-                      }
-                    >
-                      {running ? "Queueing…" : "Generate draft"}
-                    </Btn>
-                  </div>
-                  <div className="space-y-4">
-                    <PipelinePreview config={siteConfig} onConfigure={goAgents} />
-                    <div className={`${raisedCard} space-y-1`}>
-                      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">
-                        Tips
-                      </p>
-                      <p className="text-xs text-[var(--cw-ink-muted)]">
-                        Leave the topic blank and the Decider prefers a relevant world trend, then
-                        overlap (library×trend or Search Console ∩ library), then the keyword library.
-                        Type a topic to skip the Decider.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {source === "inbox" && (
-                <div className={surfaceCard}>
-                  <ContentInbox
-                    siteLink={selectedSite}
-                    highlightRunId={seedHandoffRunId}
-                    onRan={async (run) => {
-                      if (run?.id) {
-                        setLiveRun(run);
-                        selectRun(run.id);
-                      }
-                      setSaveMessage({ ok: true, text: "Run queued — following it in the Library." });
-                      await loadRuns();
-                    }}
-                  />
-                </div>
-              )}
-
-              {source === "excel" && (
-                <div className={surfaceCard}>
-                  <ExcelQueuePanel
-                    siteLink={selectedSite}
-                    siteConfig={siteConfig}
-                    onPatchSite={patchSite}
-                    onMessage={setSaveMessage}
-                    onToggleAuto={toggleAuto}
-                  />
-                </div>
-              )}
-
-              {source === "research" && (
-                <KeywordResearchPanel
-                  selectedSite={selectedSite}
-                  isWebsite={isWebsite}
-                  siteConfig={siteConfig}
-                  depth={researchDepth}
-                  market={researchMarket}
-                  onDepth={setResearchDepth}
-                  onMarket={setResearchMarket}
-                  onStart={startResearch}
-                  onConfigure={() => {
-                    setZone("setup");
-                    setSetupTab("agents");
-                  }}
-                  starting={running}
-                  running={hasLiveAutomation && isBlogResearchRun(liveRun)}
-                  result={lastResearch}
-                />
-              )}
-
-              {source !== "research" && lastResearch?.topics?.length ? (
-                <div className="space-y-3 rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5">
-                  <div className="flex flex-wrap items-end justify-between gap-2">
-                    <div>
-                      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">
-                        Last research library
-                      </p>
-                      <h3 className="mt-0.5 text-base font-bold text-[var(--cw-ink)]">
-                        {lastResearch.brief?.brandName || lastResearch.title || "Keyword library"}
-                      </h3>
-                      <p className="mt-1 text-xs text-[var(--cw-ink-muted)]">
-                        {lastResearch.topicCount || lastResearch.topics.length} topics ·{" "}
-                        {lastResearch.unique || lastResearch.universe?.length || "—"} keywords
-                        {source === "topic"
-                          ? " · pick a topic to drop it into the draft field above"
-                          : ""}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="text-xs font-semibold text-[var(--cw-neon)] hover:underline"
-                      onClick={() => setSource("research")}
-                    >
-                      Open Research →
-                    </button>
-                  </div>
-                  <KeywordResearchBoard
-                    result={lastResearch}
-                    onUseTopic={
-                      source === "topic"
-                        ? (phrase) => {
-                            setTopic(phrase);
-                            window.scrollTo({ top: 0, behavior: "smooth" });
-                          }
-                        : undefined
-                    }
-                  />
-                </div>
-              ) : null}
-            </div>
-          )}
-
-          {/* ── LIBRARY ─────────────────────────────────────────────── */}
-          {zone === "library" && (
-            <div data-guide="studio-library">
-            <RunLibrary
-              runs={runs}
-              selectedRunId={selectedRunId}
-              selectedRun={selectedRun}
-              config={siteConfig}
-              detailLoading={runDetailLoading}
-              detailError={runDetailError}
-              liveRunId={liveRunId}
-              refreshing={refreshingRuns}
-              cancelling={cancelling}
-              onSelect={selectRun}
-              onClose={closeRun}
-              onRefresh={refreshRuns}
-              onRetryDetail={() => setRunDetailNonce((n) => n + 1)}
-              onCancel={cancelRun}
-              onGoCompose={() => setZone("compose")}
+          <div>
+            <label className={labelClass}>Webhook secret</label>
+            <input
+              type="password"
+              className={`${inputClass} mt-1`}
+              value={globalConfig.webhookSecret || ""}
+              onChange={(e) => setGlobalConfig((c) => ({ ...c, webhookSecret: e.target.value }))}
             />
-            </div>
-          )}
+          </div>
+          <div>
+            <label className={labelClass}>Schedule interval</label>
+            <select
+              className={`${inputClass} mt-1`}
+              value={globalConfig.intervalMinutes || 1440}
+              onChange={(e) => setGlobalConfig((c) => ({ ...c, intervalMinutes: Number(e.target.value) }))}
+            >
+              {INTERVAL_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <label className={labelClass}>Default prompt</label>
+            <textarea
+              className={`${inputClass} mt-1 min-h-[100px]`}
+              value={globalConfig.defaultPrompt || ""}
+              onChange={(e) => setGlobalConfig((c) => ({ ...c, defaultPrompt: e.target.value }))}
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="inline-flex items-center gap-2 text-sm text-[var(--cw-ink-muted)]">
+            <input
+              type="checkbox"
+              checked={Boolean(globalConfig.scheduleEnabled)}
+              onChange={(e) => setGlobalConfig((c) => ({ ...c, scheduleEnabled: e.target.checked }))}
+            />
+            Enable external schedule
+          </label>
+          <Btn variant="primary" size="sm" icon={FiSave} onClick={saveExternal} loading={saving}>
+            Save external
+          </Btn>
+        </div>
+        <div className="border-t border-[var(--cw-hairline)] pt-4">
+          <label className={labelClass}>Manual trigger prompt</label>
+          <textarea
+            className={`${inputClass} mt-1 min-h-[80px]`}
+            value={manualPrompt}
+            onChange={(e) => setManualPrompt(e.target.value)}
+          />
+          <Btn variant="secondary" size="sm" icon={triggeringExternal ? FiRefreshCw : FiSend} onClick={triggerExternal} disabled={triggeringExternal} className="mt-2">
+            Trigger webhook
+          </Btn>
+        </div>
+        {history.length > 0 && (
+          <div>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">Webhook history</p>
+            <ul className="space-y-1 text-xs text-[var(--cw-ink-muted)]">
+              {history.slice(0, 10).map((h, i) => (
+                <li key={i} className="flex justify-between gap-2 border-b border-[var(--cw-hairline)] py-1">
+                  <span>
+                    {formatWhen(h.at)} · {h.source} · {h.ok ? "OK" : "Fail"}
+                  </span>
+                  <span className="font-mono">{h.status || h.error || ""}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  ) : null;
 
-          {/* ── SETUP ───────────────────────────────────────────────── */}
-          {zone === "setup" && (
-            <div className="space-y-4" data-guide="studio-skills">
+  let sheetContent = null;
+  if (isInternal && siteConfig && bottomTab === "brief") {
+    sheetContent = (
+      <div className="space-y-4" data-guide="studio-source">
+        {lastResearch ? (
+          <div className="rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 text-xs text-[var(--cw-ink-muted)]">
+            Keyword library · {lastResearch.topicCount || lastResearch.topics?.length || "—"} topics ·{" "}
+            {lastResearch.unique || lastResearch.universe?.length || "—"} keywords
+          </div>
+        ) : (
+          <div className="rounded-xl border border-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_8%,transparent)] px-3 py-2 text-xs text-[var(--cw-ink-dim)]">
+            No Research harvest yet.{" "}
+            <button type="button" className="font-semibold text-[var(--cw-neon)] hover:underline" onClick={() => openBottomTab("research")}>
+              Run Research
+            </button>
+          </div>
+        )}
+        <OperatorKeywordBank siteQ={siteQ} config={siteConfig} onPatch={patchSite} onMessage={setSaveMessage} />
+        <div>
+          <label className={labelClass}>Must-follow keywords (absolute)</label>
+          <textarea
+            className={`${inputClass} mt-1 min-h-[72px] font-mono text-xs`}
+            value={siteConfig.mustFollowKeywords || ""}
+            onChange={(e) => patchSite({ mustFollowKeywords: e.target.value })}
+            placeholder={"primary keyword\nsecondary keyword"}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>General / seed prompt</label>
+          <textarea
+            className={`${inputClass} mt-1 min-h-[96px]`}
+            value={siteConfig.seedPrompt || ""}
+            onChange={(e) => patchSite({ seedPrompt: e.target.value })}
+            placeholder="Standing brief for agents…"
+          />
+        </div>
+        <PipelinePreview config={siteConfig} onConfigure={goAgents} />
+        {lastResearch?.topics?.length ? (
+          <KeywordResearchBoard
+            result={lastResearch}
+            onUseTopic={(phrase) => {
+              setTopic(phrase);
+              openBottomTab(null);
+            }}
+          />
+        ) : null}
+      </div>
+    );
+  } else if (isInternal && siteConfig && bottomTab === "inbox") {
+    sheetContent = (
+      <ContentInbox
+        siteLink={selectedSite}
+        highlightRunId={seedHandoffRunId}
+        onRan={async (run) => {
+          if (run?.id) {
+            setLiveRun(run);
+            selectRun(run.id);
+          }
+          setSaveMessage({ ok: true, text: "Run queued — following it live." });
+          await loadRuns();
+          openBottomTab(null);
+        }}
+      />
+    );
+  } else if (isInternal && siteConfig && bottomTab === "excel") {
+    sheetContent = (
+      <ExcelQueuePanel
+        siteLink={selectedSite}
+        siteConfig={siteConfig}
+        onPatchSite={patchSite}
+        onMessage={setSaveMessage}
+        onToggleAuto={toggleAuto}
+      />
+    );
+  } else if (isInternal && siteConfig && bottomTab === "research") {
+    sheetContent = (
+      <KeywordResearchPanel
+        selectedSite={selectedSite}
+        isWebsite={isWebsite}
+        siteConfig={siteConfig}
+        depth={researchDepth}
+        market={researchMarket}
+        onDepth={setResearchDepth}
+        onMarket={setResearchMarket}
+        onStart={startResearch}
+        onConfigure={() => {
+          setSetupTab("agents");
+          openBottomTab("setup");
+        }}
+        starting={running}
+        running={hasLiveAutomation && isBlogResearchRun(liveRun)}
+        result={lastResearch}
+      />
+    );
+  } else if (isInternal && siteConfig && bottomTab === "library") {
+    sheetContent = (
+      <div data-guide="studio-library">
+        <RunLibrary
+          runs={runs}
+          selectedRunId={selectedRunId}
+          selectedRun={selectedRun}
+          config={siteConfig}
+          detailLoading={runDetailLoading}
+          detailError={runDetailError}
+          liveRunId={liveRunId}
+          refreshing={refreshingRuns}
+          cancelling={cancelling}
+          onSelect={selectRun}
+          onClose={closeRun}
+          onRefresh={refreshRuns}
+          onRetryDetail={() => setRunDetailNonce((n) => n + 1)}
+          onCancel={cancelRun}
+          onGoCompose={() => openBottomTab(null)}
+        />
+      </div>
+    );
+  } else if (isInternal && siteConfig && bottomTab === "setup") {
+    sheetContent = (
+    <div className="space-y-4" data-guide="studio-skills">
               <TabRail size="sm" tabs={SETUP_TABS} value={setupTab} onChange={setSetupTab} ariaLabel="Studio setup" />
 
               <div className={surfaceCard}>
@@ -1596,9 +1483,67 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                 )}
               </div>
             </div>
-          )}
-        </>
-      )}
+    );
+  }
+
+  const bottomTabs = BOTTOM_DOCK.map((t) =>
+    t.id === "library"
+      ? { ...t, live: hasLiveAutomation, badge: runs.length || undefined }
+      : t
+  );
+
+  return (
+    <div className="space-y-4">
+      {!isInternal ? (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="font-heading text-lg font-semibold text-[var(--cw-ink)]">Blog Studio</h1>
+            {engineSwitch}
+          </div>
+          {banners}
+          {externalModeUi}
+        </div>
+      ) : null}
+
+      {isInternal && siteConfig ? (
+        <StudioComposerShell
+          kind="blog"
+          projectName={selectedSite}
+          topic={topic}
+          onTopicChange={setTopic}
+          onSubmit={startRun}
+          submitting={running}
+          submitDisabled={
+            !selectedSite ||
+            (!lastResearch &&
+              !(
+                siteConfig.useOperatorKeywords &&
+                Array.isArray(siteConfig.operatorKeywords) &&
+                siteConfig.operatorKeywords.length
+              ))
+          }
+          liveRun={dockedRun}
+          liveLabel={isBlogResearchRun(liveRun) ? "Research" : "Draft"}
+          livePanel={
+            <RunConsole run={liveRun} config={siteConfig} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />
+          }
+          onCancelLive={() => cancelRun(liveRun?.id)}
+          onOpenLive={liveRun?.id ? () => selectRun(liveRun.id) : undefined}
+          cancelling={cancelling}
+          bottomTabs={bottomTabs}
+          activeBottomTab={bottomTab}
+          onBottomTabChange={openBottomTab}
+          sheetContent={sheetContent}
+          engineSwitch={engineSwitch}
+          autoEnabled={Boolean(siteConfig.autoEnabled)}
+          onToggleAuto={toggleAuto}
+          onSave={saveSiteConfig}
+          saving={saving}
+          onCancelAllLive={cancelAllLive}
+          hasLiveAutomation={hasLiveAutomation}
+          banners={banners}
+        />
+      ) : null}
 
       {isInternal && !selectedSite && (
         <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-5 text-sm text-amber-200">

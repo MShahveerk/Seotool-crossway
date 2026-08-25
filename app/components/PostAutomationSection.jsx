@@ -31,6 +31,7 @@ import StudioBrandKit from "./studioShared/StudioBrandKit";
 import TabRail from "./ui-shared/TabRail";
 import Btn from "./ui-shared/Btn";
 import LiveRunDock from "./studioShared/LiveRunDock";
+import StudioComposerShell from "./studioShared/StudioComposerShell";
 import { isLiveStatus } from "./studioShared/runFormat";
 import { POST_STUDIO_DEFAULT_PROMPTS } from "../../lib/postsStudio/defaults";
 import {
@@ -67,6 +68,13 @@ const SETUP_TABS = [
   { id: "external", label: "External", icon: FiExternalLink },
 ];
 
+const BOTTOM_DOCK = [
+  { id: "brief", label: "Brief", icon: FiEdit3 },
+  { id: "excel", label: "Queue", icon: FiGrid },
+  { id: "library", label: "Library", icon: FiList },
+  { id: "setup", label: "Setup", icon: FiSettings },
+];
+
 const surfaceCard = "rounded-2xl border border-[var(--cw-hairline)] bg-[var(--cw-surface)] p-5";
 const raisedCard = "rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] p-4";
 const helpText = "text-sm text-[var(--cw-ink-muted)]";
@@ -75,13 +83,61 @@ export default function PostAutomationSection({ selectedSite = "" }) {
   const [zone, setZone] = useState("compose");
   const [source, setSource] = useState("topic");
   const [setupTab, setSetupTab] = useState("voice");
+  const [bottomTab, setBottomTab] = useState(null);
+
+  const openBottomTab = useCallback((id) => {
+    if (!id) {
+      setBottomTab(null);
+      setZone("compose");
+      setSource("topic");
+      return;
+    }
+    setBottomTab(id);
+    if (id === "library") {
+      setZone("library");
+    setBottomTab("library");
+      return;
+    }
+    if (id === "setup") {
+      setZone("setup");
+      return;
+    }
+    if (id === "brief") {
+      setZone("compose");
+      setSource("topic");
+      return;
+    }
+    setZone("compose");
+    setSource(id);
+  }, []);
+
   useGuidePrepare((nav) => {
-    if (nav.zone) setZone(nav.zone);
-    if (nav.source) setSource(nav.source);
     if (nav.setupTab) {
       setZone("setup");
       setSetupTab(nav.setupTab);
+      setBottomTab("setup");
+      return;
     }
+    if (nav.zone === "library") {
+      setZone("library");
+    setBottomTab("library");
+      setBottomTab("library");
+      return;
+    }
+    if (nav.zone === "setup") {
+      setZone("setup");
+      setBottomTab("setup");
+      return;
+    }
+    if (nav.source && nav.source !== "topic") {
+      setZone("compose");
+      setSource(nav.source);
+      setBottomTab(nav.source);
+      return;
+    }
+    if (nav.zone) setZone(nav.zone);
+    if (nav.source) setSource(nav.source);
+    setBottomTab(null);
   });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -257,6 +313,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
     setSelectedRunDetail(null);
     setRunDetailError("");
     setZone("library");
+    setBottomTab("library");
   }, []);
 
   const closeRun = useCallback(() => {
@@ -427,40 +484,30 @@ export default function PostAutomationSection({ selectedSite = "" }) {
   }
 
   const goAgents = () => {
-    setZone("setup");
     setSetupTab("agents");
+    openBottomTab("setup");
   };
 
   // The dock is a pointer to the live run; in the Library with that run open
   // there is nothing left for it to point at.
   const dockedRun =
-    zone === "library" && selectedRunId && selectedRunId === liveRun?.id ? null : liveRun;
+    bottomTab === "library" && selectedRunId && selectedRunId === liveRun?.id ? null : liveRun;
 
-  return (
-    <div className="space-y-4">
-      {/* Header + engine switch */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-[var(--cw-hairline)] pb-4">
-        <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1 className="font-heading inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-[var(--cw-ink)]">
-            <FiZap className="h-4 w-4 text-[var(--cw-neon)]" />
-            Post Studio
-          </h1>
-          <span className="truncate font-mono text-[11px] text-[var(--cw-ink-faint)]">
-            {selectedSite || "No account selected"}
-          </span>
-        </div>
-        <TabRail
-          size="sm"
-          tabs={[
-            { id: "internal", label: "Internal Studio" },
-            { id: "external", label: "External" },
-          ]}
-          value={isInternal ? "internal" : "external"}
-          onChange={(id) => saveEngine(id)}
-          ariaLabel="Automation engine"
-        />
-      </div>
+  const engineSwitch = (
+    <TabRail
+      size="sm"
+      tabs={[
+        { id: "internal", label: "Internal" },
+        { id: "external", label: "External" },
+      ]}
+      value={isInternal ? "internal" : "external"}
+      onChange={(id) => saveEngine(id)}
+      ariaLabel="Automation engine"
+    />
+  );
 
+  const banners = (
+    <>
       {loadError && (
         <p className="rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] px-3 py-2 text-sm text-[var(--cw-danger)]">
           {loadError}
@@ -477,17 +524,16 @@ export default function PostAutomationSection({ selectedSite = "" }) {
           {String(saveMessage.text).trim()}
         </p>
       ) : null}
+    </>
+  );
 
-      {/* External-mode brand kit still available */}
-      {siteConfig && selectedSite && !isInternal ? (
+  const externalModeUi = !isInternal ? (
+    <div className="space-y-4">
+      {siteConfig && selectedSite ? (
         <div className="space-y-2">
           <p className={helpText}>
             AI Brand kit is available here even in External mode. Switch to{" "}
-            <button
-              type="button"
-              className="font-semibold text-[var(--cw-neon)] hover:underline"
-              onClick={() => saveEngine("internal")}
-            >
+            <button type="button" className="font-semibold text-[var(--cw-neon)] hover:underline" onClick={() => saveEngine("internal")}>
               Internal Studio
             </button>{" "}
             when you want image runs to apply this frame.
@@ -505,176 +551,86 @@ export default function PostAutomationSection({ selectedSite = "" }) {
           />
         </div>
       ) : null}
+      <div className={`${surfaceCard} max-w-2xl space-y-3`}>
+        <div className="flex items-center gap-2 text-[var(--cw-neon)]">
+          <FiInfo />
+          <h2 className="text-sm font-bold uppercase tracking-wide">External mode active</h2>
+        </div>
+        <p className={helpText}>
+          Inbound API, Meta pull, and email ingest remain the generators. Switch to{" "}
+          <strong className="text-[var(--cw-ink)]">Internal Studio</strong> above to schedule
+          Strategist + Copywriter + image runs that create pending Approvals.
+        </p>
+      </div>
+    </div>
+  ) : null;
 
-      {/* External engine: the ingest paths that generate posts instead. */}
-      {!isInternal && (
-        <div className={`${surfaceCard} max-w-2xl space-y-3`}>
-          <div className="flex items-center gap-2 text-[var(--cw-neon)]">
-            <FiInfo />
-            <h2 className="text-sm font-bold uppercase tracking-wide">External mode active</h2>
-          </div>
-          <p className={helpText}>
-            Inbound API, Meta pull, and email ingest remain the generators. Switch to{" "}
-            <strong className="text-[var(--cw-ink)]">Internal Studio</strong> above to schedule
-            Strategist + Copywriter + image runs that create pending Approvals.
+  let sheetContent = null;
+  if (isInternal && siteConfig && bottomTab === "brief") {
+    sheetContent = (
+      <div className="space-y-4" data-guide="studio-brief">
+        <div>
+          <label className={labelClass}>Hooks / keywords (rotating)</label>
+          <textarea
+            className={`${inputClass} mt-1 min-h-[72px] font-mono text-xs`}
+            value={siteConfig.hooksOrKeywords || ""}
+            onChange={(e) => patchSite({ hooksOrKeywords: e.target.value })}
+            placeholder={"hook or keyword one\nhook or keyword two"}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>General / seed prompt</label>
+          <textarea
+            className={`${inputClass} mt-1 min-h-[96px]`}
+            value={siteConfig.seedPrompt || ""}
+            onChange={(e) => patchSite({ seedPrompt: e.target.value })}
+            placeholder="Standing brief: brand voice, audience, what every post should reinforce…"
+          />
+        </div>
+        <PipelinePreview config={siteConfig} onConfigure={goAgents} />
+        <div className={`${raisedCard} space-y-1`}>
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">Tips</p>
+          <p className="text-xs text-[var(--cw-ink-muted)]">
+            Leave the topic blank to let the Strategist pick from your hooks. The image is required —
+            a run without a successful feed creative fails rather than shipping a caption on its own.
           </p>
         </div>
-      )}
-
-      {isInternal && siteConfig && (
-        <>
-          {/* Primary zone nav + always-available run controls */}
-          <div className="flex flex-wrap items-center gap-3">
-            <TabRail
-              tabs={ZONES.map((z) =>
-                z.id === "library"
-                  ? { ...z, live: hasLiveAutomation, badge: runs.length || undefined }
-                  : z
-              )}
-              value={zone}
-              onChange={setZone}
-              ariaLabel="Post studio"
-              className="min-w-0 flex-1"
-            />
-            <div className="ml-auto flex items-center gap-2">
-              {hasLiveAutomation && (
-                <Btn variant="danger" size="sm" icon={cancelling ? FiRefreshCw : FiXCircle} onClick={cancelAllLive} disabled={cancelling}>
-                  {cancelling ? "Cancelling…" : "Cancel run"}
-                </Btn>
-              )}
-              <Btn
-                variant={siteConfig.autoEnabled ? "outline" : "secondary"}
-                size="sm"
-                icon={siteConfig.autoEnabled ? FiPlay : FiPause}
-                onClick={toggleAuto}
-              >
-                Auto {siteConfig.autoEnabled ? "on" : "paused"}
-              </Btn>
-              <Btn variant="primary" size="sm" icon={FiSave} onClick={saveSiteConfig} loading={saving}>
-                Save
-              </Btn>
-            </div>
-          </div>
-
-          {/* Live run docks on every zone, minimised, self-hiding — except in the
-              Library with that same run already open, where it would only be
-              pointing at what you're looking at. */}
-          <div data-guide="studio-rail">
-          <LiveRunDock
-            run={dockedRun}
-            label="Post"
-            onCancel={() => cancelRun(liveRun?.id)}
-            onOpen={liveRun?.id ? () => selectRun(liveRun.id) : undefined}
-            openLabel="Open in Library"
-            cancelling={cancelling}
-          >
-            <RunConsole run={liveRun} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />
-          </LiveRunDock>
-          </div>
-
-          {/* ── COMPOSE ─────────────────────────────────────────────── */}
-          {zone === "compose" && (
-            <div className="space-y-4" data-guide="studio-brief">
-              <div className="flex items-center justify-between gap-3">
-                <TabRail size="sm" tabs={SOURCES} value={source} onChange={setSource} ariaLabel="Content source" />
-                <span className="hidden text-xs text-[var(--cw-ink-faint)] sm:inline">
-                  Where the next post comes from
-                </span>
-              </div>
-
-              {source === "topic" && (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
-                  <div className={`${surfaceCard} space-y-4`}>
-                    <div>
-                      <label className={labelClass}>Topic / angle for this post</label>
-                      <input
-                        className={`${inputClass} mt-1`}
-                        value={topic}
-                        onChange={(e) => setTopic(e.target.value)}
-                        placeholder="e.g. Behind the scenes: packing a cross-border shipment"
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Hooks / keywords (rotating)</label>
-                      <textarea
-                        className={`${inputClass} mt-1 min-h-[72px] font-mono text-xs`}
-                        value={siteConfig.hooksOrKeywords || ""}
-                        onChange={(e) => patchSite({ hooksOrKeywords: e.target.value })}
-                        placeholder={"hook or keyword one\nhook or keyword two"}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>General / seed prompt</label>
-                      <textarea
-                        className={`${inputClass} mt-1 min-h-[96px]`}
-                        value={siteConfig.seedPrompt || ""}
-                        onChange={(e) => patchSite({ seedPrompt: e.target.value })}
-                        placeholder="Standing brief: brand voice, audience, what every post should reinforce…"
-                      />
-                      <p className="mt-1 text-xs text-[var(--cw-ink-faint)]">
-                        Standing seeds (tone, platform, hashtags, CTA) live in Setup → Voice & Seeds and apply
-                        automatically.
-                      </p>
-                    </div>
-                    <Btn variant="primary" size="lg" icon={running ? FiRefreshCw : FiSend} onClick={startRun} disabled={running || !selectedSite} data-guide="studio-generate">
-                      {running ? "Queueing…" : "Generate post"}
-                    </Btn>
-                  </div>
-                  <div className="space-y-4">
-                    <PipelinePreview config={siteConfig} onConfigure={goAgents} />
-                    <div className={`${raisedCard} space-y-1`}>
-                      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--cw-ink-faint)]">
-                        Tips
-                      </p>
-                      <p className="text-xs text-[var(--cw-ink-muted)]">
-                        Leave the topic blank to let the Strategist pick from your hooks. The image is
-                        required — a run without a successful feed creative fails rather than shipping a
-                        caption on its own.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {source === "excel" && (
-                <div className={surfaceCard}>
-                  <ExcelQueuePanel
-                    siteLink={selectedSite}
-                    siteConfig={siteConfig}
-                    onPatchSite={patchSite}
-                    onMessage={setSaveMessage}
-                    onToggleAuto={toggleAuto}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── LIBRARY ─────────────────────────────────────────────── */}
-          {zone === "library" && (
-            <div data-guide="studio-library">
-            <RunLibrary
-              runs={runs}
-              selectedRunId={selectedRunId}
-              selectedRun={selectedRun}
-              detailLoading={runDetailLoading}
-              detailError={runDetailError}
-              liveRunId={liveRunId}
-              refreshing={refreshingRuns}
-              cancelling={cancelling}
-              onSelect={selectRun}
-              onClose={closeRun}
-              onRefresh={refreshRuns}
-              onRetryDetail={() => setRunDetailNonce((n) => n + 1)}
-              onCancel={cancelRun}
-              onGoCompose={() => setZone("compose")}
-            />
-            </div>
-          )}
-
-          {/* ── SETUP ───────────────────────────────────────────────── */}
-          {zone === "setup" && (
-            <div className="space-y-4">
+      </div>
+    );
+  } else if (isInternal && siteConfig && bottomTab === "excel") {
+    sheetContent = (
+      <ExcelQueuePanel
+        siteLink={selectedSite}
+        siteConfig={siteConfig}
+        onPatchSite={patchSite}
+        onMessage={setSaveMessage}
+        onToggleAuto={toggleAuto}
+      />
+    );
+  } else if (isInternal && siteConfig && bottomTab === "library") {
+    sheetContent = (
+      <div data-guide="studio-library">
+        <RunLibrary
+          runs={runs}
+          selectedRunId={selectedRunId}
+          selectedRun={selectedRun}
+          detailLoading={runDetailLoading}
+          detailError={runDetailError}
+          liveRunId={liveRunId}
+          refreshing={refreshingRuns}
+          cancelling={cancelling}
+          onSelect={selectRun}
+          onClose={closeRun}
+          onRefresh={refreshRuns}
+          onRetryDetail={() => setRunDetailNonce((n) => n + 1)}
+          onCancel={cancelRun}
+          onGoCompose={() => openBottomTab(null)}
+        />
+      </div>
+    );
+  } else if (isInternal && siteConfig && bottomTab === "setup") {
+    sheetContent = (
+    <div className="space-y-4">
               <TabRail size="sm" tabs={SETUP_TABS} value={setupTab} onChange={setSetupTab} ariaLabel="Studio setup" />
 
               <div className={surfaceCard}>
@@ -1032,13 +988,61 @@ export default function PostAutomationSection({ selectedSite = "" }) {
                 )}
               </div>
             </div>
-          )}
-        </>
-      )}
+    );
+  }
+
+  const bottomTabs = BOTTOM_DOCK.map((t) =>
+    t.id === "library"
+      ? { ...t, live: hasLiveAutomation, badge: runs.length || undefined }
+      : t
+  );
+
+  return (
+    <div className="space-y-4">
+      {!isInternal ? (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="font-heading text-lg font-semibold text-[var(--cw-ink)]">Post Studio</h1>
+            {engineSwitch}
+          </div>
+          {banners}
+          {externalModeUi}
+        </div>
+      ) : null}
+
+      {isInternal && siteConfig ? (
+        <StudioComposerShell
+          kind="post"
+          projectName={selectedSite}
+          topic={topic}
+          onTopicChange={setTopic}
+          onSubmit={startRun}
+          submitting={running}
+          submitDisabled={!selectedSite}
+          liveRun={dockedRun}
+          liveLabel="Post"
+          livePanel={<RunConsole run={liveRun} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />}
+          onCancelLive={() => cancelRun(liveRun?.id)}
+          onOpenLive={liveRun?.id ? () => selectRun(liveRun.id) : undefined}
+          cancelling={cancelling}
+          bottomTabs={bottomTabs}
+          activeBottomTab={bottomTab}
+          onBottomTabChange={openBottomTab}
+          sheetContent={sheetContent}
+          engineSwitch={engineSwitch}
+          autoEnabled={Boolean(siteConfig.autoEnabled)}
+          onToggleAuto={toggleAuto}
+          onSave={saveSiteConfig}
+          saving={saving}
+          onCancelAllLive={cancelAllLive}
+          hasLiveAutomation={hasLiveAutomation}
+          banners={banners}
+        />
+      ) : null}
 
       {isInternal && !selectedSite && (
         <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-5 text-sm text-amber-200">
-          Select a project in the sidebar to configure Internal Studio for that project.
+          Select a project in the sidebar to configure Internal Studio for that account.
         </div>
       )}
     </div>
