@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { FiArrowUp, FiRefreshCw } from "react-icons/fi";
+import { FiArrowUp, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { cn } from "@/lib/utils";
+import { CHAT_PERSONA } from "@/lib/blogStudio/chatPersona";
+
+const COUNTDOWN_SECONDS = 8;
 
 function projectDisplayName(site) {
   const raw = String(site || "").trim();
@@ -19,11 +22,9 @@ function projectDisplayName(site) {
   return raw.length > 42 ? `${raw.slice(0, 40)}…` : raw;
 }
 
-const COUNTDOWN_SECONDS = 8;
-
 function TypingDots() {
   return (
-    <span className="studio-typing" aria-label="Topic Decider is thinking">
+    <span className="studio-typing" aria-label={`${CHAT_PERSONA} is thinking`}>
       <span />
       <span />
       <span />
@@ -61,6 +62,20 @@ function CountdownRing({ seconds, total = COUNTDOWN_SECONDS }) {
   );
 }
 
+function openApprovals(href) {
+  if (!href) return;
+  try {
+    const url = new URL(href, window.location.origin);
+    const blogId = url.searchParams.get("blog");
+    if (blogId) sessionStorage.setItem("cw:openBlogId", blogId);
+  } catch {
+    /* ignore */
+  }
+  window.dispatchEvent(
+    new CustomEvent("navigate-section", { detail: { section: "my-blog-approvals" } })
+  );
+}
+
 export default function DeciderChatStage({
   projectName = "",
   messages = [],
@@ -75,11 +90,15 @@ export default function DeciderChatStage({
   onHold,
   liveRunning = false,
   disabled = false,
+  threads = [],
+  activeThreadId = "",
+  onSelectThread,
+  onNewThread,
 }) {
   const listRef = useRef(null);
   const inputRef = useRef(null);
   const displayName = useMemo(() => projectDisplayName(projectName), [projectName]);
-  const showHero = messages.length <= 1 && !proposal;
+  const showHero = messages.filter((m) => m.role === "user").length === 0 && !proposal && !liveRunning;
 
   useEffect(() => {
     const el = listRef.current;
@@ -92,7 +111,7 @@ export default function DeciderChatStage({
       const id = requestAnimationFrame(() => inputRef.current?.focus());
       return () => cancelAnimationFrame(id);
     }
-  }, [projectName, liveRunning, busy]);
+  }, [projectName, liveRunning, busy, activeThreadId]);
 
   const send = () => {
     const text = String(input || "").trim();
@@ -102,48 +121,78 @@ export default function DeciderChatStage({
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-1 flex-col px-1">
+      <div className="flex shrink-0 items-center gap-2 overflow-x-auto pb-2 pt-1 scrollbar-none">
+        <button type="button" className="studio-thread-new" onClick={onNewThread} disabled={busy}>
+          <FiPlus className="h-3.5 w-3.5" />
+          New chat
+        </button>
+        {threads.map((t) => {
+          const active = t.id === activeThreadId;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onSelectThread?.(t.id)}
+              className={cn("studio-thread-pill", active && "is-active")}
+              title={t.title}
+            >
+              {t.title || "New brief"}
+            </button>
+          );
+        })}
+      </div>
+
       {showHero ? (
-        <div className="shrink-0 px-2 pb-4 pt-4 text-center sm:pt-8">
+        <div className="shrink-0 px-2 pb-3 pt-3 text-center sm:pt-6">
           <h2 className="font-heading mx-auto max-w-xl text-[1.55rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[var(--cw-ink)] sm:text-[1.9rem]">
-            What should we write for{" "}
+            What should{" "}
             <span className="bg-gradient-to-r from-[var(--cw-neon-soft)] via-[var(--cw-info)] to-[var(--cw-neon)] bg-clip-text text-transparent">
               {displayName}
             </span>{" "}
-            today?
+            publish?
           </h2>
           <p className="mx-auto mt-3 max-w-md text-[12px] leading-relaxed text-[var(--cw-ink-faint)]">
-            Brief the Topic Decider. It already has this project’s keyword research and recent in-domain trends.
-            When the idea is right, a countdown starts the studio.
+            {CHAT_PERSONA} already knows the site. Talk like you would to an editor — “suggest topics”, “yes”, or name the cut you want.
           </p>
         </div>
-      ) : (
-        <p className="shrink-0 px-2 pb-2 pt-1 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--cw-ink-faint)]">
-          Topic Decider
-        </p>
-      )}
+      ) : null}
 
       <div
         ref={listRef}
         className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-1 py-2"
       >
-        {messages.map((m, i) => (
+        {messages.map((m) => (
           <div
-            key={`${m.role}-${i}`}
+            key={m.id || `${m.role}-${m.at}`}
             className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}
           >
-            <div
-              className={cn(
-                "max-w-[min(100%,36rem)] px-4 py-3 text-[14px] leading-relaxed",
-                m.role === "user" ? "studio-chat-user" : "studio-chat-assistant"
-              )}
-            >
-              {m.role === "assistant" ? (
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--cw-neon)]">
-                  Topic Decider
-                </p>
-              ) : null}
-              <p className="whitespace-pre-wrap text-[var(--cw-ink)]">{m.content}</p>
-            </div>
+            {m.role === "card" ? (
+              <div className="studio-chat-card w-full max-w-[min(100%,36rem)] px-4 py-3">
+                <p className="mb-1.5 text-[12px] font-medium text-[var(--cw-neon)]">{CHAT_PERSONA}</p>
+                <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[var(--cw-ink)]">{m.content}</p>
+                {m.card?.href ? (
+                  <button
+                    type="button"
+                    className="studio-proposal-go mt-3"
+                    onClick={() => openApprovals(m.card.href)}
+                  >
+                    {m.card.hrefLabel || "Open in Blog Approvals"}
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <div
+                className={cn(
+                  "max-w-[min(100%,36rem)] px-4 py-3 text-[14px] leading-relaxed",
+                  m.role === "user" ? "studio-chat-user" : "studio-chat-assistant"
+                )}
+              >
+                {m.role === "assistant" ? (
+                  <p className="mb-1 text-[12px] font-medium text-[var(--cw-neon)]">{CHAT_PERSONA}</p>
+                ) : null}
+                <p className="whitespace-pre-wrap text-[var(--cw-ink)]">{m.content}</p>
+              </div>
+            )}
           </div>
         ))}
 
@@ -151,7 +200,7 @@ export default function DeciderChatStage({
           <div className="flex justify-start">
             <div className="studio-chat-assistant flex items-center gap-3 px-4 py-3">
               <TypingDots />
-              <span className="text-[12px] text-[var(--cw-ink-muted)]">Reading the brief…</span>
+              <span className="text-[12px] text-[var(--cw-ink-muted)]">{CHAT_PERSONA} is thinking…</span>
             </div>
           </div>
         ) : null}
@@ -172,25 +221,18 @@ export default function DeciderChatStage({
                 </span>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--cw-neon)]">
-                  Ready to write
-                </p>
+                <p className="text-[11px] font-medium text-[var(--cw-neon)]">Ready when you are</p>
                 <p className="font-heading mt-1 text-[1.05rem] font-semibold leading-snug tracking-tight text-[var(--cw-ink)]">
                   {proposal.topic}
                 </p>
                 {proposal.angle ? (
                   <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--cw-ink-muted)]">{proposal.angle}</p>
                 ) : null}
-                {proposal.seedQuery ? (
-                  <p className="mt-2 font-mono text-[11px] text-[var(--cw-ink-faint)]">
-                    Binds to harvest · {proposal.seedQuery}
-                  </p>
-                ) : null}
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <button type="button" className="studio-proposal-go" onClick={onStartNow}>
-                Start now
+                Start writing
               </button>
               <button type="button" className="studio-proposal-hold" onClick={onHold}>
                 Keep talking
@@ -233,8 +275,8 @@ export default function DeciderChatStage({
             }}
             placeholder={
               liveRunning
-                ? "Draft is running — cancel it to brief a new topic."
-                : `Tell the Decider what ${displayName} should publish…`
+                ? `${CHAT_PERSONA} is writing — you’ll get the Approvals link here.`
+                : `Talk to ${CHAT_PERSONA} about ${displayName}…`
             }
             disabled={disabled || liveRunning}
             className={cn(
@@ -243,7 +285,7 @@ export default function DeciderChatStage({
               "placeholder:text-[var(--cw-ink-faint)]",
               "outline-none focus:outline-none disabled:opacity-60"
             )}
-            aria-label="Message the Topic Decider"
+            aria-label={`Message ${CHAT_PERSONA}`}
           />
           <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 px-3 pb-3">
             <p className="px-2 text-[11px] text-[var(--cw-ink-faint)]">
@@ -252,7 +294,7 @@ export default function DeciderChatStage({
             <button
               type="submit"
               disabled={busy || disabled || liveRunning || !String(input || "").trim()}
-              title="Send to Topic Decider"
+              title={`Send to ${CHAT_PERSONA}`}
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-full",
                 "bg-[var(--cw-ink)] text-[var(--cw-canvas)]",

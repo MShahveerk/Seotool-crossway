@@ -22,14 +22,30 @@ export async function POST(req) {
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
 
     const body = await req.json().catch(() => ({}));
+    const overrides =
+      body.overrides && typeof body.overrides === "object" ? { ...body.overrides } : {};
+    if (body.chatThreadId) overrides.chatThreadId = String(body.chatThreadId);
+
     const run = await enqueueStudioRun({
       siteLink,
       topic: body.topic || "",
       trigger: "manual",
       triggeredById: session.user.id,
       generateImage: body.generateImage !== false,
-      overrides: body.overrides || null,
+      overrides: Object.keys(overrides).length ? overrides : null,
     });
+
+    if (body.chatThreadId && run?.id) {
+      try {
+        const { patchDeciderThread } = await import("@/lib/blogStudio/deciderThreads.js");
+        await patchDeciderThread(siteLink, body.chatThreadId, {
+          runId: run.id,
+          status: "running",
+        });
+      } catch {
+        /* chat attach is best-effort */
+      }
+    }
 
     return Response.json({ run }, { status: 202 });
   } catch (error) {

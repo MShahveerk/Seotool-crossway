@@ -82,6 +82,10 @@ export default function StudioComposerShell({
   chatCountdown = null,
   onChatStartNow,
   onChatHold,
+  chatThreads = [],
+  chatThreadId = "",
+  onChatSelectThread,
+  onChatNewThread,
 }) {
   const textareaRef = useRef(null);
   const displayName = useMemo(() => projectDisplayName(projectName), [projectName]);
@@ -242,6 +246,10 @@ export default function StudioComposerShell({
             onHold={onChatHold}
             liveRunning={Boolean(live)}
             disabled={submitDisabled}
+            threads={chatThreads}
+            activeThreadId={chatThreadId}
+            onSelectThread={onChatSelectThread}
+            onNewThread={onChatNewThread}
           />
         ) : null}
 

@@ -178,6 +178,8 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   const [chatError, setChatError] = useState("");
   const [chatProposal, setChatProposal] = useState(null);
   const [chatCountdown, setChatCountdown] = useState(null);
+  const [chatThreads, setChatThreads] = useState([]);
+  const [chatThreadId, setChatThreadId] = useState("");
   const [running, setRunning] = useState(false);
   const [runs, setRuns] = useState([]);
   // The run in flight and the run you're reading are separate things: opening an
@@ -337,7 +339,48 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     setChatError("");
     setChatProposal(null);
     setChatCountdown(null);
+    setChatThreads([]);
+    setChatThreadId("");
   }, [selectedSite]);
+
+  const applyChatPayload = useCallback((data) => {
+    if (!data) return;
+    if (Array.isArray(data.threads)) setChatThreads(data.threads);
+    if (data.thread) {
+      setChatThreadId(data.thread.id);
+      setChatMessages(Array.isArray(data.thread.messages) ? data.thread.messages : []);
+      setChatProposal(data.thread.proposal && data.thread.proposal.ready ? data.thread.proposal : null);
+    }
+  }, []);
+
+  const chatFinishedRef = useRef(new Set());
+  useEffect(() => {
+    if (!chatEnabled || !siteQ || !chatThreadId || !liveRun?.id) return;
+    if (isBlogResearchRun(liveRun)) return;
+    if (liveRun.status !== "succeeded" && liveRun.status !== "failed") return;
+    if (chatFinishedRef.current.has(liveRun.id)) return;
+    const meta = chatThreads.find((t) => t.id === chatThreadId);
+    if (meta?.runId && meta.runId !== liveRun.id) return;
+    if (!meta?.runId && meta?.status !== "running" && meta?.status !== "revising") return;
+    chatFinishedRef.current.add(liveRun.id);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/admin/blog-automation/site/decider-chat${siteQ}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "finish", threadId: chatThreadId, runId: liveRun.id }),
+        });
+        const data = await res.json();
+        if (!cancelled && res.ok) applyChatPayload(data);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [chatEnabled, siteQ, chatThreadId, liveRun, chatThreads, applyChatPayload]);
 
   useEffect(() => {
     if (!selectedSite || lastResearch) return;
@@ -372,17 +415,25 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
       setChatBusy(true);
       setChatError("");
       try {
-        const res = await fetch(`/api/admin/blog-automation/site/decider-chat${siteQ}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: [] }),
-        });
+        const res = await fetch(`/api/admin/blog-automation/site/decider-chat${siteQ}`);
         const data = await res.json();
         if (cancelled) return;
-        if (!res.ok) throw new Error(data.error || "Topic Decider could not greet.");
-        setChatMessages([{ role: "assistant", content: data.reply }]);
+        if (!res.ok) throw new Error(data.error || "Could not load chats.");
+        if (data.thread) {
+          applyChatPayload(data);
+          return;
+        }
+        const created = await fetch(`/api/admin/blog-automation/site/decider-chat${siteQ}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "new" }),
+        });
+        const made = await created.json();
+        if (cancelled) return;
+        if (!created.ok) throw new Error(made.error || "Could not start a chat.");
+        applyChatPayload(made);
       } catch (err) {
-        if (!cancelled) setChatError(err.message || "Topic Decider is unavailable.");
+        if (!cancelled) setChatError(err.message || "Chat is unavailable.");
       } finally {
         if (!cancelled) setChatBusy(false);
       }
@@ -390,7 +441,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     return () => {
       cancelled = true;
     };
-  }, [selectedSite, chatEnabled, siteQ]);
+  }, [selectedSite, chatEnabled, siteQ, applyChatPayload]);
 
   // Keep the library list itself moving while anything is live, so its cards
   // report progress instead of going stale until someone hits Refresh.
@@ -554,6 +605,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
         body: JSON.stringify({
           topic: nextTopic,
           generateImage: true,
+          chatThreadId: (overrides && overrides.chatThreadId) || chatThreadId || undefined,
           ...(overrides && typeof overrides === "object" ? { overrides } : {}),
         }),
       });
@@ -561,6 +613,9 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
       if (!res.ok) throw new Error(data.error || "Failed to start run.");
       if (data.run) {
         setLiveRun(data.run);
+        loadRuns();
+        setSaveMessage({ ok: true, text: "Writing now — watch the chip in the composer." });
+        return data.run;
       }
       setSaveMessage({ ok: true, text: "Run queued — watch the chip in the composer." });
       loadRuns();
@@ -581,12 +636,14 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     launchingRef.current = true;
     try {
       const transcript = chatMessages
-        .map((m) => `${m.role === "user" ? "Operator" : "Decider"}: ${m.content}`)
+        .filter((m) => m.role === "user" || m.role === "assistant")
+        .map((m) => `${m.role === "user" ? "You" : "Compass"}: ${m.content}`)
         .join("\n");
       const standing = String(siteConfig?.seedPrompt || "").trim();
-      const ok = await startRun({
+      const run = await startRun({
         topic: p.topic,
         overrides: {
+          chatThreadId,
           deciderSeedQuery: p.seedQuery || "",
           recommendedAngle: p.angle || "",
           seedPrompt: [standing, transcript ? `Topic briefing:\n${transcript}` : "", p.why ? `Why this title: ${p.why}` : ""]
@@ -597,14 +654,23 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
       });
       setChatProposal(null);
       setChatCountdown(null);
-      if (!ok) return;
-      setChatMessages((rows) => [
-        ...rows,
-        {
-          role: "assistant",
-          content: `Starting the studio on “${p.topic}”. The pipeline stays in the chip above — this chat stays put.`,
-        },
-      ]);
+      if (!run || !chatThreadId) return;
+      try {
+        const res = await fetch(`/api/admin/blog-automation/site/decider-chat${siteQ}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "attach-run",
+            threadId: chatThreadId,
+            runId: run.id || undefined,
+            note: `On it — writing “${p.topic}”. Stay here; I’ll drop the approvals link when it lands.`,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) applyChatPayload(data);
+      } catch {
+        /* local fallback */
+      }
     } finally {
       launchingRef.current = false;
     }
@@ -612,29 +678,76 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
 
   const sendChat = async (text) => {
     const content = String(text || "").trim();
-    if (!content || chatBusy || running) return;
+    if (!content || chatBusy || !chatThreadId) return;
     setChatCountdown(null);
     setChatProposal(null);
     setChatError("");
-    const next = [...chatMessages, { role: "user", content }];
-    setChatMessages(next);
+    setChatMessages((rows) => [...rows, { role: "user", content, at: new Date().toISOString() }]);
     setChatInput("");
     setChatBusy(true);
     try {
       const res = await fetch(`/api/admin/blog-automation/site/decider-chat${siteQ}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({ action: "message", threadId: chatThreadId, text: content }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Topic Decider did not reply.");
-      setChatMessages([...next, { role: "assistant", content: data.reply }]);
-      if (data.ready && data.topic) {
-        setChatProposal(data);
+      if (!res.ok) throw new Error(data.error || "Compass did not reply.");
+      applyChatPayload(data);
+      if (data.turn?.ready && data.turn?.topic) {
+        setChatProposal(data.turn);
         setChatCountdown(8);
       }
+      if (data.turn?.revisionRunId) {
+        setLiveRun({ id: data.turn.revisionRunId, status: "queued" });
+        loadRuns();
+      }
     } catch (err) {
-      setChatError(err.message || "Topic Decider did not reply.");
+      setChatError(err.message || "Compass did not reply.");
+    } finally {
+      setChatBusy(false);
+    }
+  };
+
+  const startNewChat = async () => {
+    if (chatBusy) return;
+    setChatBusy(true);
+    setChatCountdown(null);
+    setChatError("");
+    try {
+      const res = await fetch(`/api/admin/blog-automation/site/decider-chat${siteQ}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "new" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not start a new chat.");
+      applyChatPayload(data);
+      setChatInput("");
+    } catch (err) {
+      setChatError(err.message);
+    } finally {
+      setChatBusy(false);
+    }
+  };
+
+  const selectChat = async (id) => {
+    if (!id || id === chatThreadId || chatBusy) return;
+    setChatBusy(true);
+    setChatCountdown(null);
+    setChatError("");
+    try {
+      const res = await fetch(`/api/admin/blog-automation/site/decider-chat${siteQ}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "select", threadId: id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not open that chat.");
+      applyChatPayload(data);
+      setChatInput("");
+    } catch (err) {
+      setChatError(err.message);
     } finally {
       setChatBusy(false);
     }
@@ -643,13 +756,6 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   const holdChatCountdown = () => {
     setChatCountdown(null);
     setChatProposal(null);
-    setChatMessages((rows) => [
-      ...rows,
-      {
-        role: "assistant",
-        content: "Holding. Tell me what to change and I’ll reshape the idea.",
-      },
-    ]);
   };
 
   const chatProposalRef = useRef(chatProposal);
@@ -1678,6 +1784,10 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
           chatCountdown={chatCountdown}
           onChatStartNow={() => void startDraftFromChat()}
           onChatHold={holdChatCountdown}
+          chatThreads={chatThreads}
+          chatThreadId={chatThreadId}
+          onChatSelectThread={selectChat}
+          onChatNewThread={startNewChat}
         />
       ) : null}
 

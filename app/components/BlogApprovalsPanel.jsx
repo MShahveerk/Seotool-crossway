@@ -158,6 +158,56 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     load();
   }, [load]);
 
+  const blogHandoffDone = useRef(false);
+  const handoffIdRef = useRef("");
+  useEffect(() => {
+    if (loading || blogHandoffDone.current) return undefined;
+    let id = handoffIdRef.current;
+    if (!id) {
+      try {
+        id = sessionStorage.getItem("cw:openBlogId") || "";
+        if (id) sessionStorage.removeItem("cw:openBlogId");
+      } catch {
+        id = "";
+      }
+      if (!id && typeof window !== "undefined") {
+        id = new URLSearchParams(window.location.search).get("blog") || "";
+      }
+      handoffIdRef.current = id;
+    }
+    if (!id) {
+      blogHandoffDone.current = true;
+      return undefined;
+    }
+    const hit = blogs.find((b) => b.id === id);
+    if (hit) {
+      blogHandoffDone.current = true;
+      openBlog(hit);
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/admin/blogs/${encodeURIComponent(id)}`);
+        const data = await res.json();
+        if (cancelled) return;
+        if (res.ok && data.blog) {
+          blogHandoffDone.current = true;
+          openBlog(data.blog);
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+      if (!cancelled) blogHandoffDone.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // one-shot deep link from Compass / URL
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, blogs]);
+
   const activeBlog = useMemo(() => {
     if (!activeId) return null;
     return blogs.find((b) => b.id === activeId) || activeSnapshot || null;
