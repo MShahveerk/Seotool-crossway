@@ -17,7 +17,6 @@ function parseOpts(body) {
     keyword = "",
     siteUrl = "",
     location = "",
-    originCountry = "",
     device = "desktop",
     geo = "us",
     rankers = 10,
@@ -30,7 +29,6 @@ function parseOpts(body) {
     refresh: Boolean(refresh),
     opts: {
       location,
-      originCountry,
       device: device === "mobile" ? "mobile" : "desktop",
       geo: ALLOWED_GEO.has(String(geo).toLowerCase()) ? String(geo).toLowerCase() : "us",
       rankers: Math.min(30, Math.max(3, Number(rankers) || 10)),

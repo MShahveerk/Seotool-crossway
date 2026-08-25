@@ -632,11 +632,11 @@ export const chapters = [
     how: "Sidebar: Toolkit, Link Opportunities. Global.",
     needs: "A target page or domain.",
     paragraphs: [
-      "Each prospect has a domain, overlap, and a reason it is on the list. Link origin keeps only linking sites from one country. Export when you are ready to outreach.",
+      "Each prospect has a domain, overlap, and a reason it is on the list. Export when you are ready to outreach.",
     ],
     clusters: [
       cluster("On the page", [
-        item("Target", "Keyword, SERP location, and optional link origin country."),
+        item("Target", "Keyword and SERP location."),
         item("Find", "Prospects from related ranks or similar links."),
         item("Prospects", "Domain, overlap, reason. Export the list."),
       ]),
