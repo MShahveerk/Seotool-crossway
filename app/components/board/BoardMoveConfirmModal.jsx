@@ -42,7 +42,11 @@ export default function BoardMoveConfirmModal({
         <header className="cw-board-modal__head">
           <div className="min-w-0">
             <p className="cw-board-modal__eyebrow">
-              {effect.willPublishNow ? "Live publish" : "Confirm move"}
+              {effect.willPublishNow
+                ? "Live publish"
+                : effect.willUnpublishNow
+                  ? "Take down"
+                  : "Confirm move"}
             </p>
             <h2 id="cw-board-confirm-title" className="cw-board-modal__title">
               {effect.title}
@@ -79,6 +83,11 @@ export default function BoardMoveConfirmModal({
               Goes live now. Schedule is ignored.
             </p>
           ) : null}
+          {effect.willUnpublishNow ? (
+            <p className="cw-board-confirm__badge cw-board-confirm__badge--danger">
+              Deletes the live Meta post.
+            </p>
+          ) : null}
           {effect.willNotify ? (
             <p className="cw-board-confirm__badge cw-board-confirm__badge--warn">
               Approval emails will be sent
@@ -96,7 +105,11 @@ export default function BoardMoveConfirmModal({
 
         <footer className="cw-board-modal__foot">
           <p className="cw-board-modal__hint">
-            {tone === "danger" ? "Esc cancel · click the button to publish" : "Esc cancel · Enter confirm"}
+            {tone === "danger"
+              ? effect.willUnpublishNow
+                ? "Esc cancel · click the button to take it down"
+                : "Esc cancel · click the button to publish"
+              : "Esc cancel · Enter confirm"}
           </p>
           <div className="cw-board-confirm__actions">
             <button
@@ -113,7 +126,13 @@ export default function BoardMoveConfirmModal({
               onClick={onConfirm}
               disabled={busy}
             >
-              {busy ? (effect.willPublishNow ? "Publishing…" : "Moving…") : confirmLabel}
+              {busy
+                ? effect.willPublishNow
+                  ? "Publishing…"
+                  : effect.willUnpublishNow
+                    ? "Removing…"
+                    : "Moving…"
+                : confirmLabel}
             </button>
           </div>
         </footer>

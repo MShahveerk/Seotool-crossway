@@ -8,7 +8,7 @@ import {
 } from "@/lib/boardMeta.js";
 import { resolveScheduleOnApprove } from "@/lib/approvalSchedule.js";
 import { notifyOnBoardMove } from "@/lib/boardNotifications.js";
-import { publishApprovalNow } from "@/lib/postPublishJobs.js";
+import { publishApprovalNow, unpublishApprovalNow } from "@/lib/postPublishJobs.js";
 
 export const runtime = "nodejs";
 
@@ -38,7 +38,73 @@ export async function PATCH(req, { params }) {
     if (!existing) return Response.json({ error: "Post not found." }, { status: 404 });
 
     if (existing.publishStatus === "published") {
-      return Response.json({ error: "Published posts are locked and cannot be moved." }, { status: 400 });
+      if (!canManuallyMovePost("published", toColumn)) {
+        return Response.json(
+          { error: `Cannot move from published to ${toColumn}.` },
+          { status: 400 }
+        );
+      }
+
+      const unpublish = await unpublishApprovalNow(id);
+      if (unpublish.attempted && unpublish.errors?.length && !unpublish.deleted && !unpublish.partial) {
+        return Response.json(
+          {
+            error: `Could not delete the live Meta post. ${unpublish.errors.join(" | ")}`,
+            unpublish,
+          },
+          { status: 400 }
+        );
+      }
+
+      const mapped = postColumnToUpdate(toColumn);
+      if (!mapped) return Response.json({ error: "Unknown column." }, { status: 400 });
+
+      let publishError = null;
+      if (unpublish.errors?.length) {
+        publishError = unpublish.errors.join(" | ");
+      } else if (unpublish.reason === "no_external_id") {
+        publishError =
+          "Taken down on the board. No Meta post id was stored, so the live post may still be on Facebook or Instagram.";
+      }
+
+      const data = {
+        ...mapped,
+        lastAction: toColumn === "declined" ? "decline" : "unpublish",
+        publishError,
+        externalId: null,
+      };
+      if (toColumn === "approved") {
+        data.scheduledFor = resolveScheduleOnApprove(existing.scheduledFor);
+        data.awaitingAdminReview = false;
+        data.respondedAt = new Date();
+      }
+      if (toColumn === "pending" || toColumn === "edited" || toColumn === "draft") {
+        data.awaitingAdminReview = false;
+        data.hiddenFromAssignee = toColumn === "draft";
+      }
+      if (toColumn === "declined") {
+        data.lastAction = "decline";
+        data.respondedAt = new Date();
+      }
+
+      const updated = await prisma.approval.update({
+        where: { id },
+        data,
+        include: {
+          assignee: { select: { id: true, email: true, name: true, role: true } },
+          createdBy: { select: { id: true, email: true, name: true, role: true } },
+        },
+      });
+
+      return Response.json({
+        ok: true,
+        approval: updated,
+        fromColumn: "published",
+        toColumn,
+        boardColumn: getPostBoardColumn(updated),
+        unpublish,
+        notify: { notified: 0, skipped: true },
+      });
     }
 
     const fromColumn = getPostBoardColumn(existing);

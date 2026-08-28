@@ -486,11 +486,11 @@ export const chapters = [
     how: "Sidebar: Social, then Board.",
     needs: "A selected project.",
     paragraphs: [
-      "Drag a card to change status. Double-click to edit caption, media, and schedule. Drop onto Published to publish immediately. A future schedule is ignored.",
+      "Drag a card to change status. Double-click to edit caption, media, and schedule. Drop onto Published to publish immediately. A future schedule is ignored. Drag a published post back to Pending (or another lane) to delete it from Facebook and Instagram.",
     ],
     clusters: [
       cluster("On the page", [
-        item("Lanes", "Idea through published. Drop onto Published to go live now."),
+        item("Lanes", "Idea through published. Drop onto Published to go live now. Drag out of Published to take it down on Meta."),
         item("A post", "Caption, media, schedule."),
         item("Filters", "Channel, assignee, or status."),
       ]),
