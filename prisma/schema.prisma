@@ -755,7 +755,7 @@ model BlogAutomationQueueRow {
   @@map("blog_automation_queue_rows")
 }
 
-/// Per-site internal Post Automation Studio configuration (2-agent + image pipeline).
+/// Per-site internal Post Automation Studio configuration (Strategist + Copywriter + optional Humanizer + image).
 model PostAutomationSiteConfig {
   id                   String    @id @default(cuid()) @db.VarChar(191)
   siteLink             String    @unique @map("site_link") @db.VarChar(512)

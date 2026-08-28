@@ -562,16 +562,16 @@ export const chapters = [
     pose: "studio",
     kicker: "Social",
     title: "Post Studio",
-    lead: "A brief, a channel, a strategist, a copywriter. Output lands in approval, not live.",
+    lead: "A brief, a channel, a strategist, a copywriter, optional Humanizer. Output lands in approval, not live.",
     how: "Sidebar: Toolkit, Post Studio.",
     needs: "Any project, including Meta-only. Agent keys saved.",
     paragraphs: [
-      "Generate runs Strategist then Copywriter. Follow the live rail. Stop or re-run a step if the angle is wrong. The library keeps earlier runs for this project.",
+      "Generate runs Strategist then Copywriter, then optional Humanizer. Follow the live rail. Stop or re-run a step if the angle is wrong. The library keeps earlier runs for this project.",
     ],
     clusters: [
       cluster("On the page", [
         item("Brief", "What the post is about and which channel it is for."),
-        item("Generate", "Strategist then copywriter."),
+        item("Generate", "Strategist, copywriter, optional Humanizer, then image."),
         item("Live rail", "Follow each agent."),
         item("Library", "Earlier runs for this project."),
       ]),

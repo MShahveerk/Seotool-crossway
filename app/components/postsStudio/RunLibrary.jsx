@@ -5,7 +5,7 @@
 
 import { Megaphone } from "lucide-react";
 import RunLibrary from "../studioShared/RunLibrary";
-import RunConsole, { POST_PIPELINE } from "./RunConsole";
+import RunConsole, { postPipelineForRun } from "./RunConsole";
 import { publicMediaUrl } from "../../../lib/publicMediaUrl";
 
 const COPY = {
@@ -16,16 +16,17 @@ const COPY = {
     "Every agent in the chain, its full output, what it cost and the finished caption and creative — all in this pane, without leaving the list.",
 };
 
-export default function PostRunLibrary({ cancelling, onCancel, ...rest }) {
+export default function PostRunLibrary({ cancelling, onCancel, config, ...rest }) {
   return (
     <RunLibrary
-      pipeline={POST_PIPELINE}
+      pipeline={postPipelineForRun(rest.selectedRun, config)}
       emptyIcon={Megaphone}
       copy={COPY}
       getThumbSrc={(run) => publicMediaUrl(run?.draftPreviewJson?.imagePath)}
       renderConsole={(run) => (
         <RunConsole
           run={run}
+          config={config}
           onCancel={onCancel ? () => onCancel(run.id) : undefined}
           cancelling={cancelling}
         />

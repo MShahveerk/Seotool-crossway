@@ -14,8 +14,22 @@ export const POST_PIPELINE = [
   { id: "interpreter", title: "Interpreter", subtitle: "Document → post seeds", optional: true },
   { id: "agent1", title: "Strategist", subtitle: "Hook · angle · hashtags" },
   { id: "agent2", title: "Copywriter", subtitle: "Title + caption" },
+  { id: "humanizer", title: "Humanizer", subtitle: "Skill-guided rewrite", optional: true },
   { id: "image", title: "Image", subtitle: "Feed creative" },
 ];
+
+/** Optional agents stay off the rail unless this run (or the live config) enabled them. */
+export function postPipelineForRun(run, config = {}) {
+  const stages = Array.isArray(run?.stagesJson) ? run.stagesJson : [];
+  const ctx = stages.find((s) => s?.agent === "_context") || {};
+  const hasAgent = (id) => stages.some((s) => s?.agent === id);
+  const humanizerOn =
+    Boolean(ctx.humanizerEnabled ?? config.humanizerEnabled) || hasAgent("humanizer");
+  return POST_PIPELINE.map((step) => {
+    if (step.id === "humanizer") return { ...step, optional: !humanizerOn };
+    return step;
+  });
+}
 
 function imageStageExtra(stage) {
   if (!stage || stage.agent !== "image") return null;
@@ -41,14 +55,15 @@ function imageStageExtra(stage) {
   );
 }
 
-export default function RunConsole({ run, onCancel, cancelling }) {
+export default function RunConsole({ run, onCancel, cancelling, config }) {
   const steps = useMemo(() => {
     const stages = Array.isArray(run?.stagesJson) ? run.stagesJson : [];
-    return buildPipelineSteps(POST_PIPELINE, stages, (s) => s?.agent).map((step) => ({
+    const pipeline = postPipelineForRun(run, config);
+    return buildPipelineSteps(pipeline, stages, (s) => s?.agent).map((step) => ({
       ...step,
       extra: imageStageExtra(step.raw),
     }));
-  }, [run?.stagesJson]);
+  }, [run?.stagesJson, config]);
 
   const draft = useMemo(() => {
     const p = run?.draftPreviewJson || {};
@@ -82,7 +97,7 @@ export default function RunConsole({ run, onCancel, cancelling }) {
       cancelling={cancelling}
       emptyIcon={Megaphone}
       emptyTitle="No run yet"
-      emptyHint="Start a post and the Strategist, Copywriter and Image agents appear here as they work — click any one to read its output."
+      emptyHint="Start a post and the Strategist, Copywriter, Humanizer and Image agents appear here as they work. Click any one to read its output."
     />
   );
 }

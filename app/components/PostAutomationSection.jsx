@@ -573,7 +573,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
         <p className={helpText}>
           Inbound API, Meta pull, and email ingest remain the generators. Switch to{" "}
           <strong className="text-[var(--cw-ink)]">Internal Studio</strong> above to schedule
-          Strategist + Copywriter + image runs that create pending Approvals.
+          Strategist + Copywriter + optional Humanizer + image runs that create pending Approvals.
         </p>
       </div>
     </div>
@@ -633,6 +633,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
           liveRunId={liveRunId}
           refreshing={refreshingRuns}
           cancelling={cancelling}
+          config={siteConfig}
           onSelect={selectRun}
           onClose={closeRun}
           onRefresh={refreshRuns}
@@ -875,13 +876,14 @@ export default function PostAutomationSection({ selectedSite = "" }) {
                 {setupTab === "agents" && (
                   <div className="space-y-6">
                     <p className={helpText}>
-                      Advanced. Strategist → Copywriter → required Image. Image provider: OpenAI,
+                      Advanced. Strategist → Copywriter → optional Humanizer → required Image. Image provider: OpenAI,
                       Anthropic (Claude illustration, rasterized), or OpenRouter (Flux, Gemini Image,
                       GPT Image). Anthropic uses the Anthropic API key on this tab.
                     </p>
                     {[
                       ["agent1", "Strategist (Agent 1)", "agent1Provider", "agent1Model", "agent1Prompt", "chat"],
                       ["agent2", "Copywriter (Agent 2)", "agent2Provider", "agent2Model", "agent2Prompt", "chat"],
+                      ["humanizer", "Humanizer", "humanizerProvider", "humanizerModel", "humanizerPrompt", "chat"],
                       ["image", "Image", "imageProvider", "imageModel", "imagePromptSystem", "image"],
                     ].map(([id, title, pKey, mKey, promptKey, kind]) => {
                       const providerList = kind === "image" ? IMAGE_PROVIDERS : PROVIDERS;
@@ -955,6 +957,50 @@ export default function PostAutomationSection({ selectedSite = "" }) {
                             value={siteConfig[promptKey] || ""}
                             onChange={(e) => patchSite({ [promptKey]: e.target.value })}
                           />
+                          {id === "humanizer" ? (
+                            <div className="mt-3 space-y-2">
+                              <label className="flex items-start gap-2 text-sm text-[var(--cw-ink-dim)]">
+                                <input
+                                  type="checkbox"
+                                  className="mt-1"
+                                  checked={Boolean(siteConfig.humanizerEnabled)}
+                                  onChange={(e) => patchSite({ humanizerEnabled: e.target.checked })}
+                                />
+                                <span>
+                                  Run Humanizer after Copywriter
+                                  <span className="mt-0.5 block text-xs text-[var(--cw-ink-faint)]">
+                                    Always strips em dashes and stock AI phrasing, then applies the skill below.
+                                  </span>
+                                </span>
+                              </label>
+                              <div className="flex items-center justify-between gap-2">
+                                <label className={labelClass}>Skill (paste markdown)</label>
+                                {POST_STUDIO_DEFAULT_PROMPTS.humanizerSkill ? (
+                                  <Btn
+                                    variant="ghost"
+                                    size="xs"
+                                    icon={FiRotateCcw}
+                                    onClick={() =>
+                                      patchSite({ humanizerSkill: POST_STUDIO_DEFAULT_PROMPTS.humanizerSkill })
+                                    }
+                                  >
+                                    Revert skill
+                                  </Btn>
+                                ) : null}
+                              </div>
+                              <textarea
+                                className={`${inputClass} mt-1 min-h-[220px] font-mono text-xs`}
+                                value={siteConfig.humanizerSkill || ""}
+                                onChange={(e) => patchSite({ humanizerSkill: e.target.value })}
+                                placeholder="Paste any Cursor-style SKILL.md here. It is injected verbatim."
+                                spellCheck={false}
+                              />
+                              <p className="text-[11px] text-[var(--cw-ink-faint)]">
+                                Replace this entire box with your own skill. RoboSEO injects it as a mandatory
+                                block after the system prompt. Default skill already bans em dashes and AI tells.
+                              </p>
+                            </div>
+                          ) : null}
                         </div>
                       );
                     })}
@@ -1000,7 +1046,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
                       <li>Manual Create Post and Post Board</li>
                     </ul>
                     <p className={helpText}>
-                      Switch to Internal Studio when you want scheduled Strategist → Copywriter → Image runs to
+                      Switch to Internal Studio when you want scheduled Strategist → Copywriter → optional Humanizer → Image runs to
                       create pending Approvals for this account. Notes:{" "}
                       {globalConfig.notes || "(none saved)"}
                     </p>
@@ -1044,7 +1090,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
           submitDisabled={!selectedSite}
           liveRun={dockedRun}
           liveLabel="Post"
-          livePanel={<RunConsole run={liveRun} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />}
+          livePanel={<RunConsole run={liveRun} config={siteConfig} onCancel={() => cancelRun(liveRun?.id)} cancelling={cancelling} />}
           onCancelLive={() => cancelRun(liveRun?.id)}
           onOpenLive={liveRun?.id ? () => selectRun(liveRun.id) : undefined}
           cancelling={cancelling}

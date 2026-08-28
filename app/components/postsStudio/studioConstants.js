@@ -139,6 +139,14 @@ export const AGENT_ROLES = [
     readyKey: "agent2",
   },
   {
+    id: "humanizer",
+    title: "Humanizer",
+    subtitle: "Paste a skill · strips em dashes",
+    providerKey: "humanizerProvider",
+    modelKey: "humanizerModel",
+    readyKey: "humanizer",
+  },
+  {
     id: "image",
     title: "Image",
     subtitle: "Feed creative (required)",

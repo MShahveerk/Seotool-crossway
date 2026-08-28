@@ -66,7 +66,10 @@ function RunRow({ run, selected, onSelect, onCancel, cancelling, requiredSteps, 
 
   const total = research
     ? 2
-    : requiredSteps + (summary?.hasInterpreter ? 1 : 0) + (summary?.hasDecider ? 1 : 0);
+    : requiredSteps +
+      (summary?.hasInterpreter ? 1 : 0) +
+      (summary?.hasDecider ? 1 : 0) +
+      (summary?.hasHumanizer ? 1 : 0);
   const done = Math.min(summary?.done ?? 0, total);
   const pct = total ? Math.round((done / total) * 100) : 0;
 
