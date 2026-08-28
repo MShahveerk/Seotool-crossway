@@ -82,6 +82,8 @@ export async function GET(req) {
         itemTitle: loaded.topic,
         postUrl: "/api/blog-studio/headings-approval",
         noun: "outline",
+        showStudioRevision: false,
+        showRevisionTarget: false,
       });
     }
 

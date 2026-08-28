@@ -273,7 +273,7 @@ export const chapters = [
     pose: "blogs",
     kicker: "Blogs",
     title: "Approvals",
-    lead: "Blogs waiting on a person. Approve schedules or publishes. Decline sends it back with a reason.",
+    lead: "Blogs waiting on a person. Approve schedules or publishes. Decline asks for a reason, and studio drafts can go back to Automation Studio.",
     how: "Sidebar: Blogs, then Approvals.",
     needs: "A selected project, and permission to approve.",
     paragraphs: [
@@ -283,7 +283,7 @@ export const chapters = [
     clusters: [
       cluster("On the page", [
         item("Your queue", "Blogs waiting on you."),
-        item("Approve or decline", "Approve schedules or publishes. Decline needs a reason."),
+        item("Approve or decline", "Approve schedules or publishes. Decline asks for a reason. Studio drafts can be sent to Automation Studio."),
         item("Preview", "Read the article as it will appear."),
       ]),
     ],
@@ -506,12 +506,12 @@ export const chapters = [
     how: "Sidebar: Social, then Approvals.",
     needs: "A selected project, and permission to approve.",
     paragraphs: [
-      "Preview caption and creative. Approve sends it toward publish. Decline returns it with a note.",
+      "Preview caption and creative. Approve sends it toward publish. Decline asks for a reason. Studio posts can be sent back to Automation Studio.",
     ],
     clusters: [
       cluster("On the page", [
         item("Your queue", "Social posts waiting on you."),
-        item("Approve or decline", "Approve toward publish. Decline with a note."),
+        item("Approve or decline", "Approve toward publish. Decline asks for a reason. Studio posts can go back to Automation Studio."),
         item("Preview", "Caption and creative before you sign off."),
       ]),
     ],

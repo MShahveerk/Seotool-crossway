@@ -1,6 +1,7 @@
 import prisma from "../../../../lib/prisma";
 import { verifyBlogQuickActionToken } from "../../../../lib/blogAssignee.js";
 import { declineFormPage, resultPage, QUICK_ACTION_REASON_MAX } from "../../../../lib/quickActionPages.js";
+import { isStudioBlogSource, parseRunStudioRevision } from "../../../../lib/studioRevisionChoice.js";
 
 export const runtime = "nodejs";
 
@@ -60,7 +61,7 @@ async function validateBlogQuickAction(id, token) {
   return { blog };
 }
 
-async function processBlogDecline(blog, reason, revisionTarget = "both") {
+async function processBlogDecline(blog, reason, revisionTarget = "both", runStudioRevision = true) {
   const trimmedReason = String(reason || "").trim();
   if (!trimmedReason) {
     return {
@@ -101,23 +102,32 @@ async function processBlogDecline(blog, reason, revisionTarget = "both") {
     console.error(`[blog] decline revert failed for ${blog.id}: ${err.message}`);
   }
 
-  // Feed the remarks straight back into the studio for an immediate revision run.
-  try {
-    const { enqueueBlogRevisionFromDecline } = await import("../../../../lib/studioRevision.js");
-    await enqueueBlogRevisionFromDecline({
-      blogPostId: blog.id,
-      remarks: trimmedReason,
-      target: revisionTarget,
-    });
-  } catch (err) {
-    console.warn(`[blog] revision run enqueue failed for ${blog.id}: ${err.message}`);
+  const studioSource = isStudioBlogSource(blog.source);
+  if (runStudioRevision && studioSource) {
+    try {
+      const { enqueueBlogRevisionFromDecline } = await import("../../../../lib/studioRevision.js");
+      await enqueueBlogRevisionFromDecline({
+        blogPostId: blog.id,
+        remarks: trimmedReason,
+        target: revisionTarget,
+      });
+    } catch (err) {
+      console.warn(`[blog] revision run enqueue failed for ${blog.id}: ${err.message}`);
+    }
+  }
+
+  let message =
+    "Your feedback has been recorded. The RoboSEO team has been notified. If this came from WordPress, the post was moved back to draft so it will not auto-publish.";
+  if (studioSource) {
+    message = runStudioRevision
+      ? "Your feedback has been recorded. Automation Studio will make the corrections you described. If this came from WordPress, the post was moved back to draft so it will not auto-publish."
+      : "Your feedback has been recorded. Automation Studio will not rewrite this automatically. The RoboSEO team has been notified. If this came from WordPress, the post was moved back to draft so it will not auto-publish.";
   }
 
   return {
     page: resultPage({
       title: "Blog declined",
-      message:
-        "Your feedback has been recorded. The RoboSEO team has been notified. If this came from WordPress, the post was moved back to draft so it will not auto-publish.",
+      message,
       tone: "decline",
       kindLabel: "Rejected",
       detail: trimmedReason,
@@ -188,12 +198,15 @@ export async function GET(req) {
     }
 
     if (action === "decline") {
+      const studio = isStudioBlogSource(blog.source);
       return declineFormPage({
         id,
         token,
         itemTitle: title,
         postUrl: "/api/blogs/quick-action",
         noun: "blog",
+        showStudioRevision: studio,
+        showRevisionTarget: studio,
       });
     }
 
@@ -222,6 +235,7 @@ export async function POST(req) {
     let action;
     let reason;
     let revisionTarget = "both";
+    let runStudioRevision = true;
 
     if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
       const form = await req.formData();
@@ -230,6 +244,7 @@ export async function POST(req) {
       action = String(form.get("action") || "");
       reason = String(form.get("reason") || "");
       revisionTarget = String(form.get("revisionTarget") || "both");
+      runStudioRevision = parseRunStudioRevision({ form });
     } else {
       const body = await req.json();
       id = String(body.id || "");
@@ -237,6 +252,7 @@ export async function POST(req) {
       action = String(body.action || "");
       reason = String(body.reason || "");
       revisionTarget = String(body.revisionTarget || "both");
+      runStudioRevision = parseRunStudioRevision({ body });
     }
 
     if (action !== "decline") {
@@ -251,7 +267,12 @@ export async function POST(req) {
     const validated = await validateBlogQuickAction(id, token);
     if (validated.error) return validated.error;
 
-    const result = await processBlogDecline(validated.blog, reason, revisionTarget);
+    const result = await processBlogDecline(
+      validated.blog,
+      reason,
+      revisionTarget,
+      runStudioRevision
+    );
     if (result.error) return result.error;
     return result.page;
   } catch (error) {

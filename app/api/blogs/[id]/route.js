@@ -12,6 +12,7 @@ import {
   notifyBlogApprovers,
 } from "../../../../lib/blogAssignee.js";
 import { canAccessSection } from "../../../../lib/modulePermissions";
+import { parseRunStudioRevision } from "../../../../lib/studioRevisionChoice.js";
 
 export const runtime = "nodejs";
 
@@ -244,17 +245,18 @@ export async function PATCH(req, { params }) {
       } catch (err) {
         console.error(`[blog] decline revert failed for ${id}: ${err.message}`);
       }
-      // Feed the remarks straight back into the studio for an immediate revision run.
-      try {
-        const { enqueueBlogRevisionFromDecline } = await import("../../../../lib/studioRevision.js");
-        await enqueueBlogRevisionFromDecline({
-          blogPostId: id,
-          remarks: reason,
-          target: body.revisionTarget,
-          triggeredById: session.user.id,
-        });
-      } catch (err) {
-        console.warn(`[blog] revision run enqueue failed for ${id}: ${err.message}`);
+      if (parseRunStudioRevision({ body })) {
+        try {
+          const { enqueueBlogRevisionFromDecline } = await import("../../../../lib/studioRevision.js");
+          await enqueueBlogRevisionFromDecline({
+            blogPostId: id,
+            remarks: reason,
+            target: body.revisionTarget,
+            triggeredById: session.user.id,
+          });
+        } catch (err) {
+          console.warn(`[blog] revision run enqueue failed for ${id}: ${err.message}`);
+        }
       }
     } else if (action === "schedule" && (isAdmin || blog.status === "approved")) {
       const scheduledFor = parseScheduledDate(body.scheduledFor);

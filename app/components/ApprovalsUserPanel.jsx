@@ -8,6 +8,8 @@ import BackupImageSwitcher from "./BackupImageSwitcher";
 import HumanizeTextButton from "./HumanizeTextButton";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { publicMediaUrl } from "../../lib/publicMediaUrl";
+import DeclineStudioAsk from "./DeclineStudioAsk";
+import { isStudioPostSource } from "../../lib/studioRevisionChoice";
 
 const TABS = [
   { id: "actionable", label: "Needs action" },
@@ -97,6 +99,119 @@ function ReviewReadonlySubmitted({ id, label, value, rows = 3 }) {
   );
 }
 
+function DeclinePostModal({
+  acting,
+  reason,
+  target,
+  runStudio,
+  studio,
+  onReason,
+  onTarget,
+  onRunStudio,
+  onCancel,
+  onSubmit,
+}) {
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-gray-900/50 backdrop-blur-[2px]"
+        onClick={onCancel}
+      />
+      <div
+        className="relative w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="decline-post-title"
+      >
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 rounded-xl border border-red-100 bg-red-50 p-2.5">
+            <FiX className="h-5 w-5 text-red-600" />
+          </div>
+          <div className="min-w-0">
+            <h3 id="decline-post-title" className="text-base font-bold text-gray-900">
+              Decline this post
+            </h3>
+            <p className="mt-1 text-sm text-gray-600">
+              {studio
+                ? "Tell us what to change. You can ask Automation Studio to apply the corrections, or just record the decline."
+                : "Tell us why you are declining this post. Your reason is recorded for the team."}
+            </p>
+          </div>
+        </div>
+
+        <label className="mt-4 block text-sm font-semibold text-gray-800">
+          What&apos;s the reason?
+          <textarea
+            className="mt-1.5 min-h-[90px] w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
+            value={reason}
+            onChange={(e) => onReason(e.target.value)}
+            placeholder="Tell us exactly what to change…"
+            autoFocus
+          />
+        </label>
+
+        {studio ? (
+          <>
+            <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Route this feedback to
+            </p>
+            <div className="mt-1.5 grid grid-cols-3 gap-2">
+              {[
+                { id: "text", label: "Wording", hint: "caption only" },
+                { id: "image", label: "Image", hint: "visual only" },
+                { id: "both", label: "Both", hint: "full redo" },
+              ].map((opt) => {
+                const active = target === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => onTarget(opt.id)}
+                    className={`rounded-xl border px-3 py-2 text-center text-sm font-semibold transition ${
+                      active
+                        ? "border-gray-900 bg-gray-900 text-white shadow-sm"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {opt.label}
+                    <span
+                      className={`block text-[0.68rem] font-medium ${
+                        active ? "text-gray-300" : "text-gray-400"
+                      }`}
+                    >
+                      {opt.hint}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <DeclineStudioAsk enabled value={runStudio} onChange={onRunStudio} />
+          </>
+        ) : null}
+
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={acting || !reason.trim()}
+            onClick={onSubmit}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-50"
+          >
+            <FiX className="h-4 w-4" />
+            {studio && runStudio ? "Decline & revise" : "Decline"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ApprovalsUserPanel({ selectedSite = "" }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -114,6 +229,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
   const [declineFor, setDeclineFor] = useState(null);
   const [declineReason, setDeclineReason] = useState("");
   const [declineTarget, setDeclineTarget] = useState("both");
+  const [declineRunStudio, setDeclineRunStudio] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -164,6 +280,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
     setDeclineFor(null);
     setDeclineReason("");
     setDeclineTarget("both");
+    setDeclineRunStudio(true);
   };
 
   const submitDecline = async () => {
@@ -173,8 +290,16 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
       return;
     }
     const id = declineFor;
+    const item = items.find((a) => a.id === id);
+    const studio = isStudioPostSource(item?.source);
+    const runStudioRevision = studio && declineRunStudio;
     closeDecline();
-    await patch(id, { action: "decline", declineReason: reason, revisionTarget: declineTarget });
+    await patch(id, {
+      action: "decline",
+      declineReason: reason,
+      revisionTarget: declineTarget,
+      runStudioRevision,
+    });
   };
 
   const promoteBackup = async (approvalId, backupIndex) => {
@@ -265,7 +390,13 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
         window.dispatchEvent(new CustomEvent("approvals:user-updated"));
       }
       if (payload.action === "approve") toastSuccess("Approval submitted");
-      else if (payload.action === "decline") toastSuccess("Post declined");
+      else if (payload.action === "decline") {
+        toastSuccess(
+          payload.runStudioRevision
+            ? "Post declined. Automation Studio will revise."
+            : "Post declined"
+        );
+      }
       else if (payload.action === "edit") toastSuccess("Changes saved");
     } catch (e) {
       setError(e.message);
@@ -685,6 +816,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                               setError("");
                               setDeclineReason("");
                               setDeclineTarget("both");
+                              setDeclineRunStudio(true);
                               setDeclineFor(a.id);
                             }}
                             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold disabled:opacity-50"
@@ -709,89 +841,18 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
       )}
 
       {declineFor ? (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-gray-900/50 backdrop-blur-[2px]"
-            onClick={closeDecline}
-          />
-          <div className="relative w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
-            <div className="flex items-start gap-3">
-              <div className="shrink-0 rounded-xl border border-red-100 bg-red-50 p-2.5">
-                <FiX className="h-5 w-5 text-red-600" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-base font-bold text-gray-900">Decline & auto-revise</h3>
-                <p className="mt-1 text-sm text-gray-600">
-                  Your remarks go straight to the AI agents, which rewrite a fresh post automatically.
-                </p>
-              </div>
-            </div>
-
-            <label className="mt-4 block text-sm font-semibold text-gray-800">
-              What&apos;s the reason?
-              <textarea
-                className="mt-1.5 min-h-[90px] w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
-                value={declineReason}
-                onChange={(e) => setDeclineReason(e.target.value)}
-                placeholder="Tell the agent exactly what to change…"
-                autoFocus
-              />
-            </label>
-
-            <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Route this feedback to
-            </p>
-            <div className="mt-1.5 grid grid-cols-3 gap-2">
-              {[
-                { id: "text", label: "Wording", hint: "caption only" },
-                { id: "image", label: "Image", hint: "visual only" },
-                { id: "both", label: "Both", hint: "full redo" },
-              ].map((opt) => {
-                const active = declineTarget === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setDeclineTarget(opt.id)}
-                    className={`rounded-xl border px-3 py-2 text-center text-sm font-semibold transition ${
-                      active
-                        ? "border-gray-900 bg-gray-900 text-white shadow-sm"
-                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                    }`}
-                  >
-                    {opt.label}
-                    <span
-                      className={`block text-[0.68rem] font-medium ${
-                        active ? "text-gray-300" : "text-gray-400"
-                      }`}
-                    >
-                      {opt.hint}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeDecline}
-                className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={acting || !declineReason.trim()}
-                onClick={submitDecline}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-50"
-              >
-                <FiX className="h-4 w-4" />
-                Decline & revise
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeclinePostModal
+          acting={acting}
+          reason={declineReason}
+          target={declineTarget}
+          runStudio={declineRunStudio}
+          studio={isStudioPostSource(items.find((a) => a.id === declineFor)?.source)}
+          onReason={setDeclineReason}
+          onTarget={setDeclineTarget}
+          onRunStudio={setDeclineRunStudio}
+          onCancel={closeDecline}
+          onSubmit={submitDecline}
+        />
       ) : null}
     </div>
   );

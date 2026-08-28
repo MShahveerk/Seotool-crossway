@@ -1,6 +1,7 @@
 import prisma from "../../../../lib/prisma";
 import { verifyApprovalQuickActionToken } from "../../../../lib/approvalQuickAction.js";
 import { declineFormPage, resultPage, QUICK_ACTION_REASON_MAX } from "../../../../lib/quickActionPages.js";
+import { isStudioPostSource, parseRunStudioRevision } from "../../../../lib/studioRevisionChoice.js";
 import { resolveScheduleOnApprove } from "../../../../lib/approvalSchedule.js";
 
 export const runtime = "nodejs";
@@ -47,7 +48,7 @@ async function validateQuickAction(id, token) {
   return { approval };
 }
 
-async function processDecline(approval, reason, revisionTarget = "both") {
+async function processDecline(approval, reason, revisionTarget = "both", runStudioRevision = true) {
   const trimmedReason = String(reason || "").trim();
   if (!trimmedReason) {
     return {
@@ -98,22 +99,32 @@ async function processDecline(approval, reason, revisionTarget = "both") {
     console.error("Failed to send decline notification email", err);
   }
 
-  // Feed the remarks straight back into the studio for an immediate revision run.
-  try {
-    const { enqueuePostRevisionFromDecline } = await import("../../../../lib/studioRevision.js");
-    await enqueuePostRevisionFromDecline({
-      approvalId: approval.id,
-      remarks: trimmedReason,
-      target: revisionTarget,
-    });
-  } catch (err) {
-    console.warn(`[approvals] revision run enqueue failed for ${approval.id}: ${err.message}`);
+  const studioSource = isStudioPostSource(approval.source);
+  if (runStudioRevision && studioSource) {
+    try {
+      const { enqueuePostRevisionFromDecline } = await import("../../../../lib/studioRevision.js");
+      await enqueuePostRevisionFromDecline({
+        approvalId: approval.id,
+        remarks: trimmedReason,
+        target: revisionTarget,
+      });
+    } catch (err) {
+      console.warn(`[approvals] revision run enqueue failed for ${approval.id}: ${err.message}`);
+    }
+  }
+
+  let message =
+    "Your feedback has been recorded. The RoboSEO team has been notified and can revise or resubmit the content.";
+  if (studioSource) {
+    message = runStudioRevision
+      ? "Your feedback has been recorded. Automation Studio will make the corrections you described."
+      : "Your feedback has been recorded. Automation Studio will not rewrite this automatically. The RoboSEO team has been notified.";
   }
 
   return {
     page: resultPage({
       title: "Post declined",
-      message: "Your feedback has been recorded. The RoboSEO team has been notified and can revise or resubmit the content.",
+      message,
       tone: "decline",
       kindLabel: "Rejected",
       detail: trimmedReason,
@@ -179,12 +190,15 @@ export async function GET(req) {
     }
 
     if (action === "decline") {
+      const studio = isStudioPostSource(approval.source);
       return declineFormPage({
         id,
         token,
         itemTitle: approval.title,
         postUrl: "/api/approvals/quick-action",
         noun: "post",
+        showStudioRevision: studio,
+        showRevisionTarget: studio,
       });
     }
 
@@ -213,6 +227,7 @@ export async function POST(req) {
     let action;
     let reason;
     let revisionTarget = "both";
+    let runStudioRevision = true;
 
     if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
       const form = await req.formData();
@@ -221,6 +236,7 @@ export async function POST(req) {
       action = String(form.get("action") || "");
       reason = String(form.get("reason") || "");
       revisionTarget = String(form.get("revisionTarget") || "both");
+      runStudioRevision = parseRunStudioRevision({ form });
     } else {
       const body = await req.json();
       id = String(body.id || "");
@@ -228,6 +244,7 @@ export async function POST(req) {
       action = String(body.action || "");
       reason = String(body.reason || "");
       revisionTarget = String(body.revisionTarget || "both");
+      runStudioRevision = parseRunStudioRevision({ body });
     }
 
     if (action !== "decline") {
@@ -237,7 +254,12 @@ export async function POST(req) {
     const validated = await validateQuickAction(id, token);
     if (validated.error) return validated.error;
 
-    const result = await processDecline(validated.approval, reason, revisionTarget);
+    const result = await processDecline(
+      validated.approval,
+      reason,
+      revisionTarget,
+      runStudioRevision
+    );
     if (result.error) return result.error;
     return result.page;
   } catch (error) {

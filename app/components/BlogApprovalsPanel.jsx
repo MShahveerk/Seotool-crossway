@@ -28,6 +28,8 @@ import { LoadingSpinner } from "./ui-shared/LoadingBlock";
 import { publicMediaUrl } from "../../lib/publicMediaUrl";
 import BackupImageSwitcher from "./BackupImageSwitcher";
 import { normalizeArticleHtml } from "../../lib/blogStudio/articleHtml";
+import DeclineStudioAsk from "./DeclineStudioAsk";
+import { isStudioBlogSource } from "../../lib/studioRevisionChoice";
 
 /** Chrome sometimes caches a bad first paint — retry once with a bust, then hide. */
 function onMediaImgError(e) {
@@ -126,6 +128,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
   const [declineOpen, setDeclineOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
   const [declineTarget, setDeclineTarget] = useState("both");
+  const [declineRunStudio, setDeclineRunStudio] = useState(true);
   const [portalReady, setPortalReady] = useState(false);
   const [activeSnapshot, setActiveSnapshot] = useState(null);
   const fileInputRef = useRef(null);
@@ -277,6 +280,8 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     setShowPreview(true);
     setDeclineOpen(false);
     setDeclineReason("");
+    setDeclineTarget("both");
+    setDeclineRunStudio(true);
     setFeaturedFile(null);
     setImageMessage("");
     setError("");
@@ -300,6 +305,8 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
     setImageMessage("");
     setDeclineOpen(false);
     setDeclineReason("");
+    setDeclineTarget("both");
+    setDeclineRunStudio(true);
     setBusy(false);
     setImageBusy(false);
     setDraft(emptyDraft());
@@ -448,7 +455,11 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
       setError("Please enter a decline reason.");
       return;
     }
-    await act(activeId, "decline", { declineReason: reason, revisionTarget: declineTarget });
+    await act(activeId, "decline", {
+      declineReason: reason,
+      revisionTarget: declineTarget,
+      runStudioRevision: isStudioBlogSource(activeBlog?.source) && declineRunStudio,
+    });
   };
 
   if (loading) {
@@ -952,82 +963,6 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
               </div>
             </div>
 
-            {/* Decline inline */}
-            {declineOpen ? (
-              <div className="shrink-0 border-t border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-danger)_10%,var(--cw-surface))] px-4 py-3 sm:px-5">
-                <label className="block text-sm font-medium text-[var(--cw-danger)]">
-                  Decline reason
-                  <textarea
-                    className="mt-1.5 min-h-[72px] w-full rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[var(--cw-raised)] px-3 py-2 text-sm text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-danger)_30%,transparent)]"
-                    value={declineReason}
-                    onChange={(e) => setDeclineReason(e.target.value)}
-                    placeholder="Tell the writer exactly what to change — it rewrites automatically…"
-                    autoFocus
-                  />
-                </label>
-                <div className="mt-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--cw-danger)]">
-                    Route this feedback to
-                  </p>
-                  <div className="mt-1.5 grid grid-cols-3 gap-2">
-                    {[
-                      { id: "text", label: "Wording", hint: "text only" },
-                      { id: "image", label: "Image", hint: "visual only" },
-                      { id: "both", label: "Both", hint: "full redo" },
-                    ].map((opt) => {
-                      const active = declineTarget === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => setDeclineTarget(opt.id)}
-                          className={`rounded-xl border px-3 py-2 text-center text-sm font-semibold transition ${
-                            active
-                              ? "border-[var(--cw-danger)] bg-[var(--cw-danger)] text-[#2b0808] shadow-sm"
-                              : "border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[var(--cw-raised)] text-[var(--cw-danger)] hover:border-[var(--cw-danger)]"
-                          }`}
-                        >
-                          {opt.label}
-                          <span
-                            className={`block text-[0.68rem] font-medium ${
-                              active ? "text-[#2b0808]/75" : "text-[var(--cw-ink-muted)]"
-                            }`}
-                          >
-                            {opt.hint}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="mt-1.5 text-xs text-[var(--cw-ink-muted)]">
-                    The writer rewrites the copy, the image agent regenerates the visual, or both —
-                    a fresh draft is queued automatically.
-                  </p>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={submitDecline}
-                    className="rounded-xl bg-[var(--cw-danger)] px-3.5 py-2 text-sm font-semibold text-[#2b0808] disabled:opacity-50"
-                  >
-                    Confirm decline
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeclineOpen(false);
-                      setDeclineReason("");
-                      setDeclineTarget("both");
-                    }}
-                    className="rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] bg-[var(--cw-raised)] px-3.5 py-2 text-sm font-semibold text-[var(--cw-danger)]"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
             {/* Actions */}
             <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--cw-hairline)] bg-[var(--cw-surface)] px-4 py-3 sm:px-5">
               <div className="flex flex-wrap gap-2">
@@ -1071,7 +1006,12 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => setDeclineOpen(true)}
+                      onClick={() => {
+                        setDeclineReason("");
+                        setDeclineTarget("both");
+                        setDeclineRunStudio(true);
+                        setDeclineOpen(true);
+                      }}
                       className="rounded-xl border border-[color-mix(in_srgb,var(--cw-danger)_35%,var(--cw-hairline))] px-3.5 py-2 text-sm font-semibold text-[var(--cw-danger)] hover:bg-[color-mix(in_srgb,var(--cw-danger)_14%,var(--cw-surface))] disabled:opacity-50"
                     >
                       Decline
@@ -1089,6 +1029,120 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
               </div>
             </footer>
           </div>
+          {declineOpen ? (
+            <div
+              className="absolute inset-0 z-10 flex items-center justify-center bg-black/55 p-4"
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget) {
+                  setDeclineOpen(false);
+                  setDeclineReason("");
+                  setDeclineTarget("both");
+                  setDeclineRunStudio(true);
+                }
+              }}
+            >
+              <div
+                className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="decline-blog-title"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0 rounded-xl border border-red-100 bg-red-50 p-2.5">
+                    <FiX className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 id="decline-blog-title" className="text-base font-bold text-gray-900">
+                      Decline this blog
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-600">
+                      {isStudioBlogSource(activeBlog.source)
+                        ? "Tell us what to change. You can ask Automation Studio to apply the corrections, or just record the decline."
+                        : "Tell us why you are declining this blog. Your reason is recorded for the team."}
+                    </p>
+                  </div>
+                </div>
+                <label className="mt-4 block text-sm font-semibold text-gray-800">
+                  Decline reason
+                  <textarea
+                    className="mt-1.5 min-h-[90px] w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
+                    value={declineReason}
+                    onChange={(e) => setDeclineReason(e.target.value)}
+                    placeholder="Tell us exactly what to change…"
+                    autoFocus
+                  />
+                </label>
+                {isStudioBlogSource(activeBlog.source) ? (
+                  <>
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Route this feedback to
+                    </p>
+                    <div className="mt-1.5 grid grid-cols-3 gap-2">
+                      {[
+                        { id: "text", label: "Wording", hint: "text only" },
+                        { id: "image", label: "Image", hint: "visual only" },
+                        { id: "both", label: "Both", hint: "full redo" },
+                      ].map((opt) => {
+                        const active = declineTarget === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => setDeclineTarget(opt.id)}
+                            className={`rounded-xl border px-3 py-2 text-center text-sm font-semibold transition ${
+                              active
+                                ? "border-gray-900 bg-gray-900 text-white shadow-sm"
+                                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                            }`}
+                          >
+                            {opt.label}
+                            <span
+                              className={`block text-[0.68rem] font-medium ${
+                                active ? "text-gray-300" : "text-gray-400"
+                              }`}
+                            >
+                              {opt.hint}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <DeclineStudioAsk
+                      enabled
+                      value={declineRunStudio}
+                      onChange={setDeclineRunStudio}
+                    />
+                  </>
+                ) : null}
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeclineOpen(false);
+                      setDeclineReason("");
+                      setDeclineTarget("both");
+                      setDeclineRunStudio(true);
+                    }}
+                    className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-500 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || !declineReason.trim()}
+                    onClick={submitDecline}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-50"
+                  >
+                    <FiX className="h-4 w-4" />
+                    {isStudioBlogSource(activeBlog.source) && declineRunStudio
+                      ? "Decline & revise"
+                      : "Decline"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>,
         document.body
         )

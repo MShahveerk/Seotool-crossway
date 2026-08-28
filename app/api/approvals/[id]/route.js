@@ -10,6 +10,7 @@ import { resolveScheduleOnApprove } from "../../../../lib/approvalSchedule.js";
 import { userCanAccessApproval } from "../../../../lib/siteAccess.js";
 import { canAccessSection } from "../../../../lib/modulePermissions";
 import { saveApprovalMediaBuffer } from "../../../../lib/approvalMedia.js";
+import { parseRunStudioRevision } from "../../../../lib/studioRevisionChoice.js";
 
 export const runtime = "nodejs";
 
@@ -213,17 +214,18 @@ export async function PATCH(req, { params }) {
           userEditedInstructions: declineReason,
         },
       });
-      // Feed the remarks straight back into the studio for an immediate revision run.
-      try {
-        const { enqueuePostRevisionFromDecline } = await import("../../../../lib/studioRevision.js");
-        await enqueuePostRevisionFromDecline({
-          approvalId: id,
-          remarks: declineReason,
-          target: body.revisionTarget,
-          triggeredById: session.user.id,
-        });
-      } catch (err) {
-        console.warn(`[approvals] revision run enqueue failed for ${id}: ${err.message}`);
+      if (parseRunStudioRevision({ body })) {
+        try {
+          const { enqueuePostRevisionFromDecline } = await import("../../../../lib/studioRevision.js");
+          await enqueuePostRevisionFromDecline({
+            approvalId: id,
+            remarks: declineReason,
+            target: body.revisionTarget,
+            triggeredById: session.user.id,
+          });
+        } catch (err) {
+          console.warn(`[approvals] revision run enqueue failed for ${id}: ${err.message}`);
+        }
       }
     } else if (action === "edit") {
       const editedText = String(body.editedText ?? "").trim();
