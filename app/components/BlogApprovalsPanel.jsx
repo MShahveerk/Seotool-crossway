@@ -696,6 +696,16 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                 Previous decline reason: {activeBlog.publishError}
               </p>
             ) : null}
+            {activeBlog.publishStatus === "published" ? (
+              <p className="shrink-0 border-b border-[color-mix(in_srgb,var(--cw-caution)_35%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_10%,var(--cw-surface))] px-4 py-2 text-sm text-[var(--cw-caution)] sm:px-5">
+                This blog is live. Pull it off Published on the Blog board before editing.
+              </p>
+            ) : activeBlog.status === "approved" ? (
+              <p className="shrink-0 border-b border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-4 py-2 text-sm text-[var(--cw-ink-dim)] sm:px-5">
+                This blog is approved and not live yet. Saving updates the copy that will publish. It stays
+                approved.
+              </p>
+            ) : null}
 
             {/* Body */}
             <div className="min-h-0 flex-1 overflow-hidden">
@@ -752,7 +762,8 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
 
                   {tab === "media" ? (
                     <div className="space-y-4">
-                      {["pending", "edited"].includes(String(activeBlog?.status || "")) &&
+                      {["pending", "edited", "approved"].includes(String(activeBlog?.status || "")) &&
+                      activeBlog.publishStatus !== "published" &&
                       (activeBlog?.featuredImagePath ||
                         (Array.isArray(activeBlog?.backupImagePaths) &&
                           activeBlog.backupImagePaths.length)) ? (
@@ -772,10 +783,12 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                               });
                               const data = await res.json();
                               if (!res.ok) throw new Error(data.error || "Failed to switch image");
-                              setActiveBlog(data.blog);
-                              setBlogs((prev) =>
-                                prev.map((b) => (b.id === data.blog.id ? { ...b, ...data.blog } : b))
-                              );
+                              if (data.blog) {
+                                setActiveSnapshot(data.blog);
+                                setBlogs((prev) =>
+                                  prev.map((b) => (b.id === data.blog.id ? { ...b, ...data.blog } : b))
+                                );
+                              }
                               setImageMessage("Primary featured image updated.");
                             } catch (err) {
                               setImageMessage(err.message || "Failed to switch image");
@@ -822,7 +835,9 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                         </button>
                         <button
                           type="button"
-                          disabled={imageBusy || !canSaveImage}
+                          disabled={
+                            imageBusy || !canSaveImage || activeBlog.publishStatus === "published"
+                          }
                           onClick={saveFeaturedImage}
                           className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--cw-neon)] px-3.5 py-2 text-sm font-semibold text-[var(--cw-neon-ink)] hover:bg-[var(--cw-neon-deep)] disabled:opacity-40"
                         >
@@ -995,7 +1010,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                 </button>
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={busy || activeBlog.publishStatus === "published"}
                   onClick={() => act(activeId, "edit")}
                   className="rounded-xl border border-[var(--cw-hairline-strong)] bg-[var(--cw-raised)] px-3.5 py-2 text-sm font-semibold text-[var(--cw-ink)] hover:bg-[var(--cw-overlay)] disabled:opacity-50"
                 >

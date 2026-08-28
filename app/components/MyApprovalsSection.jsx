@@ -12,7 +12,7 @@ export default function MyApprovalsSection({ selectedSite = "" }) {
         <PageHeader
           eyebrow="Social workflow"
           title="SMM Post Approvals"
-          description="Every pending, edited, and closed post for the selected site — review media (including backup creatives), edit copy, then approve or decline."
+          description="Every pending, edited, and closed post for the selected site. Review media (including backup creatives), edit copy, then approve or decline. Approved posts that are not live yet can still be edited."
         />
         <ApprovalsUserPanel selectedSite={selectedSite} />
       </CardContent>

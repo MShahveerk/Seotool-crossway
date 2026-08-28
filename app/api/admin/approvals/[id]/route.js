@@ -29,6 +29,25 @@ export async function PATCH(req, { params }) {
     }
 
     const data = {};
+    const live = existing.publishStatus === "published";
+    const contentPatch =
+      "scheduledFor" in body ||
+      body.title !== undefined ||
+      body.caption !== undefined ||
+      body.bodyText !== undefined ||
+      body.userEditedTitle !== undefined ||
+      body.userEditedCaption !== undefined ||
+      body.userEditedText !== undefined ||
+      body.userEditedInstructions !== undefined ||
+      body.syncEditedFields === true;
+    if (live && contentPatch) {
+      return Response.json(
+        {
+          error: "This post is live. Pull it off Published on the Post board before editing.",
+        },
+        { status: 400 }
+      );
+    }
 
     if (typeof body.hiddenFromAssignee === "boolean") {
       if (session.user.role !== ROLES.SUPER_ADMIN) {

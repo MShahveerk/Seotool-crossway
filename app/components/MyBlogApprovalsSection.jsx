@@ -9,7 +9,7 @@ export default function MyBlogApprovalsSection({ selectedSite = "" }) {
         <PageHeader
           eyebrow="Workflow"
           title="Blog Approvals"
-          description="Open a blog to review content, featured image, SEO, and schedule — then approve, edit, or decline."
+          description="Open a blog to review content, featured image, SEO, and schedule, then approve, edit, or decline. Approved blogs that are not live yet can still be edited."
         />
         <BlogApprovalsPanel selectedSite={selectedSite} />
       </CardContent>

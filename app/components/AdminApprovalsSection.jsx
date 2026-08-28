@@ -13,11 +13,14 @@ import {
   FiTrash2,
   FiEye,
   FiEyeOff,
+  FiSave,
+  FiClock,
 } from "react-icons/fi";
 import {
   datetimeLocalToUtcIso,
   formatScheduleShort,
   timezoneShortLabel,
+  toDatetimeLocalInTimezone,
 } from "../../lib/timezone";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
 import BackupImageSwitcher from "./BackupImageSwitcher";
@@ -45,7 +48,44 @@ function formatDateTime(iso) {
   return formatScheduleShort(iso) || String(iso);
 }
 
-/** Read-only multiline mirror (admin review): shows full text; scrolls when long. */
+/** Editable multiline for admin review (same chrome as the read-only boxes). */
+function AdminEditableMultiline({ id, label, value, onChange, rows = 3, maxLength }) {
+  return (
+    <div className="min-w-0 flex flex-col gap-1">
+      <label htmlFor={id} className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+        {label}
+      </label>
+      <textarea
+        id={id}
+        spellCheck
+        rows={rows}
+        maxLength={maxLength}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-[#1d9c35]/40 bg-white px-3 py-2 text-sm text-gray-900 min-h-[2.75rem] max-h-[min(24rem,50vh)] resize-y overflow-y-auto focus:outline-none focus-visible:ring-1 focus-visible:ring-[#1d9c35] whitespace-pre-wrap break-words"
+      />
+    </div>
+  );
+}
+
+function draftFromApproval(a) {
+  const title = a.userEditedTitle != null ? String(a.userEditedTitle) : String(a.title || "");
+  const caption = a.userEditedCaption != null ? String(a.userEditedCaption) : String(a.caption ?? "");
+  const body =
+    a.userEditedText != null && String(a.userEditedText).trim()
+      ? String(a.userEditedText)
+      : String(a.bodyText || "");
+  return {
+    title,
+    caption,
+    bodyText: body,
+    scheduledFor: toDatetimeLocalInTimezone(a.scheduledFor),
+  };
+}
+
+function approvalIsLive(a) {
+  return String(a?.publishStatus || "") === "published";
+}
 function AdminReadonlyMultiline({ id, label, value, rows = 3, variant = "default" }) {
   const str = value != null ? String(value) : "";
   const box =
@@ -133,6 +173,13 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
     scheduledFor: "",
   });
   const [expandedApprovalId, setExpandedApprovalId] = useState(null);
+  const [reviewDraft, setReviewDraft] = useState({
+    title: "",
+    caption: "",
+    bodyText: "",
+    scheduledFor: "",
+  });
+  const [reviewSaving, setReviewSaving] = useState(false);
   const [actionsMenuId, setActionsMenuId] = useState(null);
   const [promotingBackup, setPromotingBackup] = useState(false);
   const actionsMenuWrapRef = useRef(null);
@@ -334,6 +381,49 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
       await load();
     } catch (e) {
       setError(e.message);
+    }
+  };
+
+  const openReview = (a) => {
+    if (expandedApprovalId === a.id) {
+      setExpandedApprovalId(null);
+      return;
+    }
+    setExpandedApprovalId(a.id);
+    setReviewDraft(draftFromApproval(a));
+  };
+
+  const saveReview = async (a) => {
+    setError("");
+    setSuccess("");
+    setReviewSaving(true);
+    try {
+      const iso = reviewDraft.scheduledFor ? datetimeLocalToUtcIso(reviewDraft.scheduledFor) : null;
+      const res = await fetch(`/api/admin/approvals/${a.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: reviewDraft.title,
+          caption: reviewDraft.caption,
+          bodyText: reviewDraft.bodyText,
+          scheduledFor: iso,
+          syncEditedFields: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save");
+      setSuccess("Edits saved.");
+      if (data.approval) setReviewDraft(draftFromApproval(data.approval));
+      await load();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("approvals:admin-refresh"));
+        window.dispatchEvent(new CustomEvent("approvals:user-updated"));
+      }
+      setTimeout(() => setSuccess(""), 4000);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setReviewSaving(false);
     }
   };
 
@@ -682,6 +772,20 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                   Boolean(String(a.bodyText || "").trim()) ||
                   Boolean(a.userEditedText && String(a.userEditedText).trim()) ||
                   hasUserEdit;
+                const live = approvalIsLive(a);
+                const canEditContent = !live;
+                const canSwitchBackup =
+                  canEditContent &&
+                  ["pending", "edited", "approved"].includes(String(a.status || "")) &&
+                  Array.isArray(a.backupImagePaths) &&
+                  a.backupImagePaths.length > 0;
+                const baseline = draftFromApproval(a);
+                const reviewDirty =
+                  expanded &&
+                  (reviewDraft.title !== baseline.title ||
+                    reviewDraft.caption !== baseline.caption ||
+                    reviewDraft.bodyText !== baseline.bodyText ||
+                    reviewDraft.scheduledFor !== baseline.scheduledFor);
                 return (
                   <div
                     key={a.id}
@@ -731,7 +835,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                       <div className="flex flex-wrap items-center justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => setExpandedApprovalId(expanded ? null : a.id)}
+                          onClick={() => openReview(a)}
                           className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-800 hover:bg-gray-50"
                           aria-expanded={expanded}
                         >
@@ -832,14 +936,99 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                             ) : null}
                           </p>
                         </div>
+                        {live ? (
+                          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                            This post is live. Pull it off Published on the Post board to edit copy or the
+                            schedule.
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border border-[#1d9c35]/30 bg-white p-3 space-y-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                              Edit copy
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Changes apply to the heading, caption, accompanying text, and schedule that will
+                              publish. Assignee edits stay visible below for comparison until you save.
+                            </p>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div className="min-w-0 flex flex-col gap-1">
+                                <label
+                                  htmlFor={`approval-edit-heading-${a.id}`}
+                                  className="text-[11px] font-semibold uppercase tracking-wide text-gray-500"
+                                >
+                                  Heading
+                                </label>
+                                <input
+                                  id={`approval-edit-heading-${a.id}`}
+                                  type="text"
+                                  maxLength={255}
+                                  value={reviewDraft.title}
+                                  onChange={(e) =>
+                                    setReviewDraft((d) => ({ ...d, title: e.target.value }))
+                                  }
+                                  className="w-full rounded-lg border border-[#1d9c35]/40 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#1d9c35]"
+                                />
+                              </div>
+                              <div className="min-w-0 flex flex-col gap-1">
+                                <label
+                                  htmlFor={`approval-edit-schedule-${a.id}`}
+                                  className="text-[11px] font-semibold uppercase tracking-wide text-gray-500"
+                                >
+                                  Schedule ({timezoneShortLabel()})
+                                </label>
+                                <div className="flex items-center gap-2">
+                                  <FiClock className="w-4 h-4 text-gray-400 shrink-0" />
+                                  <input
+                                    id={`approval-edit-schedule-${a.id}`}
+                                    type="datetime-local"
+                                    value={reviewDraft.scheduledFor}
+                                    onChange={(e) =>
+                                      setReviewDraft((d) => ({ ...d, scheduledFor: e.target.value }))
+                                    }
+                                    className="w-full rounded-lg border border-[#1d9c35]/40 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus-visible:ring-1 focus-visible:ring-[#1d9c35]"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                            <AdminEditableMultiline
+                              id={`approval-edit-caption-${a.id}`}
+                              label="Caption"
+                              value={reviewDraft.caption}
+                              onChange={(v) => setReviewDraft((d) => ({ ...d, caption: v }))}
+                              rows={4}
+                              maxLength={2000}
+                            />
+                            <AdminEditableMultiline
+                              id={`approval-edit-body-${a.id}`}
+                              label="Accompanying text"
+                              value={reviewDraft.bodyText}
+                              onChange={(v) => setReviewDraft((d) => ({ ...d, bodyText: v }))}
+                              rows={6}
+                            />
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={reviewSaving || !reviewDirty}
+                                onClick={() => saveReview(a)}
+                                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#1d9c35] text-white hover:bg-[#17822c] disabled:opacity-40"
+                              >
+                                <FiSave className="w-3.5 h-3.5" />
+                                {reviewSaving ? "Saving…" : "Save edits"}
+                              </button>
+                              {reviewDirty ? (
+                                <span className="text-xs text-amber-800">Unsaved changes</span>
+                              ) : (
+                                <span className="text-xs text-gray-500">No unsaved changes</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                         <div className="grid gap-4 lg:grid-cols-[minmax(0,280px)_1fr]">
                           <div>
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
                               Media preview
                             </p>
-                            {["pending", "edited"].includes(String(a.status || "")) &&
-                            Array.isArray(a.backupImagePaths) &&
-                            a.backupImagePaths.length > 0 ? (
+                            {canSwitchBackup ? (
                               <BackupImageSwitcher
                                 primaryPath={a.imagePath}
                                 backupPaths={a.backupImagePaths}
@@ -858,11 +1047,11 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                               </div>
                             )}
                           </div>
-                            <div className="space-y-4 min-w-0">
+                          <div className="space-y-4 min-w-0">
                             <div className="grid gap-3 sm:grid-cols-2">
                               <AdminReadonlyMultiline
                                 id={`approval-heading-admin-${a.id}`}
-                                label="Heading"
+                                label="Original heading"
                                 value={a.title}
                                 rows={2}
                               />
@@ -877,7 +1066,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                             <div className="grid gap-3 sm:grid-cols-2">
                               <AdminReadonlyMultiline
                                 id={`approval-caption-admin-${a.id}`}
-                                label="Caption"
+                                label="Original caption"
                                 value={String(a.caption ?? "")}
                                 rows={4}
                               />

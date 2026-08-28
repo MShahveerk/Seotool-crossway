@@ -19,6 +19,11 @@ export const runtime = "nodejs";
 const OPEN = new Set(["pending", "edited"]);
 /** Actions allowed on declined blogs (edit then resend). */
 const DECLINED_ACTIONS = new Set(["edit", "save_image", "resend_for_approval"]);
+const APPROVED_CONTENT_ACTIONS = new Set(["edit", "save_image", "promote_backup"]);
+
+function isLivePublished(row) {
+  return String(row?.publishStatus || "") === "published";
+}
 
 async function parseBlogActionRequest(req) {
   const ct = req.headers.get("content-type") || "";
@@ -70,8 +75,18 @@ export async function PATCH(req, { params }) {
     const isAssignee = blog.assigneeId === session.user.id;
     if (!isAdmin && !isAssignee) return Response.json({ error: "Forbidden" }, { status: 403 });
 
+    if (isLivePublished(blog) && APPROVED_CONTENT_ACTIONS.has(action)) {
+      return Response.json(
+        {
+          error: "This blog is live. Pull it off Published on the Blog board before editing.",
+        },
+        { status: 400 }
+      );
+    }
+
     if (action === "promote_backup") {
-      if (!OPEN.has(blog.status)) {
+      const approvedUnpublished = blog.status === "approved" && !isLivePublished(blog);
+      if (!OPEN.has(blog.status) && !approvedUnpublished) {
         return Response.json(
           { error: "Can only switch images before approval is closed." },
           { status: 400 }
@@ -110,7 +125,11 @@ export async function PATCH(req, { params }) {
     const isOpen = OPEN.has(blog.status);
     const declinedOk = blog.status === "declined" && DECLINED_ACTIONS.has(action);
     const scheduleOk = action === "schedule" && (isAdmin || blog.status === "approved");
-    if (!isOpen && !declinedOk && !scheduleOk) {
+    const approvedContentOk =
+      blog.status === "approved" &&
+      !isLivePublished(blog) &&
+      APPROVED_CONTENT_ACTIONS.has(action);
+    if (!isOpen && !declinedOk && !scheduleOk && !approvedContentOk) {
       return Response.json({ error: "This blog is already closed." }, { status: 400 });
     }
     if (action === "resend_for_approval" && !isAdmin) {
@@ -205,6 +224,17 @@ export async function PATCH(req, { params }) {
             ...editFields,
             lastAction: "edit",
             status: "declined",
+          },
+        });
+      } else if (action === "edit" && blog.status === "approved" && !isLivePublished(blog)) {
+        // Keep approved so a scheduled publish is not knocked off the cron path.
+        await prisma.blogPost.update({
+          where: { id },
+          data: {
+            ...editFields,
+            lastAction: "edit",
+            status: "approved",
+            awaitingAdminReview: true,
           },
         });
       } else {

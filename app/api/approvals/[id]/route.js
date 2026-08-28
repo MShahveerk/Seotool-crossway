@@ -15,10 +15,19 @@ import { parseRunStudioRevision } from "../../../../lib/studioRevisionChoice.js"
 export const runtime = "nodejs";
 
 const OPEN_STATUSES = new Set(["pending", "edited"]);
+const CONTENT_ACTIONS = new Set(["edit", "save_image", "promote_backup"]);
 const TEXT_MAX = 20000;
 const CAPTION_MAX = 2000;
 const INSTRUCTIONS_MAX = 5000;
 const TITLE_MAX = 255;
+
+function isLivePublished(row) {
+  return String(row?.publishStatus || "") === "published";
+}
+
+function isApprovedUnpublished(row) {
+  return row?.status === "approved" && !isLivePublished(row);
+}
 
 /** PATCH — assignee: approve | decline | edit | save_image | promote_backup. */
 export async function PATCH(req, { params }) {
@@ -70,7 +79,18 @@ export async function PATCH(req, { params }) {
       });
     }
 
-    if (!OPEN_STATUSES.has(approval.status) && action !== "promote_backup") {
+    if (isLivePublished(approval) && CONTENT_ACTIONS.has(action)) {
+      return new Response(
+        JSON.stringify({
+          error: "This post is live. Pull it off Published on the Post board before editing.",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const contentOpen = OPEN_STATUSES.has(approval.status);
+    const approvedUnpublished = isApprovedUnpublished(approval);
+    if (!contentOpen && !(approvedUnpublished && CONTENT_ACTIONS.has(action))) {
       return new Response(
         JSON.stringify({ error: "This approval is already closed (approved or declined)." }),
         { status: 400, headers: { "Content-Type": "application/json" } }
@@ -80,12 +100,6 @@ export async function PATCH(req, { params }) {
     const now = new Date();
 
     if (action === "promote_backup") {
-      if (!OPEN_STATUSES.has(approval.status)) {
-        return new Response(
-          JSON.stringify({ error: "Can only switch images before approval is closed." }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        );
-      }
       const backups = Array.isArray(approval.backupImagePaths)
         ? approval.backupImagePaths.map((p) => String(p || "").trim()).filter(Boolean)
         : [];
@@ -110,12 +124,6 @@ export async function PATCH(req, { params }) {
         },
       });
     } else if (action === "save_image") {
-      if (!OPEN_STATUSES.has(approval.status)) {
-        return new Response(
-          JSON.stringify({ error: "Can only replace the image before approval is closed." }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        );
-      }
       if (!imageFile || !imageFile.size) {
         return new Response(
           JSON.stringify({ error: "Choose a JPEG, PNG, WebP, or GIF, then save." }),
@@ -270,8 +278,9 @@ export async function PATCH(req, { params }) {
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
       }
+      const keepApproved = approvedUnpublished;
       const editData = {
-        status: "edited",
+        status: keepApproved ? "approved" : "edited",
         userEditedText: editedText || null,
         userEditedCaption: editedCaption || null,
         userEditedInstructions: editedInstructions || null,
@@ -308,24 +317,26 @@ export async function PATCH(req, { params }) {
       });
     }
 
-    // Trigger status change email notification asynchronously
-    try {
-      const { sendPostStatusChangeNotification } = await import("../../../../lib/email");
-      let detailText = "";
-      if (action === "decline") {
-        detailText = `Rejection reason:\n${String(body.declineReason ?? body.reason ?? "").trim()}`;
-      } else if (action === "edit" || action === "approve") {
-        const parts = [];
-        if (body.editedTitle) parts.push(`Heading: ${body.editedTitle}`);
-        if (body.editedCaption) parts.push(`Caption: ${body.editedCaption}`);
-        if (body.editedText) parts.push(`Accompanying Text: ${body.editedText}`);
-        if (body.editedInstructions) parts.push(`Instructions: ${body.editedInstructions}`);
-        detailText = parts.join("\n\n");
+    // Skip a second "approved" email when copy is saved on an already-approved post.
+    const skipStatusEmail = action === "edit" && approval.status === "approved";
+    if (!skipStatusEmail) {
+      try {
+        const { sendPostStatusChangeNotification } = await import("../../../../lib/email");
+        let detailText = "";
+        if (action === "decline") {
+          detailText = `Rejection reason:\n${String(body.declineReason ?? body.reason ?? "").trim()}`;
+        } else if (action === "edit" || action === "approve") {
+          const parts = [];
+          if (body.editedTitle) parts.push(`Heading: ${body.editedTitle}`);
+          if (body.editedCaption) parts.push(`Caption: ${body.editedCaption}`);
+          if (body.editedText) parts.push(`Accompanying Text: ${body.editedText}`);
+          if (body.editedInstructions) parts.push(`Instructions: ${body.editedInstructions}`);
+          detailText = parts.join("\n\n");
+        }
+        await sendPostStatusChangeNotification(updated, session.user, updated.status, detailText);
+      } catch (err) {
+        console.error("Failed to send status change notification email", err);
       }
-      // Trigger status notification
-      await sendPostStatusChangeNotification(updated, session.user, updated.status, detailText);
-    } catch (err) {
-      console.error("Failed to send status change notification email", err);
     }
 
     const capMap = await fetchCaptionMapByApprovalIds(prisma, [id]);

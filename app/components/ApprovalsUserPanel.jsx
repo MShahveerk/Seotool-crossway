@@ -397,7 +397,13 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
             : "Post declined"
         );
       }
-      else if (payload.action === "edit") toastSuccess("Changes saved");
+      else if (payload.action === "edit") {
+        toastSuccess(
+          items.find((a) => a.id === id)?.status === "approved"
+            ? "Edits saved. This post stays approved."
+            : "Changes saved"
+        );
+      }
     } catch (e) {
       setError(e.message);
       toastError("Action failed", e.message);
@@ -420,7 +426,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
         <p className="text-sm text-gray-600 max-w-3xl">
           Pending posts from Create Post, inbound, and Post Automation Studio appear here
           {selectedSite ? " for the selected site" : ""}. Review media (switch backups if available), edit copy, then
-          approve or decline.
+          approve or decline. Approved posts that are not live yet can still be edited; they stay approved.
         </p>
         <button
           type="button"
@@ -471,8 +477,12 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
         <ul className="space-y-3">
           {visibleItems.map((a, index) => {
             const open = openId === a.id;
-            const closed = a.status === "approved" || a.status === "declined";
-            const canAct = a.status === "pending" || a.status === "edited";
+            const isLive = a.publishStatus === "published";
+            const closed = a.status === "declined" || isLive;
+            const alreadyApproved = a.status === "approved" && !isLive;
+            const canAct =
+              !isLive &&
+              (a.status === "pending" || a.status === "edited" || a.status === "approved");
             const capShown = displayCaption(a);
             const insShown = displayInstructions(a);
             const bodyShown = displayBody(a);
@@ -775,23 +785,30 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            disabled={acting}
-                            onClick={() =>
-                              patch(a.id, {
-                                action: "approve",
-                                editedTitle: titleDraft,
-                                editedText: editDraft,
-                                editedCaption: captionDraft,
-                                editedInstructions: instructionsDraft,
-                              })
-                            }
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00A3FF] hover:bg-[#0077CC] text-white text-sm font-semibold disabled:opacity-50"
-                          >
-                            <FiCheck className="w-4 h-4" />
-                            {approvePrimaryLabel}
-                          </button>
+                          {!alreadyApproved ? (
+                            <button
+                              type="button"
+                              disabled={acting}
+                              onClick={() =>
+                                patch(a.id, {
+                                  action: "approve",
+                                  editedTitle: titleDraft,
+                                  editedText: editDraft,
+                                  editedCaption: captionDraft,
+                                  editedInstructions: instructionsDraft,
+                                })
+                              }
+                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#00A3FF] hover:bg-[#0077CC] text-white text-sm font-semibold disabled:opacity-50"
+                            >
+                              <FiCheck className="w-4 h-4" />
+                              {approvePrimaryLabel}
+                            </button>
+                          ) : (
+                            <p className="w-full text-xs text-gray-600">
+                              This post is approved and not live yet. Saving updates the copy that will
+                              publish. It stays approved.
+                            </p>
+                          )}
                           <button
                             type="button"
                             disabled={acting || nothingToSave}
@@ -809,29 +826,33 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                             <FiEdit2 className="w-4 h-4" />
                             Save edit
                           </button>
-                          <button
-                            type="button"
-                            disabled={acting}
-                            onClick={() => {
-                              setError("");
-                              setDeclineReason("");
-                              setDeclineTarget("both");
-                              setDeclineRunStudio(true);
-                              setDeclineFor(a.id);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold disabled:opacity-50"
-                          >
-                            <FiX className="w-4 h-4" />
-                            Decline
-                          </button>
+                          {!alreadyApproved ? (
+                            <button
+                              type="button"
+                              disabled={acting}
+                              onClick={() => {
+                                setError("");
+                                setDeclineReason("");
+                                setDeclineTarget("both");
+                                setDeclineRunStudio(true);
+                                setDeclineFor(a.id);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold disabled:opacity-50"
+                            >
+                              <FiX className="w-4 h-4" />
+                              Decline
+                            </button>
+                          ) : null}
                         </div>
                       </>
                     )}
-                    {closed && (
+                    {closed ? (
                       <p className="text-xs text-gray-500">
-                        This item is closed. Contact your administrator if you need changes.
+                        {isLive
+                          ? "This post is live. Pull it off Published on the Post board to edit."
+                          : "This item is closed. Contact your administrator if you need changes."}
                       </p>
-                    )}
+                    ) : null}
                   </div>
                 )}
               </li>
