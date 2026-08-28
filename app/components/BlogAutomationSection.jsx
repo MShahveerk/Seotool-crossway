@@ -42,6 +42,8 @@ import LiveRunDock from "./studioShared/LiveRunDock";
 import StudioComposerShell from "./studioShared/StudioComposerShell";
 import { isLiveStatus } from "./studioShared/runFormat";
 import { BLOG_STUDIO_DEFAULT_PROMPTS } from "../../lib/blogStudio/defaults";
+import { useStudioProjectLabel } from "../hooks/useStudioProjectLabel";
+import { uploadStudioOperatorImage } from "../../lib/studioOperatorImageClient";
 import {
   INTERVAL_OPTIONS,
   AUTO_SOURCE_OPTIONS,
@@ -105,6 +107,7 @@ function parseLinksEditor(text) {
 }
 
 export default function BlogAutomationSection({ selectedSite = "" }) {
+  const projectLabel = useStudioProjectLabel(selectedSite);
   const [zone, setZone] = useState("compose");
   const [source, setSource] = useState("topic");
   const [setupTab, setSetupTab] = useState("voice");
@@ -172,6 +175,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
   const [topic, setTopic] = useState("");
+  const [operatorImageFile, setOperatorImageFile] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
@@ -596,12 +600,17 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
     setSaveMessage(null);
     try {
       await saveSiteConfig();
+      let operatorImagePath = String(overrides?.operatorImagePath || "").trim();
+      if (!operatorImagePath && operatorImageFile) {
+        operatorImagePath = await uploadStudioOperatorImage("blog", operatorImageFile);
+      }
       const res = await fetch(`/api/admin/blog-automation/site/run${siteQ}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topic: nextTopic,
-          generateImage: true,
+          generateImage: !operatorImagePath,
+          operatorImagePath: operatorImagePath || undefined,
           chatThreadId: (overrides && overrides.chatThreadId) || chatThreadId || undefined,
           ...(overrides && typeof overrides === "object" ? { overrides } : {}),
         }),
@@ -612,6 +621,7 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
         setLiveRun(data.run);
         loadRuns();
         setSaveMessage({ ok: true, text: "Writing now — watch the chip in the composer." });
+        setOperatorImageFile(null);
         return data.run;
       }
       setSaveMessage({ ok: true, text: "Run queued — watch the chip in the composer." });
@@ -1739,8 +1749,11 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
         <StudioComposerShell
           kind="blog"
           projectName={selectedSite}
+          projectLabel={projectLabel}
           topic={topic}
           onTopicChange={setTopic}
+          operatorImageFile={operatorImageFile}
+          onOperatorImageChange={setOperatorImageFile}
           onSubmit={startRun}
           submitting={running}
           submitDisabled={!selectedSite}

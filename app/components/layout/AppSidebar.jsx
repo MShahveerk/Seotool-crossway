@@ -227,15 +227,19 @@ export default function AppSidebar({
       if (metaMatch?.name) return metaMatch.name;
       const name = entry.displayName || entry.userName || entry.siteLink || "";
       if (name && String(name).startsWith("http")) return getSiteHostName(name);
-      if (name && !/^\d+$/.test(String(name).trim())) return name;
-      if (entry.siteLink) return getSiteHostName(entry.siteLink);
-      return metaMatch?.name || "Facebook Page";
+      if (name && !/^\d+$/.test(String(name).trim()) && !/^facebook\s*page/i.test(String(name)) && !/^unnamed page/i.test(String(name))) {
+        return name;
+      }
+      if (entry.siteLink && !isMetaPageId(entry.siteLink)) return getSiteHostName(entry.siteLink);
+      return metaMatch?.name || (entry.facebookPageId ? `Page ${entry.facebookPageId}` : "this project");
     }
     if (isString && /^\d+$/.test(siteEntryOrVal.trim())) {
       const metaMatch = metaAccounts.find(
         (a) => String(a.facebookPageId || "").trim() === siteEntryOrVal.trim()
       );
-      return metaMatch?.name || "Facebook Page";
+      return metaMatch?.name && !/^facebook\s*page/i.test(metaMatch.name)
+        ? metaMatch.name
+        : `Page ${siteEntryOrVal.trim()}`;
     }
     return isString ? getSiteHostName(siteEntryOrVal) : "No Account Selected";
   };

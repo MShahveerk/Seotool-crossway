@@ -1,25 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { FiArrowUp, FiPlus, FiRefreshCw } from "react-icons/fi";
+import { FiArrowUp, FiImage, FiPlus, FiRefreshCw, FiX } from "react-icons/fi";
 import { cn } from "@/lib/utils";
 import { CHAT_PERSONA } from "@/lib/blogStudio/chatPersona";
+import { studioGreetingName } from "@/lib/studioProjectLabel";
 
 const COUNTDOWN_SECONDS = 8;
 
-function projectDisplayName(site) {
-  const raw = String(site || "").trim();
-  if (!raw) return "your project";
-  try {
-    if (raw.startsWith("sc-domain:")) return raw.slice("sc-domain:".length);
-    if (/^https?:\/\//i.test(raw)) {
-      return new URL(raw).hostname.replace(/^www\./i, "");
-    }
-    if (raw.includes(".") && !raw.includes(" ")) return raw.replace(/^www\./i, "");
-  } catch {
-    /* fall through */
-  }
-  return raw.length > 42 ? `${raw.slice(0, 40)}…` : raw;
+function projectDisplayName(site, resolvedName = "") {
+  return studioGreetingName(site, resolvedName);
 }
 
 function TypingDots() {
@@ -94,10 +84,17 @@ export default function DeciderChatStage({
   activeThreadId = "",
   onSelectThread,
   onNewThread,
+  projectLabel = "",
+  operatorImageFile = null,
+  onOperatorImageChange,
 }) {
   const listRef = useRef(null);
   const inputRef = useRef(null);
-  const displayName = useMemo(() => projectDisplayName(projectName), [projectName]);
+  const imageInputRef = useRef(null);
+  const displayName = useMemo(
+    () => projectDisplayName(projectName, projectLabel),
+    [projectName, projectLabel]
+  );
   const showHero = messages.filter((m) => m.role === "user").length === 0 && !proposal && !liveRunning;
 
   useEffect(() => {
@@ -144,11 +141,18 @@ export default function DeciderChatStage({
 
       {showHero ? (
         <div className="shrink-0 px-2 pb-3 pt-3 text-center sm:pt-6">
-          <h2 className="font-heading mx-auto max-w-xl text-[1.55rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[var(--cw-ink)] sm:text-[1.9rem]">
-            What should we write for{" "}
-            <span className="bg-gradient-to-r from-[var(--cw-neon-soft)] via-[var(--cw-info)] to-[var(--cw-neon)] bg-clip-text text-transparent">
-              {displayName}
-            </span>
+          <h2 className="font-heading mx-auto max-w-xl text-[1.55rem] font-semibold leading-[1.2] tracking-[-0.03em] text-balance text-[var(--cw-ink)] sm:text-[1.9rem]">
+            {displayName ? (
+              <>
+                What should we write for{" "}
+                <span className="bg-gradient-to-r from-[var(--cw-neon-soft)] via-[var(--cw-info)] to-[var(--cw-neon)] bg-clip-text text-transparent">
+                  {displayName}
+                </span>
+                ?
+              </>
+            ) : (
+              <>What should we write today?</>
+            )}
           </h2>
         </div>
       ) : null}
@@ -272,7 +276,9 @@ export default function DeciderChatStage({
             placeholder={
               liveRunning
                 ? `${CHAT_PERSONA} is writing — you’ll get the Approvals link here.`
-                : `Talk to ${CHAT_PERSONA} about ${displayName}…`
+                : displayName
+                  ? `Talk to ${CHAT_PERSONA} about ${displayName}…`
+                  : `Talk to ${CHAT_PERSONA}…`
             }
             disabled={disabled || liveRunning}
             className={cn(
@@ -284,9 +290,43 @@ export default function DeciderChatStage({
             aria-label={`Message ${CHAT_PERSONA}`}
           />
           <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 px-3 pb-3">
-            <p className="px-2 text-[11px] text-[var(--cw-ink-faint)]">
-              Enter to send · Shift+Enter for a new line
-            </p>
+            <div className="flex min-w-0 items-center gap-2 px-1">
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => {
+                  onOperatorImageChange?.(e.target.files?.[0] || null);
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                disabled={liveRunning}
+                title="Use your image instead of generating one"
+                className={cn(
+                  "inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium",
+                  operatorImageFile
+                    ? "bg-[color-mix(in_srgb,var(--cw-neon)_16%,transparent)] text-[var(--cw-neon)]"
+                    : "text-[var(--cw-ink-faint)] hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink-dim)]"
+                )}
+              >
+                <FiImage className="h-3.5 w-3.5" />
+                {operatorImageFile ? "Replace image" : "Use my image"}
+              </button>
+              {operatorImageFile ? (
+                <button
+                  type="button"
+                  onClick={() => onOperatorImageChange?.(null)}
+                  className="truncate text-[11px] text-[var(--cw-ink-muted)] hover:text-[var(--cw-ink)]"
+                >
+                  {operatorImageFile.name}
+                  <FiX className="ml-1 inline h-3 w-3" />
+                </button>
+              ) : null}
+            </div>
             <button
               type="submit"
               disabled={busy || disabled || liveRunning || !String(input || "").trim()}

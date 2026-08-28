@@ -9,6 +9,7 @@ import {
 import { resolveScheduleOnApprove } from "../../../../lib/approvalSchedule.js";
 import { userCanAccessApproval } from "../../../../lib/siteAccess.js";
 import { canAccessSection } from "../../../../lib/modulePermissions";
+import { saveApprovalMediaBuffer } from "../../../../lib/approvalMedia.js";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,7 @@ const CAPTION_MAX = 2000;
 const INSTRUCTIONS_MAX = 5000;
 const TITLE_MAX = 255;
 
-/** PATCH — assignee: approve | decline | edit (heading, caption, instructions, accompanying text; media unchanged). */
+/** PATCH — assignee: approve | decline | edit | save_image | promote_backup. */
 export async function PATCH(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -37,7 +38,19 @@ export async function PATCH(req, { params }) {
     }
 
     const { id } = await params;
-    const body = await req.json();
+    const ct = req.headers.get("content-type") || "";
+    let body = {};
+    let imageFile = null;
+    if (ct.includes("multipart/form-data")) {
+      const form = await req.formData();
+      for (const [key, value] of form.entries()) {
+        if (typeof value === "string") body[key] = value;
+      }
+      const raw = form.get("image") || form.get("featuredImage");
+      if (raw && typeof raw !== "string") imageFile = raw;
+    } else {
+      body = await req.json();
+    }
     const action = String(body.action || "").toLowerCase();
 
     const approval = await prisma.approval.findUnique({ where: { id } });
@@ -93,6 +106,34 @@ export async function PATCH(req, { params }) {
           imagePath: chosen,
           backupImagePaths: nextBackups,
           lastAction: "promote_backup",
+        },
+      });
+    } else if (action === "save_image") {
+      if (!OPEN_STATUSES.has(approval.status)) {
+        return new Response(
+          JSON.stringify({ error: "Can only replace the image before approval is closed." }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      if (!imageFile || !imageFile.size) {
+        return new Response(
+          JSON.stringify({ error: "Choose a JPEG, PNG, WebP, or GIF, then save." }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      const mime = imageFile.type || "image/jpeg";
+      const buf = Buffer.from(await imageFile.arrayBuffer());
+      const imagePath = await saveApprovalMediaBuffer(buf, mime);
+      const backups = [approval.imagePath, ...(Array.isArray(approval.backupImagePaths) ? approval.backupImagePaths : [])]
+        .map((p) => String(p || "").trim())
+        .filter((p) => p && p !== imagePath)
+        .slice(0, 3);
+      await prisma.approval.update({
+        where: { id },
+        data: {
+          imagePath,
+          backupImagePaths: backups,
+          lastAction: "save_image",
         },
       });
     } else if (action === "approve") {
@@ -245,7 +286,7 @@ export async function PATCH(req, { params }) {
       });
     } else {
       return new Response(
-        JSON.stringify({ error: "Invalid action. Use approve, decline, edit, or promote_backup." }),
+        JSON.stringify({ error: "Invalid action. Use approve, decline, edit, save_image, or promote_backup." }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }

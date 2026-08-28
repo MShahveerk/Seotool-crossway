@@ -18,13 +18,17 @@ export async function POST(req) {
     const siteLink = String(new URL(req.url).searchParams.get("siteLink") || "").trim();
     if (!siteLink) return Response.json({ error: "siteLink is required." }, { status: 400 });
     const body = await req.json().catch(() => ({}));
+    const operatorImagePath = String(body.operatorImagePath || body.overrides?.operatorImagePath || "").trim();
+    const overrides =
+      body.overrides && typeof body.overrides === "object" ? { ...body.overrides } : {};
+    if (operatorImagePath) overrides.operatorImagePath = operatorImagePath;
     const run = await enqueueStudioRun({
       siteLink,
       topic: body.topic || "",
       trigger: "manual",
       triggeredById: session.user.id,
-      generateImage: body.generateImage !== false,
-      overrides: body.overrides || null,
+      generateImage: body.generateImage !== false && !operatorImagePath,
+      overrides: Object.keys(overrides).length ? overrides : null,
     });
     return Response.json({ run }, { status: 202 });
   } catch (error) {

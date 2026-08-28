@@ -11,6 +11,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
   FiArrowUp,
+  FiImage,
   FiX,
   FiZap,
   FiSave,
@@ -24,20 +25,10 @@ import Btn from "../ui-shared/Btn";
 import LiveRunDock from "./LiveRunDock";
 import DeciderChatStage from "./DeciderChatStage";
 import { isLiveStatus } from "./runFormat";
+import { studioGreetingHeadline, studioGreetingName } from "@/lib/studioProjectLabel";
 
-export function projectDisplayName(site) {
-  const raw = String(site || "").trim();
-  if (!raw) return "your project";
-  try {
-    if (raw.startsWith("sc-domain:")) return raw.slice("sc-domain:".length);
-    if (/^https?:\/\//i.test(raw)) {
-      return new URL(raw).hostname.replace(/^www\./i, "");
-    }
-    if (raw.includes(".") && !raw.includes(" ")) return raw.replace(/^www\./i, "");
-  } catch {
-    /* fall through */
-  }
-  return raw.length > 42 ? `${raw.slice(0, 40)}…` : raw;
+export function projectDisplayName(site, resolvedName = "") {
+  return studioGreetingName(site, resolvedName) || "this project";
 }
 
 export default function StudioComposerShell({
@@ -86,18 +77,21 @@ export default function StudioComposerShell({
   chatThreadId = "",
   onChatSelectThread,
   onChatNewThread,
+  projectLabel = "",
+  operatorImageFile = null,
+  onOperatorImageChange,
 }) {
   const textareaRef = useRef(null);
-  const displayName = useMemo(() => projectDisplayName(projectName), [projectName]);
+  const imageInputRef = useRef(null);
+  const displayName = useMemo(
+    () => studioGreetingName(projectName, projectLabel),
+    [projectName, projectLabel]
+  );
   const live = liveRun && isLiveStatus(liveRun.status) ? liveRun : null;
   const keepComposer = kind === "blog";
   const showComposer = (!live || keepComposer) && !activeBottomTab;
-  const verb = kind === "post" ? "post" : "write";
   const promptLabel =
-    placeholder ||
-    (kind === "post"
-      ? `What should we post for ${displayName} today?`
-      : `What should we write for ${displayName} today?`);
+    placeholder || studioGreetingHeadline(kind, displayName);
 
   useEffect(() => {
     if (showComposer && textareaRef.current) {
@@ -234,6 +228,7 @@ export default function StudioComposerShell({
         {showComposer && chatEnabled ? (
           <DeciderChatStage
             projectName={projectName}
+            projectLabel={projectLabel}
             messages={chatMessages}
             input={chatInput}
             onInputChange={onChatInputChange}
@@ -250,17 +245,25 @@ export default function StudioComposerShell({
             activeThreadId={chatThreadId}
             onSelectThread={onChatSelectThread}
             onNewThread={onChatNewThread}
+            operatorImageFile={operatorImageFile}
+            onOperatorImageChange={onOperatorImageChange}
           />
         ) : null}
 
         {showComposer && !chatEnabled ? (
           <div className="mx-auto flex h-full min-h-0 w-full max-w-2xl flex-1 flex-col items-center justify-center px-1 py-8 sm:py-12">
-            <h2 className="font-heading mb-8 max-w-xl text-center text-[1.65rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[var(--cw-ink)] sm:text-[2rem]">
-              What should we {verb} for{" "}
-              <span className="bg-gradient-to-r from-[var(--cw-neon-soft)] via-[var(--cw-info)] to-[var(--cw-neon)] bg-clip-text text-transparent">
-                {displayName}
-              </span>{" "}
-              today?
+            <h2 className="font-heading mb-8 max-w-xl text-center text-[1.65rem] font-semibold leading-[1.2] tracking-[-0.03em] text-balance text-[var(--cw-ink)] sm:text-[2rem]">
+              {displayName ? (
+                <>
+                  What should we {kind === "post" ? "post" : "write"} for{" "}
+                  <span className="bg-gradient-to-r from-[var(--cw-neon-soft)] via-[var(--cw-info)] to-[var(--cw-neon)] bg-clip-text text-transparent">
+                    {displayName}
+                  </span>{" "}
+                  today?
+                </>
+              ) : (
+                <>What should we {kind === "post" ? "post" : "write"} today?</>
+              )}
             </h2>
 
             <form
@@ -299,9 +302,47 @@ export default function StudioComposerShell({
                   aria-label={promptLabel}
                 />
                 <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 px-3 pb-3">
-                  <p className="px-2 text-[11px] text-[var(--cw-ink-faint)]">
-                    Enter to send · Shift+Enter for a new line
-                  </p>
+                  <div className="flex min-w-0 items-center gap-2 px-1">
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      onChange={(e) => {
+                        onOperatorImageChange?.(e.target.files?.[0] || null);
+                        e.target.value = "";
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      title="Use your image instead of generating one"
+                      className={cn(
+                        "inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium",
+                        operatorImageFile
+                          ? "bg-[color-mix(in_srgb,var(--cw-neon)_16%,transparent)] text-[var(--cw-neon)]"
+                          : "text-[var(--cw-ink-faint)] hover:bg-[var(--cw-overlay)] hover:text-[var(--cw-ink-dim)]"
+                      )}
+                    >
+                      <FiImage className="h-3.5 w-3.5" />
+                      {operatorImageFile ? "Replace image" : "Use my image"}
+                    </button>
+                    {operatorImageFile ? (
+                      <button
+                        type="button"
+                        onClick={() => onOperatorImageChange?.(null)}
+                        className="truncate text-[11px] text-[var(--cw-ink-muted)] hover:text-[var(--cw-ink)]"
+                        title="Remove your image"
+                      >
+                        {operatorImageFile.name}
+                        <FiX className="ml-1 inline h-3 w-3" />
+                      </button>
+                    ) : (
+                      <p className="hidden truncate text-[11px] text-[var(--cw-ink-faint)] sm:block">
+                        Optional — skip the image agent
+                      </p>
+                    )}
+                  </div>
                   <button
                     type="submit"
                     disabled={submitting || submitDisabled}

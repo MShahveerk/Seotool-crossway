@@ -25,13 +25,15 @@ export async function POST(req) {
     const overrides =
       body.overrides && typeof body.overrides === "object" ? { ...body.overrides } : {};
     if (body.chatThreadId) overrides.chatThreadId = String(body.chatThreadId);
+    const operatorImagePath = String(body.operatorImagePath || overrides.operatorImagePath || "").trim();
+    if (operatorImagePath) overrides.operatorImagePath = operatorImagePath;
 
     const run = await enqueueStudioRun({
       siteLink,
       topic: body.topic || "",
       trigger: "manual",
       triggeredById: session.user.id,
-      generateImage: body.generateImage !== false,
+      generateImage: body.generateImage !== false && !operatorImagePath,
       overrides: Object.keys(overrides).length ? overrides : null,
     });
 

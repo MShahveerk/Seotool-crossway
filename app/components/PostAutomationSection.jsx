@@ -34,6 +34,8 @@ import LiveRunDock from "./studioShared/LiveRunDock";
 import StudioComposerShell from "./studioShared/StudioComposerShell";
 import { isLiveStatus } from "./studioShared/runFormat";
 import { POST_STUDIO_DEFAULT_PROMPTS } from "../../lib/postsStudio/defaults";
+import { useStudioProjectLabel } from "../hooks/useStudioProjectLabel";
+import { uploadStudioOperatorImage } from "../../lib/studioOperatorImageClient";
 import {
   INTERVAL_OPTIONS,
   AUTO_SOURCE_OPTIONS,
@@ -80,6 +82,7 @@ const raisedCard = "rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-r
 const helpText = "text-sm text-[var(--cw-ink-muted)]";
 
 export default function PostAutomationSection({ selectedSite = "" }) {
+  const projectLabel = useStudioProjectLabel(selectedSite);
   const [zone, setZone] = useState("compose");
   const [source, setSource] = useState("topic");
   const [setupTab, setSetupTab] = useState("voice");
@@ -147,6 +150,7 @@ export default function PostAutomationSection({ selectedSite = "" }) {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
   const [topic, setTopic] = useState("");
+  const [operatorImageFile, setOperatorImageFile] = useState(null);
   const [running, setRunning] = useState(false);
   const [runs, setRuns] = useState([]);
   // The run in flight and the run you're reading are separate things: opening an
@@ -382,16 +386,25 @@ export default function PostAutomationSection({ selectedSite = "" }) {
     try {
       // Persist current compose fields before run
       await saveSiteConfig();
+      let operatorImagePath = "";
+      if (operatorImageFile) {
+        operatorImagePath = await uploadStudioOperatorImage("post", operatorImageFile);
+      }
       const res = await fetch(`/api/admin/post-automation/site/run${siteQ}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, generateImage: true }),
+        body: JSON.stringify({
+          topic,
+          generateImage: !operatorImagePath,
+          operatorImagePath: operatorImagePath || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start run.");
       if (data.run) {
         setLiveRun(data.run);
         selectRun(data.run.id);
+        setOperatorImageFile(null);
       }
       setSaveMessage({ ok: true, text: "Run queued — following it in the Library." });
       loadRuns();
@@ -1014,8 +1027,11 @@ export default function PostAutomationSection({ selectedSite = "" }) {
         <StudioComposerShell
           kind="post"
           projectName={selectedSite}
+          projectLabel={projectLabel}
           topic={topic}
           onTopicChange={setTopic}
+          operatorImageFile={operatorImageFile}
+          onOperatorImageChange={setOperatorImageFile}
           onSubmit={startRun}
           submitting={running}
           submitDisabled={!selectedSite}

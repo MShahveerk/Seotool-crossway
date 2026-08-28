@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiCheck, FiEdit2, FiX, FiRefreshCw, FiChevronDown, FiChevronUp, FiClock } from "react-icons/fi";
+import { FiCheck, FiEdit2, FiX, FiRefreshCw, FiChevronDown, FiChevronUp, FiClock, FiUpload } from "react-icons/fi";
 import { formatScheduleShort } from "../../lib/timezone";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
 import BackupImageSwitcher from "./BackupImageSwitcher";
@@ -109,6 +109,8 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
   const [instructionsDraft, setInstructionsDraft] = useState("");
   const [acting, setActing] = useState(false);
   const [promoting, setPromoting] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
   const [declineFor, setDeclineFor] = useState(null);
   const [declineReason, setDeclineReason] = useState("");
   const [declineTarget, setDeclineTarget] = useState("both");
@@ -196,6 +198,31 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
     }
   };
 
+  const saveOperatorImage = async (approvalId) => {
+    if (!imageFile) {
+      toastError("Choose an image first");
+      return;
+    }
+    setImageBusy(true);
+    setError("");
+    try {
+      const fd = new FormData();
+      fd.append("action", "save_image");
+      fd.append("image", imageFile);
+      const res = await fetch(`/api/approvals/${approvalId}`, { method: "PATCH", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save image");
+      toastSuccess("Image replaced");
+      setImageFile(null);
+      await load();
+    } catch (e) {
+      setError(e.message);
+      toastError("Could not replace image", e.message);
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
   useEffect(() => {
     load();
   }, [load]);
@@ -207,6 +234,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
       setTitleDraft("");
       setCaptionDraft("");
       setInstructionsDraft("");
+      setImageFile(null);
       return;
     }
     setOpenId(a.id);
@@ -397,6 +425,33 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                         promoting={promoting}
                         onPromote={(idx) => promoteBackup(a.id, idx)}
                       />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-800 hover:bg-gray-50">
+                          <FiUpload className="h-3.5 w-3.5" />
+                          {a.imagePath ? "Replace with my image" : "Upload my image"}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            className="hidden"
+                            onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          disabled={imageBusy || !imageFile}
+                          onClick={() => saveOperatorImage(a.id)}
+                          className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+                        >
+                          {imageBusy ? "Saving…" : "Save image"}
+                        </button>
+                        {imageFile ? (
+                          <span className="text-xs text-amber-800">Unsaved: {imageFile.name}</span>
+                        ) : (
+                          <span className="text-xs text-gray-500">
+                            Overrides the generated creative. The old file is kept as a backup.
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <div className="rounded-lg border border-gray-100 overflow-hidden bg-gray-50">
                         <ApprovalMediaPreview
