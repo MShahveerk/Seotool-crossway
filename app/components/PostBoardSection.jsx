@@ -108,7 +108,7 @@ export default function PostBoardSection({ selectedSite = "" }) {
     boardId: `posts-${room}`,
     brand: "Post Board",
     subtitle:
-      "Drag to change status · double-click to preview & edit. Draft → Pending sends approval emails. Live sync across open boards.",
+      "Drag to change status · drop onto Published to go live now (schedule is ignored). Double-click to preview and edit.",
     columns: POST_BOARD_COLUMNS,
     autoMoves: POST_AUTO_MOVES,
     items,

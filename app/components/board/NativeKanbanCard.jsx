@@ -62,7 +62,7 @@ export default function NativeKanbanCard({
         const el = document.elementFromPoint(e.clientX, e.clientY);
         const lane = el?.closest?.("[data-column-id]");
         const hit = lane?.getAttribute("data-column-id");
-        if (!hit || hit === columnId || hit === "published") return;
+        if (!hit || hit === columnId) return;
         setMoving(true);
         try {
           await onMoveToColumn(item, hit, columnId);

@@ -85,7 +85,7 @@ export default function KanbanBoard({
 
   const requestMove = async (item, toColumn, fromColumn) => {
     const from = fromColumn || getColumn(item);
-    if (!toColumn || toColumn === from || toColumn === "published") {
+    if (!toColumn || toColumn === from) {
       throw new Error("Invalid move");
     }
 
@@ -106,11 +106,19 @@ export default function KanbanBoard({
       const result = await onMoveToColumn(item, toColumn, fromColumn);
       const toLabel = columns.find((c) => c.id === toColumn)?.label || toColumn;
       const notified = result?.notify?.notified;
-      setToast(
-        notified > 0
-          ? `Moved to ${toLabel} · ${notified} approval email${notified === 1 ? "" : "s"} sent`
-          : `Moved to ${toLabel}`
-      );
+      const publish = result?.publish;
+      if (publish && publish.success === false) {
+        const detail = Array.isArray(publish.errors) ? publish.errors.filter(Boolean).join(" · ") : "";
+        setToast(detail ? `Publish failed · ${detail}` : "Publish failed · moved to Failed");
+      } else if (publish && publish.success) {
+        setToast(`Published live${publish.method ? ` via ${publish.method}` : ""}`);
+      } else {
+        setToast(
+          notified > 0
+            ? `Moved to ${toLabel} · ${notified} approval email${notified === 1 ? "" : "s"} sent`
+            : `Moved to ${toLabel}`
+        );
+      }
       window.setTimeout(() => setToast(""), 3200);
       return result;
     } catch (err) {
@@ -207,7 +215,7 @@ export default function KanbanBoard({
                           columnId={col.id}
                           boardId={boardId}
                           boundsSelector={`#${boundsId}`}
-                          locked={Boolean(col.locked) || getColumn(item) === "published"}
+                          locked={Boolean(col.lockCards || col.locked) || getColumn(item) === "published"}
                           onMoveToColumn={requestMove}
                           onOpenDetails={setDetailItem}
                           index={index}

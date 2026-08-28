@@ -112,7 +112,7 @@ export default function BlogBoardSection({ selectedSite = "" }) {
     boardId: `blogs-${room}`,
     brand: "Blog Board",
     subtitle:
-      "Drag to change status · double-click to preview & edit. Draft → Pending sends approval emails. Live sync across open boards.",
+      "Drag to change status · drop onto Published to go live now (schedule is ignored). Double-click to preview and edit.",
     columns: BLOG_BOARD_COLUMNS,
     autoMoves: BLOG_AUTO_MOVES,
     items,

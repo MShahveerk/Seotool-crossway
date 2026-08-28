@@ -256,12 +256,12 @@ export const chapters = [
     how: "Sidebar: Blogs, then Board.",
     needs: "A selected project. Blog Studio later needs a website. The board can still hold posts for that project.",
     paragraphs: [
-      "Drag a card to change status. Double-click to edit. Changes save immediately.",
+      "Drag a card to change status. Double-click to edit. Drop onto Published to publish immediately. A future schedule is ignored.",
       "Filter by assignee, site, or status when the board is busy.",
     ],
     clusters: [
       cluster("On the page", [
-        item("Lanes", "Draft through published."),
+        item("Lanes", "Draft through published. Drop onto Published to go live now."),
         item("A post", "Double-click to edit. Saves immediately."),
         item("Filters", "Assignee, site, or status."),
       ]),
@@ -486,11 +486,11 @@ export const chapters = [
     how: "Sidebar: Social, then Board.",
     needs: "A selected project.",
     paragraphs: [
-      "Drag a card to change status. Double-click to edit caption, media, and schedule. Filter by channel, assignee, or status.",
+      "Drag a card to change status. Double-click to edit caption, media, and schedule. Drop onto Published to publish immediately. A future schedule is ignored.",
     ],
     clusters: [
       cluster("On the page", [
-        item("Lanes", "Idea through published."),
+        item("Lanes", "Idea through published. Drop onto Published to go live now."),
         item("A post", "Caption, media, schedule."),
         item("Filters", "Channel, assignee, or status."),
       ]),

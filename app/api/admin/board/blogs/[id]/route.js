@@ -15,7 +15,7 @@ import { revertDeclinedBlogToDraft } from "@/lib/blogDecline.js";
 
 export const runtime = "nodejs";
 
-/** PATCH — move a blog card to another board column (status). Published is locked. */
+/** PATCH — move a blog card to another board column. Dropping onto Published publishes now. */
 export async function PATCH(req, { params }) {
   try {
     const session = await requireAdminRoute(req, "blog-board");
@@ -33,7 +33,7 @@ export async function PATCH(req, { params }) {
     });
     if (!existing) return Response.json({ error: "Blog not found." }, { status: 404 });
 
-    if (existing.publishStatus === "published" || toColumn === "published") {
+    if (existing.publishStatus === "published") {
       return Response.json({ error: "Published blogs are locked and cannot be moved." }, { status: 400 });
     }
     if (existing.status === "deleted") {
@@ -46,6 +46,33 @@ export async function PATCH(req, { params }) {
         { error: `Cannot move from ${fromColumn} to ${toColumn}.` },
         { status: 400 }
       );
+    }
+
+    if (toColumn === "published") {
+      if (!["approved", "edited"].includes(existing.status)) {
+        await prisma.blogPost.update({
+          where: { id },
+          data: {
+            status: "approved",
+            publishStatus: "unpublish",
+            hiddenFromAssignee: false,
+            lastAction: "approve",
+            respondedAt: new Date(),
+            publishError: null,
+          },
+        });
+      }
+      const publish = await publishBlogNow(id);
+      const updated = await prisma.blogPost.findUnique({ where: { id }, include: BLOG_INCLUDE });
+      return Response.json({
+        ok: true,
+        blog: updated,
+        fromColumn,
+        toColumn,
+        boardColumn: getBlogBoardColumn(updated),
+        publish,
+        notify: { notified: 0, skipped: true },
+      });
     }
 
     const mapped = blogColumnToUpdate(toColumn);

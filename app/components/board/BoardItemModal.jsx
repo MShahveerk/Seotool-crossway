@@ -315,7 +315,7 @@ export default function BoardItemModal({
             <div className="cw-board-modal__form">
               {locked ? (
                 <p className="cw-board-modal__prose cw-board-modal__prose--muted">
-                  This item is published and locked. Move it out of Published is not allowed from the board.
+                  This item is already live. You cannot move it out of Published from the board.
                 </p>
               ) : null}
 

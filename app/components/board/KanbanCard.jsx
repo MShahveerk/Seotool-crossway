@@ -146,7 +146,7 @@ export default function KanbanCard({
         const hit = st.dragging ? hitColumnAt(ev.clientX, ev.clientY) : null;
         clearTransform();
 
-        if (!st.dragging || !hit || hit === columnId || hit === "published") return;
+        if (!st.dragging || !hit || hit === columnId) return;
 
         setMoving(true);
         try {
