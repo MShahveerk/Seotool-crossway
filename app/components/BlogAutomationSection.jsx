@@ -1458,8 +1458,9 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                 {setupTab === "agents" && (
                   <div className="space-y-6">
                     <p className={helpText}>
-                      Advanced. Pick a provider and model per agent. Image: OpenAI or OpenRouter (Flux, Gemini
-                      Image, GPT Image…). Claude cannot generate images — use OpenRouter instead.
+                      Advanced. Pick a provider and model per agent. Image: OpenAI, Anthropic
+                      (Claude illustration, rasterized), or OpenRouter (Flux, Gemini Image, GPT Image).
+                      Anthropic uses the Anthropic API key on this tab.
                     </p>
                     {[
                       ["interpreter", "Interpreter", "interpreterProvider", "interpreterModel", "interpreterPrompt", "chat"],

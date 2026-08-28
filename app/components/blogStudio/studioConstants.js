@@ -29,9 +29,10 @@ export const PROVIDERS = [
   { value: "openrouter", label: "OpenRouter" },
 ];
 
-/** Image agent: OpenAI direct, or OpenRouter (Flux / Gemini Image / GPT Image / etc.). Claude has no image gen API. */
+/** Image agent: OpenAI, Anthropic (Claude SVG rasterized), or OpenRouter. */
 export const IMAGE_PROVIDERS = [
   { value: "openai", label: "OpenAI" },
+  { value: "anthropic", label: "Anthropic" },
   { value: "openrouter", label: "OpenRouter" },
 ];
 
@@ -70,6 +71,12 @@ export const IMAGE_MODELS = {
     { value: "gpt-image-1", label: "GPT Image 1 — legacy stable" },
     { value: "gpt-image-1-mini", label: "GPT Image 1 Mini — budget / volume" },
     { value: "chatgpt-image-latest", label: "ChatGPT Image Latest (moving)" },
+  ],
+  anthropic: [
+    { value: "claude-sonnet-4-6", label: "Claude Sonnet 4.6 illustration (recommended)" },
+    { value: "claude-opus-4-6", label: "Claude Opus 4.6 illustration — strongest" },
+    { value: "claude-sonnet-4-5", label: "Claude Sonnet 4.5 illustration" },
+    { value: "claude-haiku-4-5", label: "Claude Haiku 4.5 illustration — fastest" },
   ],
   openrouter: [
     { value: "openai/gpt-image-2", label: "OpenAI GPT Image 2 (recommended)" },

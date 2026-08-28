@@ -874,8 +874,9 @@ export default function PostAutomationSection({ selectedSite = "" }) {
                 {setupTab === "agents" && (
                   <div className="space-y-6">
                     <p className={helpText}>
-                      Advanced. Strategist → Copywriter → required Image. Image provider: OpenAI or OpenRouter
-                      (Flux, Gemini Image, GPT Image…). Claude cannot generate images.
+                      Advanced. Strategist → Copywriter → required Image. Image provider: OpenAI,
+                      Anthropic (Claude illustration, rasterized), or OpenRouter (Flux, Gemini Image,
+                      GPT Image). Anthropic uses the Anthropic API key on this tab.
                     </p>
                     {[
                       ["agent1", "Strategist (Agent 1)", "agent1Provider", "agent1Model", "agent1Prompt", "chat"],

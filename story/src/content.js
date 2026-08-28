@@ -394,7 +394,7 @@ export const chapters = [
       "Decider order when the topic is blank: relevant world trends first (on-niche only), then overlap (a library phrase that matches a trend, or a Search Console query already in the library), then leftover library keywords. Closed list. No invented seeds. Binder still hangs the harvest keyword bag on whatever seed wins.",
       "Binder splits low-KD keywords into headings and higher KD into body. It does not invent keywords. Checker rephrases if the title collides in-app or, if enabled, with an exact Google organic title. Headings builds the outline. Architect writes the blueprint. Writer writes the draft.",
       "Humanizer is an optional rewrite plus a deterministic scrub of stock phrasing (including em dashes). If Humanizer returns empty HTML, the writer draft is kept and the scrub still runs. The run does not die on a blank model.",
-      "Image generates a featured visual. Claude has no image API; use OpenAI or OpenRouter for that step.",
+      "Image generates a featured visual. OpenAI and OpenRouter produce photos. Anthropic draws a Claude illustration and rasterizes it, using the Anthropic API key.",
     ],
     clusters: [
       cluster("Rail order", [
