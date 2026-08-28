@@ -611,10 +611,10 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
           <div className="space-y-4 border-t border-[var(--cw-hairline)] pt-4">
             <p className="text-[12px] leading-relaxed text-[var(--cw-ink-muted)]">
               Live pages are fetched to mark paid vs free and to drop parked spam, mills, and
-              off-niche citations. Unpaid is confirmed free only. The model may veto a paid
-              checkout from fetched text — it still cannot invent a URL. Leave a field masked
-              to keep the saved key. Server env keys (OPENROUTER_API_KEY, OPENAI_API_KEY,
-              ANTHROPIC_API_KEY) still work as fallback.
+              off-niche citations. Unpaid is a confirmed free submit, claim, or write-for-us
+              route. The model may veto a paid checkout from fetched text. It still cannot
+              invent a URL. Leave a field masked to keep the saved key. Server env keys
+              (OPENROUTER_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY) still work as fallback.
             </p>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               {[
@@ -803,9 +803,9 @@ export default function LinkOpportunitiesSection({ selectedSite = "" }) {
                 {phaseLabel || "Searching — rows appear as they are found"}
               </p>
               <p className="mt-1 text-[12px] leading-relaxed text-[var(--cw-ink-faint)]">
-                Rival backlinks first, then extra Google searches for directories, resource
-                pages and write-for-us, then a live check of the best prospects. Unpaid only
-                means a free route was confirmed.
+                Hunting free write-for-us, directories and listing forms in parallel with
+                rival backlinks, then live-checking submit pages. Unpaid is a confirmed
+                free route.
                 {data?.progress?.total ? (
                   <>
                     {" "}
