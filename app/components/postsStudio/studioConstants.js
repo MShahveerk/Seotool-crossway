@@ -35,12 +35,15 @@ export const PROVIDERS = [
   { value: "openrouter", label: "OpenRouter" },
 ];
 
-/** Image agent: OpenAI, Anthropic (Claude SVG rasterized), or OpenRouter. */
+/** Image agent: OpenAI, Anthropic (illustration fallback), or OpenRouter. */
 export const IMAGE_PROVIDERS = [
   { value: "openai", label: "OpenAI" },
-  { value: "anthropic", label: "Anthropic" },
+  { value: "anthropic", label: "Anthropic (illustration fallback)" },
   { value: "openrouter", label: "OpenRouter" },
 ];
+
+export const IMAGE_ANTHROPIC_HINT =
+  "Fallback only. Claude draws a vector illustration and we turn it into a JPEG. Not a photograph. Prefer OpenAI or OpenRouter for feed photos.";
 
 /** Viable chat models per provider (API ids verified for Studio pipeline). */
 export const CHAT_MODELS = {

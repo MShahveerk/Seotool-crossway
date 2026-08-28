@@ -11,5 +11,11 @@ const STEPS = [
 ];
 
 export default function PostPipelinePreview(props) {
-  return <PipelinePreview steps={STEPS} estimate="~40–90 sec" {...props} />;
+  const cfg = props.config || {};
+  const steps = STEPS.map((s) =>
+    s.id === "image" && String(cfg.imageProvider || "").toLowerCase() === "anthropic"
+      ? { ...s, subtitle: "Claude illustration, not a photo" }
+      : s
+  );
+  return <PipelinePreview steps={steps} estimate="~40–90 sec" {...props} />;
 }

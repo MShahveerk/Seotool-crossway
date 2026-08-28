@@ -49,6 +49,7 @@ import {
   AUTO_SOURCE_OPTIONS,
   PROVIDERS,
   IMAGE_PROVIDERS,
+  IMAGE_ANTHROPIC_HINT,
   modelsForProvider,
   defaultModelForProvider,
   inputClass,
@@ -1536,6 +1537,11 @@ export default function BlogAutomationSection({ selectedSite = "" }) {
                               </p>
                             </div>
                           </div>
+                          {kind === "image" && providerValue === "anthropic" ? (
+                            <p className="mb-3 rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2 text-[12px] leading-relaxed text-[var(--cw-ink-muted)]">
+                              {IMAGE_ANTHROPIC_HINT}
+                            </p>
+                          ) : null}
                           <label className={labelClass}>System prompt</label>
                           <textarea
                             className={`${inputClass} mt-1 min-h-[160px] font-mono text-xs`}

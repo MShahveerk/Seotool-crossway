@@ -17,6 +17,11 @@ const STEPS = [
 
 export default function BlogPipelinePreview(props) {
   const cfg = props.config || {};
-  const steps = STEPS.filter((s) => (s.id === "humanizer" ? Boolean(cfg.humanizerEnabled) : true));
+  const steps = STEPS.filter((s) => (s.id === "humanizer" ? Boolean(cfg.humanizerEnabled) : true)).map(
+    (s) =>
+      s.id === "image" && String(cfg.imageProvider || "").toLowerCase() === "anthropic"
+        ? { ...s, subtitle: "Claude illustration, not a photo" }
+        : s
+  );
   return <PipelinePreview steps={steps} estimate="~4–8 min" {...props} />;
 }
