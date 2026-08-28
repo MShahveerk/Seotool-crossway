@@ -17,6 +17,7 @@ import {
   Search,
   Send,
   ShieldCheck,
+  TriangleAlert,
   TrendingDown,
   TrendingUp,
   Users,
@@ -26,7 +27,7 @@ import {
   getClientAccountSelectValue,
   mergeClientAccountEntries,
 } from "@/lib/clientAccountList";
-import { canonicalizeSiteKey, isMetaPageId } from "@/lib/siteAccess";
+import { canonicalizeSiteKey, isMetaPageId, unnamedMetaPageLabel } from "@/lib/siteAccess";
 import { ROLES } from "@/lib/rbac";
 import ClientAccountLogo from "./ui-shared/ClientAccountLogo";
 import { FadeIn } from "./ui-shared/Motion";
@@ -375,22 +376,26 @@ function OnboardPanel({ isAdmin, hasProjects, onProjectsChanged }) {
     try {
       const res = await fetch("/api/admin/meta-accounts", { method: "POST" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Could not fetch Meta pages.");
-      const count = Array.isArray(data.accounts) ? data.accounts.length : 0;
+      await onProjectsChanged?.();
+      if (!res.ok || data.tokenInvalid || data.graphLookupFailed) {
+        throw new Error(
+          data.error ||
+            data.warning ||
+            "Facebook did not return live pages. Replace META_PAGE_ACCESS_TOKEN, restart, then try again."
+        );
+      }
       const saved = Number(data.persisted || 0);
-      if (count === 0) {
+      const live = Number(data.stats?.graph || 0);
+      if (live === 0) {
         setError(
           data.error ||
             "Meta returned no pages. Check META_PAGE_ACCESS_TOKEN on the server, then try again."
         );
       } else {
         setOk(
-          saved > 0
-            ? `Fetched ${count} Meta ${count === 1 ? "page" : "pages"} and saved them as projects.`
-            : `Loaded ${count} Meta ${count === 1 ? "page" : "pages"}.`
+          `Fetched ${saved || live} Meta ${(saved || live) === 1 ? "page" : "pages"} from Graph and saved them as projects.`
         );
       }
-      await onProjectsChanged?.();
     } catch (err) {
       setError(err.message || "Could not fetch Meta pages.");
     } finally {
@@ -531,8 +536,9 @@ function OnboardPanel({ isAdmin, hasProjects, onProjectsChanged }) {
                   </div>
                   {!hasProjects ? (
                     <p className="mt-3 text-[11px] leading-relaxed text-[var(--cw-ink-faint)]">
-                      Fetch Meta pages pulls Facebook pages from Graph and saves them as social
-                      projects, even when they are not attached to a website.
+                      Fetch Meta pages asks Graph for every Page the token can manage. It cannot
+                      re-authenticate Facebook. If the token was invalidated, replace
+                      META_PAGE_ACCESS_TOKEN on the server first.
                     </p>
                   ) : null}
                 </form>
@@ -796,6 +802,7 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("attention");
   const [filter, setFilter] = useState("all");
+  const [metaGraphNotice, setMetaGraphNotice] = useState("");
 
   const loadPortfolio = useCallback(async ({ initial = false } = {}) => {
     if (initial) setLoading(true);
@@ -808,6 +815,11 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
       const arr = (v) => (Array.isArray(v) ? v : []);
       setSites(mergeClientAccountEntries(integrations?.sites || []));
       setMetaAccounts(arr(meta?.accounts));
+      setMetaGraphNotice(
+        meta?.tokenInvalid || meta?.graphLookupFailed || integrations?.tokenInvalid
+          ? meta?.error || meta?.warning || integrations?.metaWarning || ""
+          : meta?.warning || integrations?.metaWarning || ""
+      );
       setOverview({
         posts: arr(ov?.posts),
         blogs: arr(ov?.blogs),
@@ -1033,6 +1045,21 @@ export default function PortfolioDashboard({ selectedSite = "", onEnterClient })
         </FadeIn>
       ) : null}
 
+      {metaGraphNotice ? (
+        <FadeIn delay={45}>
+          <div
+            role="alert"
+            className="mt-5 flex gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--cw-caution)_40%,var(--cw-hairline))] bg-[color-mix(in_srgb,var(--cw-caution)_12%,var(--cw-surface))] px-4 py-3"
+          >
+            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-[var(--cw-caution)]" aria-hidden />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[var(--cw-ink)]">Meta Graph is not connected</p>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--cw-ink-dim)]">{metaGraphNotice}</p>
+            </div>
+          </div>
+        </FadeIn>
+      ) : null}
+
       <FadeIn delay={50}>
         <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4" data-guide="portfolio-list">
           <SummaryTile
@@ -1161,6 +1188,6 @@ function projectDisplayName(entry, metaAccounts) {
   if (name && !name.startsWith("http") && !/^\d+$/.test(name) && !/^your account$/i.test(name)) {
     return name;
   }
-  if (isMeta) return metaName || "Meta page";
+  if (isMeta) return metaName || unnamedMetaPageLabel(entry.facebookPageId);
   return siteHost(entry.siteLink) || "Untitled project";
 }

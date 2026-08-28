@@ -58,6 +58,18 @@ Once the web service finishes building, you need to push the Prisma schema to yo
 - **SMTP Settings:** To enable email sending (password resets, invitations), add your `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` variables to the web service environment.
 - **Instagram Publishing:** Instagram requires images to be hosted on publicly accessible URLs. The background scheduler uses the `NEXTAUTH_URL` variable to format absolute image links. Ensure `NEXTAUTH_URL` exactly matches your Render deployment URL (e.g., `https://crossway-web.onrender.com`).
 
+### Meta token invalidated (no live pages)
+
+Logs like `graph=0 db=1` plus `Error validating access token: The session has been invalidated` mean Facebook killed `META_PAGE_ACCESS_TOKEN`. Fetch Meta pages cannot list Pages until you replace it. Cached database rows (often shown as Unnamed page plus a numeric ID) are leftovers, not a live Graph list.
+
+1. Open [Graph API Explorer](https://developers.facebook.com/tools/explorer/).
+2. Generate a User token with `pages_show_list` and `pages_read_engagement` (add Instagram permissions if you publish there), or create a System User token in Meta Business settings.
+3. Exchange it for a long-lived token.
+4. Paste the new value into Render → **crossway-web** → Environment → `META_PAGE_ACCESS_TOKEN` (and `META_APP_ACCESS_TOKEN` if you use a second token). Also update any per-site token stored in Post publish config.
+5. Restart / redeploy the web service, then click **Fetch Meta pages**.
+
+A Page token only returns that one Page via `/me`. A User or System User token lists every Page the account can manage via `/me/accounts`.
+
 ### Monitoring the Scheduler
 To verify that your posts are being scheduled and published successfully:
 1. Go to the **crossway-scheduler** service in your Render dashboard.

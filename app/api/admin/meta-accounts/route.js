@@ -4,18 +4,33 @@ import { fetchAndPersistMetaPages, loadMetaAccounts } from "../../../../lib/meta
 
 export const runtime = "nodejs";
 
-function jsonResult(payload, extra = {}) {
-  const { accounts, error, warning, stats, graphErrors, tokensConfigured, persisted } = payload;
-  return Response.json({
-    accounts: accounts || [],
+function jsonResult(payload, extra = {}, init = {}) {
+  const {
+    accounts,
+    error,
+    warning,
     stats,
-    tokensConfigured,
     graphErrors,
-    ...(typeof persisted === "number" ? { persisted } : {}),
-    ...(warning ? { warning } : {}),
-    ...(error ? { error } : {}),
-    ...extra,
-  });
+    tokensConfigured,
+    persisted,
+    tokenInvalid,
+    graphLookupFailed,
+  } = payload;
+  return Response.json(
+    {
+      accounts: accounts || [],
+      stats,
+      tokensConfigured,
+      graphErrors,
+      tokenInvalid: Boolean(tokenInvalid),
+      graphLookupFailed: Boolean(graphLookupFailed),
+      ...(typeof persisted === "number" ? { persisted } : {}),
+      ...(warning ? { warning } : {}),
+      ...(error ? { error } : {}),
+      ...extra,
+    },
+    init
+  );
 }
 
 export async function GET() {
@@ -43,6 +58,17 @@ export async function POST() {
   try {
     await requireSuperAdmin();
     const loaded = await fetchAndPersistMetaPages();
+    if (
+      loaded.graphLookupFailed ||
+      loaded.tokenInvalid ||
+      (loaded.persisted === 0 && Number(loaded.stats?.graph || 0) === 0)
+    ) {
+      return jsonResult(
+        loaded,
+        { message: loaded.error || "Meta Graph returned no pages to save." },
+        { status: 502 }
+      );
+    }
     return jsonResult(loaded, {
       message:
         loaded.persisted > 0

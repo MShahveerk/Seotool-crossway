@@ -26,6 +26,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
 } from "react-icons/fi";
+import { unnamedMetaPageLabel } from "@/lib/siteAccess";
 import { useGuidePrepare } from "@/lib/guideNav";
 
 const ROLES = {
@@ -255,21 +256,25 @@ export default function AdminSection({ onNavigate } = {}) {
         return;
       }
       await fetchAvailableIntegrations();
-      if (accounts.length === 0) {
+      if (!res.ok || data.tokenInvalid || data.graphLookupFailed || Number(data.stats?.graph || 0) === 0) {
         const msg =
           data.error ||
-          "Meta returned no pages. Check META_PAGE_ACCESS_TOKEN on the server, then try again.";
+          data.warning ||
+          "Facebook did not return live pages. Replace META_PAGE_ACCESS_TOKEN, restart, then try again.";
         setMetaAccountsError(msg);
         setError(msg);
-      } else {
-        setMetaAccountsError(data.warning || "");
-        setSuccessMessage(
-          data.message ||
-            `Fetched ${accounts.length} Meta ${accounts.length === 1 ? "page" : "pages"} as projects.`
-        );
-        setError("");
-        setTimeout(() => setSuccessMessage(""), 6000);
+        setSuccessMessage("");
+        return;
       }
+      setMetaAccountsError("");
+      setSuccessMessage(
+        data.message ||
+          `Fetched ${Number(data.persisted || accounts.length)} Meta ${
+            Number(data.persisted || accounts.length) === 1 ? "page" : "pages"
+          } from Graph as projects.`
+      );
+      setError("");
+      setTimeout(() => setSuccessMessage(""), 6000);
     } catch (err) {
       console.error("Failed to fetch Meta pages", err);
       setMetaAccounts([]);
@@ -1548,8 +1553,9 @@ export default function AdminSection({ onNavigate } = {}) {
                     Link Meta account (Facebook &amp; Instagram)
                   </label>
                   <p className="mb-3 text-xs text-[var(--cw-ink-muted)]">
-                    Select a Facebook Page linked to your Meta token. Use Fetch Meta pages on this
-                    screen if the list is empty, then the pages also appear as projects.
+                    Select a Facebook Page linked to your Meta token. Fetch Meta pages talks to Graph
+                    with that token. If Facebook invalidated the session, replace META_PAGE_ACCESS_TOKEN
+                    on Render and restart before fetching again. Cached nameless rows are not live pages.
                   </p>
 
                   {loadingMetaAccounts ? (
@@ -1580,7 +1586,7 @@ export default function AdminSection({ onNavigate } = {}) {
                         <option value="">-- Select a Meta Account --</option>
                         {metaAccounts.map((acc) => (
                           <option key={acc.facebookPageId} value={acc.facebookPageId}>
-                            {acc.name || acc.facebookPageId}{" "}
+                            {acc.name || unnamedMetaPageLabel(acc.facebookPageId)}{" "}
                             {acc.instagramUserId ? "(Includes Instagram)" : "(Facebook Only)"}
                             {acc.source === "database" ? " · saved" : ""}
                           </option>

@@ -2,6 +2,7 @@ import { requireSuperAdmin } from "../../../../../lib/middleware/auth";
 import { getUserById } from "../../../../../lib/auth";
 import { normalizeSiteOrigin } from "../../../../../lib/validation";
 import { fetchTikTokUserByUsername, getTikTokClientAccessToken } from "../../../../../lib/tiktokApi";
+import { formatMetaTokenReconnectHint, isInvalidatedMetaTokenError } from "../../../../../lib/metaAccounts";
 
 function normalizePlatform(value) {
   const p = String(value || "").trim().toLowerCase();
@@ -13,6 +14,7 @@ function normalizePlatform(value) {
 function formatMetaAccessTokenHint(message) {
   const raw = String(message || "").trim();
   if (!raw) return raw;
+  if (isInvalidatedMetaTokenError(raw)) return formatMetaTokenReconnectHint(raw);
   if (/expired|Session has expired|invalid.*session|OAuthException|invalid oauth|Error validating access token/i.test(raw)) {
     return `${raw} — Regenerate a Page access token in Meta for Developers (Graph API Explorer: select your Page → get Page token, or use a System User token). Update META_PAGE_ACCESS_TOKEN in .env.local; optional META_APP_ACCESS_TOKEN for app-level calls. Restart npm run dev.`;
   }

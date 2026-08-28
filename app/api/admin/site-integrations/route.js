@@ -96,6 +96,7 @@ export async function GET() {
     // Shared Meta loader: page-token /me fallback, per-page Graph enrich, DB merge
     let metaAccounts = [];
     let metaWarning = null;
+    let metaTokenInvalid = false;
     try {
       const loaded = await loadMetaAccounts({ includeDatabase: true });
       metaAccounts = (loaded.accounts || []).map((page) => ({
@@ -110,10 +111,11 @@ export async function GET() {
         source: page.source || "graph",
       }));
       metaWarning = loaded.warning || (loaded.error && metaAccounts.length === 0 ? loaded.error : null);
+      metaTokenInvalid = Boolean(loaded.tokenInvalid);
       if (metaWarning) console.warn("Meta accounts for site-integrations:", metaWarning);
       if (loaded.stats) {
         console.info(
-          `Meta accounts loaded: total=${loaded.stats.total} graph=${loaded.stats.graph} db=${loaded.stats.database}`
+          `Meta accounts loaded: total=${loaded.stats.total} graph=${loaded.stats.graph} db=${loaded.stats.database} tokenInvalid=${metaTokenInvalid ? 1 : 0}`
         );
       }
     } catch (err) {
@@ -266,6 +268,8 @@ export async function GET() {
         JSON.stringify({
           sites: dedupedSmm,
           superAdminSite: null,
+          ...(metaWarning ? { metaWarning } : {}),
+          tokenInvalid: metaTokenInvalid,
         }),
         {
           status: 200,
@@ -316,6 +320,7 @@ export async function GET() {
         sites: dedupedEntries,
         superAdminSite: currentSuperAdmin?.facebookPageId || currentSuperAdmin?.siteLink || null,
         ...(metaWarning ? { metaWarning } : {}),
+        tokenInvalid: metaTokenInvalid,
       }),
       {
         status: 200,
