@@ -417,6 +417,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                 {open && (
                   <div className="px-4 pb-4 border-t border-gray-100 pt-4 space-y-4">
                     {canAct ? (
+                      <>
                       <BackupImageSwitcher
                         primaryPath={a.imagePath}
                         backupPaths={a.backupImagePaths}
@@ -452,6 +453,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                           </span>
                         )}
                       </div>
+                      </>
                     ) : (
                       <div className="rounded-lg border border-gray-100 overflow-hidden bg-gray-50">
                         <ApprovalMediaPreview
