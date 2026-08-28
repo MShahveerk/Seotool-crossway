@@ -203,7 +203,9 @@ export default function KanbanBoard({
                       <p className="cw-board__empty">Loading…</p>
                     ) : null}
                     {!loading && list.length === 0 ? (
-                      <p className="cw-board__empty">Drop here</p>
+                      <p className="cw-board__empty">
+                        {col.id === "published" ? "Drop to publish now" : "Drop here"}
+                      </p>
                     ) : null}
                     {list.map((item, index) => (
                       <div
