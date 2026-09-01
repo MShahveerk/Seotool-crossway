@@ -24,6 +24,7 @@ import BackupImageSwitcher from "./BackupImageSwitcher";
 import MediaCropModal from "./MediaCropModal";
 import HumanizeTextButton from "./HumanizeTextButton";
 import PostPublishConfigPanel from "./PostPublishConfigPanel";
+import ContentWorkflowLinks from "./content/ContentWorkflowLinks";
 
 const POST_SOURCE_LABELS = {
   manual: "Manual",
@@ -66,7 +67,9 @@ function AdminReadonlyMultiline({ id, label, value, rows = 3, variant = "default
         rows={rows}
         value={str}
         placeholder="—"
-        className={`w-full rounded-lg border px-3 py-2 text-sm text-gray-900 min-h-[2.75rem] max-h-[min(24rem,50vh)] resize-y overflow-y-auto cursor-default focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 whitespace-pre-wrap break-words ${box}`}
+        className={`w-full rounded-lg border px-3 py-2 text-gray-900 max-h-[min(24rem,50vh)] resize-y overflow-y-auto cursor-default focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 whitespace-pre-wrap break-words ${
+          rows >= 4 ? "cw-copy-box" : "min-h-[2.75rem] text-sm"
+        } ${box}`}
       />
     </div>
   );
@@ -117,7 +120,7 @@ function userResponseSummary(a) {
   };
 }
 
-export default function AdminApprovalsSection({ selectedSite = "" }) {
+export default function AdminApprovalsSection({ selectedSite = "", focusItemId = "" }) {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -137,6 +140,7 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
   const [promotingBackup, setPromotingBackup] = useState(false);
   const actionsMenuWrapRef = useRef(null);
   const approvalImageInputRef = useRef(null);
+  const focusAppliedRef = useRef("");
 
   // Crop modal state
   const [cropPendingFile, setCropPendingFile] = useState(null);  // raw file awaiting crop
@@ -239,7 +243,33 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
 
   useEffect(() => {
     load();
+    const onRefresh = () => load();
+    window.addEventListener("approvals:admin-refresh", onRefresh);
+    window.addEventListener("approvals:user-updated", onRefresh);
+    return () => {
+      window.removeEventListener("approvals:admin-refresh", onRefresh);
+      window.removeEventListener("approvals:user-updated", onRefresh);
+    };
   }, [load]);
+
+  useEffect(() => {
+    focusAppliedRef.current = "";
+  }, [focusItemId]);
+
+  useEffect(() => {
+    if (!focusItemId || loading) return;
+    const found = approvals.find((a) => a.id === focusItemId);
+    if (!found) return;
+    if (focusAppliedRef.current === focusItemId && expandedApprovalId === found.id) return;
+    focusAppliedRef.current = focusItemId;
+    setExpandedApprovalId(found.id);
+    window.requestAnimationFrame(() => {
+      document.getElementById(`admin-approval-${found.id}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+  }, [focusItemId, loading, approvals, expandedApprovalId]);
 
   useEffect(() => {
     if (!actionsMenuId) return undefined;
@@ -476,11 +506,11 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
               />
             </div>
             <textarea
-              rows={3}
+              rows={10}
               maxLength={2000}
               value={form.caption}
               onChange={(e) => setForm((f) => ({ ...f, caption: e.target.value }))}
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-white text-gray-900 text-sm"
+              className="cw-copy-box w-full px-4 py-2 border border-gray-200 rounded-xl bg-white text-gray-900"
               placeholder="Optional caption shown to the assignee (they can edit it)"
             />
             <p className="text-xs text-gray-500 mt-1">Max 2000 characters. {form.caption.length}/2000</p>
@@ -685,7 +715,10 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                 return (
                   <div
                     key={a.id}
-                    className="border-b border-gray-100 last:border-b-0"
+                    id={`admin-approval-${a.id}`}
+                    className={`border-b border-gray-100 last:border-b-0 ${
+                      focusItemId === a.id ? "bg-[color-mix(in_srgb,var(--cw-neon)_8%,transparent)]" : ""
+                    }`}
                     ref={actionsMenuId === a.id ? actionsMenuWrapRef : undefined}
                   >
                     <div className="px-4 py-3 grid sm:grid-cols-[1fr_100px_80px_1fr] gap-2 items-center text-sm">
@@ -703,6 +736,9 @@ export default function AdminApprovalsSection({ selectedSite = "" }) {
                               Hidden
                             </span>
                           ) : null}
+                        </div>
+                        <div className="mt-1.5">
+                          <ContentWorkflowLinks kind="post" itemId={a.id} item={a} surface="approvals" />
                         </div>
                         <div className="text-xs text-gray-400 sm:hidden mt-1">
                           {a.status}

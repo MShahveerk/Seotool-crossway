@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Syne } from "next/font/google";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatScheduleShort } from "@/lib/timezone";
 import { describeBoardMove } from "@/lib/boardMoveEffects";
 import AutoMoveArrows from "./AutoMoveArrows";
@@ -9,12 +8,6 @@ import BoardItemModal from "./BoardItemModal";
 import BoardMoveConfirmModal from "./BoardMoveConfirmModal";
 import KanbanCard from "./KanbanCard";
 import NativeKanbanCard from "./NativeKanbanCard";
-
-const syne = Syne({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-  variable: "--font-board-display",
-});
 
 function groupByColumn(items, getColumn, columnIds) {
   const map = Object.fromEntries(columnIds.map((id) => [id, []]));
@@ -42,11 +35,14 @@ export default function KanbanBoard({
   playhtml = true,
   liveConnected = null,
   itemKind = "post",
+  focusItemId = "",
+  onFocusItem,
 }) {
   const [toast, setToast] = useState("");
   const [detailItem, setDetailItem] = useState(null);
   const [pendingMove, setPendingMove] = useState(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
+  const dismissedFocusRef = useRef("");
   const boundsId = `${boardId}-bounds`;
   const columnIds = useMemo(() => columns.map((c) => c.id), [columns]);
   const grouped = useMemo(
@@ -54,6 +50,18 @@ export default function KanbanBoard({
     [items, getColumn, columnIds]
   );
   const Card = playhtml ? KanbanCard : NativeKanbanCard;
+
+  useEffect(() => {
+    dismissedFocusRef.current = "";
+  }, [focusItemId]);
+
+  useEffect(() => {
+    if (!focusItemId || loading) return;
+    if (dismissedFocusRef.current === focusItemId) return;
+    const found = items.find((row) => row.id === focusItemId);
+    if (!found) return;
+    setDetailItem((current) => (current?.id === focusItemId ? current : found));
+  }, [focusItemId, loading, items]);
 
   const resolvedAutoMoves = useMemo(() => {
     const approved = grouped.approved || [];
@@ -135,7 +143,7 @@ export default function KanbanBoard({
 
   return (
     <div
-      className={`cw-board cw-board--fill ${syne.variable}`}
+      className="cw-board cw-board--fill"
       style={{ "--lane-count": columns.length }}
     >
       <div className="cw-board__atmosphere" aria-hidden="true" />
@@ -209,8 +217,13 @@ export default function KanbanBoard({
                           boundsSelector={`#${boundsId}`}
                           locked={Boolean(col.locked) || getColumn(item) === "published"}
                           onMoveToColumn={requestMove}
-                          onOpenDetails={setDetailItem}
+                          onOpenDetails={(next) => {
+                            dismissedFocusRef.current = "";
+                            setDetailItem(next);
+                            onFocusItem?.(next?.id || "");
+                          }}
                           index={index}
+                          focused={focusItemId === item.id}
                         />
                       </div>
                     ))}
@@ -227,7 +240,10 @@ export default function KanbanBoard({
           item={detailItem}
           kind={itemKind}
           columnLabel={columns.find((c) => c.id === getColumn(detailItem))?.label || ""}
-          onClose={() => setDetailItem(null)}
+          onClose={() => {
+            if (focusItemId) dismissedFocusRef.current = focusItemId;
+            setDetailItem(null);
+          }}
           onSaved={(updated) => {
             setDetailItem(updated);
             onItemSaved?.(updated);

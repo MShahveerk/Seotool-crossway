@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { sessionCanAccessSection } from "@/lib/clientPermissions";
 import { FiFileText, FiRefreshCw, FiSave, FiSettings, FiTrash2, FiZap } from "react-icons/fi";
@@ -11,6 +11,7 @@ import FileChooseField from "./ui-shared/FileChooseField";
 import InboundApiDocsPanel from "./InboundApiDocsPanel";
 import EmailInboundConfigFields from "./EmailInboundConfigFields";
 import WordpressPullChooser from "./WordpressPullChooser";
+import ContentWorkflowLinks from "./content/ContentWorkflowLinks";
 
 const DEFAULT_CONFIG = {
   enabled: true,
@@ -149,7 +150,7 @@ function WordpressDiagnosticsPanel({ diagnostics, title = "WordPress diagnostics
   );
 }
 
-export default function AdminBlogSection({ selectedSite = "" }) {
+export default function AdminBlogSection({ selectedSite = "", focusItemId = "" }) {
   const { data: session } = useSession();
   const canManageContent = sessionCanAccessSection(session, "admin-blogs");
   const [form, setForm] = useState({
@@ -192,6 +193,7 @@ export default function AdminBlogSection({ selectedSite = "" }) {
   const [purgeBusy, setPurgeBusy] = useState(false);
   const [emailTesting, setEmailTesting] = useState(false);
   const [emailPulling, setEmailPulling] = useState(false);
+  const focusAppliedRef = useRef("");
 
   const softDeletedCount = blogs.filter((b) => b.status === "deleted").length;
 
@@ -231,7 +233,32 @@ export default function AdminBlogSection({ selectedSite = "" }) {
 
   useEffect(() => {
     loadBlogs();
+    const onRefresh = () => loadBlogs();
+    window.addEventListener("blogs:admin-refresh", onRefresh);
+    window.addEventListener("blogs:user-updated", onRefresh);
+    return () => {
+      window.removeEventListener("blogs:admin-refresh", onRefresh);
+      window.removeEventListener("blogs:user-updated", onRefresh);
+    };
   }, [loadBlogs]);
+
+  useEffect(() => {
+    focusAppliedRef.current = "";
+  }, [focusItemId]);
+
+  useEffect(() => {
+    if (!focusItemId || blogsLoading) return;
+    const found = blogs.find((b) => b.id === focusItemId);
+    if (!found) return;
+    if (focusAppliedRef.current === focusItemId) return;
+    focusAppliedRef.current = focusItemId;
+    window.requestAnimationFrame(() => {
+      document.getElementById(`admin-blog-${found.id}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+  }, [focusItemId, blogsLoading, blogs]);
 
   const saveConfig = async () => {
     if (!selectedSite) {
@@ -923,7 +950,10 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                   {blogs.map((blog) => (
                     <tr
                       key={blog.id}
-                      className={`border-b border-gray-100 align-top ${blog.status === "deleted" ? "bg-red-50/60" : ""}`}
+                      id={`admin-blog-${blog.id}`}
+                      className={`border-b border-gray-100 align-top ${
+                        blog.status === "deleted" ? "bg-red-50/60" : ""
+                      } ${focusItemId === blog.id ? "bg-[color-mix(in_srgb,var(--cw-neon)_10%,transparent)]" : ""}`}
                     >
                       <td className="py-2 pr-3 font-medium text-gray-900">
                         {blog.title}
@@ -935,6 +965,9 @@ export default function AdminBlogSection({ selectedSite = "" }) {
                         {blog.externalId ? (
                           <span className="block text-xs font-normal text-gray-500">WP #{blog.externalId}</span>
                         ) : null}
+                        <div className="mt-1.5">
+                          <ContentWorkflowLinks kind="blog" itemId={blog.id} item={blog} surface="admin" />
+                        </div>
                       </td>
                       <td className="py-2 pr-3">
                         <span className="block">{blog.status}</span>
@@ -1059,7 +1092,12 @@ export default function AdminBlogSection({ selectedSite = "" }) {
         </div>
         <label className="block">
           <span className="text-xs font-semibold uppercase text-gray-500">Excerpt</span>
-          <textarea className="mt-1 w-full border rounded-lg px-3 py-2 min-h-[72px]" value={form.excerpt} onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))} />
+          <textarea
+            rows={8}
+            className="cw-copy-box mt-1 w-full border rounded-lg px-3 py-2"
+            value={form.excerpt}
+            onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))}
+          />
         </label>
         <label className="block">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
@@ -1103,7 +1141,13 @@ export default function AdminBlogSection({ selectedSite = "" }) {
           </label>
           <label className="block md:col-span-2">
             <span className="text-xs font-semibold uppercase text-gray-500">Meta description</span>
-            <textarea className="mt-1 w-full border rounded-lg px-3 py-2 min-h-[64px]" value={form.metaDescription} onChange={(e) => setForm((f) => ({ ...f, metaDescription: e.target.value }))} placeholder="Optional — search snippet" />
+            <textarea
+              rows={6}
+              className="cw-copy-box cw-copy-box--compact mt-1 w-full border rounded-lg px-3 py-2"
+              value={form.metaDescription}
+              onChange={(e) => setForm((f) => ({ ...f, metaDescription: e.target.value }))}
+              placeholder="Optional — search snippet"
+            />
           </label>
           <label className="block">
             <span className="text-xs font-semibold uppercase text-gray-500">Focus keyword</span>

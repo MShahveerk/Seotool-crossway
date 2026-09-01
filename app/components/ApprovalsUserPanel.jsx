@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FiCheck, FiEdit2, FiX, FiRefreshCw, FiChevronDown, FiChevronUp, FiClock } from "react-icons/fi";
 import { formatScheduleShort } from "../../lib/timezone";
 import ApprovalMediaPreview from "./ApprovalMediaPreview";
@@ -8,6 +8,8 @@ import BackupImageSwitcher from "./BackupImageSwitcher";
 import HumanizeTextButton from "./HumanizeTextButton";
 import { toastSuccess, toastError } from "@/lib/toast";
 import { publicMediaUrl } from "../../lib/publicMediaUrl";
+import ContentWorkflowLinks from "./content/ContentWorkflowLinks";
+import { postApprovalTabForStatus } from "@/lib/contentFocus";
 
 const TABS = [
   { id: "actionable", label: "Needs action" },
@@ -58,6 +60,7 @@ function adminBodyText(a) {
 /** Read-only review box (administrator copy) — matches admin panel “from admin” styling. */
 function ReviewReadonlyAdmin({ id, label, value, rows = 3 }) {
   const str = value != null ? String(value) : "";
+  const copy = rows >= 4;
   return (
     <div className="min-w-0 flex flex-col gap-1">
       <label htmlFor={id} className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
@@ -70,7 +73,9 @@ function ReviewReadonlyAdmin({ id, label, value, rows = 3 }) {
         rows={rows}
         value={str}
         placeholder="—"
-        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 min-h-[2.75rem] max-h-[min(24rem,50vh)] resize-y overflow-y-auto cursor-default focus:outline-none whitespace-pre-wrap break-words"
+        className={`w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 max-h-[min(24rem,50vh)] resize-y overflow-y-auto cursor-default focus:outline-none whitespace-pre-wrap break-words ${
+          copy ? "cw-copy-box" : "min-h-[2.75rem] text-sm"
+        }`}
       />
     </div>
   );
@@ -79,6 +84,7 @@ function ReviewReadonlyAdmin({ id, label, value, rows = 3 }) {
 /** Read-only box for “your submitted” side when item is closed (matches admin amber column). */
 function ReviewReadonlySubmitted({ id, label, value, rows = 3 }) {
   const str = value != null ? String(value) : "";
+  const copy = rows >= 4;
   return (
     <div className="min-w-0 flex flex-col gap-1">
       <label htmlFor={id} className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">
@@ -91,13 +97,15 @@ function ReviewReadonlySubmitted({ id, label, value, rows = 3 }) {
         rows={rows}
         value={str}
         placeholder="—"
-        className="w-full rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-sm text-gray-900 min-h-[2.75rem] max-h-[min(24rem,50vh)] resize-y overflow-y-auto cursor-default focus:outline-none whitespace-pre-wrap break-words"
+        className={`w-full rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-gray-900 max-h-[min(24rem,50vh)] resize-y overflow-y-auto cursor-default focus:outline-none whitespace-pre-wrap break-words ${
+          copy ? "cw-copy-box" : "min-h-[2.75rem] text-sm"
+        }`}
       />
     </div>
   );
 }
 
-export default function ApprovalsUserPanel({ selectedSite = "" }) {
+export default function ApprovalsUserPanel({ selectedSite = "", focusItemId = "" }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -112,6 +120,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
   const [declineFor, setDeclineFor] = useState(null);
   const [declineReason, setDeclineReason] = useState("");
   const [declineTarget, setDeclineTarget] = useState("both");
+  const focusAppliedRef = useRef("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -198,7 +207,42 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
 
   useEffect(() => {
     load();
+    const onRefresh = () => load();
+    window.addEventListener("approvals:user-updated", onRefresh);
+    window.addEventListener("approvals:admin-refresh", onRefresh);
+    return () => {
+      window.removeEventListener("approvals:user-updated", onRefresh);
+      window.removeEventListener("approvals:admin-refresh", onRefresh);
+    };
   }, [load]);
+
+  useEffect(() => {
+    focusAppliedRef.current = "";
+  }, [focusItemId]);
+
+  useEffect(() => {
+    if (!focusItemId || loading) return;
+    const found = items.find((a) => a.id === focusItemId);
+    if (!found) return;
+    const nextTab = postApprovalTabForStatus(found.status);
+    if (tab !== "all" && tab !== nextTab && tab !== found.status) {
+      setTab(nextTab);
+      return;
+    }
+    if (focusAppliedRef.current === focusItemId && openId === found.id) return;
+    focusAppliedRef.current = focusItemId;
+    setOpenId(found.id);
+    setEditDraft(displayBody(found));
+    setTitleDraft(displayTitle(found));
+    setCaptionDraft(displayCaption(found));
+    setInstructionsDraft(displayInstructions(found));
+    window.requestAnimationFrame(() => {
+      document.getElementById(`approval-item-${found.id}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+  }, [focusItemId, loading, items, tab, openId]);
 
   const toggleOpen = (a) => {
     if (openId === a.id) {
@@ -327,7 +371,15 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
             const nothingToSave = !dirtyTitle && !dirtyCaption && !dirtyInstructions && !dirtyBody;
             const approvePrimaryLabel = headingOrCaptionDirty ? "Save Edits + Approve" : "Approve";
             return (
-              <li key={a.id} className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+              <li
+                key={a.id}
+                id={`approval-item-${a.id}`}
+                className={`rounded-xl border bg-white overflow-hidden shadow-sm ${
+                  focusItemId === a.id
+                    ? "border-[#00A3FF] ring-2 ring-[#00A3FF]/30"
+                    : "border-gray-200"
+                }`}
+              >
                 <button
                   type="button"
                   onClick={() => toggleOpen(a)}
@@ -386,6 +438,9 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                     <FiChevronDown className="w-5 h-5 text-gray-400 shrink-0 self-center" />
                   )}
                 </button>
+                <div className="px-4 pb-2">
+                  <ContentWorkflowLinks kind="post" itemId={a.id} item={a} surface="approvals" />
+                </div>
                 {open && (
                   <div className="px-4 pb-4 border-t border-gray-100 pt-4 space-y-4">
                     {canAct ? (
@@ -442,7 +497,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                             id={`closed-adm-sug-${a.id}`}
                             label="Suggestions (from administrator)"
                             value=""
-                            rows={3}
+                            rows={8}
                           />
                           <ReviewReadonlySubmitted
                             id={`closed-your-sug-${a.id}`}
@@ -529,11 +584,11 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                             </div>
                             <textarea
                               id={`act-your-caption-${a.id}`}
-                              rows={4}
+                              rows={10}
                               maxLength={2000}
                               value={captionDraft}
                               onChange={(e) => setCaptionDraft(e.target.value)}
-                              className="w-full rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-sm text-gray-900 min-h-[5rem] max-h-[min(24rem,50vh)] resize-y focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400 whitespace-pre-wrap break-words"
+                              className="cw-copy-box w-full rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-gray-900 max-h-[min(24rem,50vh)] resize-y focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400 whitespace-pre-wrap break-words"
                             />
                             <p className="text-[11px] text-gray-400">{captionDraft.length}/2000</p>
                           </div>
@@ -543,7 +598,7 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                             id={`act-adm-sug-${a.id}`}
                             label="Suggestions (from administrator)"
                             value=""
-                            rows={3}
+                            rows={8}
                           />
                           <div className="min-w-0 flex flex-col gap-1">
                             <label
@@ -554,11 +609,11 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                             </label>
                             <textarea
                               id={`act-your-sug-${a.id}`}
-                              rows={4}
+                              rows={8}
                               maxLength={5000}
                               value={instructionsDraft}
                               onChange={(e) => setInstructionsDraft(e.target.value)}
-                              className="w-full rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-sm text-gray-900 min-h-[5rem] max-h-[min(24rem,50vh)] resize-y focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400 whitespace-pre-wrap break-words"
+                              className="cw-copy-box cw-copy-box--compact w-full rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-gray-900 max-h-[min(24rem,50vh)] resize-y focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400 whitespace-pre-wrap break-words"
                             />
                             <p className="text-[11px] text-gray-400">{instructionsDraft.length}/5000</p>
                           </div>
@@ -579,10 +634,10 @@ export default function ApprovalsUserPanel({ selectedSite = "" }) {
                             </label>
                             <textarea
                               id={`act-your-body-${a.id}`}
-                              rows={4}
+                              rows={8}
                               value={editDraft}
                               onChange={(e) => setEditDraft(e.target.value)}
-                              className="w-full rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-sm text-gray-900 min-h-[5rem] max-h-[min(24rem,50vh)] resize-y focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400 whitespace-pre-wrap break-words"
+                              className="cw-copy-box w-full rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-gray-900 max-h-[min(24rem,50vh)] resize-y focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-400 whitespace-pre-wrap break-words"
                             />
                           </div>
                         </div>

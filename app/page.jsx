@@ -30,6 +30,7 @@ import LinkOpportunitiesSection from "./components/seo/LinkOpportunitiesSection"
 import { isGlobalSection } from "../lib/workspaces";
 import { isMetaPageId } from "../lib/siteAccess";
 import { readSectionFromUrl, readSiteFromUrl, writeDashboardUrl } from "../lib/sectionMeta";
+import { readItemFromUrl, sameContentFamily } from "../lib/contentFocus";
 import { sessionCanAccessSection, sessionHasGlobalSiteAccess } from "../lib/clientPermissions";
 import { LoadingSpinner } from "./components/ui-shared/LoadingBlock";
 import { SectionTransition } from "./components/ui-shared/Motion";
@@ -100,6 +101,7 @@ export default function Home() {
   const [previousSection, setPreviousSection] = useState("dashboard");
   const [selectedHelpArticle, setSelectedHelpArticle] = useState("general-seo");
   const [landingApplied, setLandingApplied] = useState(false);
+  const [focusedItemId, setFocusedItemId] = useState(() => readItemFromUrl() || "");
 
   const canSwitchClients = sessionHasGlobalSiteAccess(session);
 
@@ -114,6 +116,12 @@ export default function Home() {
   const goToPortfolio = () => {
     setSelectedSite("");
     setActiveSection("portfolio");
+    setFocusedItemId("");
+  };
+
+  const handleSectionChange = (section) => {
+    setActiveSection(section);
+    setFocusedItemId((current) => (sameContentFamily(activeSection, section) ? current : ""));
   };
 
   // Agencies land in the portfolio, not force-dropped inside one client. Decided
@@ -134,15 +142,20 @@ export default function Home() {
 
   useEffect(() => {
     const handleNavigate = (e) => {
-      const { section, article } = e.detail;
-      setActiveSection((prev) => {
-        if (section === "help" && prev !== "help") {
-          setPreviousSection(prev);
-        }
-        return section;
-      });
+      const { section, article, item } = e.detail || {};
+      if (section) {
+        setActiveSection((prev) => {
+          if (section === "help" && prev !== "help") {
+            setPreviousSection(prev);
+          }
+          return section;
+        });
+      }
       if (article) {
         setSelectedHelpArticle(article);
+      }
+      if (Object.prototype.hasOwnProperty.call(e.detail || {}, "item")) {
+        setFocusedItemId(item || "");
       }
     };
     window.addEventListener("navigate-section", handleNavigate);
@@ -150,8 +163,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    writeDashboardUrl(activeSection, selectedSite);
-  }, [activeSection, selectedSite]);
+    writeDashboardUrl(activeSection, selectedSite, focusedItemId);
+  }, [activeSection, selectedSite, focusedItemId]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -296,9 +309,11 @@ export default function Home() {
       case "calendar":
         return <CalendarSection selectedSite={selectedSite} />;
       case "my-approvals":
-        return <MyApprovalsSection selectedSite={selectedSite} />;
+        return <MyApprovalsSection selectedSite={selectedSite} focusItemId={focusedItemId} />;
       case "my-blog-approvals":
-        return <MyBlogApprovalsSection selectedSite={selectedSite} />;
+        return (
+          <MyBlogApprovalsSection selectedSite={selectedSite} focusItemId={focusedItemId} />
+        );
       case "help":
         return (
           <HelpCenterSection
@@ -321,25 +336,35 @@ export default function Home() {
         );
       case "admin-approvals":
         return sessionCanAccessSection(session, "admin-approvals") ? (
-          <AdminApprovalsSection selectedSite={selectedSite} />
+          <AdminApprovalsSection selectedSite={selectedSite} focusItemId={focusedItemId} />
         ) : (
           fallback()
         );
       case "post-board":
         return sessionCanAccessSection(session, "post-board") ? (
-          <PostBoardSection selectedSite={selectedSite} />
+          <PostBoardSection
+            selectedSite={selectedSite}
+            focusItemId={focusedItemId}
+            onClearFocus={() => setFocusedItemId("")}
+            onFocusItem={setFocusedItemId}
+          />
         ) : (
           fallback()
         );
       case "admin-blogs":
         return sessionCanAccessSection(session, "admin-blogs") ? (
-          <AdminBlogSection selectedSite={selectedSite} />
+          <AdminBlogSection selectedSite={selectedSite} focusItemId={focusedItemId} />
         ) : (
           fallback()
         );
       case "blog-board":
         return sessionCanAccessSection(session, "blog-board") ? (
-          <BlogBoardSection selectedSite={selectedSite} />
+          <BlogBoardSection
+            selectedSite={selectedSite}
+            focusItemId={focusedItemId}
+            onClearFocus={() => setFocusedItemId("")}
+            onFocusItem={setFocusedItemId}
+          />
         ) : (
           fallback()
         );
@@ -387,7 +412,7 @@ export default function Home() {
   return (
     <DashboardLayout
       activeSection={activeSection}
-      onSectionChange={setActiveSection}
+      onSectionChange={handleSectionChange}
       selectedSite={selectedSite}
       onSelectedSiteChange={setSelectedSite}
       onEnterClient={enterClient}

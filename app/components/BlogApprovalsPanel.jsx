@@ -27,6 +27,8 @@ import EmptyState from "./ui-shared/EmptyState";
 import { LoadingSpinner } from "./ui-shared/LoadingBlock";
 import { publicMediaUrl } from "../../lib/publicMediaUrl";
 import BackupImageSwitcher from "./BackupImageSwitcher";
+import ContentWorkflowLinks from "./content/ContentWorkflowLinks";
+import { blogQueueFilterForStatus } from "@/lib/contentFocus";
 
 /** Chrome sometimes caches a bad first paint — retry once with a bust, then hide. */
 function onMediaImgError(e) {
@@ -104,7 +106,7 @@ function emptyDraft() {
   };
 }
 
-export default function BlogApprovalsPanel({ selectedSite = "" }) {
+export default function BlogApprovalsPanel({ selectedSite = "", focusItemId = "" }) {
   const { data: session } = useSession();
   const canResend =
     session?.user?.role === "super_admin" || session?.user?.role === "smm";
@@ -129,6 +131,8 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
   const [activeSnapshot, setActiveSnapshot] = useState(null);
   const fileInputRef = useRef(null);
   const closeReviewRef = useRef(() => {});
+  const focusAppliedRef = useRef("");
+  const dismissedFocusRef = useRef("");
 
   useEffect(() => {
     setPortalReady(true);
@@ -156,7 +160,37 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
 
   useEffect(() => {
     load();
+    const onRefresh = () => load();
+    window.addEventListener("blogs:admin-refresh", onRefresh);
+    window.addEventListener("blogs:user-updated", onRefresh);
+    return () => {
+      window.removeEventListener("blogs:admin-refresh", onRefresh);
+      window.removeEventListener("blogs:user-updated", onRefresh);
+    };
   }, [load]);
+
+  useEffect(() => {
+    focusAppliedRef.current = "";
+    dismissedFocusRef.current = "";
+  }, [focusItemId]);
+
+  useEffect(() => {
+    if (!focusItemId || loading) return;
+    if (dismissedFocusRef.current === focusItemId) return;
+    const found = blogs.find((b) => b.id === focusItemId);
+    if (!found) {
+      if (statusFilter !== "all") setStatusFilter("all");
+      return;
+    }
+    const preferred = blogQueueFilterForStatus(found.status);
+    if (statusFilter !== "all" && statusFilter !== preferred && statusFilter !== found.status) {
+      setStatusFilter(preferred);
+      return;
+    }
+    if (focusAppliedRef.current === focusItemId && activeId === found.id) return;
+    focusAppliedRef.current = focusItemId;
+    openBlog(found);
+  }, [focusItemId, loading, blogs, statusFilter, activeId]);
 
   const activeBlog = useMemo(() => {
     if (!activeId) return null;
@@ -219,6 +253,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
   }, [blogs, query]);
 
   const openBlog = (blog) => {
+    dismissedFocusRef.current = "";
     const meta = blog.payload?.meta || {};
     setActiveId(blog.id);
     setActiveSnapshot(blog);
@@ -243,6 +278,7 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
   };
 
   const closeReview = () => {
+    if (focusItemId) dismissedFocusRef.current = focusItemId;
     setActiveId(null);
     setActiveSnapshot(null);
     setFeaturedFile(null);
@@ -476,13 +512,22 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
               const title = blog.userEditedTitle || blog.title || "Untitled";
               const excerpt = stripHtml(blog.userEditedExcerpt ?? blog.excerpt ?? "").slice(0, 140);
               return (
-                <li key={blog.id}>
-                  <button
-                    type="button"
-                    onClick={() => openBlog(blog)}
-                    data-guide={index === 0 ? "approve-actions" : undefined}
-                    className="group flex w-full items-stretch gap-4 px-4 py-3.5 text-left transition hover:bg-[var(--cw-raised)] focus:bg-[var(--cw-raised)] focus:outline-none"
-                  >
+                <li
+                  key={blog.id}
+                  id={`blog-approval-${blog.id}`}
+                  className={
+                    focusItemId === blog.id
+                      ? "bg-[color-mix(in_srgb,var(--cw-neon)_8%,transparent)]"
+                      : ""
+                  }
+                >
+                  <div className="flex items-stretch">
+                    <button
+                      type="button"
+                      onClick={() => openBlog(blog)}
+                      data-guide={index === 0 ? "approve-actions" : undefined}
+                      className="group flex min-w-0 flex-1 items-stretch gap-4 px-4 py-3.5 text-left transition hover:bg-[var(--cw-raised)] focus:bg-[var(--cw-raised)] focus:outline-none"
+                    >
                     <div
                       className="relative h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-[var(--cw-canvas)] ring-1 ring-[var(--cw-hairline)]"
                       data-guide={index === 0 ? "approve-preview" : undefined}
@@ -535,7 +580,11 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                         ) : null}
                       </div>
                     </div>
-                  </button>
+                    </button>
+                    <div className="flex shrink-0 items-center px-3 py-2">
+                      <ContentWorkflowLinks kind="blog" itemId={blog.id} item={blog} surface="approvals" />
+                    </div>
+                  </div>
                 </li>
               );
             })}
@@ -579,6 +628,14 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                       <FiClock /> {formatScheduleShort(activeBlog.scheduledFor)}
                     </span>
                   ) : null}
+                </div>
+                <div className="mt-2">
+                  <ContentWorkflowLinks
+                    kind="blog"
+                    itemId={activeBlog.id}
+                    item={activeBlog}
+                    surface="approvals"
+                  />
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
@@ -664,7 +721,8 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                       <label className="block text-sm font-medium text-[var(--cw-ink-dim)]">
                         Excerpt
                         <textarea
-                          className="mt-1.5 min-h-[72px] w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-sm text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
+                          rows={8}
+                          className="cw-copy-box mt-1.5 w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
                           value={draft.editedExcerpt}
                           onChange={(e) => setDraft((d) => ({ ...d, editedExcerpt: e.target.value }))}
                         />
@@ -824,7 +882,8 @@ export default function BlogApprovalsPanel({ selectedSite = "" }) {
                       <label className="block text-sm font-medium text-[var(--cw-ink-dim)]">
                         Meta description
                         <textarea
-                          className="mt-1.5 min-h-[96px] w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-sm text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
+                          rows={6}
+                          className="cw-copy-box cw-copy-box--compact mt-1.5 w-full rounded-xl border border-[var(--cw-hairline)] bg-[var(--cw-raised)] px-3 py-2.5 text-[var(--cw-ink)] outline-none placeholder:text-[var(--cw-ink-faint)] focus:border-[var(--cw-neon)] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--cw-neon)_28%,transparent)]"
                           value={draft.metaDescription}
                           onChange={(e) =>
                             setDraft((d) => ({ ...d, metaDescription: e.target.value }))

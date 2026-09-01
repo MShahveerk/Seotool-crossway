@@ -25,6 +25,7 @@
   --font-heading: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --font-copy: var(--font-newsreader), "Iowan Old Style", Georgia, "Times New Roman", serif;
 
   /* ── Brand accent (electric blue) ───────────────────────────────────── */
   --color-primary-50: #051018;
@@ -1026,6 +1027,69 @@
   .cw-raised {
     background-color: var(--cw-raised);
     border: 1px solid var(--cw-hairline);
+  }
+
+  .cw-copy-box {
+    font-family: var(--font-copy), ui-serif, Georgia, serif;
+    font-optical-sizing: auto;
+    font-size: 1.0625rem;
+    font-weight: 400;
+    line-height: 1.65;
+    min-height: 12.5rem;
+    max-height: min(70vh, 36rem);
+    resize: vertical;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .cw-copy-prose,
+  .cw-copy-prose .ProseMirror {
+    font-family: var(--font-copy), ui-serif, Georgia, serif;
+    font-optical-sizing: auto;
+    font-size: 1.05rem;
+    line-height: 1.65;
+  }
+
+  .cw-copy-box--compact {
+    min-height: 8rem;
+  }
+
+  .cw-workflow-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.55rem;
+  }
+
+  .cw-workflow-links__lane {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--cw-neon) 35%, var(--cw-hairline));
+    background: color-mix(in srgb, var(--cw-neon) 12%, var(--cw-raised));
+    color: var(--cw-neon);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .cw-workflow-links__btn {
+    padding: 0.28rem 0.7rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--cw-hairline-strong);
+    background: var(--cw-raised);
+    color: var(--cw-ink);
+    font-size: 0.75rem;
+    font-weight: 650;
+    cursor: pointer;
+  }
+
+  .cw-workflow-links__btn:hover {
+    border-color: color-mix(in srgb, var(--cw-neon) 45%, var(--cw-hairline));
+    background: color-mix(in srgb, var(--cw-neon) 12%, var(--cw-raised));
   }
 
   /* A hairline of light along the top edge — reads as a lit surface */

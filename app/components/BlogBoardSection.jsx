@@ -34,7 +34,12 @@ function mapBlogs(blogs) {
     });
 }
 
-export default function BlogBoardSection({ selectedSite = "" }) {
+export default function BlogBoardSection({
+  selectedSite = "",
+  focusItemId = "",
+  onClearFocus,
+  onFocusItem,
+}) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -69,6 +74,13 @@ export default function BlogBoardSection({ selectedSite = "" }) {
 
   useEffect(() => {
     load({ silent: false });
+    const onRefresh = () => load({ silent: true });
+    window.addEventListener("blogs:admin-refresh", onRefresh);
+    window.addEventListener("blogs:user-updated", onRefresh);
+    return () => {
+      window.removeEventListener("blogs:admin-refresh", onRefresh);
+      window.removeEventListener("blogs:user-updated", onRefresh);
+    };
   }, [load]);
 
   const onMoveToColumn = useCallback(async (item, toColumn) => {
@@ -82,6 +94,8 @@ export default function BlogBoardSection({ selectedSite = "" }) {
     setItems((prev) =>
       prev.map((row) => (row.id === item.id ? { ...row, ...data.blog } : row))
     );
+    window.dispatchEvent(new CustomEvent("blogs:admin-refresh"));
+    window.dispatchEvent(new CustomEvent("blogs:user-updated"));
     return data;
   }, []);
 
@@ -103,6 +117,8 @@ export default function BlogBoardSection({ selectedSite = "" }) {
           : row
       )
     );
+    window.dispatchEvent(new CustomEvent("blogs:admin-refresh"));
+    window.dispatchEvent(new CustomEvent("blogs:user-updated"));
   }, []);
 
   const getColumn = useCallback((item) => getBlogBoardColumn(item), []);
@@ -121,6 +137,9 @@ export default function BlogBoardSection({ selectedSite = "" }) {
     error,
     siteLabel: selectedSite || "All sites",
     itemKind: "blog",
+    focusItemId,
+    onClearFocus,
+    onFocusItem,
   };
 
   return (

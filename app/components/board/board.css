@@ -87,7 +87,7 @@
 }
 
 .cw-board__brand {
-  font-family: var(--font-board-display), var(--font-nunito), system-ui, sans-serif;
+  font-family: var(--font-heading), var(--font-sans), system-ui, sans-serif;
   font-size: clamp(1.35rem, 2.2vw, 1.85rem);
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -217,7 +217,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.35rem;
-  font-family: var(--font-board-display), var(--font-nunito), system-ui, sans-serif;
+  font-family: var(--font-heading), var(--font-sans), system-ui, sans-serif;
   font-size: 0.82rem;
   font-weight: 650;
   letter-spacing: -0.02em;
@@ -460,7 +460,7 @@
 .cw-board__arrow-label {
   fill: rgba(232, 240, 233, 0.72);
   font-size: 10px;
-  font-family: var(--font-nunito), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   letter-spacing: 0.02em;
 }
 
@@ -655,7 +655,7 @@ div:has(> .cw-board--fill) {
 
 .cw-board-modal__title {
   margin-top: 0.25rem;
-  font-family: var(--font-board-display), var(--font-nunito), system-ui, sans-serif;
+  font-family: var(--font-heading), var(--font-sans), system-ui, sans-serif;
   font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -778,8 +778,9 @@ div:has(> .cw-board--fill) {
 
 .cw-board-modal__prose {
   margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-family: var(--font-copy), ui-serif, Georgia, serif;
+  font-size: 1.05rem;
+  line-height: 1.6;
   color: rgba(232, 240, 233, 0.88);
   white-space: pre-wrap;
   word-break: break-word;
@@ -807,7 +808,7 @@ div:has(> .cw-board--fill) {
 .cw-board-modal__html h3 {
   margin: 1rem 0 0.4rem;
   color: #f4fff5;
-  font-family: var(--font-board-display), var(--font-nunito), system-ui, sans-serif;
+  font-family: var(--font-heading), var(--font-sans), system-ui, sans-serif;
 }
 .cw-board-modal__html ul,
 .cw-board-modal__html ol { padding-left: 1.25rem; margin: 0.5rem 0; }
@@ -869,8 +870,11 @@ div:has(> .cw-board--fill) {
 
 .cw-board-modal__textarea {
   resize: vertical;
-  min-height: 4.5rem;
-  line-height: 1.45;
+  min-height: 14rem;
+  line-height: 1.55;
+  font-family: var(--font-copy), ui-serif, Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 400;
 }
 
 .cw-board-modal__input:focus,
@@ -1100,4 +1104,85 @@ div:has(> .cw-board--fill) {
   border-color: rgba(255, 107, 107, 0.45);
   background: rgba(255, 107, 107, 0.16);
   color: #ffc9c9;
+}
+
+.cw-board__card--origin {
+  opacity: 0.28;
+  box-shadow: none;
+  pointer-events: none;
+  filter: saturate(0.7);
+}
+
+.cw-board__card--float {
+  position: fixed !important;
+  z-index: 2147483000 !important;
+  margin: 0 !important;
+  cursor: grabbing;
+  animation: none !important;
+  transition: none !important;
+  overflow: visible !important;
+  max-height: none !important;
+  pointer-events: none !important;
+  box-shadow:
+    0 28px 64px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(0, 163, 255, 0.5);
+  opacity: 1;
+}
+
+.cw-board__card--focus {
+  border-color: rgba(0, 163, 255, 0.7);
+  box-shadow: 0 0 0 2px rgba(0, 163, 255, 0.35), 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+body.cw-board-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+body.cw-board-dragging .cw-board,
+body.cw-board-dragging .cw-board__scroller,
+body.cw-board-dragging .cw-board__lane {
+  overflow: visible;
+}
+
+body.cw-board-dragging iframe,
+body.cw-board-dragging video {
+  pointer-events: none;
+}
+
+.cw-workflow-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+}
+
+.cw-workflow-links__lane {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 163, 255, 0.28);
+  background: rgba(0, 163, 255, 0.1);
+  color: #9ad4ff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cw-workflow-links__btn {
+  padding: 0.28rem 0.65rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e8eef7;
+  font-size: 0.72rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.cw-workflow-links__btn:hover {
+  border-color: rgba(0, 163, 255, 0.45);
+  background: rgba(0, 163, 255, 0.14);
 }

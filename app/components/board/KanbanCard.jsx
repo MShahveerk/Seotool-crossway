@@ -5,10 +5,11 @@ import { usePlayContext } from "@playhtml/react";
 import { formatScheduleShort } from "@/lib/timezone";
 import { isBoardVideoPath, resolveBoardMedia } from "./resolveBoardMedia";
 import { useBoardDragPresence } from "./BoardDragPresence";
+import { useKanbanPointerDrag } from "./useKanbanPointerDrag";
 
 /**
- * Physically draggable board card (pointer capture + translate).
- * Broadcasts live drag position via playhtml presence; status changes on column drop.
+ * Physically draggable board card. A body-level clone follows the pointer so
+ * the card stays visible over every column.
  */
 export default function KanbanCard({
   item,
@@ -18,23 +19,32 @@ export default function KanbanCard({
   onMoveToColumn,
   onOpenDetails,
   index = 0,
+  focused = false,
 }) {
   const { isLoading: playLoading } = usePlayContext();
   const { broadcastDrag, clearDrag } = useBoardDragPresence();
   const [moving, setMoving] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
-  const cardRef = useRef(null);
-  const dragState = useRef(null);
-  const didDragRef = useRef(false);
-  const lastBroadcast = useRef(0);
-  const onMoveRef = useRef(onMoveToColumn);
   const onOpenRef = useRef(onOpenDetails);
-  const broadcastRef = useRef(broadcastDrag);
-  const clearDragRef = useRef(clearDrag);
-  onMoveRef.current = onMoveToColumn;
   onOpenRef.current = onOpenDetails;
-  broadcastRef.current = broadcastDrag;
-  clearDragRef.current = clearDrag;
+
+  const { cardRef, didDragRef } = useKanbanPointerDrag({
+    locked,
+    moving,
+    columnId,
+    boardId,
+    item,
+    onMoveToColumn: async (nextItem, hit, from) => {
+      setMoving(true);
+      try {
+        await onMoveToColumn(nextItem, hit, from);
+      } finally {
+        setMoving(false);
+      }
+    },
+    broadcastDrag,
+    clearDrag,
+  });
 
   const title = item.displayTitle || item.title || item.userEditedTitle || "Untitled";
   const media = resolveBoardMedia(item);
@@ -46,133 +56,32 @@ export default function KanbanCard({
   }, [media]);
 
   useEffect(() => {
-    if (locked) return undefined;
-    const el = cardRef.current;
-    if (!el) return undefined;
+    if (!focused || !cardRef.current) return undefined;
+    const node = cardRef.current;
+    const id = window.requestAnimationFrame(() => {
+      node.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [focused, cardRef]);
 
-    const clearLiveDrag = () => {
-      clearDragRef.current?.();
-    };
+  const openDetails = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    if (didDragRef.current) return;
+    onOpenRef.current?.(item);
+  };
 
-    const broadcastLiveDrag = (clientX, clientY) => {
-      const now = Date.now();
-      if (now - lastBroadcast.current < 40) return;
-      lastBroadcast.current = now;
-      const rect = el.getBoundingClientRect();
-      broadcastRef.current?.({
-        itemId: String(item.id),
-        title: String(item.displayTitle || item.title || item.userEditedTitle || "Card"),
-        x: Math.round(clientX - (dragState.current?.offsetX ?? rect.width / 2)),
-        y: Math.round(clientY - (dragState.current?.offsetY ?? 24)),
-        w: Math.round(rect.width),
-        h: Math.round(rect.height),
-      });
-    };
-
-    const clearTransform = () => {
-      el.style.transform = "";
-      el.style.zIndex = "";
-      el.classList.remove("cw-board__card--dragging");
-      document.querySelectorAll("[data-board-id][data-drop-active='true']").forEach((lane) => {
-        lane.setAttribute("data-drop-active", "false");
-      });
-      clearLiveDrag();
-    };
-
-    const hitColumnAt = (clientX, clientY) => {
-      const lanes = document.querySelectorAll(`[data-board-id="${boardId}"][data-column-id]`);
-      let hit = null;
-      lanes.forEach((lane) => {
-        const r = lane.getBoundingClientRect();
-        const active = clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
-        lane.setAttribute("data-drop-active", active ? "true" : "false");
-        if (active) hit = lane.getAttribute("data-column-id");
-      });
-      return hit;
-    };
-
-    const onPointerDown = (e) => {
-      if (e.button != null && e.button !== 0) return;
-      if (moving) return;
-      if (e.target?.closest?.("a,button,input,textarea,select")) return;
-
-      didDragRef.current = false;
-      const rect = el.getBoundingClientRect();
-      dragState.current = {
-        pointerId: e.pointerId,
-        startX: e.clientX,
-        startY: e.clientY,
-        offsetX: e.clientX - rect.left,
-        offsetY: e.clientY - rect.top,
-        dragging: false,
-      };
-
-      const onPointerMove = (ev) => {
-        const st = dragState.current;
-        if (!st || ev.pointerId !== st.pointerId) return;
-        const dx = ev.clientX - st.startX;
-        const dy = ev.clientY - st.startY;
-        if (!st.dragging && Math.hypot(dx, dy) < 5) return;
-        if (!st.dragging) {
-          st.dragging = true;
-          didDragRef.current = true;
-          el.classList.add("cw-board__card--dragging");
-          el.style.zIndex = "50";
-          try {
-            el.setPointerCapture(ev.pointerId);
-          } catch {
-            /* ignore */
-          }
-        }
-        el.style.transform = `translate(${dx}px, ${dy}px)`;
-        broadcastLiveDrag(ev.clientX, ev.clientY);
-        hitColumnAt(ev.clientX, ev.clientY);
-        ev.preventDefault();
-      };
-
-      const finish = async (ev) => {
-        const st = dragState.current;
-        if (!st || ev.pointerId !== st.pointerId) return;
-        window.removeEventListener("pointermove", onPointerMove);
-        window.removeEventListener("pointerup", finish);
-        window.removeEventListener("pointercancel", finish);
-        dragState.current = null;
-        try {
-          el.releasePointerCapture(ev.pointerId);
-        } catch {
-          /* ignore */
-        }
-
-        const hit = st.dragging ? hitColumnAt(ev.clientX, ev.clientY) : null;
-        clearTransform();
-
-        if (!st.dragging || !hit || hit === columnId || hit === "published") return;
-
-        setMoving(true);
-        try {
-          await onMoveRef.current(item, hit, columnId);
-        } catch {
-          /* toast handled upstream */
-        } finally {
-          setMoving(false);
-          clearTransform();
-        }
-      };
-
-      window.addEventListener("pointermove", onPointerMove, { passive: false });
-      window.addEventListener("pointerup", finish);
-      window.addEventListener("pointercancel", finish);
-    };
-
-    el.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      el.removeEventListener("pointerdown", onPointerDown);
-      clearLiveDrag();
-    };
-  }, [locked, moving, columnId, boardId, item]);
-
-  const body = (
-    <>
+  return (
+    <article
+      ref={cardRef}
+      id={`${boardId}-card-${item.id}`}
+      className={`cw-board__card${focused ? " cw-board__card--focus" : ""}`}
+      data-locked={locked ? "true" : "false"}
+      data-moving={moving ? "true" : "false"}
+      style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+      onDoubleClick={openDetails}
+      title="Double-click for details"
+    >
       {media && !imgFailed ? (
         <div className="cw-board__card-media">
           {isBoardVideoPath(media) ? (
@@ -202,28 +111,6 @@ export default function KanbanCard({
         {locked ? <span className="cw-board__card-tag">locked</span> : null}
         {!locked && playLoading ? <span className="cw-board__card-tag">syncing</span> : null}
       </div>
-    </>
-  );
-
-  const openDetails = (e) => {
-    e?.preventDefault?.();
-    e?.stopPropagation?.();
-    if (didDragRef.current) return;
-    onOpenRef.current?.(item);
-  };
-
-  return (
-    <article
-      ref={cardRef}
-      id={`${boardId}-card-${item.id}`}
-      className="cw-board__card"
-      data-locked={locked ? "true" : "false"}
-      data-moving={moving ? "true" : "false"}
-      style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
-      onDoubleClick={openDetails}
-      title="Double-click for details"
-    >
-      {body}
     </article>
   );
 }

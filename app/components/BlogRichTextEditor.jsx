@@ -62,7 +62,7 @@ export default function BlogRichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm prose-invert max-w-none focus:outline-none px-3 py-2 bg-[var(--cw-canvas)] text-[var(--cw-ink)] prose-headings:text-[var(--cw-ink)] prose-p:text-[var(--cw-ink-dim)] prose-li:text-[var(--cw-ink-dim)] prose-strong:text-[var(--cw-ink)] prose-a:text-[var(--cw-neon)] prose-img:rounded-lg prose-hr:border-[var(--cw-hairline)] prose-blockquote:text-[var(--cw-ink-muted)] [&_p]:my-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--cw-hairline-strong)] [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-[var(--cw-neon)] [&_a]:underline",
+          "prose prose-sm prose-invert cw-copy-prose max-w-none focus:outline-none px-3 py-2 bg-[var(--cw-canvas)] text-[var(--cw-ink)] prose-headings:text-[var(--cw-ink)] prose-p:text-[var(--cw-ink-dim)] prose-li:text-[var(--cw-ink-dim)] prose-strong:text-[var(--cw-ink)] prose-a:text-[var(--cw-neon)] prose-img:rounded-lg prose-hr:border-[var(--cw-hairline)] prose-blockquote:text-[var(--cw-ink-muted)] [&_p]:my-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-4 [&_blockquote]:border-[var(--cw-hairline-strong)] [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-[var(--cw-neon)] [&_a]:underline",
         style: `min-height: ${minHeight}px`,
         "aria-label": ariaLabel,
       },

@@ -24,7 +24,12 @@ function mapApprovals(approvals) {
   }));
 }
 
-export default function PostBoardSection({ selectedSite = "" }) {
+export default function PostBoardSection({
+  selectedSite = "",
+  focusItemId = "",
+  onClearFocus,
+  onFocusItem,
+}) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -117,6 +122,9 @@ export default function PostBoardSection({ selectedSite = "" }) {
     error,
     siteLabel: selectedSite || "All Meta / site accounts",
     itemKind: "post",
+    focusItemId,
+    onClearFocus,
+    onFocusItem,
   };
 
   return (

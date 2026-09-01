@@ -10,6 +10,7 @@ import {
 } from "@/lib/timezone";
 import BlogRichTextEditor from "../BlogRichTextEditor";
 import { isBoardVideoPath, resolveBoardMedia } from "./resolveBoardMedia";
+import ContentWorkflowLinks from "../content/ContentWorkflowLinks";
 
 function Field({ label, children }) {
   if (children == null || children === "") return null;
@@ -217,6 +218,9 @@ export default function BoardItemModal({
             <h2 id="cw-board-modal-title" className="cw-board-modal__title">
               {draft.title || title}
             </h2>
+            <div className="mt-3">
+              <ContentWorkflowLinks kind={isBlog ? "blog" : "post"} itemId={localItem.id} item={localItem} surface="board" />
+            </div>
           </div>
           <button
             type="button"
@@ -343,8 +347,8 @@ export default function BoardItemModal({
                   <label className="cw-board-modal__label">
                     Excerpt
                     <textarea
-                      className="cw-board-modal__textarea"
-                      rows={3}
+                      className="cw-board-modal__textarea cw-copy-box--compact"
+                      rows={8}
                       value={draft.excerpt}
                       disabled={busy || locked}
                       onChange={(e) => setDraft((d) => ({ ...d, excerpt: e.target.value }))}
@@ -415,7 +419,7 @@ export default function BoardItemModal({
                     Caption
                     <textarea
                       className="cw-board-modal__textarea"
-                      rows={4}
+                      rows={10}
                       value={draft.caption}
                       disabled={busy || locked}
                       onChange={(e) => setDraft((d) => ({ ...d, caption: e.target.value }))}
@@ -425,7 +429,7 @@ export default function BoardItemModal({
                     Accompanying text
                     <textarea
                       className="cw-board-modal__textarea"
-                      rows={4}
+                      rows={8}
                       value={draft.bodyText}
                       disabled={busy || locked}
                       onChange={(e) => setDraft((d) => ({ ...d, bodyText: e.target.value }))}
@@ -434,8 +438,8 @@ export default function BoardItemModal({
                   <label className="cw-board-modal__label">
                     Assignee notes / instructions
                     <textarea
-                      className="cw-board-modal__textarea"
-                      rows={3}
+                      className="cw-board-modal__textarea cw-copy-box--compact"
+                      rows={6}
                       value={draft.instructions}
                       disabled={busy || locked}
                       onChange={(e) => setDraft((d) => ({ ...d, instructions: e.target.value }))}
