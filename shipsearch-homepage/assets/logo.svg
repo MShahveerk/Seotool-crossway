@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 48" role="img" aria-label="ShipSearch">
+  <title>ShipSearch</title>
+  <text x="0" y="34" font-family="Figtree, Arial, sans-serif" font-size="32" font-weight="800" font-style="italic" fill="#1a1d23" letter-spacing="-0.04em">SHIP</text>
+  <text x="92" y="34" font-family="Figtree, Arial, sans-serif" font-size="32" font-weight="500" font-style="italic" fill="#6b7280" letter-spacing="-0.04em">SEARCH</text>
+  <path d="M2 42 C28 38, 48 46, 86 40" fill="none" stroke="#00ACB3" stroke-width="3" stroke-linecap="round"/>
+</svg>
