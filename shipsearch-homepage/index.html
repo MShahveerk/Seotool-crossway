@@ -59,25 +59,47 @@
     </header>
 
     <main id="main">
-      <section class="hero">
-        <video
-          class="hero-video"
-          autoplay
-          muted
-          loop
-          playsinline
-          poster="assets/hero.jpg"
-          aria-hidden="true"
-        >
-          <source src="assets/hero.mp4" type="video/mp4" />
-        </video>
-        <div class="hero-shade"></div>
-        <div class="hero-copy">
-          <h1>The shipping platform for general cargo, RO-RO, breakbulk and barge markets</h1>
-          <p>
-            ShipSearch is where shipowners, brokers, charterers and freight forwarders match cargo to vessels, fix charters and trade ships. Post a cargo, see the ships that fit. List a vessel, reach the charterers who need it.
-          </p>
-          <a class="btn btn-teal btn-lg" href="https://portal.shipsearch.com/signup">Get started</a>
+      <section class="story" data-story>
+        <div class="story-sticky">
+          <video
+            class="hero-video"
+            muted
+            playsinline
+            preload="auto"
+            poster="assets/hero.jpg"
+            aria-hidden="true"
+            data-story-video
+          >
+            <source src="assets/hero.mp4" type="video/mp4" />
+          </video>
+          <div class="hero-shade"></div>
+
+          <div class="story-stage">
+            <div class="chapter is-on" data-chapter="0">
+              <p class="story-kicker">ShipSearch</p>
+              <h1>
+                <span class="h1-top">The shipping platform</span>
+                <span class="h1-markets">for <em>general cargo</em>, <em>RO-RO</em>, <em>breakbulk</em> and <em>barge</em></span>
+              </h1>
+              <p class="scroll-hint">Scroll</p>
+            </div>
+
+            <div class="chapter" data-chapter="1">
+              <p class="story-line">Match cargo to vessels.</p>
+              <p class="story-line accent">Fix charters.</p>
+              <p class="story-line">Trade ships.</p>
+            </div>
+
+            <div class="chapter" data-chapter="2">
+              <p class="story-line">Post a cargo,<br />see the ships that fit.</p>
+              <p class="story-support">List a vessel, reach the charterers who need it.</p>
+            </div>
+
+            <div class="chapter" data-chapter="3">
+              <p class="story-line">One desk.<br />Both sides of the market.</p>
+              <a class="btn btn-teal btn-lg" href="https://portal.shipsearch.com/signup">Get started</a>
+            </div>
+          </div>
         </div>
       </section>
 
